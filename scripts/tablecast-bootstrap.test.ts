@@ -173,6 +173,7 @@ describe("初期セットアップCLIの対象固定", () => {
             ...process.env,
             TABLECAST_CONFIG: undefined,
             TABLECAST_RELEASE_SHA: "a".repeat(40),
+            TABLECAST_EMAIL_FROM: "tablecast@example.test",
           },
           timeout: 45000,
         },

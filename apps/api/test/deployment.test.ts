@@ -1,5 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { expect, test } from "vitest";
+import { verificationEmail } from "../src/emails/account-content";
 import { sendAccountEmail } from "../src/emails/send";
 import { createAuth } from "../src/modules/auth/service";
 
@@ -81,7 +82,7 @@ test.each([
         TABLECAST_MAILPIT_URL: `http://${host}`,
       },
       "tablecast@example.invalid",
-      { title: "確認", message: "開発境界の確認", action: "確認", url: "http://localhost:3000" },
+      verificationEmail("http://localhost:3000", "ja"),
     ),
   ).rejects.toThrow("MAILPIT_LOCAL_ONLY");
 });

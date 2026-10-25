@@ -8,6 +8,8 @@
 
 Browserの仮想entryから後で読み込む外部依存は、既存の`optimizeDeps.include`に明示する。実行中の依存再最適化でtest iframeがreloadした結果を、操作の失敗や成功と混同しない。認証clientのentry追加時もBrowserとStorybookの対象設定を揃え、共有cacheを消さず隔離した`cacheDir`の初回で確認する。warm再実行だけで準備不成立を解消済みとは扱わない。
 
+メールfixtureの`TABLECAST_EMAIL_FROM`はアドレスだけを指定する。表示名は本番の構造化メールbuilderとMailpitの双方で送信処理が別に設定するため、`TableCast <...>`をenvへ含めない。本番設定は確認済み送信元が必須であり、CLIの本番設定解決を検証する隔離試験にも架空の有効アドレスを明示する。
+
 ## UIの動きの検証
 
 `motion-system.browser.test.tsx`はChromium・WebKit・Chromiumのreduced motionで、入退場の途中反転、focus、keepMounted入力、閉じた多言語必須項目のエラー復帰、live regionの寿命を確認する。StorybookはCSS animationを最終フレームで止めるため、共通afterEachは実行中かつ有限のMotion animationだけを待ってからa11yへ進む。ActionFeedbackとMotionProviderの成功表示は、Web Animations APIで検出できないMotionの描画もあるため、Storyのplayで成功文のopacityが1になってからa11yへ進む。無限の待機表示を待たず、動きの無効化やコントラストの除外で失敗を隠さない。

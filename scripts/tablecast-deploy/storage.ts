@@ -243,8 +243,6 @@ export async function prepareStorage({
             {
               email: "haruka.sato@komorebi-shijo.com",
               otherEmail: "tsubasa.yamamoto@westward-burgers-kyoto.com",
-              password: crypto.randomUUID(),
-              otherPassword: crypto.randomUUID(),
               baseTime: Date.now(),
               profile: "demo",
             },

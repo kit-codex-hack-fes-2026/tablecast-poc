@@ -7,6 +7,7 @@ import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
 import { buildTablecast } from "../../../../scripts/tablecast-build";
 import { seedDemoDatabase } from "../../../../scripts/tablecast-seed-data";
+import { seedE2ePolicyPasskeys } from "../../../../scripts/test-support/tablecast-auth-fixture";
 import { apiSdkConfiguration } from "../../../api/cloudflare.config";
 import { diagnosticSecrets, redactCredentials } from "../../../api/src/platform/diagnostics";
 import { credentials, runtime } from "./runtime";
@@ -58,7 +59,7 @@ export default async function setup() {
       TABLECAST_GOOGLE_EMULATOR_URL: `${runtime.origin}/_tablecast/oauth`,
       TABLECAST_GOOGLE_AUTHORIZE_URL: `${runtime.origin}/_tablecast/oauth`,
       TABLECAST_MAILPIT_URL: `${runtime.origin}/_tablecast/mailpit`,
-      TABLECAST_EMAIL_FROM: "TableCast <tablecast@example.test>",
+      TABLECAST_EMAIL_FROM: "tablecast@example.test",
     };
     const options = {
       api: {
@@ -107,6 +108,7 @@ export default async function setup() {
     });
     try {
       await seedDemoDatabase(platform.env, credentials);
+      await seedE2ePolicyPasskeys(platform.env.TABLECAST_DB);
     } finally {
       await platform.dispose();
     }

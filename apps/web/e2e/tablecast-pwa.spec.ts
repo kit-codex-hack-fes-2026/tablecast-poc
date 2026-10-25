@@ -234,16 +234,17 @@ test("二つのログイン画面は未保存入力がある間はPWA更新を�
     await expect
       .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
       .toBe(true);
-    await expect(page.getByRole("button", { name: ja.auth_sign_in, exact: true })).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: ja.auth_send_magic_link, exact: true }),
+    ).toBeEnabled();
     await page.getByLabel(ja.auth_email, { exact: true }).fill("unsaved@example.test");
-    await expect(page.getByRole("button", { name: ja.auth_sign_in, exact: true })).toHaveAttribute(
-      "data-pwa-blocked",
-      "true",
-    );
+    await expect(
+      page.getByRole("button", { name: ja.auth_send_magic_link, exact: true }),
+    ).toHaveAttribute("data-pwa-blocked", "true");
     const other = await context.newPage();
     try {
       await other.goto("/login");
-      const cleanSubmit = other.getByRole("button", { name: ja.auth_sign_in, exact: true });
+      const cleanSubmit = other.getByRole("button", { name: ja.auth_send_magic_link, exact: true });
       await expect(cleanSubmit).toBeEnabled();
       await expect(cleanSubmit).toHaveAttribute("data-pwa-blocked", "false");
       await expect(other.getByLabel(ja.auth_email, { exact: true })).toHaveValue("");
@@ -321,7 +322,7 @@ test("二つのログイン画面は未保存入力がある間はPWA更新を�
             await expect.poll(() => page.evaluate(() => document.visibilityState)).toBe("visible");
             await page.getByLabel(ja.auth_email, { exact: true }).fill("");
             await expect(
-              page.getByRole("button", { name: ja.auth_sign_in, exact: true }),
+              page.getByRole("button", { name: ja.auth_send_magic_link, exact: true }),
             ).toHaveAttribute("data-pwa-blocked", "false");
           })(),
         ]);

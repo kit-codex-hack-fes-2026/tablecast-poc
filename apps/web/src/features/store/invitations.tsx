@@ -6,6 +6,7 @@ import {
   CircleCheck,
   Mail,
   MailPlus,
+  Send,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -41,9 +42,27 @@ export function Invitations() {
     onSuccess: () =>
       client.invalidateQueries({ queryKey: ["tablecast-membership", store.organizationId] }),
   });
+  const resend = useMutation({
+    mutationFn: async (invitation: Invitation) => {
+      if (new Date(invitation.expiresAt).getTime() <= Date.now())
+        authResult(await authClient.organization.cancelInvitation({ invitationId: invitation.id }));
+      return authResult(
+        await authClient.organization.inviteMember({
+          email: invitation.email,
+          role: z.enum(["owner", "admin", "member"]).parse(invitation.role),
+          organizationId: store.organizationId,
+          resend: true,
+        }),
+      );
+    },
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: ["tablecast-membership", store.organizationId] }),
+  });
+  const now = query.dataUpdatedAt;
   const columns = useMemo(
-    () => invitationColumns(t, cancel.isPending, cancel.mutate),
-    [t, cancel.isPending, cancel.mutate],
+    () =>
+      invitationColumns(t, cancel.isPending || resend.isPending, cancel.mutate, resend.mutate, now),
+    [t, cancel.isPending, cancel.mutate, resend.isPending, resend.mutate, now],
   );
   return (
     <>
@@ -62,7 +81,10 @@ export function Invitations() {
           </Button>
         }
       />
-      <ErrorNotice error={query.error || cancel.error} onRetry={() => void query.refetch()} />
+      <ErrorNotice
+        error={query.error || cancel.error || resend.error}
+        onRetry={() => void query.refetch()}
+      />
       <DataTable
         {...collection}
         data={query.data.invitations}
@@ -81,6 +103,8 @@ function invitationColumns(
   t: ReturnType<typeof useI18n>["t"],
   pending: boolean,
   cancel: (id: string) => void,
+  resend: (invitation: Invitation) => void,
+  now: number,
 ): DataTableColumn<Invitation>[] {
   return [
     {
@@ -122,7 +146,9 @@ function invitationColumns(
         >
           {t(
             row.original.status === "pending"
-              ? "invite_pending"
+              ? new Date(row.original.expiresAt).getTime() <= now
+                ? "invite_expired"
+                : "invite_pending"
               : row.original.status === "accepted"
                 ? "invite_accepted"
                 : row.original.status === "rejected"
@@ -145,13 +171,19 @@ function invitationColumns(
       header: t("org_cancel_invitation"),
       cell: ({ row }) =>
         row.original.status === "pending" && (
-          <ConfirmAction
-            label={t("org_cancel_invitation")}
-            subject={row.original.email}
-            icon={<X />}
-            disabled={pending}
-            onConfirm={() => cancel(row.original.id)}
-          />
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" disabled={pending} onClick={() => resend(row.original)}>
+              <Send />
+              {t("invite_resend")}
+            </Button>
+            <ConfirmAction
+              label={t("org_cancel_invitation")}
+              subject={row.original.email}
+              icon={<X />}
+              disabled={pending}
+              onConfirm={() => cancel(row.original.id)}
+            />
+          </div>
         ),
     },
   ];

@@ -1,6 +1,7 @@
 import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
 import { bindings, defineConfig, defineContainer, exports, triggers } from "cf/config";
 import { resolve } from "node:path";
+import { z } from "zod";
 import {
   modeOptions,
   optionsSchema,
@@ -13,6 +14,8 @@ export function apiCloudflareConfig(input: TablecastConfigOptions = {}) {
   const options = optionsSchema.parse(input);
   const hosted = ["preview", "staging", "production"].includes(options.environment);
   const emulate = options.environment === "preview" || options.environment === "staging";
+  const emailFrom = options.vars.TABLECAST_EMAIL_FROM;
+  if (emailFrom) z.email().parse(emailFrom);
   const container = emulate
     ? defineContainer({
         name: `${options.name}-tablecastemulate`,
@@ -57,13 +60,16 @@ export function apiCloudflareConfig(input: TablecastConfigOptions = {}) {
         TABLECAST_BILLING_ENABLED: bindings.text("false"),
         TABLECAST_BILLING_RATES: bindings.text(""),
         TABLECAST_BILLING_OPERATOR_USER_IDS: bindings.text(""),
+        TABLECAST_EMAIL_FROM: bindings.text(emailFrom ?? ""),
         ...Object.fromEntries(
           Object.entries(options.vars).map(([key, value]) => [key, bindings.text(value)]),
         ),
         TABLECAST_DB: bindings.d1(options.database),
         TABLECAST_MEDIA: bindings.r2({ name: options.bucket }),
         TABLECAST_IMAGES: bindings.images(),
-        TABLECAST_EMAIL: bindings.sendEmail(),
+        TABLECAST_EMAIL: bindings.sendEmail(
+          emailFrom ? { allowedSenderAddresses: [emailFrom] } : {},
+        ),
         TABLECAST_VOICE_USAGE: bindings.durableObject({
           worker: options.name,
           exportName: "TablecastVoiceUsage",

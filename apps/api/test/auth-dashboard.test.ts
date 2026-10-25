@@ -4,6 +4,8 @@ import { eq, sql } from "drizzle-orm";
 import { afterEach, expect, inject, test, vi } from "vitest";
 import app from "../src/app";
 import { session, user } from "../src/db/identity-schema";
+import { createAuth } from "../src/modules/auth/service";
+import { captureAuthMail, magicLinkUrl, mailAuthEnv } from "./auth-fixture";
 import { fixtureDb } from "./database-fixture";
 import { setupFixture } from "./fixture";
 
@@ -44,30 +46,23 @@ test.each([200, 503])(
     expect(await fixtureDb.select({ lastActiveAt: user.lastActiveAt }).from(user).get()).toEqual({
       lastActiveAt: null,
     });
-    const outbound = vi
-      .spyOn(globalThis, "fetch")
-      .mockImplementation(async () => Response.json({ success: status === 200 }, { status }));
+    const { mails, outbound } = captureAuthMail(() =>
+      Response.json({ success: status === 200 }, { status }),
+    );
+    await createAuth(mailAuthEnv).api.signInMagicLink({
+      body: { email: "tablecast-staff@example.test" },
+      headers: new Headers({ Origin: origin }),
+    });
     const context = createExecutionContext();
     const waitUntil = vi.spyOn(context, "waitUntil");
     const startedAt = Date.now();
 
-    // When: 本番のHono経路でメールログインする
-    const response = await app.fetch(
-      new Request(`${origin}/api/auth/sign-in/email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Origin: origin },
-        body: JSON.stringify({
-          email: "tablecast-staff@example.test",
-          password: "tablecast-local-fixture-password",
-        }),
-      }),
-      configured,
-      context,
-    );
+    // When: 本番のHono経路でマジックリンクを検証する
+    const response = await app.fetch(new Request(magicLinkUrl(mails[0])), configured, context);
     await waitOnExecutionContext(context);
 
     // Then: 外部送信の成否によらずログインでき、既存セッションを保持して日時を更新する
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(302);
     expect(response.headers.getSetCookie().join(";")).toContain("tablecast.session_token");
     expect(waitUntil).toHaveBeenCalled();
     const updated = await fixtureDb

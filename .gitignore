@@ -58,5 +58,6 @@ apps/web/src/paraglide/
 .vitest-attachments/
 __screenshots__/
 
-# メールカタログの静的HTML
+# React Email公式プレビューと配信用成果物
+apps/api/.react-email/
 apps/api/email-static/

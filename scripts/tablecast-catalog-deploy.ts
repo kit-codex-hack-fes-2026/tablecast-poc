@@ -120,21 +120,50 @@ export async function inspectCatalog(origin: string, pr: string, kind: CatalogKi
   return release;
 }
 
+async function prepareCatalog(kind: CatalogKind) {
+  const email = kind === "email";
+  const directory = resolve(
+    root,
+    email ? "apps/api/.react-email/.open-next/assets" : "apps/web/storybook-static",
+  );
+  const files = await readdir(directory, { recursive: true });
+  const script = files.find((path) => path.endsWith(".js"));
+  if (!script) throw new Error("カタログの静的JSがありません。");
+  const routes = email
+    ? Object.keys(
+        z
+          .object({ routes: z.record(z.string(), z.unknown()) })
+          .parse(
+            JSON.parse(
+              await readFile(
+                resolve(root, "apps/api/.react-email/.next/prerender-manifest.json"),
+                "utf8",
+              ),
+            ),
+          ).routes,
+      ).filter((path) => path.startsWith("/preview/"))
+    : [];
+  if (email && !routes.includes("/preview/invitation-ja"))
+    throw new Error("招待メールの公式プレビューがありません。");
+  const release = email
+    ? catalogRelease("email", ["/", ...routes, `/${script}`])
+    : catalogRelease("storybook", ["/", "/iframe.html", "/index.json", `/${script}`]);
+  await mkdir(resolve(directory, "_tablecast"), { recursive: true });
+  await writeFile(resolve(directory, "_tablecast/release.json"), JSON.stringify(release));
+  await writeFile(resolve(directory, "_headers"), "/*\n  Cache-Control: no-store\n");
+  await writeFile(
+    resolve(directory, "_redirects"),
+    email
+      ? routes.map((path) => `/${path.slice("/preview/".length)}.html ${path} 302\n`).join("")
+      : "/ /index.html 200\n",
+  );
+}
+
 async function main() {
   const pr = process.env.TABLECAST_PR_NUMBER || "";
   if (process.argv.includes("--cleanup")) return cleanupCatalogs(pr);
-  if (process.argv.includes("--prepare-storybook")) {
-    const directory = resolve(root, "apps/web/storybook-static");
-    const files = await readdir(directory, { recursive: true });
-    const script = files.find((path) => path.endsWith(".js"));
-    if (!script) throw new Error("Storybookの静的JSがありません。");
-    const release = catalogRelease("storybook", ["/", "/iframe.html", "/index.json", `/${script}`]);
-    await mkdir(resolve(directory, "_tablecast"), { recursive: true });
-    await writeFile(resolve(directory, "_tablecast/release.json"), JSON.stringify(release));
-    await writeFile(resolve(directory, "_headers"), "/*\n  Cache-Control: no-store\n");
-    await writeFile(resolve(directory, "_redirects"), "/ /index.html 200\n");
-    return;
-  }
+  if (process.argv.includes("--prepare-storybook")) return prepareCatalog("storybook");
+  if (process.argv.includes("--prepare-email")) return prepareCatalog("email");
   const sha = z
     .string()
     .regex(/^[a-f0-9]{40}$/)
@@ -153,8 +182,9 @@ async function main() {
       const { name, origin } = catalogTarget(pr, kind);
       const artifact =
         kind === "email"
-          ? resolve(root, "apps/api/email-static")
+          ? resolve(root, "apps/api/.react-email/.open-next/assets")
           : resolve(root, "apps/web/storybook-static");
+      if (kind === "email") await prepareCatalog(kind);
       const releasePath = "_tablecast/release.json";
       const release = catalogReleaseSchema.parse(
         JSON.parse(await readFile(resolve(artifact, releasePath), "utf8")),
@@ -170,28 +200,43 @@ async function main() {
       await protect(name, new URL(origin).hostname, existing?.id);
       await currentRevision(target, sha);
       const catalogRoot = resolve(directory, kind);
-      await writeAssets({ root: catalogRoot, sourceDirectory: artifact });
-      await writeWorkerConfig({
-        root: catalogRoot,
-        config: InputWorkerSchema.parse({
-          assets: { notFoundHandling: "none", htmlHandling: "none" },
-          name,
-          compatibilityDate: "2026-09-03",
-          // 既存Workerは事前にWorker単位のAccess保護を照合済みなので公開経路を維持する。
-          workersDev: Boolean(existing),
-          previewUrls: false,
-        }),
-      });
-      await writeRootConfig(
-        catalogRoot,
-        { accountId: tablecastAccountId },
-        { mode: "preview", isPreview: false },
-      );
+      const emailConfig = resolve(root, "apps/api/.local/tablecast-email.wrangler.json");
+      if (kind === "email") {
+        const config = z
+          .looseObject({ name: z.literal(name) })
+          .parse(JSON.parse(await readFile(emailConfig, "utf8")));
+        await writeFile(emailConfig, JSON.stringify({ ...config, workers_dev: Boolean(existing) }));
+      } else {
+        await writeAssets({ root: catalogRoot, sourceDirectory: artifact });
+        await writeWorkerConfig({
+          root: catalogRoot,
+          config: InputWorkerSchema.parse({
+            assets: { notFoundHandling: "none", htmlHandling: "none" },
+            name,
+            compatibilityDate: "2026-09-03",
+            // 既存Workerは事前にWorker単位のAccess保護を照合済みなので公開経路を維持する。
+            workersDev: Boolean(existing),
+            previewUrls: false,
+          }),
+        });
+        await writeRootConfig(
+          catalogRoot,
+          { accountId: tablecastAccountId },
+          { mode: "preview", isPreview: false },
+        );
+      }
       const child = spawn(
         "node",
-        [resolve(root, "node_modules/cf/bin/cf"), "deploy", "--prebuilt", "--mode", "preview"],
+        kind === "email"
+          ? [
+              resolve(root, "apps/api/node_modules/@opennextjs/cloudflare/dist/cli/index.js"),
+              "deploy",
+              "--config",
+              emailConfig,
+            ]
+          : [resolve(root, "node_modules/cf/bin/cf"), "deploy", "--prebuilt", "--mode", "preview"],
         {
-          cwd: catalogRoot,
+          cwd: kind === "email" ? resolve(root, "apps/api/.react-email") : catalogRoot,
           stdio: "inherit",
           env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: tablecastAccountId },
         },

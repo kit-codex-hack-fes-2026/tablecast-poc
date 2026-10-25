@@ -312,11 +312,11 @@ it("端末の承認待ちは正常な待機状態を返す", async () => {
   expect(await poll.json()).toEqual({ ready: false });
 });
 
-it("メール未確認のパスワード登録ではセッションを発行しない", async () => {
+it("廃止したパスワードAPIは登録・ログインとも拒否する", async () => {
   const email = "tablecast-unverified@example.test";
   const password = "tablecast-verification-password";
   const signup = await json("/api/auth/sign-up/email", { email, password, name: "未確認" });
-  expect(signup.status).toBe(200);
+  expect(signup.status).toBe(403);
   expect(signup.headers.getSetCookie().join()).not.toContain("session_token");
   const login = await json("/api/auth/sign-in/email", { email, password });
   expect(login.status).toBe(403);

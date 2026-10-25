@@ -8,6 +8,7 @@ export const user = sqliteTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: integer("email_verified", { mode: "boolean" }).default(false).notNull(),
   image: text("image"),
+  passkeyRegistered: integer("passkey_registered", { mode: "boolean" }).default(false).notNull(),
   lastActiveAt: integer("last_active_at", { mode: "timestamp_ms" }),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
@@ -237,3 +238,10 @@ export const subscription = sqliteTable(
   },
   (t) => [index("subscription_reference").on(t.referenceId, t.status)],
 );
+
+export const rateLimit = sqliteTable("rate_limit", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull(),
+  lastRequest: integer("last_request").notNull(),
+});

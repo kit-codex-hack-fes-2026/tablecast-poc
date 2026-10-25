@@ -17,7 +17,8 @@
     "test": "vitest run",
     "cf:typegen": "cf workers types --mode development --include-runtime=false",
     "lint": "oxlint . --type-aware --deny-warnings",
-    "build:email": "bun --no-env-file scripts/tablecast-email-build.ts",
+    "build:email": "bun --no-env-file scripts/tablecast-email-preview.ts && email build --dir .local/tablecast-email && bun --no-env-file scripts/tablecast-email-cloudflare.ts && cd .react-email && opennextjs-cloudflare build --config ../.local/tablecast-email.wrangler.json --openNextConfigPath ../tablecast-email.open-next.config.ts",
+    "preview:email": "cd .react-email && opennextjs-cloudflare preview --config ../.local/tablecast-email.wrangler.json",
     "cf:build": "cf build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts"
   },
   "dependencies": {
@@ -51,6 +52,8 @@
     "@cloudflare/vite-plugin": "2.0.0-beta.v.1",
     "@cloudflare/vitest-plugin": "1.4.4",
     "@cloudflare/workers-types": "5.20261016.1",
+    "@opennextjs/cloudflare": "1.20.13",
+    "@react-email/ui": "6.11.3",
     "@types/css-tree": "^3.2.0",
     "@types/react": "19.3.0",
     "drizzle-kit": "1.0.0-rc.5",
@@ -58,6 +61,7 @@
     "eslint-plugin-boundaries": "7.2.0",
     "eslint-plugin-drizzle": "0.2.3",
     "eslint-plugin-hono": "1.1.0",
+    "react-email": "6.11.3",
     "typescript": "6.0.3",
     "vite": "8.3.4",
     "vitest": "5.0.5"

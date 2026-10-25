@@ -1,3 +1,4 @@
+import { makeSignature } from "better-auth/crypto";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import * as authTables from "../src/db/auth-schema";
@@ -7,7 +8,6 @@ import { createAuth } from "../src/modules/auth/service";
 import { hashDeviceToken } from "../src/modules/auth/token";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
-import { ensure } from "../src/platform/errors";
 import { configuration } from "./configuration-fixture";
 import { fixtureDb, insertFixture } from "./database-fixture";
 
@@ -28,31 +28,27 @@ export function responseCookies(response: Response) {
     .join("; ");
 }
 
+// 業務の前提だけに使い、登録・ログイン自体の保証は実WebAuthnの試験へ置く。
+export function addFixturePasskey(userId: string, id = "tablecast-fixture-passkey") {
+  return fixtureDb.insert(authTables.passkey).values({
+    id,
+    userId,
+    credentialID: btoa(id),
+    publicKey: "tablecast-fixture-public-key",
+    counter: 0,
+    deviceType: "multiDevice",
+    backedUp: true,
+  });
+}
+
 export async function setupFixture() {
-  const registration = await createAuth(env).api.signUpEmail({
-    body: {
-      email: "tablecast-staff@example.test",
-      password: "tablecast-local-fixture-password",
-      name: "店員",
-    },
-    asResponse: true,
-  });
-  ensure(registration.ok, "FIXTURE_AUTH_FAILED", 503);
-  const user = await fixtureDb
-    .select({ id: authTables.user.id })
-    .from(authTables.user)
-    .where(eq(authTables.user.email, "tablecast-staff@example.test"))
-    .get();
-  ensure(user, "FIXTURE_USER_MISSING", 503);
-  await fixtureDb
-    .update(authTables.user)
-    .set({ emailVerified: true })
-    .where(eq(authTables.user.id, user.id));
-  const response = await createAuth(env).api.signInEmail({
-    body: { email: "tablecast-staff@example.test", password: "tablecast-local-fixture-password" },
-    asResponse: true,
-  });
-  ensure(response.ok, "FIXTURE_LOGIN_FAILED", 503);
+  const auth = createAuth(env);
+  const ctx = await auth.$context;
+  const user = await ctx.internalAdapter.createUser(
+    { email: "tablecast-staff@example.test", name: "店員", emailVerified: true },
+    { method: "admin" },
+  );
+  const session = await ctx.internalAdapter.createSession(user.id);
   const now = Date.now();
   await env.TABLECAST_DB.batch([
     insertFixture(authTables.organization, {
@@ -111,7 +107,7 @@ export async function setupFixture() {
       role: "owner",
       tableSessionId: "tablecast-session",
     } satisfies Actor,
-    cookie: responseCookies(response),
+    cookie: `tablecast.session_token=${encodeURIComponent(`${session.token}.${await makeSignature(session.token, env.TABLECAST_AUTH_SECRET)}`)}`,
   };
 }
 

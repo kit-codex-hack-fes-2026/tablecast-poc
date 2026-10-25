@@ -2,7 +2,6 @@ import {
   configurationErrors,
   createAuth,
   isHostedEmulator,
-  tablecastCredentialIssuer,
   tablecastGoogleMockIssuer,
 } from "@tablecast/api/bootstrap";
 import { business, createDatabase, type Database, identity } from "@tablecast/api/db";
@@ -77,6 +76,7 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
   await migrateDemoIdentityEmails(env);
   const db = createDatabase(env.TABLECAST_DB);
   const auth = createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined }, undefined, db);
+  const authContext = await auth.$context;
   // 以前のローカルemulate連携だけを統合し、実Googleの識別子は変更しない。
   const mockAccounts = await db
     .select({
@@ -119,12 +119,9 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
   if (firstRepair) await db.batch([firstRepair, ...remainingRepairs]);
   const staff = demoStaff(credentials);
   const owners: string[] = [];
-  for (const [email, password] of [
-    [credentials.email, credentials.password],
-    [credentials.otherEmail, credentials.otherPassword],
-  ]) {
+  for (const email of [credentials.email, credentials.otherEmail]) {
     const person = staff.find((candidate) => candidate.email === email);
-    if (!email || !password || !person) throw new Error("デモ認証情報が不正です。");
+    if (!email || !person) throw new Error("デモ認証情報が不正です。");
     const existing = await db
       .select({ id: identity.user.id })
       .from(identity.user)
@@ -132,7 +129,10 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
       .get();
     const user =
       existing ??
-      (await auth.api.signUpEmail({ body: { email, password, name: person.name } })).user;
+      (await authContext.internalAdapter.createUser(
+        { email, name: person.name, emailVerified: true },
+        { method: "admin" },
+      ));
     owners.push(user.id);
   }
   const existingStaff = await db
@@ -150,11 +150,10 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
     const existingId = staffIds.get(person.email);
     const user =
       (existingId ? { id: existingId } : undefined) ??
-      (
-        await auth.api.signUpEmail({
-          body: { email: person.email, name: person.name, password: crypto.randomUUID() },
-        })
-      ).user;
+      (await authContext.internalAdapter.createUser(
+        { email: person.email, name: person.name, emailVerified: true },
+        { method: "admin" },
+      ));
     staffUpdates.push(
       db
         .update(identity.user)
@@ -282,23 +281,8 @@ async function populateSeedTemplate(
   )
     throw new Error("固定seedは標準デモの初回投入に限ります。");
   const db = createDatabase(env.TABLECAST_DB);
-  const auth = await createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined }, undefined, db)
-    .$context;
   const at = new Date(credentials.baseTime);
-  // 資格情報と時刻は成果物に保存せず、現行の認証設定で毎回生成する。
-  const users = await Promise.all(
-    staff.map(async (person) => ({
-      ...person,
-      id: `tablecast-seed-user-${person.email}`,
-      password: await auth.password.hash(
-        person.email === credentials.email
-          ? credentials.password
-          : person.email === credentials.otherEmail
-            ? credentials.otherPassword
-            : crypto.randomUUID(),
-      ),
-    })),
-  );
+  const users = staff.map((person) => ({ ...person, id: `tablecast-seed-user-${person.email}` }));
   // 画像の失敗時はDBを変更しない。内容アドレス付きの同じ画像は再利用できる。
   await seedMenuImages(
     env.TABLECAST_MEDIA,
@@ -329,18 +313,6 @@ async function populateSeedTemplate(
         name: person.name,
         emailVerified: true,
         image: images.get(person.imageFile),
-        createdAt: at,
-        updatedAt: at,
-      })),
-    ),
-    db.insert(identity.account).values(
-      users.map((person) => ({
-        id: `tablecast-seed-credential-${person.id}`,
-        userId: person.id,
-        accountId: person.id,
-        providerId: "credential",
-        issuer: tablecastCredentialIssuer,
-        password: person.password,
         createdAt: at,
         updatedAt: at,
       })),

@@ -1,5 +1,5 @@
 import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 import { apiSdkConfiguration } from "../apps/api/cloudflare.config.ts";
 import { webCloudflareConfig } from "../apps/web/cloudflare.config.ts";
@@ -10,6 +10,7 @@ import {
   deploymentTarget,
   optionsSchema,
 } from "./tablecast-deploy-config.ts";
+import { workerConfigurationDiff } from "./tablecast-infra-diff.ts";
 
 function deploymentConfigs(...args: Parameters<typeof deploymentOptions>) {
   const options = deploymentOptions(...args);
@@ -34,9 +35,73 @@ const input = {
   CF_ACCESS_CLIENT_ID: "tablecast-access-id",
   CF_ACCESS_CLIENT_SECRET: "tablecast-access-secret",
 };
+beforeEach(() => vi.stubEnv("TABLECAST_EMAIL_FROM", "tablecast@example.test"));
 afterEach(() => vi.unstubAllEnvs());
 
 describe("本番とPRの配備境界", () => {
+  test.each([undefined, "", "kit-codex.workers.dev"])(
+    "本番の送信元が未設定または不正な%sなら資源変更前に拒否する",
+    (value) => {
+      vi.stubEnv("TABLECAST_EMAIL_FROM", value);
+      expect(() =>
+        deploymentOptions(
+          deploymentTarget(),
+          "a".repeat(40),
+          "11111111-1111-4111-8111-111111111111",
+        ),
+      ).toThrow("TABLECAST_EMAIL_FROM");
+    },
+  );
+
+  test("配備入力の送信元をWorkerと公式send_email bindingの同じ制限へ渡す", () => {
+    const config = deploymentConfigs(
+      deploymentTarget(),
+      "a".repeat(40),
+      "11111111-1111-4111-8111-111111111111",
+    );
+    expect(config.api.vars.TABLECAST_EMAIL_FROM).toBe("tablecast@example.test");
+    expect(config.api.send_email).toEqual([
+      { name: "TABLECAST_EMAIL", allowed_sender_addresses: ["tablecast@example.test"] },
+    ]);
+    expect(config.web.vars).not.toHaveProperty("TABLECAST_EMAIL_FROM");
+  });
+
+  test("送信元の制限だけが変わったbindingもIaCの更新対象にする", () => {
+    const configured = {
+      send_email: [
+        { name: "TABLECAST_EMAIL", allowed_sender_addresses: ["tablecast@example.test"] },
+      ],
+    };
+    const actual = {
+      placement: {},
+      bindings: [
+        {
+          name: "TABLECAST_EMAIL",
+          type: "send_email",
+          allowed_sender_addresses: ["other@example.test"],
+        },
+      ],
+    };
+    expect(workerConfigurationDiff(configured, actual, { schedules: [] })).toEqual([
+      "bindings.TABLECAST_EMAIL",
+    ]);
+    expect(
+      workerConfigurationDiff(
+        configured,
+        {
+          ...actual,
+          bindings: [
+            {
+              name: "TABLECAST_EMAIL",
+              type: "send_email",
+              allowed_sender_addresses: ["tablecast@example.test"],
+            },
+          ],
+        },
+        { schedules: [] },
+      ),
+    ).toEqual([]);
+  });
   test.each([undefined, ""])("課金設定が未設定または空文字%sなら両機能を無効にする", (value) => {
     vi.stubEnv("TABLECAST_BILLING_CONFIG", value);
     const target = deploymentTarget("338");

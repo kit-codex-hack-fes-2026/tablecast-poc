@@ -6,7 +6,7 @@ import { sessionOptions } from "../lib/session-query";
 export const Route = createFileRoute("/member")({
   staticData: { document: { title: "customer_title", description: "head_customer_description" } },
   beforeLoad: async ({ context, location }) => {
-    const session = await context.queryClient.fetchQuery(sessionOptions);
+    const session = await context.queryClient.ensureQueryData(sessionOptions);
     const previousOwner = context.queryClient.getQueryData<string>(["tablecast-customer-owner"]);
     if (previousOwner !== session?.user.id) {
       context.queryClient.removeQueries({ queryKey: ["tablecast-customer"] });

@@ -144,9 +144,11 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 
 ## メールカタログの検証
 
-既存APIのReact Emailテンプレートから、一覧と招待・メール確認・パスワード再設定の静的HTMLを生成する。`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`cd apps/api`の後に`bun ../web/node_modules/.bin/vite preview --outDir email-static --port 6007`で静的HTMLを確認し、終了時はViteを停止する。
+`bun --no-env-file run build:email`で、React Email公式CLIの`email build --dir .local/tablecast-email`からプレビューアプリを`apps/api/.react-email`へ生成する。OpenNextでCloudflare用のstandalone buildとStatic Assetsの読取専用キャッシュへ変換する。`bun --no-env-file run --cwd apps/api preview:email --port 6007`でローカルのWorkers runtimeを確認し、終了時はCtrl+CでWranglerと子workerdを停止する。使用中のportは別の番号にする。
 
-生成HTMLは編集せず、レイアウト・日英文言はAPIのメール実装、架空データと一覧は`apps/api/scripts/tablecast-email-build.ts`を変更する。編集・診断・送信機能は持たない。追加の依存導入やDev ContainerのRebuildは不要。
+公式のサイドバーから39例を切り替え、`/preview/invitation-ja`、`/preview/invitation-en`、`/preview/invitation`（日英併記）などを直接開く。表示・コード・画面幅の切替を公式UIで確認する。レイアウト・日英文言は`apps/api/src/emails`、固定の架空データは`apps/api/scripts/tablecast-email-preview.ts`を変更する。CLI入力とWebの正本画像はGit管理外の`.local/tablecast-email`へ一時生成する。生成アプリ・依存packageのソースは編集しない。
+
+`apps/api/scripts/tablecast-email-cloudflare.ts`は生成アプリのNext設定にtracing rootを設定し、OpenNextのpackage rootと揃える。リポジトリの`.env.local`をカタログWorkerへ取り込まない。架空データだけをbuildし、Resend等の送信キーは渡さない。公式CLI自身が生成アプリの依存をnpmで導入するため、初回buildにはネットワーク接続が必要である。新しい依存はrootで`bun install --frozen-lockfile`を実行して導入する。
 
 ## 統合先とrelease
 

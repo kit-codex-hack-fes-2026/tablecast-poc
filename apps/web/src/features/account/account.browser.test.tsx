@@ -76,7 +76,7 @@ async function show(
     if (handled) return handled;
     const path = new URL(request.url).pathname;
     if (path === "/api/auth/organization/get-full-organization") return Response.json(null);
-    if (path === "/api/auth/get-session") return Response.json(session);
+    if (path === "/api/account/auth-state") return Response.json(session);
     if (
       [
         "/api/auth/list-sessions",
@@ -168,7 +168,7 @@ it("名前を保存中は入力を止め、保存後の背景取得が失敗し�
         saved = true;
         return Response.json({ status: true });
       }
-      if (path === "/api/auth/get-session" && saved)
+      if (path === "/api/account/auth-state" && saved)
         return Response.json({ ...session, user: { ...session.user, name: "保存する名前" } });
       if (path === "/api/auth/list-sessions" && saved) {
         refetchReached.resolve();
@@ -200,7 +200,7 @@ it("名前を保存中は入力を止め、保存後の背景取得が失敗し�
     await expect.element(name).toBeEnabled();
     await expect.element(name).toHaveValue("入力途中の名前");
     expect(payloads).toEqual([{ name: "保存する名前" }]);
-    expect(requests.filter((path) => path === "/api/auth/get-session")).toHaveLength(1);
+    expect(requests.filter((path) => path === "/api/account/auth-state")).toHaveLength(1);
     expect(
       requests.filter((path) => path === "/api/admin/initial" || path === "/api/admin/stores"),
     ).toEqual([]);

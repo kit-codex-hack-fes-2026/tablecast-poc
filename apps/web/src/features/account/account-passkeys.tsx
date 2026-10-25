@@ -1,4 +1,4 @@
-import { CalendarDays, KeyRound, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, Fingerprint, Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import { z } from "zod";
 import type { AccountController, Passkey } from "./account-state";
@@ -30,10 +30,14 @@ export function AccountPasskeys({ controller }: { controller: AccountController 
   });
   return (
     <section id="account-passkeys" aria-labelledby="account-passkeys-title" className={section}>
-      <h2 id="account-passkeys-title" className="flex items-center gap-2 text-lg font-semibold">
-        <KeyRound />
-        {t("account_passkeys")}
-      </h2>
+      <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-3">
+        <Fingerprint className="size-12 text-primary" aria-hidden="true" />
+        <h2 id="account-passkeys-title" className="flex items-center gap-2 text-lg font-semibold">
+          <Fingerprint />
+          {t("account_passkeys")}
+        </h2>
+        <p className="text-sm text-muted-foreground">{t("auth_passkey_description")}</p>
+      </div>
       <DataTable
         {...collection}
         searchLabel={t("account_passkeys_search")}
@@ -79,11 +83,11 @@ function passkeyColumns(
     {
       id: "name",
       accessorFn: (row) => row.name || t("account_passkeys"),
-      meta: { icon: KeyRound },
+      meta: { icon: Fingerprint },
       header: t("account_key_name"),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <KeyRound />
+          <Fingerprint />
           {row.original.name || t("account_passkeys")}
         </div>
       ),
