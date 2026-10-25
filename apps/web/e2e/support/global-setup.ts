@@ -59,7 +59,7 @@ export default async function setup() {
       TABLECAST_GOOGLE_EMULATOR_URL: `${runtime.origin}/_tablecast/oauth`,
       TABLECAST_GOOGLE_AUTHORIZE_URL: `${runtime.origin}/_tablecast/oauth`,
       TABLECAST_MAILPIT_URL: `${runtime.origin}/_tablecast/mailpit`,
-      TABLECAST_EMAIL_FROM: "TableCast <tablecast@example.test>",
+      TABLECAST_EMAIL_FROM: "tablecast@example.test",
     };
     const options = {
       api: {

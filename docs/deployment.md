@@ -100,7 +100,7 @@ buildは検証済みJSONを`apps/web/.cloudflare/output/tablecast-seed.json`へ�
 
 ### 本番bootstrap
 
-正本の`apps/api/cloudflare.config.ts`を`--env production`で解決する。bootstrapは`scripts/tablecast-deploy-config.ts`の採用済み実D1 IDから公開入力を生成する。`TABLECAST_RELEASE_SHA`には確認対象のHEADを指定し、build前の検証用UUIDや別の手編集configを使わない。
+正本の`apps/api/cloudflare.config.ts`を`--env production`で解決する。bootstrapは`scripts/tablecast-deploy-config.ts`の採用済み実D1 IDから公開入力を生成する。`TABLECAST_RELEASE_SHA`には確認対象のHEAD、`TABLECAST_EMAIL_FROM`には配備と同じ確認済み送信元を実行環境で指定する。build前の検証用UUIDや別の手編集configを使わない。
 
 初回の管理者・組織・店舗・卓・公開カタログは、migration適用後に管理CLI `db:bootstrap` で作る。Better AuthのサーバーAPIを使い、公開HTTPへ管理用の認証回避経路は追加しない。開発seedは公開環境で使えないままにする。
 

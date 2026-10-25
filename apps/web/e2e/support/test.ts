@@ -335,7 +335,7 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
           TABLECAST_GOOGLE_EMULATOR_URL: oauth.url,
           TABLECAST_GOOGLE_AUTHORIZE_URL: oauth.url,
           TABLECAST_MAILPIT_URL: mailpitUrl,
-          TABLECAST_EMAIL_FROM: "TableCast <tablecast@example.test>",
+          TABLECAST_EMAIL_FROM: "tablecast@example.test",
         };
         const built = await readBuildOutput(join(template.directory, "build"));
         await cp(
