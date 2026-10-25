@@ -51,3 +51,7 @@ validate_draft → get_draft_diffで検証・差分を確認し、店舗・変�
 接客指示が文書形式なら構造を保持し、update_draftへinstructionFormatVersion: 1を添える。本文だけの変更で書式を落とさず、実際の入力schemaに従う。
 
 公開は別段階である。明示の公開申請依頼があればrequest_publicationのreviewUrlを案内し、人が管理画面で承認する。get_configurationで公開結果を確認するまでは公開済みと言わない。
+
+## 使い方を確認する
+
+接続・権限・設定の説明が必要なら、接続先originの`/llms.txt`から必要なヘルプ章だけ取得する。人向けの公開入口は`/help`、日英のページ単位Markdownは索引から辿れる。plugin同梱の`tablecast-help` skillでも同じ本文を参照できる。

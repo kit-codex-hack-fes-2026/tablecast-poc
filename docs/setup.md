@@ -363,3 +363,7 @@ root・APIの`drizzle-orm`とAPIの`drizzle-kit`は`1.0.0-rc.5`へ固定する�
 ## パスワードレス認証への移行
 
 0028 migrationはパスワードハッシュを消去し、認証の制限記録とパスキー登録状態を追加する。続けて0029を適用し、旧0028の最後のパスキー保護を解除する。デモseedはパスワードを作成しない。Google emulatorかMailpitのマジックリンクでログイン後、パスキー登録は任意で案内する。One Tapの実Google設定と公開前のメール送信確認は[認証仕様](authentication.md#パスワードレス認証と任意のパスキー)に従う。
+
+### 公開ヘルプの依存
+
+Web内のFumadocsは`fumadocs-core`・`fumadocs-ui` 16.17.8と`fumadocs-mdx` 15.4.10、型定義`@types/mdx` 2.0.13を使う。通常の`bun install --frozen-lockfile`で導入でき、追加のenv・サービス・workspaceは不要。Vite pluginが`.agents/skills/tablecast-help/references`のMarkdownをビルド時に処理する。`bun run dev`で`/help`、`/llms.txt`、`/help/content/ja/mcp.md`を認証せず確認できる。原稿の追加・リンク規約は[Codexプラグイン](codex-plugin.md#公開ヘルプ)を参照する。

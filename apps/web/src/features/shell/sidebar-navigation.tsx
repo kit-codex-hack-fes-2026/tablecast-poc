@@ -4,6 +4,7 @@ import {
   BookOpen,
   Building2,
   ChartNoAxesCombined,
+  CircleHelp,
   CreditCard,
   Gamepad2,
   Gift,
@@ -11,6 +12,7 @@ import {
   House,
   KeyRound,
   LayoutDashboard,
+  LifeBuoy,
   MonitorSmartphone,
   Plug,
   Store,
@@ -43,7 +45,7 @@ export function SidebarNavigation({
   selectedStore?: string;
   userId?: string;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const common = { collapsed, userId };
   const layoutId = useId();
   return (
@@ -199,6 +201,28 @@ export function SidebarNavigation({
           userId={userId}
           onNavigate={onNavigate}
         />
+        <NavigationGroup {...common} id="help" label={t("help_title")} icon={LifeBuoy}>
+          {(
+            [
+              { slug: "", label: "help_overview", Icon: BookOpen },
+              { slug: "mcp", label: "help_mcp", Icon: Plug },
+              { slug: "troubleshooting", label: "help_troubleshooting", Icon: CircleHelp },
+            ] as const
+          ).map(({ slug, label, Icon }) => (
+            <Link
+              key={slug}
+              collapsed={collapsed}
+              to="/help/$lang/$"
+              params={{ lang: locale, _splat: slug }}
+              className={navigationItemClass}
+              title={t(label)}
+              onClick={onNavigate}
+            >
+              <Icon className="size-4" />
+              {!collapsed && t(label)}
+            </Link>
+          ))}
+        </NavigationGroup>
       </m.nav>
     </LayoutGroup>
   );

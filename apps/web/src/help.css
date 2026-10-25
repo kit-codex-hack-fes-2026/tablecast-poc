@@ -1,0 +1,11 @@
+@import "tailwindcss" source(none);
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+@source "./features/help";
+
+@theme {
+  --color-fd-primary: var(--green-11);
+  --color-fd-primary-foreground: var(--gray-1);
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+}

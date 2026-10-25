@@ -1444,5 +1444,10 @@
   "currency_loading": "レートを取得中",
   "currency_unavailable": "参考レートを取得できません",
   "auth_passkey_title": "パスキーでかんたんログイン",
-  "auth_passkey_later": "あとで設定"
+  "auth_passkey_later": "あとで設定",
+  "help_title": "ヘルプ",
+  "help_overview": "使い方ガイド",
+  "help_mcp": "MCP・agentガイド",
+  "help_troubleshooting": "困ったとき",
+  "head_help_description": "TableCastの店舗準備、メニュー・接客の設定、MCP接続と困ったときの公開ヘルプ。"
 }

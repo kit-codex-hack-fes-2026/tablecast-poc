@@ -13,6 +13,7 @@ const groupStyle = tv({
   base: "min-w-0",
   variants: {
     tone: {
+      help: "[--nav-color:var(--color-nav-help)] [--nav-surface:var(--color-nav-help-soft)]",
       operations:
         "[--nav-color:var(--color-nav-operations)] [--nav-surface:var(--color-nav-operations-soft)]",
       menu: "[--nav-color:var(--color-nav-menu)] [--nav-surface:var(--color-nav-menu-soft)]",

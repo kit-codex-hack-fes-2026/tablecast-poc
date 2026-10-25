@@ -4,11 +4,13 @@ import { parseEnv } from "node:util";
 import { assertPrepared, tablecastLocal, tablecastRoot } from "./tablecast-runtime.ts";
 
 const syncOnly = process.argv.includes("--skills-only");
-await cp(
-  join(tablecastRoot, ".agents/skills/tablecast-theme"),
-  join(tablecastRoot, "plugins/tablecast/skills/tablecast-theme"),
-  { recursive: true },
-);
+for (const skill of ["tablecast-theme", "tablecast-help"]) {
+  await cp(
+    join(tablecastRoot, ".agents/skills", skill),
+    join(tablecastRoot, "plugins/tablecast/skills", skill),
+    { recursive: true },
+  );
+}
 const published = syncOnly ? undefined : process.argv[2];
 if (syncOnly) process.exit(0);
 if (!published) await assertPrepared();

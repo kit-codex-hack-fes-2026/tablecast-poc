@@ -5,6 +5,7 @@ import { createApi, createContext, main as serwist } from "@serwist/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
+import { fumadocsMdx } from "fumadocs-mdx/vite";
 import { resolve } from "node:path";
 import process from "node:process";
 import { defineConfig } from "vite";
@@ -64,6 +65,7 @@ export default defineConfig(async ({ command, mode, isPreview }) => {
     cacheDir: tablecastEnv.TABLECAST_VITE_CACHE_DIR,
     resolve: { dedupe: ["react", "react-dom"] },
     plugins: [
+      fumadocsMdx({ index: false }),
       tailwindcss(),
       cloudflare({
         types: { includeRuntime: false },

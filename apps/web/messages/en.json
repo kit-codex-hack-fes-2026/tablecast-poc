@@ -1444,5 +1444,10 @@
   "currency_loading": "Loading rates",
   "currency_unavailable": "Reference rate unavailable",
   "auth_passkey_title": "Sign in more easily with a passkey",
-  "auth_passkey_later": "Maybe later"
+  "auth_passkey_later": "Maybe later",
+  "help_title": "Help",
+  "help_overview": "User guide",
+  "help_mcp": "MCP & agent guide",
+  "help_troubleshooting": "Troubleshooting",
+  "head_help_description": "Public help for setting up TableCast, configuring menus and service, connecting MCP agents and resolving issues."
 }

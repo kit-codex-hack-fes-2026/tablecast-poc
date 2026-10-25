@@ -9,6 +9,7 @@ const owners = [
   "devices",
   "floor",
   "games",
+  "help",
   "kiosk",
   "rewards",
   "shell",

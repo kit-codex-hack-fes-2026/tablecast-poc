@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as ConsentRouteImport } from './routes/consent'
 import { Route as DeviceRouteImport } from './routes/device'
+import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MemberRouteImport } from './routes/member'
 import { Route as OrganisationsRouteImport } from './routes/organisations'
@@ -22,6 +24,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AccountMcpSessionsRouteImport } from './routes/account_.mcp-sessions'
 import { Route as AdminLiveRouteImport } from './routes/admin.live'
 import { Route as BillingOrganizationIdRouteImport } from './routes/billing.$organizationId'
+import { Route as HelpIndexRouteImport } from './routes/help.index'
 import { Route as InvitationsInvitationIdRouteImport } from './routes/invitations.$invitationId'
 import { Route as MemberIndexRouteImport } from './routes/member.index'
 import { Route as MemberStoreIdRouteImport } from './routes/member.$storeId'
@@ -30,6 +33,8 @@ import { Route as StoresNewRouteImport } from './routes/stores.new'
 import { Route as AccountIntegrationsManualRouteImport } from './routes/account_.integrations.manual'
 import { Route as AccountIntegrationsPluginsRouteImport } from './routes/account_.integrations.plugins'
 import { Route as AdminStoresStoreIdRouteImport } from './routes/admin.stores.$storeId'
+import { Route as HelpLangSplatRouteImport } from './routes/help.$lang.$'
+import { Route as HelpContentSplatRouteImport } from './routes/help.content.$'
 import { Route as MemberStoreIdIndexRouteImport } from './routes/member.$storeId.index'
 import { Route as MemberStoreIdConsumptionRouteImport } from './routes/member.$storeId.consumption'
 import { Route as MemberStoreIdCouponsRouteImport } from './routes/member.$storeId.coupons'
@@ -82,6 +87,16 @@ const DeviceRoute = DeviceRouteImport.update({
   path: '/device',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LlmsFullDottxtRoute = LlmsFullDottxtRouteImport.update({
+  id: '/llms-full.txt',
+  path: '/llms-full.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -127,6 +142,11 @@ const BillingOrganizationIdRoute = BillingOrganizationIdRouteImport.update({
   path: '/billing/$organizationId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HelpIndexRoute = HelpIndexRouteImport.update({
+  id: '/help/',
+  path: '/help/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InvitationsInvitationIdRoute = InvitationsInvitationIdRouteImport.update({
   id: '/invitations/$invitationId',
   path: '/invitations/$invitationId',
@@ -167,6 +187,16 @@ const AccountIntegrationsPluginsRoute =
 const AdminStoresStoreIdRoute = AdminStoresStoreIdRouteImport.update({
   id: '/admin/stores/$storeId',
   path: '/admin/stores/$storeId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpLangSplatRoute = HelpLangSplatRouteImport.update({
+  id: '/help/$lang/$',
+  path: '/help/$lang/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpContentSplatRoute = HelpContentSplatRouteImport.update({
+  id: '/help/content/$',
+  path: '/help/content/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MemberStoreIdIndexRoute = MemberStoreIdIndexRouteImport.update({
@@ -353,6 +383,8 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/consent': typeof ConsentRoute
   '/device': typeof DeviceRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/member': typeof MemberRouteWithChildren
   '/organisations': typeof OrganisationsRoute
@@ -366,10 +398,13 @@ export interface FileRoutesByFullPath {
   '/member/$storeId': typeof MemberStoreIdRouteWithChildren
   '/member/join': typeof MemberJoinRoute
   '/stores/new': typeof StoresNewRoute
+  '/help/': typeof HelpIndexRoute
   '/member/': typeof MemberIndexRoute
   '/account/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
+  '/help/$lang/$': typeof HelpLangSplatRoute
+  '/help/content/$': typeof HelpContentSplatRoute
   '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
   '/member/$storeId/coupons': typeof MemberStoreIdCouponsRoute
   '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
@@ -407,6 +442,8 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRoute
   '/consent': typeof ConsentRoute
   '/device': typeof DeviceRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/organisations': typeof OrganisationsRoute
   '/passkey-setup': typeof PasskeySetupRoute
@@ -418,9 +455,12 @@ export interface FileRoutesByTo {
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
   '/member/join': typeof MemberJoinRoute
   '/stores/new': typeof StoresNewRoute
+  '/help': typeof HelpIndexRoute
   '/member': typeof MemberIndexRoute
   '/account/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
+  '/help/$lang/$': typeof HelpLangSplatRoute
+  '/help/content/$': typeof HelpContentSplatRoute
   '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
   '/member/$storeId/coupons': typeof MemberStoreIdCouponsRoute
   '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
@@ -459,6 +499,8 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/consent': typeof ConsentRoute
   '/device': typeof DeviceRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/member': typeof MemberRouteWithChildren
   '/organisations': typeof OrganisationsRoute
@@ -472,10 +514,13 @@ export interface FileRoutesById {
   '/member/$storeId': typeof MemberStoreIdRouteWithChildren
   '/member/join': typeof MemberJoinRoute
   '/stores/new': typeof StoresNewRoute
+  '/help/': typeof HelpIndexRoute
   '/member/': typeof MemberIndexRoute
   '/account_/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account_/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
+  '/help/$lang/$': typeof HelpLangSplatRoute
+  '/help/content/$': typeof HelpContentSplatRoute
   '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
   '/member/$storeId/coupons': typeof MemberStoreIdCouponsRoute
   '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
@@ -515,6 +560,8 @@ export interface FileRouteTypes {
     | '/account'
     | '/consent'
     | '/device'
+    | '/llms-full.txt'
+    | '/llms.txt'
     | '/login'
     | '/member'
     | '/organisations'
@@ -528,10 +575,13 @@ export interface FileRouteTypes {
     | '/member/$storeId'
     | '/member/join'
     | '/stores/new'
+    | '/help/'
     | '/member/'
     | '/account/integrations/manual'
     | '/account/integrations/plugins'
     | '/admin/stores/$storeId'
+    | '/help/$lang/$'
+    | '/help/content/$'
     | '/member/$storeId/consumption'
     | '/member/$storeId/coupons'
     | '/member/$storeId/memories'
@@ -569,6 +619,8 @@ export interface FileRouteTypes {
     | '/account'
     | '/consent'
     | '/device'
+    | '/llms-full.txt'
+    | '/llms.txt'
     | '/login'
     | '/organisations'
     | '/passkey-setup'
@@ -580,9 +632,12 @@ export interface FileRouteTypes {
     | '/invitations/$invitationId'
     | '/member/join'
     | '/stores/new'
+    | '/help'
     | '/member'
     | '/account/integrations/manual'
     | '/account/integrations/plugins'
+    | '/help/$lang/$'
+    | '/help/content/$'
     | '/member/$storeId/consumption'
     | '/member/$storeId/coupons'
     | '/member/$storeId/memories'
@@ -620,6 +675,8 @@ export interface FileRouteTypes {
     | '/account'
     | '/consent'
     | '/device'
+    | '/llms-full.txt'
+    | '/llms.txt'
     | '/login'
     | '/member'
     | '/organisations'
@@ -633,10 +690,13 @@ export interface FileRouteTypes {
     | '/member/$storeId'
     | '/member/join'
     | '/stores/new'
+    | '/help/'
     | '/member/'
     | '/account_/integrations/manual'
     | '/account_/integrations/plugins'
     | '/admin/stores/$storeId'
+    | '/help/$lang/$'
+    | '/help/content/$'
     | '/member/$storeId/consumption'
     | '/member/$storeId/coupons'
     | '/member/$storeId/memories'
@@ -675,6 +735,8 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   ConsentRoute: typeof ConsentRoute
   DeviceRoute: typeof DeviceRoute
+  LlmsFullDottxtRoute: typeof LlmsFullDottxtRoute
+  LlmsDottxtRoute: typeof LlmsDottxtRoute
   LoginRoute: typeof LoginRoute
   MemberRoute: typeof MemberRouteWithChildren
   OrganisationsRoute: typeof OrganisationsRoute
@@ -686,9 +748,12 @@ export interface RootRouteChildren {
   BillingOrganizationIdRoute: typeof BillingOrganizationIdRoute
   InvitationsInvitationIdRoute: typeof InvitationsInvitationIdRoute
   StoresNewRoute: typeof StoresNewRoute
+  HelpIndexRoute: typeof HelpIndexRoute
   AccountIntegrationsManualRoute: typeof AccountIntegrationsManualRoute
   AccountIntegrationsPluginsRoute: typeof AccountIntegrationsPluginsRoute
   AdminStoresStoreIdRoute: typeof AdminStoresStoreIdRouteWithChildren
+  HelpLangSplatRoute: typeof HelpLangSplatRoute
+  HelpContentSplatRoute: typeof HelpContentSplatRoute
   AdminStoresStoreIdDemoRoute: typeof AdminStoresStoreIdDemoRoute
   AdminStoresStoreIdDemoDemoIdRoute: typeof AdminStoresStoreIdDemoDemoIdRoute
 }
@@ -721,6 +786,20 @@ declare module '@tanstack/react-router' {
       path: '/device'
       fullPath: '/device'
       preLoaderRoute: typeof DeviceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms-full.txt': {
+      id: '/llms-full.txt'
+      path: '/llms-full.txt'
+      fullPath: '/llms-full.txt'
+      preLoaderRoute: typeof LlmsFullDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -786,6 +865,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BillingOrganizationIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/help/': {
+      id: '/help/'
+      path: '/help'
+      fullPath: '/help/'
+      preLoaderRoute: typeof HelpIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/invitations/$invitationId': {
       id: '/invitations/$invitationId'
       path: '/invitations/$invitationId'
@@ -840,6 +926,20 @@ declare module '@tanstack/react-router' {
       path: '/admin/stores/$storeId'
       fullPath: '/admin/stores/$storeId'
       preLoaderRoute: typeof AdminStoresStoreIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help/$lang/$': {
+      id: '/help/$lang/$'
+      path: '/help/$lang/$'
+      fullPath: '/help/$lang/$'
+      preLoaderRoute: typeof HelpLangSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help/content/$': {
+      id: '/help/content/$'
+      path: '/help/content/$'
+      fullPath: '/help/content/$'
+      preLoaderRoute: typeof HelpContentSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/member/$storeId/': {
@@ -1167,6 +1267,8 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   ConsentRoute: ConsentRoute,
   DeviceRoute: DeviceRoute,
+  LlmsFullDottxtRoute: LlmsFullDottxtRoute,
+  LlmsDottxtRoute: LlmsDottxtRoute,
   LoginRoute: LoginRoute,
   MemberRoute: MemberRouteWithChildren,
   OrganisationsRoute: OrganisationsRoute,
@@ -1178,9 +1280,12 @@ const rootRouteChildren: RootRouteChildren = {
   BillingOrganizationIdRoute: BillingOrganizationIdRoute,
   InvitationsInvitationIdRoute: InvitationsInvitationIdRoute,
   StoresNewRoute: StoresNewRoute,
+  HelpIndexRoute: HelpIndexRoute,
   AccountIntegrationsManualRoute: AccountIntegrationsManualRoute,
   AccountIntegrationsPluginsRoute: AccountIntegrationsPluginsRoute,
   AdminStoresStoreIdRoute: AdminStoresStoreIdRouteWithChildren,
+  HelpLangSplatRoute: HelpLangSplatRoute,
+  HelpContentSplatRoute: HelpContentSplatRoute,
   AdminStoresStoreIdDemoRoute: AdminStoresStoreIdDemoRoute,
   AdminStoresStoreIdDemoDemoIdRoute: AdminStoresStoreIdDemoDemoIdRoute,
 }

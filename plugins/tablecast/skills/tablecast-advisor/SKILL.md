@@ -41,3 +41,7 @@ TableCastのtoolを探索し、get_configurationで対象店舗・公開版・�
 接客指示が文書形式なら構造を保持し、update_draftへinstructionFormatVersion: 1を添える。本文だけの変更で書式を落とさず、実際の入力schemaに従う。
 
 画像の新規取込が必要ならupload_imageの実際の入力schemaを確認し、提供・生成された実ファイルだけを渡す。出所を記録し、生成画像はillustrationとする。画像を渡せない場合も、他の採用済み設定を保存して画像が未完了と明示する。
+
+## 使い方を確認する
+
+接続・権限・設定の説明が必要なら、接続先originの`/llms.txt`から必要なヘルプ章だけ取得する。人向けの公開入口は`/help`、日英のページ単位Markdownは索引から辿れる。plugin同梱の`tablecast-help` skillでも同じ本文を参照できる。

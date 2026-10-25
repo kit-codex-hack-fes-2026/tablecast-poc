@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   Blocks,
   Download,
@@ -65,11 +66,18 @@ export function IntegrationSetup({
   connection?: ReturnType<typeof integrationConnection>;
   mode: "manual" | "plugins";
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { endpoint, name, staging } = connection;
   return (
     <IntegrationsShell publicGuide>
       {staging && <p>{t("mcp_staging_connection")}</p>}
+      <Link
+        to="/help/$lang/$"
+        params={{ lang: locale, _splat: "mcp" }}
+        className="inline-flex min-h-11 items-center gap-2 text-nav-help underline underline-offset-4"
+      >
+        {t("help_mcp")}
+      </Link>
       {mode === "plugins" ? (
         <>
           <Guide

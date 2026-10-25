@@ -411,3 +411,7 @@ cf設定・IaCの試験はmode解決、秘密値の宣言、Build Outputの別�
 Webの`billing-page.browser.test.tsx`と隣接Storyは、日本語でrole・無料GUIと有料AIの区別・申込み/解約の入口・解約予約・失敗再試行・組織切替の遅い応答・縦横・狭幅・長文・keyboard/focusを確認する。通常時のAI準備完了通知と無料プランの管理者向けAI設定通知がなく、準備中・準備失敗では音声利用不可とGUI継続を説明することも確認する。日英の翻訳・日時・通貨の保証と英語Storyの扱いは、前述の共通戦略に従う。
 
 `billing-usage-chart.browser.test.tsx`は日別のキーボード操作・数値表・料金の権限・ゼロと負数調整を確認する。`billing-overview.test.ts`は実D1/HTTPで現在の契約期間とUTC暦月集計の分離・期間境界・完全なUTC日別系列・memberの金融情報非漏出を確認する。`tablecast-billing.spec.ts`は実Web/API/D1、Google emulatorのmemberログイン、JSなしSSRと匿名分離を確認する。実Service Account発行とStripe SandboxのCheckout/Meters/請求書/Portalは [課金の接続確認](billing.md#外部接続の確認) として別に行う。
+
+### 公開ヘルプの確認
+
+`tablecast-help.spec.ts`は実Web/APIへ接続し、未認証のHTML・日英切替・相対リンク・Markdown・LLM索引と、管理画面・MCP・業務APIの認証境界を確認する。本文の配信とリンクの解決はビルド後の成果物で確認し、原稿の文言を固定するunitテストは追加しない。サイドバーのグループ開閉は既存のBrowser統合、画面の証拠はこの代表E2Eで扱う。
