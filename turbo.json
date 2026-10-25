@@ -148,7 +148,13 @@
         "$TURBO_ROOT$/assets/demo/identities/haruka-sato.webp",
         "$TURBO_ROOT$/docs/design/themes/gomen/logo.png"
       ],
-      "outputs": ["email-static/**"]
+      "outputs": [
+        ".react-email/.open-next/**",
+        ".react-email/.next/prerender-manifest.json",
+        ".local/tablecast-email.wrangler.json"
+      ],
+      "env": ["TABLECAST_PR_NUMBER"],
+      "cache": false
     },
     "cf:build": {
       "inputs": [

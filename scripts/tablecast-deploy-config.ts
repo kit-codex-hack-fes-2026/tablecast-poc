@@ -32,6 +32,12 @@ function billingDeploymentVars(environment: string) {
   );
 }
 
+function emailDeploymentFrom(environment: string) {
+  const from = process.env.TABLECAST_EMAIL_FROM;
+  if (!from && environment !== "production") return "";
+  return z.email({ error: "TABLECAST_EMAIL_FROMに確認済み送信元を設定してください。" }).parse(from);
+}
+
 export const tablecastCompatibilityDate = "2026-09-03";
 
 export const optionsSchema = z.object({
@@ -244,6 +250,7 @@ export function deploymentOptions(
       target.emulate ? [`${target.api}-tablecastemulate`] : [],
     ),
     TABLECAST_PUBLIC_ORIGIN: target.origin,
+    TABLECAST_EMAIL_FROM: emailDeploymentFrom(target.environment),
     TABLECAST_VOICE_ENABLED: "true",
     ...(target.emulate
       ? {
@@ -351,6 +358,14 @@ export function deploymentBuildOutput(output: BuildOutput, target: DeploymentTar
       TABLECAST_PR_NUMBER: z.object({ type: z.literal("text"), value: z.literal(target.pr ?? "") }),
     }).parse(worker.config.env);
     if (name === target.api) {
+      const from = emailDeploymentFrom(target.environment);
+      z.object({
+        TABLECAST_EMAIL_FROM: z.object({ type: z.literal("text"), value: z.literal(from) }),
+        TABLECAST_EMAIL: z.object({
+          type: z.literal("send-email"),
+          allowedSenderAddresses: from ? z.tuple([z.literal(from)]) : z.undefined().optional(),
+        }),
+      }).parse(worker.config.env);
       for (const key of tablecastBillingVars) {
         const expected =
           billingDeploymentVars(target.environment)[key] ??

@@ -71,7 +71,7 @@ const samples = {
     ),
 };
 
-// 公式CLIはファイルごとに書き出すため、架空データを渡す入口だけを一時生成する。
+// 公式CLIが読み込む、架空データを渡す入口だけを生成する。
 const directory = resolve(import.meta.dirname, "../.local/tablecast-email");
 await rm(directory, { recursive: true, force: true });
 await mkdir(resolve(directory, "static"), { recursive: true });

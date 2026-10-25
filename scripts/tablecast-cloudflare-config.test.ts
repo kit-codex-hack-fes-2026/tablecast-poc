@@ -10,7 +10,7 @@ import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { apiCloudflareConfig } from "../apps/api/cloudflare.config.ts";
 import { webCloudflareConfig } from "../apps/web/cloudflare.config.ts";
 import { cleanBuild } from "./tablecast-clean-build.ts";
@@ -26,6 +26,9 @@ import {
 } from "./tablecast-deploy-config.ts";
 import { reconcileAccess } from "./tablecast-infra-access.ts";
 import { assertWorkerOwner } from "./tablecast-infra-diff.ts";
+
+beforeEach(() => vi.stubEnv("TABLECAST_EMAIL_FROM", "tablecast@example.test"));
+afterEach(() => vi.unstubAllEnvs());
 
 describe("cfの環境解決と実資源の採用", () => {
   test.each(["preview", "staging", "production"])(

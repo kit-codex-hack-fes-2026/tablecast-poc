@@ -195,7 +195,7 @@ DBとの直列往復が多いAPI Workerに `placement.mode: smart` を設定す�
 
 ## PRのStorybook・メールカタログ
 
-同一repositoryのPRでは、要求されたカタログを`tablecast-storybook-pr-番号.kit-codex.workers.dev`と`tablecast-email-pr-番号.kit-codex.workers.dev`へWorkers Static Assetsで配信する。通常のPR更新では生成・再配備しない。メールはReact Email公式CLIの`email export`でAPIの既存レイアウトと全通知の日英文言を静的HTMLへ書き出す。架空の店舗名と`example.invalid`だけを使い、独自のHTML生成や一覧ページは追加しない。編集・診断・送信機能や実行Workerコードは追加しない。メールHTMLのCSPはスクリプト・外部接続・form送信を禁止する。
+同一repositoryのPRでは、要求されたカタログを`tablecast-storybook-pr-番号.kit-codex.workers.dev`と`tablecast-email-pr-番号.kit-codex.workers.dev`へ配信する。通常のPR更新では生成・再配備しない。StorybookはWorkers Static Assets、React Emailは公式`email build`が生成したNext.jsプレビューをOpenNextの標準WorkerとStatic Assetsへ変換して配信する。SSGの読取専用キャッシュを使い、R2・DB・Queueは追加しない。架空の店舗名と`example.invalid`だけを使い、独自renderer・一覧アプリを持たない。公式サイドバー・コード表示・端末幅切替とbuild時の診断を利用し、送信キーは渡さない。アプリのJSとRSCを配信するため、旧静的メール専用のscript禁止CSPは適用しない。
 
 PR通知の表内でStorybook・React Emailのビルド・デプロイをチェックすると、`catalog-preview.yml`が選択した種別だけを実行する。コメントコマンドは受け付けない。起動した利用者のwrite/admin権限、同一repositoryのopenな通常PR、最新head SHAを確認する。チェック操作はgithub-actionsの固定通知と対象SHAが一致する場合だけ受け付け、受付後に選択を戻す。古い通知からの要求は拒否する。
 
@@ -207,7 +207,9 @@ PR通知の表内でStorybook・React Emailのビルド・デプロイをチェ�
 
 既存の2つのAccess policyを参照する専用applicationを作り、初回はhostname保護の後、workers.devとpreview URLを無効にしてWorkerを作る。Worker IDの`worker` destinationで全経路を保護したことを管理APIで再確認してから正規workers.devを有効にする。既存Workerの更新は、配備前に同じWorker IDのAccess保護を確認し、workers.devを無効化せず維持する。配備後は管理APIから公開有効・preview URL無効を読み戻し、実HTTPのSHA・Accessと併せて検証する。独自認証やaccount全体のAccess変更は行わない。必要権限は既存のWorkers ScriptsとAccess Apps and Policies・Access Service Tokensの管理権限で、Worker ID取得APIも読取り可能であることを確認する。
 
-両カタログは`html_handling: none`でHTMLパスをそのまま配信する。`_redirects`はStorybookのトップを`/index.html`、メールのトップを公式CLIが出力した`/invitation-ja.html`へ書き換える。メールの各種類・言語は出力された`/*.html`へ直接アクセスする。
+Storybookは`html_handling: none`でHTMLを配信し、`_redirects`でトップを`/index.html`へ書き換える。メールは`/`に公式の一覧、`/preview/テンプレート名`に各言語のプレビューを配信する。旧`/*.html`の39個の直リンクは対応する公式プレビューへ302転送する。メール配備はOpenNext公式deployを使い、生成した`wrangler.json`の名前・PRを照合する。初回のworkers.dev無効化と公開前後のAccess検査はStorybookと共通である。release manifestはNextのprerender manifestから39例と配信JSを列挙し、配備処理自身が生成する。
+
+製品メールの送信元はrepository variable `TABLECAST_EMAIL_FROM`をbuild・deployの両方で指定する。APIの`cloudflare.config.ts`は同じ値をWorkerのtext bindingとEmail bindingの`allowedSenderAddresses`へ渡す。本番では未設定・不正なアドレスを資源変更前に拒否し、Build Outputの送信元と配備時の入力が異なる場合も再buildを要求する。送信ドメインはWorkersと同じアカウントの[Email Sending](https://developers.cloudflare.com/email-service/get-started/send-emails/)で有効化する。Cloudflare DNS上の独自ドメインが必要であり、workers.devだけでは実送信できない。ドメイン・From・実受信の設定確認は別途行う。
 
 `/_tablecast/release.json`にrepository・PR・種別・SHA・確認対象パスを記録する。メールのrelease・headers・redirectsは配備処理自身が公式CLIの出力から作り、呼出し側workflowの事前準備stepへ依存しない。既定ブランチのチェックボックス起動でも、対象PRの配備処理が同じ成果物を用意する。配備後はservice tokenでreleaseと全ページを確認し、未認証の同じパスがAccessで拒否されることを検査する。製品と手動カタログの各配備jobが、公式`actions/github-script`を使う共通actionで同じ固定コメント1件を更新する。製品buildを必要としない文書・テストだけのPR更新は軽量の通知jobから同じactionを使い、最新headの要求欄と確認できた現在版を表示する。いずれも手動カタログの終了は待たない。TableCast・Storybook・React Emailを同じ表にまとめ、ビルド・デプロイの操作、確認できたデプロイ版とJSTのデプロイ日時を表示する。日時はCloudflareの最新deploymentの`created_on`を使い、通知時刻やビルド時刻で代用しない。デプロイ版が対象SHAと同じ場合は緑、前の版は黄、現在版や日時を取得できない場合は`—`を表示する。投稿直前にPR/headを照合し、古い実行からの更新を防ぐ。forkはsecretなしの検証だけを実施し、配備・コメント要求の対象外とする。
 

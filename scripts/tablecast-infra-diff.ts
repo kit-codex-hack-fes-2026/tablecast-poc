@@ -78,7 +78,13 @@ export function workerConfigurationDiff(
     expected[binding.binding] = { type: "service", service: binding.service };
   for (const binding of config.durable_objects?.bindings ?? [])
     expected[binding.name] = { type: "durable_object_namespace", class_name: binding.class_name };
-  for (const binding of config.send_email ?? []) expected[binding.name] = { type: "send_email" };
+  for (const binding of config.send_email ?? [])
+    expected[binding.name] = {
+      type: "send_email",
+      destination_address: binding.destination_address,
+      allowed_destination_addresses: binding.allowed_destination_addresses,
+      allowed_sender_addresses: binding.allowed_sender_addresses,
+    };
   if (config.images) expected[config.images.binding] = { type: "images" };
   for (const [name, value] of Object.entries(expected)) {
     const binding = bindings.find((entry) => entry.name === name);

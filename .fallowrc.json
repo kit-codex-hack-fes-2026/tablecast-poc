@@ -4,6 +4,7 @@
     "apps/*/cloudflare.config.ts",
     "apps/*/oxlint.config.ts",
     "apps/api/auth.config.ts",
+    "apps/api/tablecast-email.open-next.config.ts",
     "apps/api/test/setup.ts",
     "apps/presentation/styles.css",
     "apps/web/src/sw.ts",
@@ -26,6 +27,7 @@
     }
   ],
   "ignoreDependencies": [
+    "@react-email/ui",
     "@tablecast/typescript-native",
     "eslint-import-resolver-typescript",
     "portless"

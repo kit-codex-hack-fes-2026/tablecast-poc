@@ -286,7 +286,9 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 
 ### メールプレビュー依存
 
-メールカタログはAPIの開発依存`react-email` 6.11.3の公式CLIで静的HTMLを生成する。固定サンプルを`apps/api/scripts/tablecast-email-preview.ts`へ集約し、CLI入力をGit管理外の`.local/tablecast-email`へ一時生成する。描画は`email export`を使い、`email build`で生成されるサーバー用プレビューアプリは配備しない。追加後はrootで`bun install --frozen-lockfile`を実行する。追加workspace・patch・サービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
+メールカタログはAPIの開発依存`react-email`・`@react-email/ui` 6.11.3の公式`email build`を使う。`@opennextjs/cloudflare` 1.20.13でCloudflareへ変換する。固定サンプルを`apps/api/scripts/tablecast-email-preview.ts`へ集約し、CLI入力はGit管理外の`.local/tablecast-email`、公式アプリと配信成果物は`.react-email`へ生成する。rootで`bun install --frozen-lockfile`を実行する。公式CLIは生成アプリの依存をnpmで導入するため、build時にもネットワーク接続が必要である。追加workspace・patch・R2・DB・送信サービスの契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
+
+製品の実送信はWorkersと同じCloudflareアカウントのEmail Serviceを使う。GitHubのrepository variable `TABLECAST_EMAIL_FROM`に確認済みドメインのFromアドレスを設定する。buildとdeployの両方へ渡し、未設定・不正な本番配備は資源の変更前に拒否する。ローカルのMailpit設定とは別であり、`workers.dev`のホスト名を送信元にしない。今回のPRではドメイン有効化・From設定・実送信確認を後続作業とする。
 
 ## stagingと本番release
 
