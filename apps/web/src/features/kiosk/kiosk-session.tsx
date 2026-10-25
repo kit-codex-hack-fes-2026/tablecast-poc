@@ -182,8 +182,13 @@ export function TableSession({
     return () => clearTimeout(timer);
   }, [prepared]);
   useEffect(() => {
-    voice.synchronise(data.voiceSessionId, data.voiceState === "active", data.speechSpeed);
-  }, [data.voiceSessionId, data.voiceState, data.speechSpeed, voice]);
+    voice.synchronise(
+      data.voiceSessionId,
+      data.voiceState === "active",
+      data.speechSpeed,
+      data.locale,
+    );
+  }, [data.voiceSessionId, data.voiceState, data.speechSpeed, data.locale, voice]);
   const customerContextCursor =
     data.events.findLast((event) => event.kind === "customer.context-reset")?.cursor ?? 0;
   const previousCustomerContext = useRef(0);
@@ -253,7 +258,6 @@ export function TableSession({
   });
   const language = useMutation({
     mutationFn: async (next: Locale) => {
-      await voice.stop({ existingSession: view.error === "active" });
       return parseResponse(endpoint.client.locale.$patch({ json: { locale: next } }));
     },
     onSuccess: (updated) => {

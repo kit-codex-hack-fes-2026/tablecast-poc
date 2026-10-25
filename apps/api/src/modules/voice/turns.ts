@@ -140,7 +140,7 @@ export async function startVoiceTurn(
     eq(business.tableSessions.locale, input.locale),
   );
   const eligibility = proactive
-    ? sql`1=1 ${proactiveReservationCondition(startedAt, startedAt - 180_000)}`
+    ? sql`1=1 ${proactiveReservationCondition(startedAt, startedAt - 30_000)}`
     : undefined;
   if (
     proactive &&

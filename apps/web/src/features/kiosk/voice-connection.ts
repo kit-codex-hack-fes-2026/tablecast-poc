@@ -21,6 +21,7 @@ import {
   type MicrophoneView,
   type VoiceView,
 } from "./voice-model";
+import { observeVoiceActivity } from "./voice-runtime";
 export type { VoiceStatus, VoiceView } from "./voice-model";
 export class VoiceConnection {
   private attempt = 0;
@@ -49,6 +50,10 @@ export class VoiceConnection {
   private readyTimer?: ReturnType<typeof setTimeout>;
   private proactiveTimer?: ReturnType<typeof setTimeout>;
   private proactive = false;
+  private endingTimer?: ReturnType<typeof setTimeout>;
+  private endingQuietTimer?: ReturnType<typeof setTimeout>;
+  private ending = false;
+  private activityObservers: (() => void)[] = [];
   private locale: Locale = "ja";
   private speechSpeed = 1;
   private requestedSpeechSpeed = 1;
@@ -126,11 +131,19 @@ export class VoiceConnection {
       this.emit({ status: "error", error: reason });
     }
   }
-  synchronise(sessionId: null | string, active: boolean, speechSpeed: number) {
+  synchronise(
+    sessionId: null | string,
+    active: boolean,
+    speechSpeed: number,
+    locale = this.locale,
+  ) {
     this.requestedSpeechSpeed = speechSpeed;
     if (this.sessionId && (!active || this.sessionId !== sessionId))
       void this.stop({ serverStopped: true });
-    else if (this.sessionId === sessionId && active) this.updateSpeechSpeed();
+    else if (this.sessionId === sessionId && active) {
+      this.updateSpeechSpeed();
+      this.updateLocale(locale);
+    }
   }
   clearCustomerContext() {
     void this.stop({ serverStopped: true });
@@ -149,6 +162,11 @@ export class VoiceConnection {
       return Promise.resolve();
     this.desired = false;
     this.ready = false;
+    this.ending = false;
+    clearTimeout(this.endingTimer);
+    clearTimeout(this.endingQuietTimer);
+    this.activityObservers.forEach((dispose) => dispose());
+    this.activityObservers = [];
     ++this.attempt;
     this.startingRequest?.abort();
     this.startingRequest = undefined;
@@ -499,7 +517,7 @@ export class VoiceConnection {
     const id = envelope.delegation_id;
     if (!this.current(attempt)) return;
     if (event.type === "response.created") {
-      this.responses.set(event.response.id, { calls: [], handled: false });
+      this.responses.set(event.response.id, { calls: [], handled: false, locale: this.locale });
       this.responseIds.set(id, event.response.id);
       return;
     }
@@ -563,11 +581,14 @@ export class VoiceConnection {
       }
       this.emit({ status: "thinking" });
       // 同じresponseの独立した読取だけを並列実行し、書込はモデルの順序を保つ。
+      let controlAction = false;
       const execute = async (call: PendingResponse["calls"][number]) => {
         if (!this.current(attempt) || this.activeDelegation !== id || controller.signal.aborted)
           return;
         let output: unknown;
         try {
+          if (controlAction || this.ending || pending.locale !== this.locale)
+            throw new Error("Previous language or conversation has ended");
           const argumentsValue: unknown = JSON.parse(call.arguments);
           const tool = z
             .object({ toolName: voiceToolNameSchema, arguments: z.record(z.string(), z.unknown()) })
@@ -589,6 +610,13 @@ export class VoiceConnection {
             ),
           );
           output = result.result;
+          if (result.conversationAction === "language" && result.locale) {
+            this.updateLocale(result.locale);
+            controlAction = true;
+          } else if (result.conversationAction === "end") {
+            this.requestEnd(attempt);
+            controlAction = true;
+          } else if (pending.locale !== this.locale) output = { error: "VOICE_LOCALE_STALE" };
           if (
             result.displayCurrencyAction &&
             this.current(attempt) &&
@@ -654,10 +682,17 @@ export class VoiceConnection {
   }
   private scheduleProactive(attempt: number) {
     clearTimeout(this.proactiveTimer);
-    if (!this.proactive || !this.ready || !this.current(attempt)) return;
+    if (!this.proactive || !this.ready || !this.current(attempt) || this.ending) return;
     this.proactiveTimer = setTimeout(() => {
-      if (!this.delegation) void this.proactiveSuggestion(attempt);
-    }, 180000);
+      if (
+        !this.delegation &&
+        this.responses.size === 0 &&
+        this.view.status === "listening" &&
+        !this.ending
+      )
+        void this.proactiveSuggestion(attempt);
+      else this.scheduleProactive(attempt);
+    }, 30000);
   }
   private async proactiveSuggestion(attempt: number) {
     const delegationId = this.activeDelegation;
@@ -706,6 +741,44 @@ export class VoiceConnection {
     } catch {
       this.onSync();
     }
+  }
+  private updateLocale(locale: Locale) {
+    if (locale === this.locale || !this.ready || !this.desired) return;
+    this.locale = locale;
+    this.channel?.send(
+      JSON.stringify({
+        type: "session.instructions.append",
+        event_id: crypto.randomUUID(),
+        delegation_id: null,
+        content: `会話言語は${locale === "ja" ? "日本語" : "British English"}です。次の発話から使い、古い言語の注文確認を再利用しないでください。`,
+      }),
+    );
+    this.scheduleProactive(this.attempt);
+  }
+  private audioActivity(attempt: number, output: boolean) {
+    if (!this.current(attempt)) return;
+    this.scheduleProactive(attempt);
+    if (this.ending && output) {
+      clearTimeout(this.endingQuietTimer);
+      this.endingQuietTimer = setTimeout(() => void this.stop(), 1000);
+    }
+  }
+  private requestEnd(attempt: number) {
+    if (!this.current(attempt) || this.ending) return;
+    this.ending = true;
+    clearTimeout(this.proactiveTimer);
+    this.channel?.send(
+      JSON.stringify({
+        type: "session.commentary.append",
+        event_id: crypto.randomUUID(),
+        delegation_id: null,
+        content:
+          this.locale === "ja"
+            ? "接客を終了します。承知しました、と一言だけ挨拶してください。"
+            : "The guest has finished. Say only: Certainly. Thank you.",
+      }),
+    );
+    this.endingTimer = setTimeout(() => void this.stop(), 5000);
   }
   private updateSpeechSpeed() {
     if (!this.ready || !this.desired || this.speechSpeed === this.requestedSpeechSpeed) return;
@@ -764,6 +837,9 @@ export class VoiceConnection {
       if (!this.current(attempt) || track.kind !== "audio") return;
       audio.srcObject = new MediaStream([track]);
       this.emit({ outputTrack: track });
+      this.activityObservers.push(
+        observeVoiceActivity(track, () => this.audioActivity(attempt, true)),
+      );
       void audio.play().catch(() => this.fail(attempt));
     });
     peer.addEventListener("connectionstatechange", () => {
@@ -797,6 +873,9 @@ export class VoiceConnection {
           if (delegation.success) {
             const id = delegation.data.delegation.id;
             if (!this.delegations.has(id)) {
+              if (this.ending) return;
+              this.emit({ status: "thinking" });
+              clearTimeout(this.proactiveTimer);
               this.activeDelegation = id;
               this.delegation?.abort();
               this.delegation = undefined;
@@ -822,6 +901,9 @@ export class VoiceConnection {
     if (!track) throw new DOMException("Microphone has no audio track", "NotFoundError");
     this.microphoneSender = peer.addTrack(track, microphone);
     this.observeMicrophone(microphone, attempt);
+    this.activityObservers.push(
+      observeVoiceActivity(track, () => this.audioActivity(attempt, false)),
+    );
     this.updateMicrophone({ activeLabel: track.label, error: undefined });
     this.emit({ inputTrack: track });
     void this.refreshMicrophones();

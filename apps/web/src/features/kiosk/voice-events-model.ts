@@ -1,3 +1,4 @@
+import type { Locale } from "@tablecast/api/schema";
 import { z } from "zod";
 import { type LiveMessage } from "./voice-model";
 
@@ -39,6 +40,7 @@ export const responseEnvelope = z.object({
 export type PendingResponse = {
   calls: { arguments: string; callId: string; name: string }[];
   handled: boolean;
+  locale: Locale;
 };
 
 export type Caption = {

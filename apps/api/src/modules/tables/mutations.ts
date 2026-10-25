@@ -81,7 +81,12 @@ export function invalidationStatement(services: ApiServices, actor: Actor, mutat
     );
 }
 
-export function interruptVoiceTurns(services: ApiServices, actor: Actor, mutation: string) {
+export function interruptVoiceTurns(
+  services: ApiServices,
+  actor: Actor,
+  mutation: string,
+  interruptCurrentSession = false,
+) {
   const db = services.db;
   const previousSession = and(
     eq(business.voiceTurns.table_session_id, actor.tableSessionId ?? ""),
@@ -95,7 +100,7 @@ export function interruptVoiceTurns(services: ApiServices, actor: Actor, mutatio
             eq(business.tableSessions.id, actor.tableSessionId ?? ""),
             eq(business.tableSessions.store_id, actor.storeId),
             eq(business.tableSessions.mutation_id, mutation),
-            sql`${business.tableSessions.voice_session_id} IS NOT ${business.voiceTurns.voice_session_id}`,
+            sql`(${business.tableSessions.voice_session_id} IS NOT ${business.voiceTurns.voice_session_id} OR ${interruptCurrentSession})`,
           ),
         ),
     ),

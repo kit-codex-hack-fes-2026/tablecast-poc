@@ -10,6 +10,7 @@ import { createCastTools } from "./agent";
 import { type toolSchema, voiceToolEventSchema } from "./model";
 import { currentVoiceTurn, voiceContext } from "./queries";
 import { recordVoiceEvent, voiceToolQuery } from "./service";
+import { finishVoiceTurn } from "./turns";
 export async function conversationHistory(
   services: ApiServices,
   actor: { storeId: string; tableSessionId?: string },
@@ -116,7 +117,16 @@ export async function invokeVoiceTool(
             new TextEncoder().encode(JSON.stringify(result)).byteLength,
           );
         await record("completed");
+        if (input.toolName === "endConversation")
+          await finishVoiceTurn(services, input.voiceSessionId, input.turnId, "interrupted");
         return {
+          ...(input.toolName === "endConversation" ? { conversationAction: "end" as const } : {}),
+          ...(input.toolName === "setLanguage"
+            ? {
+                conversationAction: "language" as const,
+                locale: input.arguments.locale === "en" ? ("en" as const) : ("ja" as const),
+              }
+            : {}),
           result,
           ...(input.toolName === "setDisplayCurrency"
             ? {
