@@ -1,10 +1,9 @@
 import type { Configuration, Modifier, Product } from "@tablecast/api/schema";
 import { configurationSchema } from "@tablecast/api/schema";
 import type { GroupKey } from "./types.ts";
-import { tablecastDemoStoreIcons } from "../../apps/emulate/src/tablecast-demo-identities.ts";
 import { demoOptionImageKey } from "../tablecast-demo-option-images.ts";
 import { koreanDemoStore } from "../tablecast-korean-demo.ts";
-import { demoImageKey } from "../tablecast-seed-media.ts";
+import { demoImageKey, demoStoreLogo } from "../tablecast-seed-media.ts";
 import { groupDefinitions } from "./modifiers.ts";
 import { sakeKinds, sakes } from "./sake.ts";
 import { categories, drinks, foods, stores } from "./store-data.ts";
@@ -213,25 +212,11 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
       tableCount: profile === "smoke" ? 2 : 12,
     };
   });
-  return seededStores.map((store) => {
-    const file = tablecastDemoStoreIcons[store.id];
-    if (!file) throw new Error("店舗ロゴ素材がありません。");
-    return {
-      ...store,
-      configuration: configurationSchema.parse({
-        ...store.configuration,
-        branding: {
-          logo: {
-            imageKey: demoImageKey(`identities/${file}`).replace(
-              "tablecast/images/",
-              "tablecast/uploads/",
-            ),
-            imageKind: "illustration",
-            imageSource: { generated: true, description: "架空店舗のデモ用に生成したロゴ" },
-            alt: { ja: `${store.name}のロゴ`, en: `${store.name} logo` },
-          },
-        },
-      }),
-    };
-  });
+  return seededStores.map((store) => ({
+    ...store,
+    configuration: configurationSchema.parse({
+      ...store.configuration,
+      branding: { logo: demoStoreLogo(store.id, store.name) },
+    }),
+  }));
 }

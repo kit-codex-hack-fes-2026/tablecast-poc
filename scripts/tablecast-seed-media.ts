@@ -1,8 +1,9 @@
-import type { Configuration } from "@tablecast/api/schema";
+import type { Configuration, ThemeImage } from "@tablecast/api/schema";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
+import { tablecastDemoStoreIcons } from "../apps/emulate/src/tablecast-demo-identities.ts";
 
 const directory = resolve(import.meta.dirname, "../assets/demo");
 const keys = new Map<string, string>();
@@ -20,6 +21,31 @@ export function demoImageKey(file: string) {
   }
   return key;
 }
+function storeLogoAsset(storeId: string) {
+  const file = tablecastDemoStoreIcons[storeId];
+  if (!file) throw new Error("店舗ロゴ素材がありません。");
+  const metadata = {
+    imageKind: "illustration" as const,
+    imageSource: { generated: true, description: "架空店舗のデモ用に生成したロゴ" },
+  };
+  const bytes = readFileSync(resolve(directory, "identities", file));
+  // 通常の画像取込と同じく、店舗・出所・画像内容を一つのidentityにする。
+  const hash = createHash("sha256")
+    .update(JSON.stringify({ storeId, ...metadata }))
+    .update(bytes)
+    .digest("hex");
+  return { imageKey: `tablecast/uploads/${hash}.webp`, metadata };
+}
+
+export function demoStoreLogo(storeId: string, name: string): ThemeImage {
+  const asset = storeLogoAsset(storeId);
+  return {
+    imageKey: asset.imageKey,
+    ...asset.metadata,
+    alt: { ja: `${name}のロゴ`, en: `${name} logo` },
+  };
+}
+
 export async function seedMenuImages(
   bucket: Parameters<typeof uploadPreviewImage>[0] & Pick<R2Bucket, "list">,
   legacy = false,
@@ -52,7 +78,9 @@ export async function seedMenuImages(
     const existing = new Map<string, R2Object>();
     console.time("商品画像の既存一覧");
     try {
-      for (const prefix of legacy ? ["tablecast/images/", "tablecast/demo/"] : ["tablecast/"]) {
+      for (const prefix of legacy
+        ? ["tablecast/images/", "tablecast/demo/", "tablecast/uploads/"]
+        : ["tablecast/"]) {
         let cursor: string | undefined;
         do {
           const page = await bucket.list({ prefix, limit: 1000, cursor });
@@ -79,9 +107,11 @@ export async function seedMenuImages(
             try {
               const bytes = await readFile(resolve(directory, file));
               const contentKey = imageKey(bytes, extname(file) === ".webp" ? "webp" : "png");
-              const key = file.startsWith("identities/")
-                ? contentKey.replace("tablecast/images/", "tablecast/uploads/")
-                : contentKey;
+              const logoStore = Object.entries(tablecastDemoStoreIcons).find(
+                ([, icon]) => file === `identities/${icon}`,
+              )?.[0];
+              const logo = logoStore ? storeLogoAsset(logoStore) : undefined;
+              const key = logo?.imageKey ?? contentKey;
               if (required && !required.has(key)) continue;
               for (const target of legacy ? [key, `tablecast/demo/${file}`] : [key]) {
                 if (failed) return;
@@ -91,6 +121,9 @@ export async function seedMenuImages(
                   bytes,
                   undefined,
                   existing.get(target) ?? null,
+                  logo && logoStore
+                    ? { storeId: logoStore, metadata: JSON.stringify(logo.metadata) }
+                    : undefined,
                 );
                 if (result === "uploaded") {
                   uploaded++;
@@ -129,6 +162,7 @@ export async function uploadPreviewImage(
   bytes: Uint8Array,
   contentType: "image/png" | "image/webp" = key.endsWith(".webp") ? "image/webp" : "image/png",
   known?: null | Pick<R2Object, "etag" | "size">,
+  customMetadata: Record<string, string> = { source: "synthetic-demo" },
 ) {
   const md5 = createHash("md5").update(bytes).digest("hex");
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -144,7 +178,7 @@ export async function uploadPreviewImage(
         onlyIf: { etagDoesNotMatch: "*" },
         md5,
         httpMetadata: { contentType },
-        customMetadata: { source: "synthetic-demo" },
+        customMetadata,
       });
       if (!uploaded || uploaded.etag !== md5 || uploaded.size !== bytes.length)
         throw new Error("画像の保存結果を確認できません");
