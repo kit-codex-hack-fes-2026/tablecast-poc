@@ -88,7 +88,9 @@ function CastEditAction({
       ? t("cast_edit_proactive")
       : target.startsWith("instructions")
         ? m.cast_edit_instructions({ language }, { locale })
-        : m.cast_edit_voice({ language }, { locale });
+        : target.startsWith("opening")
+          ? `${t("cast_edit_opening")} (${language})`
+          : m.cast_edit_voice({ language }, { locale });
   return draftId ? (
     <Button
       nativeButton={false}

@@ -66,7 +66,7 @@ export type VoicePage = z.infer<typeof voicePageSchema>;
 
 export type VoiceListQuery = z.infer<typeof voiceListQuerySchema>;
 
-export const voiceTriggerSchema = z.enum(["user", "proactive"]);
+export const voiceTriggerSchema = z.enum(["user", "proactive", "opening"]);
 
 export type VoiceTrigger = z.infer<typeof voiceTriggerSchema>;
 
@@ -123,5 +123,19 @@ export const voiceConversationSchema = z
   .object({
     voiceSessionId: id,
     items: z.array(conversationItemSchema).min(1).max(20),
+  })
+  .strict();
+
+export const voiceSuggestionsSchema = z
+  .object({
+    voiceSessionId: id,
+    locale: localeSchema,
+    itemId: id,
+    text: z.string().min(1).max(10000),
+  })
+  .strict();
+export const voiceSuggestionsResultSchema = z
+  .object({
+    suggestions: z.array(z.string().trim().min(1).max(500)).max(3),
   })
   .strict();

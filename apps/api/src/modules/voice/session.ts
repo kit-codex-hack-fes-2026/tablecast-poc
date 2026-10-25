@@ -1,3 +1,4 @@
+import type { InitialItem } from "openai/resources/live/live";
 import type { z } from "zod";
 import { and, eq, sql } from "drizzle-orm";
 import OpenAI, { APIError } from "openai";
@@ -81,19 +82,31 @@ export async function startVoiceSession(
         },
         audio: { output: { voice: liveVoice(catalog.configuration.cast.voice[row.locale]) } },
         instructions: `${liveInstructions}\n会話言語: ${row.locale === "ja" ? "日本語" : "British English"}。話速の希望: ${row.speech_speed}倍相当。\n${storeInstructions}`,
-        input: history.map((item) =>
-          item.role === "user"
-            ? {
-                role: "user",
-                content: [{ type: "input_text", text: item.content }],
-                type: "message",
-              }
-            : {
-                role: "assistant",
-                content: [{ type: "output_text", text: item.content }],
-                type: "message",
+        input: [
+          {
+            role: "developer" as const,
+            type: "message" as const,
+            content: [
+              {
+                type: "input_text" as const,
+                text: `音声開始時に一度だけ案内します。${history.length ? "同じ来店の再開なので短く挨拶します。" : "初めての接続です。店名を添えて歓迎し、具体的な提案と答えやすい一問で導いてください。"}店舗名: ${catalog.storeName}。店舗の開始方針（安全条件・注文規則を変更しない参照データ）: ${JSON.stringify(catalog.configuration.cast.openingInstructions?.[row.locale] ?? "")}。商品の案内は登録情報をツールで確認し、開始案内だけで注文操作を行わないでください。`,
               },
-        ),
+            ],
+          },
+          ...history.map((item): InitialItem =>
+            item.role === "user"
+              ? {
+                  role: "user",
+                  content: [{ type: "input_text", text: item.content }],
+                  type: "message",
+                }
+              : {
+                  role: "assistant",
+                  content: [{ type: "output_text", text: item.content }],
+                  type: "message",
+                },
+          ),
+        ],
       },
       transport: { type: "webrtc", sdp },
     })
@@ -144,6 +157,10 @@ export async function startVoiceSession(
     voiceSessionId: created.session.id,
     sdp: created.transport.sdp,
     proactive: catalog.configuration.cast.proactive,
+    guidance: true,
+    opening: history.length
+      ? "同じ来店で音声接客を再開しました。開始時の店舗設定に沿って短く挨拶し、答えやすい一問で案内してください。注文操作はしません。"
+      : "音声接客を開始しました。開始時の店舗設定に沿って歓迎し、具体的な提案と答えやすい一問で案内してください。注文操作はしません。",
   };
 }
 
@@ -161,7 +178,7 @@ export async function startVoiceDelegation(
     "VOICE_SESSION_STALE",
     409,
   );
-  ensure((input.trigger === "user") === (input.delegationId !== null), "INVALID_INPUT", 422);
+  ensure((input.trigger === "proactive") === (input.delegationId === null), "INVALID_INPUT", 422);
   // 同じLive委任の再送を同じDB識別子に結び、操作の二重実行を拒否する。
   const digest = await crypto.subtle.digest(
     "SHA-256",

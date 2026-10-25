@@ -37,6 +37,12 @@ export function CastOverview({
               </div>
               <div className="flex">{renderEdit?.(`instructions-${language}`)}</div>
             </ConfigurationSection>
+            <ConfigurationSection title={t("editor_cast_opening")} icon={MessageSquareText}>
+              <p lang={language} className="whitespace-pre-wrap text-sm leading-relaxed">
+                {value.openingInstructions?.[language] || t("cast_opening_default")}
+              </p>
+              <div className="flex">{renderEdit?.(`opening-${language}`)}</div>
+            </ConfigurationSection>
             <ConfigurationSection title={t("editor_cast_voice_group")} icon={Mic}>
               <VoiceOverview storeId={storeId} language={language} value={value.voice[language]} />
               <div className="flex">{renderEdit?.(`voice-${language}`)}</div>

@@ -8,6 +8,7 @@ import {
   ConversationScrollButton,
 } from "../../components/ai-elements/conversation";
 import { ProductMenu } from "../../components/product-menu";
+import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import {
   type ConversationLine,
@@ -43,6 +44,7 @@ export type VoicePanelProps = {
   onReview?: () => void;
   onSpeedChange?: (value: number) => void;
   onStart: () => void;
+  onSuggestion?: (text: string, source: string[] | undefined) => void;
   reviewPending?: boolean;
   snapshot?: null | Snapshot;
   speechSpeed?: number;
@@ -89,6 +91,7 @@ export function VoicePanel({
   onSpeedChange,
   onMicrophoneChange,
   onMicrophoneRefresh,
+  onSuggestion,
 }: VoicePanelProps) {
   const camera = useLocalCamera();
   const panel = useRef<HTMLElement>(null);
@@ -281,6 +284,22 @@ export function VoicePanel({
             />
           </Conversation>
         </div>
+        {active && Boolean(view.suggestions?.length) && (
+          <div className="flex shrink-0 flex-wrap gap-2" aria-label={t("kiosk_suggestions")}>
+            {view.suggestions?.map((text) => (
+              <Button
+                key={text}
+                variant="outline"
+                size="lg"
+                className="h-auto max-w-full whitespace-normal text-left text-sm"
+                disabled={view.status !== "listening" || !onSuggestion}
+                onClick={() => onSuggestion?.(text, view.suggestions)}
+              >
+                {text}
+              </Button>
+            ))}
+          </div>
+        )}
         <VoiceControls
           view={view}
           active={active}

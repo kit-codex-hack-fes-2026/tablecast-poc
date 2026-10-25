@@ -340,3 +340,25 @@ it.each(["published", "discarded"] as const)(
       .toBeVisible();
   },
 );
+
+it("開始案内の編集先へfocusし、日英の案内を同じ下書きへ保存する", async () => {
+  const { screen } = await open(`${base}/changes/${draftId}/cast/settings#opening-ja`);
+  const japanese = screen.getByRole("textbox", {
+    name: `${ja.common_ja} ${ja.editor_cast_opening}`,
+    exact: true,
+  });
+  await expect.element(japanese).toHaveFocus();
+  await japanese.fill("ようこそ。温かいお茶はいかがですか？");
+  await screen.getByRole("tab", { name: "English", exact: true }).click();
+  const english = screen.getByRole("textbox", {
+    name: `${ja.common_en} ${ja.editor_cast_opening}`,
+    exact: true,
+  });
+  await english.fill("Welcome. Would you like some tea?");
+  await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
+  await expect.element(screen.getByText(ja.account_saved, { exact: true })).toBeVisible();
+  expect(fixture.current.configuration.cast.openingInstructions).toEqual({
+    ja: "ようこそ。温かいお茶はいかがですか？",
+    en: "Welcome. Would you like some tea?",
+  });
+});

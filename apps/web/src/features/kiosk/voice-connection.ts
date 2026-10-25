@@ -55,6 +55,13 @@ export class VoiceConnection {
   private ending = false;
   private activityObservers: (() => void)[] = [];
   private locale: Locale = "ja";
+  private opening?: string;
+  private openingSent = false;
+  private guidanceEnabled = false;
+  private guidanceVersion = 0;
+  private suggestionsRequest?: AbortController;
+  private manualDelegation?: string;
+  private hasUserInput = false;
   private speechSpeed = 1;
   private requestedSpeechSpeed = 1;
   private microphoneView = initialMicrophone;
@@ -85,6 +92,10 @@ export class VoiceConnection {
     this.desired = true;
     this.ready = false;
     this.locale = locale;
+    this.openingSent = false;
+    this.hasUserInput = false;
+    this.manualDelegation = undefined;
+    this.clearGuidance();
     this.speechSpeed = speechSpeed;
     this.requestedSpeechSpeed = speechSpeed;
     this.captions = [];
@@ -112,6 +123,8 @@ export class VoiceConnection {
       }
       this.sessionId = created.voiceSessionId;
       this.proactive = created.proactive;
+      this.opening = created.opening;
+      this.guidanceEnabled = created.guidance;
       await peer.setRemoteDescription({ type: "answer", sdp: created.sdp });
       if (this.current(attempt) && !this.ready)
         this.readyTimer = setTimeout(() => void this.fail(attempt), 15000);
@@ -163,6 +176,7 @@ export class VoiceConnection {
     this.desired = false;
     this.ready = false;
     this.ending = false;
+    this.clearGuidance();
     clearTimeout(this.endingTimer);
     clearTimeout(this.endingQuietTimer);
     this.activityObservers.forEach((dispose) => dispose());
@@ -387,7 +401,9 @@ export class VoiceConnection {
     if (this.transcriptEvents.has(event.event_id) || event.end_ms < event.start_ms || !event.delta)
       return;
     this.transcriptEvents.add(event.event_id);
+    this.clearGuidance();
     const role = event.type === "session.input_transcript.delta" ? "user" : "assistant";
+    if (role === "user") this.hasUserInput = true;
     // 字幕のまとまりは表示だけに使い、委任開始や業務の中断条件には使わない。
     let caption = this.captions.findLast(
       (row) =>
@@ -440,6 +456,7 @@ export class VoiceConnection {
         status: this.delegation ? "thinking" : "listening",
       });
       this.scheduleSave();
+      if (current.message.role === "assistant") void this.suggestReplies(current, attempt);
     }, 1500);
     this.emit({
       messages: this.captions.map((row) => row.message),
@@ -488,7 +505,7 @@ export class VoiceConnection {
   }
   private async registerDelegation(
     id: null | string,
-    trigger: "proactive" | "user",
+    trigger: "opening" | "proactive" | "user",
     attempt: number,
   ): Promise<string | undefined> {
     if (!this.current(attempt) || !this.sessionId) return undefined;
@@ -514,7 +531,7 @@ export class VoiceConnection {
   }
   private async receiveResponse(envelope: z.infer<typeof responseEnvelope>, attempt: number) {
     const event = envelope.event;
-    const id = envelope.delegation_id;
+    const id = this.manualDelegation ?? envelope.delegation_id;
     if (!this.current(attempt)) return;
     if (event.type === "response.created") {
       this.responses.set(event.response.id, { calls: [], handled: false, locale: this.locale });
@@ -742,9 +759,124 @@ export class VoiceConnection {
       this.onSync();
     }
   }
+  private clearGuidance() {
+    ++this.guidanceVersion;
+    this.suggestionsRequest?.abort();
+    this.suggestionsRequest = undefined;
+    this.emit({ suggestions: [] });
+  }
+  private async suggestReplies(caption: Caption, attempt: number) {
+    if (
+      !this.guidanceEnabled ||
+      !this.sessionId ||
+      !this.current(attempt) ||
+      this.ending ||
+      caption.message.interrupted
+    )
+      return;
+    const voiceSessionId = this.sessionId;
+    const version = this.guidanceVersion;
+    const text = caption.message.text;
+    const locale = this.locale;
+    const controller = new AbortController();
+    this.suggestionsRequest = controller;
+    try {
+      await this.saveCaptions(voiceSessionId);
+      if (controller.signal.aborted || !this.current(attempt) || version !== this.guidanceVersion)
+        return;
+      const result = await parseResponse(
+        this.client.voice.suggestions.$post(
+          {
+            json: {
+              voiceSessionId,
+              locale,
+              itemId: caption.message.id,
+              text,
+            },
+          },
+          { init: { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]) } },
+        ),
+      );
+      if (
+        !controller.signal.aborted &&
+        this.current(attempt) &&
+        version === this.guidanceVersion &&
+        locale === this.locale &&
+        result.itemId === caption.message.id &&
+        result.text === text
+      )
+        this.emit({ suggestions: result.suggestions });
+    } catch {
+      /* 候補生成の失敗で音声を停止しない。 */
+    } finally {
+      if (this.suggestionsRequest === controller) this.suggestionsRequest = undefined;
+    }
+  }
+  async sendSuggestion(text: string, source: string[] | undefined) {
+    if (
+      !this.ready ||
+      !this.desired ||
+      this.ending ||
+      !this.sessionId ||
+      source !== this.view.suggestions ||
+      !source?.includes(text) ||
+      this.delegation ||
+      this.responses.size ||
+      this.view.status !== "listening"
+    )
+      return;
+    const attempt = this.attempt;
+    const locale = this.locale;
+    const sessionId = this.sessionId;
+    this.clearGuidance();
+    const version = this.guidanceVersion;
+    const itemId = crypto.randomUUID();
+    this.hasUserInput = true;
+    const caption: Caption = {
+      message: {
+        id: itemId,
+        turnId: itemId,
+        role: "user",
+        text,
+        final: true,
+        locale,
+        createdAt: Date.now(),
+      },
+      start: 0,
+      end: 0,
+      fragments: [],
+    };
+    this.captions.push(caption);
+    this.finishCaption(caption, false);
+    this.emit({ status: "thinking", messages: this.captions.map((row) => row.message) });
+    try {
+      await this.saveCaptions(sessionId);
+      if (!this.current(attempt) || locale !== this.locale || version !== this.guidanceVersion)
+        return;
+      const id = `tablecast-input-${itemId}`;
+      this.activeDelegation = id;
+      this.manualDelegation = id;
+      const registered = this.registerDelegation(id, "user", attempt);
+      this.delegations.set(id, registered);
+      if (!(await registered) || !this.current(attempt) || version !== this.guidanceVersion) return;
+      this.channel?.send(
+        JSON.stringify({
+          type: "response.item.create",
+          event_id: itemId,
+          item: { type: "message", role: "user", content: [{ type: "input_text", text }] },
+        }),
+      );
+      this.channel?.send(
+        JSON.stringify({ type: "response.create", event_id: crypto.randomUUID() }),
+      );
+    } catch {
+      if (this.current(attempt)) this.reportFailure();
+    }
+  }
   private updateLocale(locale: Locale) {
     if (locale === this.locale || !this.ready || !this.desired) return;
     this.locale = locale;
+    this.clearGuidance();
     this.channel?.send(
       JSON.stringify({
         type: "session.instructions.append",
@@ -766,6 +898,7 @@ export class VoiceConnection {
   private requestEnd(attempt: number) {
     if (!this.current(attempt) || this.ending) return;
     this.ending = true;
+    this.clearGuidance();
     clearTimeout(this.proactiveTimer);
     this.channel?.send(
       JSON.stringify({
@@ -862,6 +995,17 @@ export class VoiceConnection {
         this.ready = true;
         this.emit({ status: "listening" });
         this.updateSpeechSpeed();
+        if (!this.openingSent && this.opening) {
+          this.openingSent = true;
+          this.channel?.send(
+            JSON.stringify({
+              type: "session.commentary.append",
+              event_id: crypto.randomUUID(),
+              delegation_id: null,
+              content: this.opening,
+            }),
+          );
+        }
         this.scheduleProactive(attempt);
       } else if (event.type === "session.closed" || event.type === "error") {
         void this.fail(attempt);
@@ -874,12 +1018,21 @@ export class VoiceConnection {
             const id = delegation.data.delegation.id;
             if (!this.delegations.has(id)) {
               if (this.ending) return;
+              this.clearGuidance();
+              this.manualDelegation = undefined;
               this.emit({ status: "thinking" });
               clearTimeout(this.proactiveTimer);
               this.activeDelegation = id;
               this.delegation?.abort();
               this.delegation = undefined;
-              this.delegations.set(id, this.registerDelegation(id, "user", attempt));
+              this.delegations.set(
+                id,
+                this.registerDelegation(
+                  id,
+                  this.hasUserInput || !this.guidanceEnabled ? "user" : "opening",
+                  attempt,
+                ),
+              );
             }
           } else {
             const envelope = responseEnvelope.safeParse(event);

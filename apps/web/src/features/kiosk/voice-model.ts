@@ -42,4 +42,5 @@ export type VoiceView = {
   microphone?: MicrophoneView;
   outputTrack?: MediaStreamTrack;
   status: VoiceStatus;
+  suggestions?: string[];
 };

@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, lt, notInArray, sql, sum } from "drizzle-orm";
+import { and, desc, eq, isNotNull, lt, ne, notInArray, sql, sum } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import {
@@ -155,6 +155,7 @@ export async function getSessionEvents(
     .where(
       and(
         eq(tableEvents.table_session_id, row.id),
+        ne(tableEvents.kind, "voice.suggestions"),
         eq(tableEvents.store_id, actor.storeId),
         query.before === undefined ? undefined : lt(tableEvents.cursor, query.before),
       ),

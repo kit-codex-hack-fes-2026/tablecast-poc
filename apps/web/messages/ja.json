@@ -1461,5 +1461,10 @@
   "navigation_search_error": "ドキュメントを検索できませんでした。入力を保ったまま再試行できます。",
   "navigation_search_retry": "再試行",
   "navigation_search_no_pages": "一致するページはありません。",
-  "navigation_search_no_help": "一致するドキュメントはありません。別の言葉で検索してください。"
+  "navigation_search_no_help": "一致するドキュメントはありません。別の言葉で検索してください。",
+  "kiosk_suggestions": "こんなふうに話せます",
+  "cast_edit_opening": "開始案内を編集",
+  "editor_cast_opening_hint": "開始時のメッセージや最初に尋ねる内容。未設定なら歓迎と答えやすい一問で案内します。",
+  "cast_opening_default": "既定の歓迎案内と、答えやすい一問で接客を始めます。",
+  "editor_cast_opening": "会話開始の案内"
 }

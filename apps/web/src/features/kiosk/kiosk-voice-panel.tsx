@@ -12,6 +12,9 @@ export function KioskVoicePanel({
     <VoicePanel
       {...props}
       view={view}
+      onSuggestion={(text, source) => {
+        void voice.sendSuggestion(text, source);
+      }}
       controlDisabled={props.controlDisabled || view.status === "stopping"}
     />
   );

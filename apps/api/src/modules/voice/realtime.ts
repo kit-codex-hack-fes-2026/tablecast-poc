@@ -72,12 +72,12 @@ export async function invokeVoiceTool(
         "tablecast.voice.session.id": input.voiceSessionId,
         "tablecast.voice.turn.id": input.turnId,
       });
-      const { actor, session, proactive } = await voiceContext(
+      const { actor, session, proactive, opening } = await voiceContext(
         services,
         input.voiceSessionId,
         input.turnId,
       );
-      const trigger = proactive ? "proactive" : "user";
+      const trigger = opening ? "opening" : proactive ? "proactive" : "user";
       if (trigger === "proactive") await currentVoiceTurn(services, actor, session.locale, trigger);
       const tools = createCastTools(
         services,

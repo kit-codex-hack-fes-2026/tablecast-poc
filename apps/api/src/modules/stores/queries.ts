@@ -1,4 +1,4 @@
-import { and, desc, eq, exists, gt, inArray, isNull, max, or, sql, sum } from "drizzle-orm";
+import { and, desc, eq, exists, gt, inArray, isNull, max, ne, or, sql, sum } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { TableEvent } from "../tables/model";
@@ -10,6 +10,7 @@ import { eventValue, tableStateValue } from "../tables/values";
 export async function getAdminState(services: ApiServices, actor: Actor): Promise<AdminState> {
   const db = services.db;
   const storeEvents = and(
+    ne(business.tableEvents.kind, "voice.suggestions"),
     eq(business.tableEvents.store_id, actor.storeId),
     or(
       isNull(business.tableEvents.table_session_id),
@@ -133,7 +134,7 @@ export async function getAdminState(services: ApiServices, actor: Actor): Promis
       .select()
       .from(business.tableEvents)
       .where(
-        sql`store_id=${actor.storeId} AND cursor IN (SELECT cursor FROM (SELECT cursor,row_number() OVER (PARTITION BY table_session_id ORDER BY cursor DESC) AS position FROM table_events WHERE store_id=${actor.storeId} AND table_session_id IN (${active})) WHERE position<=100)`,
+        sql`store_id=${actor.storeId} AND cursor IN (SELECT cursor FROM (SELECT cursor,row_number() OVER (PARTITION BY table_session_id ORDER BY cursor DESC) AS position FROM table_events WHERE store_id=${actor.storeId} AND kind<>'voice.suggestions' AND table_session_id IN (${active})) WHERE position<=100)`,
       )
       .orderBy(business.tableEvents.cursor),
     db
@@ -213,6 +214,7 @@ export async function getEvents(
       and(
         eq(business.tableEvents.store_id, actor.storeId),
         scope,
+        ne(business.tableEvents.kind, "voice.suggestions"),
         gt(business.tableEvents.cursor, after),
       ),
     )

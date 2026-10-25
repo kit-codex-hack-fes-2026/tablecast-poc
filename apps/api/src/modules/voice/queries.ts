@@ -42,6 +42,10 @@ export async function voiceContext(services: ApiServices, voiceSessionId: string
     .select({
       session: business.tableSessions,
       createdBy: business.demoSessions.created_by,
+      opening:
+        sql<number>`EXISTS(SELECT 1 FROM table_events WHERE table_session_id=${business.tableSessions.id} AND kind='voice.opening' AND json_extract(data_json,'$.turnId')=${turnId ?? null})`.mapWith(
+          Boolean,
+        ),
       proactive: sql<number>`EXISTS(SELECT 1 FROM table_events WHERE table_session_id=${business.tableSessions.id} AND kind='voice.proactive' AND json_extract(data_json,'$.turnId')=${turnId ?? null})`,
     })
     .from(business.tableSessions)
@@ -73,5 +77,10 @@ export async function voiceContext(services: ApiServices, voiceSessionId: string
     ...(turnId ? { turnId } : {}),
   };
   await validateSession(services, actor, row);
-  return { actor, session: row, proactive: Boolean(result.proactive) };
+  return {
+    actor,
+    session: row,
+    proactive: Boolean(result.proactive),
+    opening: result.opening,
+  };
 }

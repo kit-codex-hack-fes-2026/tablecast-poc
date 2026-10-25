@@ -1461,5 +1461,10 @@
   "navigation_search_error": "Documentation search is unavailable. You can retry without losing your search.",
   "navigation_search_retry": "Retry",
   "navigation_search_no_pages": "No matching pages.",
-  "navigation_search_no_help": "No matching documentation. Try different words."
+  "navigation_search_no_help": "No matching documentation. Try different words.",
+  "kiosk_suggestions": "You could say",
+  "cast_edit_opening": "Edit opening guide",
+  "editor_cast_opening_hint": "Set the welcome message and first question. Leave blank for a welcoming introduction with one simple question.",
+  "cast_opening_default": "Start with a welcoming introduction and one simple question.",
+  "editor_cast_opening": "Opening guide"
 }
