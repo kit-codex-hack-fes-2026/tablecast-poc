@@ -113,6 +113,13 @@ it("常設枠はオフでも同寸法を保ち、明示操作だけで撮影す�
   expect(document.querySelector('[role="dialog"]')).toBeNull();
   await page.getByRole("button", { name: ja.kiosk_camera_start }).click();
   await expect.poll(() => document.querySelector("video")?.srcObject).toBe(stream);
+  await Promise.allSettled(
+    page
+      .getByRole("button", { name: ja.kiosk_camera_stop })
+      .element()
+      .getAnimations()
+      .map((animation) => animation.finished),
+  );
   const toggleAfter = page
     .getByRole("button", { name: ja.kiosk_camera_stop })
     .element()

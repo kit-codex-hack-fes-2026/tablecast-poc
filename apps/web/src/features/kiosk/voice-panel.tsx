@@ -223,8 +223,7 @@ export function VoicePanelContent({
     return (
       <section
         ref={panel}
-        className="relative flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-hidden p-3 @container"
-        style={{ fontFamily: "var(--font-sans)" }}
+        className="relative flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-hidden p-3 font-sans! @container [&_*]:font-sans!"
         data-theme-part="conversation"
         aria-label={t("kiosk_conversation")}
       >
@@ -234,7 +233,7 @@ export function VoicePanelContent({
         </div>
         <div
           data-ui="conversation-history"
-          className="flex min-h-0 flex-1 flex-col overflow-hidden"
+          className={`flex min-h-0 flex-1 flex-col overflow-hidden ${active ? "" : "max-h-[calc(50%_-_4rem)]"}`}
         >
           <Conversation>
             <ConversationContent tabIndex={0} className="relative">
@@ -257,7 +256,7 @@ export function VoicePanelContent({
                       />
                     </ConversationEntry>
                   ) : (
-                    <ConversationEntry key={entry.id} className="w-11/12 space-y-2">
+                    <ConversationEntry key={entry.id} className="w-full space-y-2">
                       {toolCards(entry.turnId)}
                       {products(entry.turnId)}
                       {events

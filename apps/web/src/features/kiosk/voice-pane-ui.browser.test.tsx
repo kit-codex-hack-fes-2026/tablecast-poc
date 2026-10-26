@@ -43,6 +43,9 @@ it.each(["ja", "en"] as const)(
       );
       expect(getComputedStyle(panel).fontFamily).toContain("sans-serif");
       expect(getComputedStyle(panel).fontFamily).not.toContain("Mincho");
+      const heading = panel.querySelector("h2");
+      if (!heading) throw new Error("会話見出しがありません");
+      expect(getComputedStyle(heading).fontFamily).toContain("sans-serif");
       const frame = panel.querySelector('[data-ui="camera-frame"]');
       const history = panel.querySelector('[data-ui="conversation-history"]');
       if (!frame || !history) throw new Error("カメラと履歴の領域がありません");
@@ -52,6 +55,7 @@ it.each(["ja", "en"] as const)(
       expect(history.getBoundingClientRect().right).toBeGreaterThan(
         frame.getBoundingClientRect().right,
       );
+      expect(history.getBoundingClientRect().bottom).toBeLessThanOrEqual(playBounds.top);
       await expect.element(screen.getByText(line.text)).toBeVisible();
       expect(panel.textContent).not.toContain(
         locale === "ja" ? "録画・保存" : "recorded or stored",

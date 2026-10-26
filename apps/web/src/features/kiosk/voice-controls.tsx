@@ -160,7 +160,7 @@ export function VoiceControls({
   return (
     <footer
       data-theme-part="voice-controls"
-      className={`grid min-w-0 shrink-0 gap-2 ${active ? "border-t border-border pt-2" : ""}`}
+      className={`mt-auto grid min-w-0 shrink-0 gap-2 ${active ? "border-t border-border pt-2" : ""}`}
     >
       {active && (
         <div className="min-w-0" data-ui="voice-media">
