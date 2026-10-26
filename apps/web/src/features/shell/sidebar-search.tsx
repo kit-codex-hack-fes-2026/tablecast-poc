@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { fetchClient } from "fumadocs-core/search/client/fetch";
 import { ArrowUpRight, LoaderCircle, Search, X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import { cn } from "tailwind-variants";
 import { Input } from "../../components/ui/input";
 import { controlMotion, surfaceMotion } from "../../components/ui/motion-variants";
@@ -49,6 +49,7 @@ export function SidebarSearch({
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const term = query.trim();
+  const visible = open && (collapsed || !!term);
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(term), 150);
     return () => clearTimeout(timer);
@@ -81,66 +82,23 @@ export function SidebarSearch({
   );
 
   const searchInput = (
-    <div className="relative flex min-w-0 flex-1 items-center">
-      <Search
-        aria-hidden="true"
-        className="pointer-events-none absolute left-3 size-4 text-muted-foreground"
-      />
-      <Input
-        id={id}
-        ref={input}
-        type="search"
-        value={query}
-        maxLength={200}
-        autoComplete="off"
-        aria-label={t("navigation_search")}
-        aria-controls={open ? `${id}-results` : undefined}
-        placeholder={t("navigation_search_placeholder")}
-        className="h-11 rounded-lg bg-muted/50 pr-14 pl-9 text-sm [&::-webkit-search-cancel-button]:appearance-none"
-        onFocus={() => setOpen(true)}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setOpen(true);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.preventDefault();
-            setOpen(false);
-          }
-          if (event.key === "ArrowDown") {
-            event.preventDefault();
-            popup.current?.querySelector<HTMLAnchorElement>("a[href]")?.focus();
-          }
-        }}
-      />
-      {query ? (
-        <button
-          type="button"
-          aria-label={t("navigation_search_clear")}
-          className={cn(
-            controlMotion,
-            "absolute right-1 flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          )}
-          onClick={() => {
-            setQuery("");
-            input.current?.focus();
-          }}
-        >
-          <X className="size-4" />
-        </button>
-      ) : (
-        <kbd
-          aria-hidden="true"
-          className="pointer-events-none absolute right-3 text-xs text-muted-foreground max-md:hidden"
-        >
-          ⌘ K
-        </kbd>
-      )}
-    </div>
+    <SidebarSearchInput
+      id={id}
+      inputRef={input}
+      resultsRef={popup}
+      query={query}
+      visible={visible}
+      onQuery={(next) => {
+        setQuery(next);
+        setOpen(true);
+      }}
+      onFocus={() => setOpen(true)}
+      onDismiss={() => setOpen(false)}
+    />
   );
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen} modal={false}>
+    <Popover.Root open={visible} onOpenChange={setOpen} modal={false}>
       <div ref={anchor} className="shrink-0 pb-3">
         {collapsed ? (
           <Popover.Trigger
@@ -206,6 +164,83 @@ export function SidebarSearch({
         </Popover.Positioner>
       </Popover.Portal>
     </Popover.Root>
+  );
+}
+
+function SidebarSearchInput({
+  id,
+  inputRef,
+  resultsRef,
+  query,
+  visible,
+  onQuery,
+  onFocus,
+  onDismiss,
+}: {
+  id: string;
+  inputRef: RefObject<HTMLInputElement | null>;
+  onDismiss: () => void;
+  onFocus: () => void;
+  onQuery: (query: string) => void;
+  query: string;
+  resultsRef: RefObject<HTMLDivElement | null>;
+  visible: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="relative flex min-w-0 flex-1 items-center">
+      <Search
+        aria-hidden="true"
+        className="pointer-events-none absolute left-3 size-4 text-muted-foreground"
+      />
+      <Input
+        id={id}
+        ref={inputRef}
+        type="search"
+        value={query}
+        maxLength={200}
+        autoComplete="off"
+        aria-label={t("navigation_search")}
+        aria-controls={visible ? `${id}-results` : undefined}
+        placeholder={t("navigation_search_placeholder")}
+        className="h-11 rounded-lg bg-muted/50 pr-14 pl-9 text-sm [&::-webkit-search-cancel-button]:appearance-none"
+        onFocus={onFocus}
+        onChange={(event) => onQuery(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            onDismiss();
+          }
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            resultsRef.current?.querySelector<HTMLAnchorElement>("a[href]")?.focus();
+          }
+        }}
+      />
+      {query ? (
+        <button
+          type="button"
+          aria-label={t("navigation_search_clear")}
+          className={cn(
+            controlMotion,
+            "absolute right-1 flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          )}
+          onClick={() => {
+            onQuery("");
+            inputRef.current?.focus();
+          }}
+        >
+          <X className="size-4" />
+        </button>
+      ) : (
+        <kbd
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3 text-xs text-muted-foreground max-md:hidden"
+        >
+          ⌘ K
+        </kbd>
+      )}
+    </div>
   );
 }
 

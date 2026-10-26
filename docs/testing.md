@@ -144,7 +144,7 @@ runtime再起動はlisten markerだけで完了とせず、入口の実API・Mai
 | ssrの無予算の4標本反復・Worker restart                        | 各featureの取得/操作はBrowserへ。計測回数自体は保証にしない                                                                                                                                  | 代表URLを各1回のSSR/hydration、JS無効・匿名隔離・session/PWA redirect                                                                     |
 | image-performance・runtime-isolation                          | 既存予算とruntime fixtureの実物を維持                                                                                                                                                        | 下記の画像予算とケース間の配信資産隔離を引き続き実E2Eで検証                                                                               |
 
-画像性能は[`tablecast-image-performance.spec.ts`](../apps/web/e2e/tablecast-image-performance.spec.ts)の24/120商品で、取得済みURLの再訪転送0、cold画像転送合計500,000byte以下、計測可能なCLS 0.1未満、実画像の縦横比・カート画像64pxを保つ。WebKitでbyte値が取得できない場合は制限を記録し、Chromiumの予算検証で補う。件数の多いfixtureや上限を緩和して高速化済みにはしない。
+画像性能は[`tablecast-image-performance.spec.ts`](../apps/web/e2e/tablecast-image-performance.spec.ts)の24/120商品で、取得済みURLの再訪転送0、cold画像転送合計500,000byte以下、計測可能なCLS 0.1未満、実画像の縦横比・カート画像64pxを保つ。WebKitでbyte値が取得できない場合は制限を記録し、Chromiumの予算検証で補う。件数の多いfixtureや上限を緩和して高速化済みにはしない。Resource Timingの収集枠は1,000件を確保し、満杯になった標本は転送量が欠けるため失敗とする。記録の収集枠と画像転送の予算を区別する。
 
 [`tablecast-runtime-isolation.spec.ts`](../apps/web/e2e/tablecast-runtime-isolation.spec.ts)は、同じworkerでケース内の再起動がassets変更を保持し、次のケースで変更・追加ファイルを復元する保証を維持する。稼働中stateのcopyやfixture共有で業務テストを速くしない。
 

@@ -108,6 +108,7 @@ it("入力を保って失敗を再試行でき、アプリ候補・0件・本文
   const shortcut = detectPlatform() === "mac" ? "{Meta>}k{/Meta}" : "{Control>}k{/Control}";
   await userEvent.keyboard(shortcut);
   await expect.element(input()).toHaveFocus();
+  await input().fill("tablecast-keyboard-search");
   await expect.element(page.getByRole("dialog", { name: "検索結果" })).toBeVisible();
 });
 it("折りたたんだサイドバーから検索を開いて入力へフォーカスできる", async () => {
