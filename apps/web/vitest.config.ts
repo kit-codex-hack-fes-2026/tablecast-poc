@@ -27,6 +27,7 @@ export default defineConfig({
             "@tanstack/react-query",
             "@tablecast/api > hono/client",
             "lucide-react",
+            "fumadocs-core/search/client/fetch",
             "react-resizable-panels",
             "tailwind-variants",
             "zod",

@@ -8,6 +8,7 @@ import { useI18n } from "../../i18n/locale";
 import { navigationItemClass as sidebarItemClass } from "./navigation-group";
 import { NavigationLink } from "./navigation-link";
 import { SidebarNavigation } from "./sidebar-navigation";
+import { SidebarSearch } from "./sidebar-search";
 import { SidebarUserMenu } from "./sidebar-user-menu";
 import { StorePicker } from "./store-picker";
 
@@ -73,6 +74,13 @@ export function AdminSidebar({
           />
         )}
       </div>
+      <SidebarSearch
+        collapsed={collapsed}
+        selectedStore={selectedStore}
+        selectedOrganization={selectedOrganization}
+        manager={manager}
+        onNavigate={onNavigate}
+      />
       <SidebarNavigation
         tab={tab}
         selectedStore={selectedStore}

@@ -1,14 +1,19 @@
 import { useParams, useSearch } from "@tanstack/react-router";
-import { FileClock, History, LayoutList, Mic, Palette, Tags, UtensilsCrossed } from "lucide-react";
 import { useI18n } from "../../i18n/locale";
 import { menuLabels, menuReviewSearchSchema } from "../configuration/menu-model";
 import { navigationItemClass } from "../shell/navigation-group";
 import { NavigationLink as Link } from "../shell/navigation-link";
+import { navigationPages } from "../shell/navigation-model";
+const {
+  changes: { Icon: FileClock },
+  history: { Icon: History },
+  design: { Icon: Palette },
+} = navigationPages;
 const items = [
-  { section: "products", Icon: UtensilsCrossed },
-  { section: "categories", Icon: Tags },
-  { section: "plans", Icon: LayoutList },
-  { section: "cast", Icon: Mic },
+  { section: "products", ...navigationPages.products },
+  { section: "categories", ...navigationPages.categories },
+  { section: "plans", ...navigationPages.plans },
+  { section: "cast", ...navigationPages.cast },
 ] as const;
 export function MenuNavigation({
   storeId,
@@ -66,7 +71,7 @@ export function MenuNavigation({
       <Link
         collapsed={collapsed}
         title={t("theme_title")}
-        to="/admin/stores/$storeId/design"
+        to={navigationPages.design.to}
         params={{ storeId }}
         search={{ ...listSearch, returnSection: currentSection, draftId }}
         className={className}
@@ -78,11 +83,7 @@ export function MenuNavigation({
       <Link
         collapsed={collapsed}
         title={t("admin_drafts")}
-        to={
-          draftId
-            ? "/admin/stores/$storeId/menu/changes/$draftId"
-            : "/admin/stores/$storeId/menu/changes"
-        }
+        to={draftId ? "/admin/stores/$storeId/menu/changes/$draftId" : navigationPages.changes.to}
         params={{ storeId, draftId: draftId ?? "" }}
         search={draftId ? { ...listSearch, returnSection: currentSection } : {}}
         activeOptions={{ exact: true }}
@@ -96,7 +97,7 @@ export function MenuNavigation({
         <Link
           collapsed={collapsed}
           title={t("configuration_history_title")}
-          to="/admin/stores/$storeId/menu/history"
+          to={navigationPages.history.to}
           params={{ storeId }}
           className={className}
           onClick={onNavigate}

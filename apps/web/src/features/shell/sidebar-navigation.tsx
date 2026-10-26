@@ -1,25 +1,4 @@
 import type { ReactNode } from "react";
-import {
-  Blocks,
-  BookOpen,
-  Building2,
-  ChartNoAxesCombined,
-  CircleHelp,
-  CreditCard,
-  Gamepad2,
-  Gift,
-  History,
-  House,
-  KeyRound,
-  LayoutDashboard,
-  LifeBuoy,
-  MonitorSmartphone,
-  Plug,
-  Store,
-  TicketPercent,
-  Users,
-  UtensilsCrossed,
-} from "lucide-react";
 import { LayoutGroup } from "motion/react";
 import * as m from "motion/react-m";
 import { useId } from "react";
@@ -27,6 +6,15 @@ import type { AdminSidebarProps } from "./admin-sidebar";
 import { useI18n } from "../../i18n/locale";
 import { NavigationGroup, navigationItemClass } from "./navigation-group";
 import { NavigationLink as Link } from "./navigation-link";
+import {
+  helpNavigation,
+  isNavigationGroupId,
+  isNavigationPageId,
+  navigationGroups,
+  navigationPages,
+  navigationTarget,
+} from "./navigation-model";
+
 export function SidebarNavigation({
   tab,
   manager,
@@ -46,7 +34,6 @@ export function SidebarNavigation({
   userId?: string;
 }) {
   const { t, locale } = useI18n();
-  const common = { collapsed, userId };
   const layoutId = useId();
   return (
     <LayoutGroup id={layoutId}>
@@ -55,224 +42,74 @@ export function SidebarNavigation({
         className="min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-border py-3"
         aria-label={t("admin_navigation")}
       >
-        {selectedStore && (
-          <>
+        {Object.entries(navigationGroups).map(([key, group]) => {
+          if (!isNavigationGroupId(key)) return null;
+          const id = key;
+          if (!selectedStore && id !== "workspace" && id !== "help") return null;
+          return (
             <NavigationGroup
-              {...common}
-              id="operations"
-              label={t("nav_operations")}
-              icon={LayoutDashboard}
-            >
-              <Link
-                collapsed={collapsed}
-                className={navigationItemClass}
-                to="/admin/stores/$storeId"
-                params={{ storeId: selectedStore }}
-                activeOptions={{ exact: true }}
-                onClick={onNavigate}
-                title={t("home_title")}
-                aria-label={t("home_title")}
-              >
-                <House className="size-4" />
-                {!collapsed && t("home_title")}
-              </Link>
-              <Link
-                collapsed={collapsed}
-                className={navigationItemClass}
-                to="/admin/stores/$storeId/floor"
-                params={{ storeId: selectedStore }}
-                onClick={onNavigate}
-                title={t("admin_live")}
-              >
-                <LayoutDashboard className="size-4" />
-                {!collapsed && t("admin_live")}
-              </Link>
-              <Link
-                collapsed={collapsed}
-                className={navigationItemClass}
-                to="/admin/stores/$storeId/visits"
-                params={{ storeId: selectedStore }}
-                onClick={onNavigate}
-                title={t("admin_history")}
-              >
-                <History className="size-4" />
-                {!collapsed && t("admin_history")}
-              </Link>
-              {manager && (
-                <Link
-                  collapsed={collapsed}
-                  className={navigationItemClass}
-                  to="/admin/stores/$storeId/statistics"
-                  params={{ storeId: selectedStore }}
-                  search={{ period: "today", view: "summary" }}
-                  onClick={onNavigate}
-                  title={t("statistics_title")}
-                  aria-label={t("statistics_title")}
-                >
-                  <ChartNoAxesCombined className="size-4" />
-                  {!collapsed && t("statistics_title")}
-                </Link>
-              )}
-            </NavigationGroup>
-            <NavigationGroup {...common} id="menu" label={t("admin_config")} icon={UtensilsCrossed}>
-              {menuNavigation}
-              <Link
-                collapsed={collapsed}
-                className={navigationItemClass}
-                to="/admin/stores/$storeId/games"
-                params={{ storeId: selectedStore }}
-                onClick={onNavigate}
-                title={t("games_title")}
-              >
-                <Gamepad2 className="size-4" />
-                {!collapsed && t("games_title")}
-              </Link>
-            </NavigationGroup>
-            <NavigationGroup {...common} id="rewards" label={t("nav_rewards")} icon={Gift}>
-              <Link
-                collapsed={collapsed}
-                className={navigationItemClass}
-                to="/admin/stores/$storeId/points"
-                params={{ storeId: selectedStore }}
-                onClick={onNavigate}
-                title={t("customer_points_policy")}
-              >
-                <Gift className="size-4" />
-                {!collapsed && t("customer_points_policy")}
-              </Link>
-              <Link
-                collapsed={collapsed}
-                className={navigationItemClass}
-                to="/admin/stores/$storeId/coupons"
-                params={{ storeId: selectedStore }}
-                onClick={onNavigate}
-                title={t("coupons")}
-              >
-                <TicketPercent className="size-4" />
-                {!collapsed && t("coupons")}
-              </Link>
-            </NavigationGroup>
-            <NavigationGroup {...common} id="store" label={t("nav_store_management")} icon={Store}>
-              {(
-                [
-                  { to: "/admin/stores/$storeId/members", label: "org_members", Icon: Users },
-                  {
-                    to: "/admin/stores/$storeId/devices",
-                    label: "device_title",
-                    Icon: MonitorSmartphone,
-                  },
-                  { to: "/admin/stores/$storeId/profile", label: "store_profile", Icon: Store },
-                ] as const
-              ).map(({ to, label, Icon }) => (
-                <Link
-                  collapsed={collapsed}
-                  key={to}
-                  className={navigationItemClass}
-                  to={to}
-                  params={{ storeId: selectedStore }}
-                  title={t(label)}
-                  onClick={onNavigate}
-                >
-                  <Icon className="size-4" />
-                  {!collapsed && t(label)}
-                </Link>
-              ))}
-              {selectedOrganization && (
-                <Link
-                  collapsed={collapsed}
-                  className={navigationItemClass}
-                  to="/billing/$organizationId"
-                  params={{ organizationId: selectedOrganization }}
-                  title={t("billing_title")}
-                  aria-label={t("billing_title")}
-                  aria-current={tab === "billing" ? "page" : undefined}
-                  onClick={onNavigate}
-                >
-                  <CreditCard className="size-4" />
-                  {!collapsed && t("billing_title")}
-                </Link>
-              )}
-            </NavigationGroup>
-          </>
-        )}
-        <WorkspaceNavigation
-          tab={tab}
-          collapsed={collapsed}
-          userId={userId}
-          onNavigate={onNavigate}
-        />
-        <NavigationGroup {...common} id="help" label={t("help_title")} icon={LifeBuoy}>
-          {(
-            [
-              { slug: "", label: "help_overview", Icon: BookOpen },
-              { slug: "mcp", label: "help_mcp", Icon: Plug },
-              { slug: "troubleshooting", label: "help_troubleshooting", Icon: CircleHelp },
-            ] as const
-          ).map(({ slug, label, Icon }) => (
-            <Link
-              key={slug}
+              key={id}
+              id={id}
+              label={t(group.label)}
+              icon={group.Icon}
               collapsed={collapsed}
-              to="/help/$lang/$"
-              params={{ lang: locale, _splat: slug }}
-              className={navigationItemClass}
-              title={t(label)}
-              onClick={onNavigate}
+              userId={userId}
             >
-              <Icon className="size-4" />
-              {!collapsed && t(label)}
-            </Link>
-          ))}
-        </NavigationGroup>
+              {id === "menu" && menuNavigation}
+              {Object.entries(navigationPages).map(([pageKey, page]) => {
+                if (page.group !== id || (id === "menu" && pageKey !== "games")) return null;
+                if (!manager && "manager" in page && page.manager) return null;
+                if (!isNavigationPageId(pageKey)) return null;
+                const pageId = pageKey;
+                const to = navigationTarget(pageId, { selectedStore, selectedOrganization });
+                if (!to) return null;
+                const Icon = page.Icon;
+                return (
+                  <Link
+                    key={pageId}
+                    collapsed={collapsed}
+                    className={navigationItemClass}
+                    to={to}
+                    activeOptions={{ exact: pageId === "home" }}
+                    title={t(page.label)}
+                    aria-label={pageId === "organisations" ? t("stores_title") : undefined}
+                    aria-current={pageId === "billing" && tab === "billing" ? "page" : undefined}
+                    onClick={onNavigate}
+                  >
+                    <Icon className="size-5" />
+                    {!collapsed && t(page.label)}
+                  </Link>
+                );
+              })}
+              {id === "help" &&
+                (
+                  [
+                    { slug: "", label: "help_overview" },
+                    { slug: "mcp", label: "help_mcp" },
+                    { slug: "troubleshooting", label: "help_troubleshooting" },
+                  ] as const
+                ).map(({ slug, label }) => {
+                  const Icon = helpNavigation[slug].Icon;
+                  return (
+                    <Link
+                      key={slug}
+                      collapsed={collapsed}
+                      className={navigationItemClass}
+                      to="/help/$lang/$"
+                      params={{ lang: locale, _splat: slug }}
+                      activeOptions={{ exact: true }}
+                      title={t(label)}
+                      onClick={onNavigate}
+                    >
+                      <Icon className="size-5" />
+                      {!collapsed && t(label)}
+                    </Link>
+                  );
+                })}
+            </NavigationGroup>
+          );
+        })}
       </m.nav>
     </LayoutGroup>
-  );
-}
-
-function WorkspaceNavigation({
-  tab,
-  collapsed,
-  userId,
-  onNavigate,
-}: Pick<AdminSidebarProps, "tab"> & {
-  collapsed: boolean;
-  onNavigate?: () => void;
-  userId?: string;
-}) {
-  const { t } = useI18n();
-  const common = { collapsed, userId };
-  return (
-    <NavigationGroup {...common} id="workspace" label={t("nav_workspace")} icon={Plug}>
-      <Link
-        collapsed={collapsed}
-        className={navigationItemClass}
-        to="/organisations"
-        title={t("nav_all_stores")}
-        aria-label={t("stores_title")}
-        aria-current={tab === "organisations" ? "page" : undefined}
-        onClick={onNavigate}
-      >
-        <Building2 className="size-4" />
-        {!collapsed && t("nav_all_stores")}
-      </Link>
-      {(
-        [
-          { to: "/account/integrations/plugins", label: "mcp_plugin_install", Icon: Blocks },
-          { to: "/account/integrations/manual", label: "mcp_manual_install", Icon: BookOpen },
-          { to: "/account/mcp-sessions", label: "mcp_oauth_sessions", Icon: KeyRound },
-        ] as const
-      ).map(({ to, label, Icon }) => (
-        <Link
-          collapsed={collapsed}
-          key={to}
-          className={navigationItemClass}
-          to={to}
-          title={t(label)}
-          onClick={onNavigate}
-        >
-          <Icon className="size-4" />
-          {!collapsed && t(label)}
-        </Link>
-      ))}
-    </NavigationGroup>
   );
 }

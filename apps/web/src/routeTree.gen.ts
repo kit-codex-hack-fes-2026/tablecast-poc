@@ -25,6 +25,7 @@ import { Route as AccountMcpSessionsRouteImport } from './routes/account_.mcp-se
 import { Route as AdminLiveRouteImport } from './routes/admin.live'
 import { Route as BillingOrganizationIdRouteImport } from './routes/billing.$organizationId'
 import { Route as HelpIndexRouteImport } from './routes/help.index'
+import { Route as HelpSearchRouteImport } from './routes/help.search'
 import { Route as InvitationsInvitationIdRouteImport } from './routes/invitations.$invitationId'
 import { Route as MemberIndexRouteImport } from './routes/member.index'
 import { Route as MemberStoreIdRouteImport } from './routes/member.$storeId'
@@ -32,6 +33,7 @@ import { Route as MemberJoinRouteImport } from './routes/member.join'
 import { Route as StoresNewRouteImport } from './routes/stores.new'
 import { Route as AccountIntegrationsManualRouteImport } from './routes/account_.integrations.manual'
 import { Route as AccountIntegrationsPluginsRouteImport } from './routes/account_.integrations.plugins'
+import { Route as AdminGoPageRouteImport } from './routes/admin.go.$page'
 import { Route as AdminStoresStoreIdRouteImport } from './routes/admin.stores.$storeId'
 import { Route as HelpLangSplatRouteImport } from './routes/help.$lang.$'
 import { Route as HelpContentSplatRouteImport } from './routes/help.content.$'
@@ -147,6 +149,11 @@ const HelpIndexRoute = HelpIndexRouteImport.update({
   path: '/help/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HelpSearchRoute = HelpSearchRouteImport.update({
+  id: '/help/search',
+  path: '/help/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InvitationsInvitationIdRoute = InvitationsInvitationIdRouteImport.update({
   id: '/invitations/$invitationId',
   path: '/invitations/$invitationId',
@@ -184,6 +191,11 @@ const AccountIntegrationsPluginsRoute =
     path: '/account/integrations/plugins',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminGoPageRoute = AdminGoPageRouteImport.update({
+  id: '/admin/go/$page',
+  path: '/admin/go/$page',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminStoresStoreIdRoute = AdminStoresStoreIdRouteImport.update({
   id: '/admin/stores/$storeId',
   path: '/admin/stores/$storeId',
@@ -394,6 +406,7 @@ export interface FileRoutesByFullPath {
   '/account/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
   '/billing/$organizationId': typeof BillingOrganizationIdRoute
+  '/help/search': typeof HelpSearchRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
   '/member/$storeId': typeof MemberStoreIdRouteWithChildren
   '/member/join': typeof MemberJoinRoute
@@ -402,6 +415,7 @@ export interface FileRoutesByFullPath {
   '/member/': typeof MemberIndexRoute
   '/account/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
+  '/admin/go/$page': typeof AdminGoPageRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/help/$lang/$': typeof HelpLangSplatRoute
   '/help/content/$': typeof HelpContentSplatRoute
@@ -452,6 +466,7 @@ export interface FileRoutesByTo {
   '/account/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
   '/billing/$organizationId': typeof BillingOrganizationIdRoute
+  '/help/search': typeof HelpSearchRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
   '/member/join': typeof MemberJoinRoute
   '/stores/new': typeof StoresNewRoute
@@ -459,6 +474,7 @@ export interface FileRoutesByTo {
   '/member': typeof MemberIndexRoute
   '/account/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
+  '/admin/go/$page': typeof AdminGoPageRoute
   '/help/$lang/$': typeof HelpLangSplatRoute
   '/help/content/$': typeof HelpContentSplatRoute
   '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
@@ -510,6 +526,7 @@ export interface FileRoutesById {
   '/account_/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
   '/billing/$organizationId': typeof BillingOrganizationIdRoute
+  '/help/search': typeof HelpSearchRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
   '/member/$storeId': typeof MemberStoreIdRouteWithChildren
   '/member/join': typeof MemberJoinRoute
@@ -518,6 +535,7 @@ export interface FileRoutesById {
   '/member/': typeof MemberIndexRoute
   '/account_/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account_/integrations/plugins': typeof AccountIntegrationsPluginsRoute
+  '/admin/go/$page': typeof AdminGoPageRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/help/$lang/$': typeof HelpLangSplatRoute
   '/help/content/$': typeof HelpContentSplatRoute
@@ -571,6 +589,7 @@ export interface FileRouteTypes {
     | '/account/mcp-sessions'
     | '/admin/live'
     | '/billing/$organizationId'
+    | '/help/search'
     | '/invitations/$invitationId'
     | '/member/$storeId'
     | '/member/join'
@@ -579,6 +598,7 @@ export interface FileRouteTypes {
     | '/member/'
     | '/account/integrations/manual'
     | '/account/integrations/plugins'
+    | '/admin/go/$page'
     | '/admin/stores/$storeId'
     | '/help/$lang/$'
     | '/help/content/$'
@@ -629,6 +649,7 @@ export interface FileRouteTypes {
     | '/account/mcp-sessions'
     | '/admin/live'
     | '/billing/$organizationId'
+    | '/help/search'
     | '/invitations/$invitationId'
     | '/member/join'
     | '/stores/new'
@@ -636,6 +657,7 @@ export interface FileRouteTypes {
     | '/member'
     | '/account/integrations/manual'
     | '/account/integrations/plugins'
+    | '/admin/go/$page'
     | '/help/$lang/$'
     | '/help/content/$'
     | '/member/$storeId/consumption'
@@ -686,6 +708,7 @@ export interface FileRouteTypes {
     | '/account_/mcp-sessions'
     | '/admin/live'
     | '/billing/$organizationId'
+    | '/help/search'
     | '/invitations/$invitationId'
     | '/member/$storeId'
     | '/member/join'
@@ -694,6 +717,7 @@ export interface FileRouteTypes {
     | '/member/'
     | '/account_/integrations/manual'
     | '/account_/integrations/plugins'
+    | '/admin/go/$page'
     | '/admin/stores/$storeId'
     | '/help/$lang/$'
     | '/help/content/$'
@@ -746,11 +770,13 @@ export interface RootRouteChildren {
   AccountMcpSessionsRoute: typeof AccountMcpSessionsRoute
   AdminLiveRoute: typeof AdminLiveRoute
   BillingOrganizationIdRoute: typeof BillingOrganizationIdRoute
+  HelpSearchRoute: typeof HelpSearchRoute
   InvitationsInvitationIdRoute: typeof InvitationsInvitationIdRoute
   StoresNewRoute: typeof StoresNewRoute
   HelpIndexRoute: typeof HelpIndexRoute
   AccountIntegrationsManualRoute: typeof AccountIntegrationsManualRoute
   AccountIntegrationsPluginsRoute: typeof AccountIntegrationsPluginsRoute
+  AdminGoPageRoute: typeof AdminGoPageRoute
   AdminStoresStoreIdRoute: typeof AdminStoresStoreIdRouteWithChildren
   HelpLangSplatRoute: typeof HelpLangSplatRoute
   HelpContentSplatRoute: typeof HelpContentSplatRoute
@@ -872,6 +898,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HelpIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/help/search': {
+      id: '/help/search'
+      path: '/help/search'
+      fullPath: '/help/search'
+      preLoaderRoute: typeof HelpSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/invitations/$invitationId': {
       id: '/invitations/$invitationId'
       path: '/invitations/$invitationId'
@@ -919,6 +952,13 @@ declare module '@tanstack/react-router' {
       path: '/account/integrations/plugins'
       fullPath: '/account/integrations/plugins'
       preLoaderRoute: typeof AccountIntegrationsPluginsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/go/$page': {
+      id: '/admin/go/$page'
+      path: '/admin/go/$page'
+      fullPath: '/admin/go/$page'
+      preLoaderRoute: typeof AdminGoPageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/stores/$storeId': {
@@ -1278,11 +1318,13 @@ const rootRouteChildren: RootRouteChildren = {
   AccountMcpSessionsRoute: AccountMcpSessionsRoute,
   AdminLiveRoute: AdminLiveRoute,
   BillingOrganizationIdRoute: BillingOrganizationIdRoute,
+  HelpSearchRoute: HelpSearchRoute,
   InvitationsInvitationIdRoute: InvitationsInvitationIdRoute,
   StoresNewRoute: StoresNewRoute,
   HelpIndexRoute: HelpIndexRoute,
   AccountIntegrationsManualRoute: AccountIntegrationsManualRoute,
   AccountIntegrationsPluginsRoute: AccountIntegrationsPluginsRoute,
+  AdminGoPageRoute: AdminGoPageRoute,
   AdminStoresStoreIdRoute: AdminStoresStoreIdRouteWithChildren,
   HelpLangSplatRoute: HelpLangSplatRoute,
   HelpContentSplatRoute: HelpContentSplatRoute,

@@ -8,6 +8,7 @@ import { RootProvider } from "fumadocs-ui/provider/tanstack";
 import { createContext, useContext } from "react";
 import { Brand } from "../../components/brand";
 import { helpI18n, helpMarkdownUrl, helpSource, resolveHelpLink } from "../../lib/help-source";
+import { HelpSidebarGroup, HelpSidebarItem, HelpSidebarSearch } from "./help-sidebar";
 
 const HelpPageContext = createContext<InferPageType<typeof helpSource> | undefined>(undefined);
 
@@ -19,6 +20,7 @@ function HelpLink({ href, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
 }
 
 const components = { ...defaultMdxComponents, a: HelpLink };
+const sidebarComponents = { Folder: HelpSidebarGroup, Item: HelpSidebarItem };
 
 const translations = defineI18nUI(helpI18n, {
   ja: {
@@ -42,6 +44,7 @@ const translations = defineI18nUI(helpI18n, {
 export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
   const english = page.locale === "en";
   const Body = page.data.body;
+  const tree = helpSource.getPageTree(page.locale);
   return (
     <div lang={page.locale} className="min-h-dvh bg-background text-foreground">
       <RootProvider
@@ -50,7 +53,13 @@ export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
         i18n={translations.provider(page.locale)}
       >
         <DocsLayout
-          tree={helpSource.getPageTree(page.locale)}
+          tree={{
+            ...tree,
+            children: [
+              { type: "folder", name: english ? "Help" : "ヘルプ", children: tree.children },
+            ],
+          }}
+          sidebar={{ components: sidebarComponents, banner: <HelpSidebarSearch /> }}
           nav={{
             title: (
               <>
