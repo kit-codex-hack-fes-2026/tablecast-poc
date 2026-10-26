@@ -227,15 +227,19 @@ test("ヘルプをSSRで読み、関連章・言語・モバイル目次へ移�
   expect(identityRequests).toEqual([]);
 });
 
-test("店舗サイドバーのヘルプグループから公開ガイドへ進める", async ({
-  page,
-  baseURL,
-}, testInfo) => {
+test("店舗サイドバーの検索から公開ガイドへ進める", async ({ page, baseURL }, testInfo) => {
   await signInStaff(page.request, baseURL);
   await page.setViewportSize({ width: 1512, height: 982 });
   await page.goto("/admin/go/products");
   await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/menu\/products$/);
   await page.goto("/admin/live");
+  await expect(page.getByRole("region", { name: "ヘルプ", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "連携・店舗一覧", exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: testInfo.outputPath("tablecast-admin-sidebar.png"),
+    fullPage: false,
+    animations: "disabled",
+  });
   await page.getByRole("searchbox", { name: "ページとヘルプを検索" }).fill("商品");
   const results = page.getByRole("dialog", { name: "検索結果" });
   await expect(results.getByRole("link", { name: "商品 メニュー・接客" })).toBeVisible();
@@ -266,20 +270,12 @@ test("店舗サイドバーのヘルプグループから公開ガイドへ進�
   });
   await page.getByRole("button", { name: "日本語", exact: true }).click();
   await page.setViewportSize({ width: 1512, height: 982 });
-  const help = page.getByRole("region", { name: "ヘルプ", exact: true });
-  await expect(help.getByRole("button", { name: "ヘルプ", exact: true })).toHaveAttribute(
-    "aria-expanded",
-    "true",
-  );
-  await expect(help.getByRole("link", { name: "MCP・agentガイド", exact: true })).toHaveAttribute(
-    "href",
-    "/help/ja/mcp",
-  );
-  await help.scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: testInfo.outputPath("tablecast-help-sidebar.png"),
-    fullPage: false,
-  });
-  await help.getByRole("link", { name: "使い方ガイド", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "TableCast ヘルプ", exact: true })).toBeVisible();
+  await page.getByRole("searchbox", { name: "ページとヘルプを検索" }).fill("MCP");
+  const guide = results.getByRole("link", { name: /MCP接続とagentの使い方/ }).first();
+  await expect(guide).toBeVisible();
+  await guide.click();
+  await expect(page).toHaveURL(/\/help\/ja\/mcp(#|$)/);
+  await expect(
+    page.getByRole("heading", { name: "MCP接続とagentの使い方", exact: true }),
+  ).toBeVisible();
 });

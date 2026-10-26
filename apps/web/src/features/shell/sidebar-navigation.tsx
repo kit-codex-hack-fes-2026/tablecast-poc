@@ -7,7 +7,6 @@ import { useI18n } from "../../i18n/locale";
 import { NavigationGroup, navigationItemClass } from "./navigation-group";
 import { NavigationLink as Link } from "./navigation-link";
 import {
-  helpNavigation,
   isNavigationGroupId,
   isNavigationPageId,
   navigationGroups,
@@ -33,7 +32,7 @@ export function SidebarNavigation({
   selectedStore?: string;
   userId?: string;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const layoutId = useId();
   return (
     <LayoutGroup id={layoutId}>
@@ -43,9 +42,9 @@ export function SidebarNavigation({
         aria-label={t("admin_navigation")}
       >
         {Object.entries(navigationGroups).map(([key, group]) => {
-          if (!isNavigationGroupId(key)) return null;
+          if (!isNavigationGroupId(key) || key === "help") return null;
           const id = key;
-          if (!selectedStore && id !== "workspace" && id !== "help") return null;
+          if (!selectedStore && id !== "workspace") return null;
           return (
             <NavigationGroup
               key={id}
@@ -81,31 +80,6 @@ export function SidebarNavigation({
                   </Link>
                 );
               })}
-              {id === "help" &&
-                (
-                  [
-                    { slug: "", label: "help_overview" },
-                    { slug: "mcp", label: "help_mcp" },
-                    { slug: "troubleshooting", label: "help_troubleshooting" },
-                  ] as const
-                ).map(({ slug, label }) => {
-                  const Icon = helpNavigation[slug].Icon;
-                  return (
-                    <Link
-                      key={slug}
-                      collapsed={collapsed}
-                      className={navigationItemClass}
-                      to="/help/$lang/$"
-                      params={{ lang: locale, _splat: slug }}
-                      activeOptions={{ exact: true }}
-                      title={t(label)}
-                      onClick={onNavigate}
-                    >
-                      <Icon className="size-5" />
-                      {!collapsed && t(label)}
-                    </Link>
-                  );
-                })}
             </NavigationGroup>
           );
         })}
