@@ -196,7 +196,7 @@ export function navigationTarget(id: NavigationPageId, context: NavigationContex
     .replace("$organizationId", encodeURIComponent(context.selectedOrganization ?? ""));
 }
 
-export const helpNavigation = {
+const helpNavigation = {
   "": { Icon: BookOpen },
   "getting-started": { Icon: Tablet },
   mcp: { Icon: Plug },

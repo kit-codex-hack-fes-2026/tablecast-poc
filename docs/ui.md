@@ -388,3 +388,5 @@ modal/drawerのoverlayは半透明の暗幕だけを使い、背景をぼかさ�
 公開ヘルプと管理画面は共通AppHeader・LanguageSwitch・PageHeaderを使う。ヘルプの言語はURLを正本とし、切替時は同じ章へ移り、認証や店舗情報は取得しない。検索入力のEnterは先頭、Cmd/Ctrl+1〜4は分類を通した表示順の先頭4件を開く。IME変換中・Safariの変換確定・古い候補では遷移しない。候補のインラインMarkdownと表のセルを読みやすく描画し、内側のリンクや埋込は作らない。日本語tokenizerと英語stemmingを索引・検索語・一致部分の強調で共有する。
 
 公開ヘルプのページ面は管理画面と共通の`page-layout`で角丸・背景・影・外側の余白・本文幅と余白を揃える。PageHeaderはページ幅を使い、ページ内TOCは本文領域へ置く。モバイルのTOCも本文内で開閉する。アプリを開く導線は共通SidebarFooter・NavigationLinkを使い、サイドバー下部へ配置する。
+
+本文はplugin同梱の参照資料をそのまま表示し、公開ヘルプ・ログイン不要・Markdown・Agent向け索引などの配信形式や実装上の案内を付加しない。

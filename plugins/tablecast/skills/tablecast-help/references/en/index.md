@@ -3,7 +3,7 @@ title: TableCast Help
 description: Prepare your store, configure menus and service, and work with an MCP agent.
 ---
 
-TableCast provides voice and on-screen ordering on tabletop iPads. This help is for store teams and the MCP agents that assist them. You can read it without signing in. Accessing store data or performing operations still requires authentication and permission for the organisation.
+TableCast provides voice and on-screen ordering on tabletop iPads. Find the procedures for preparing a store, connecting, changing settings, publishing and checking the result by task.
 
 ## Find your task
 
@@ -15,8 +15,8 @@ TableCast provides voice and on-screen ordering on tabletop iPads. This help is 
 | Review sales and orders                    | [Analytics and improvements](./analytics.md)       |
 | Resolve connection, saving or voice issues | [Troubleshooting](./troubleshooting.md)            |
 
-## Read with an agent
+## Before starting a task
 
-The public `/llms.txt` lists both languages and links to Markdown pages. Fetch only the chapters you need. Each page offers a Markdown link; `/llms-full.txt` contains all chapters. The plugin bundles the same source in `tablecast-help/references` for offline use.
+Check the connected TableCast server's tool list and input schemas, the target store ID, permissions and current configuration. Do not guess store IDs or prices; ask when the supplied material and current data do not establish a fact. [Check the connection and authorisation](./mcp.md) before starting the requested task.
 
-Use the connected server’s actual tools and input schemas to confirm available operations, store permissions, prices and publication status. This help explains the workflow; the server determines the result.
+A request for an explanation does not authorise changes to store settings. When changes are requested, follow [Configuration and publishing](./configuration.md) and distinguish saving, validation, publication requests and human approval. Saving or successful validation alone does not mean the changes are published; check the current configuration after publication.

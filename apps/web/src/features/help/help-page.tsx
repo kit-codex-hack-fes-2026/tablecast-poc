@@ -9,7 +9,7 @@ import { RootProvider } from "fumadocs-ui/provider/tanstack";
 import { createContext, useContext } from "react";
 import { Brand } from "../../components/brand";
 import { PageHeader } from "../../components/page-header";
-import { helpI18n, helpMarkdownUrl, helpSource, resolveHelpLink } from "../../lib/help-source";
+import { helpI18n, helpSource, resolveHelpLink } from "../../lib/help-source";
 import { helpNavigationItem } from "../shell/navigation-model";
 import { HelpLayoutContainer, HelpPageContainer, HelpTableOfContents } from "./help-layout";
 import {
@@ -115,17 +115,6 @@ export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
               <HelpTableOfContents />
               <div className="min-w-0 space-y-6 xl:col-start-1 xl:row-start-1">
                 <PageBreadcrumb />
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-                  <span>
-                    {english ? "Public help · No sign-in required" : "公開ヘルプ · ログイン不要"}
-                  </span>
-                  <a className="underline underline-offset-4" href={helpMarkdownUrl(page)}>
-                    Markdown
-                  </a>
-                  <a className="underline underline-offset-4" href="/llms.txt">
-                    {english ? "Agent index" : "Agent向け索引"}
-                  </a>
-                </div>
                 <DocsBody>
                   <HelpPageContext value={page}>
                     <Body components={components} />
