@@ -4,6 +4,7 @@ import { Minus, Plus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { ConditionSummary } from "../../components/condition-summary";
 import { ErrorNotice } from "../../components/error-notice";
+import { IllustrationNotice } from "../../components/illustration-notice";
 import { Money } from "../../components/money";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
@@ -69,15 +70,18 @@ export function ProductPage({
             </div>
           </div>
           {product.imageKey && (
-            <ProductImage
-              priority
-              width={160}
-              height={160}
-              sizes="(min-width: 640px) 160px, 96px"
-              className="size-24 shrink-0 rounded-xl object-contain sm:size-40"
-              src={`/media/${product.imageKey}`}
-              alt={product.text[locale].displayName}
-            />
+            <div className="relative size-24 shrink-0 sm:size-40">
+              <ProductImage
+                priority
+                width={160}
+                height={160}
+                sizes="(min-width: 640px) 160px, 96px"
+                className="size-full rounded-xl object-contain"
+                src={`/media/${product.imageKey}`}
+                alt={product.text[locale].displayName}
+              />
+              {product.imageKind === "illustration" && <IllustrationNotice />}
+            </div>
           )}
         </div>
         {product.modifiers.map((group, groupIndex) => (

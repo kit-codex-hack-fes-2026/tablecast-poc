@@ -3,6 +3,7 @@ import { ImageOff, Plus } from "lucide-react";
 import { memo, useState } from "react";
 import { tv } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
+import { IllustrationNotice } from "./illustration-notice";
 import { MenuBanners } from "./menu-banners";
 import { Money } from "./money";
 import { ProductImage } from "./product-image";
@@ -112,7 +113,7 @@ export const ProductMenu = memo(function ProductMenu({
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <span className="flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-md bg-muted">
+            <span className="relative flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-md bg-muted">
               {product.imageKey ? (
                 <ProductImage
                   className="size-full object-contain"
@@ -128,18 +129,15 @@ export const ProductMenu = memo(function ProductMenu({
                   {t("kiosk_no_image")}
                 </span>
               )}
+              {product.imageKey && product.imageKind === "illustration" && <IllustrationNotice />}
             </span>
             <span className="flex flex-1 flex-col pt-3">
-              {(!product.available ||
-                (product.imageKey && product.imageKind === "illustration")) && (
+              {!product.available && (
                 <span className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
                   {!product.available && (
                     <span className="rounded-sm bg-muted px-1.5 py-1 font-medium text-foreground">
                       {t("kiosk_sold_out")}
                     </span>
-                  )}
-                  {product.imageKey && product.imageKind === "illustration" && (
-                    <span>{t("kiosk_illustration")}</span>
                   )}
                 </span>
               )}

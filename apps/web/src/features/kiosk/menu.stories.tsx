@@ -121,6 +121,7 @@ export const OptionalCustomisation: Story = {
           selections: [],
         },
         true,
+        expect.any(DOMRect),
       );
     });
   },
@@ -248,6 +249,7 @@ export const RelatedCustomisation: Story = {
           ],
         },
         true,
+        expect.any(DOMRect),
       );
       await expect(body.queryByRole("textbox")).not.toBeInTheDocument();
     });
@@ -335,6 +337,7 @@ export const LongDescription: Story = {
           selections: [{ optionId: "tablecast-glass", quantity: 1 }],
         }),
         false,
+        expect.any(DOMRect),
       );
     });
   },

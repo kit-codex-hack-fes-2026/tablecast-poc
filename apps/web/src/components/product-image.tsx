@@ -12,6 +12,7 @@ function transformImage(src: string | URL, { width = 640 }: { width?: number }) 
  * src・alt・width・heightが必須。
  * sizesは実際の表示幅、priorityは先頭の重要画像のみ、blurDataURLは生成済みplaceholder、onErrorは代替表示の通知に使う。
  * 表示幅に合う画像を既存の配送経路から取得し、無意味な別URLや原寸画像を指定しない。
+ * fitは既定contain、カード高さいっぱいの写真だけcoverを指定する。
  * 写真は商品名・価格の代替ではない。
  */
 export function ProductImage({
@@ -22,12 +23,14 @@ export function ProductImage({
   sizes,
   className,
   priority = false,
+  fit = "contain",
   blurDataURL,
   onError,
 }: {
   alt: string;
   blurDataURL?: `data:image/${string}`;
   className?: string;
+  fit?: "contain" | "cover";
   height: number;
   onError?: () => void;
   priority?: boolean;
@@ -61,7 +64,7 @@ export function ProductImage({
         height={height}
         sizes={priority ? sizes : `auto, ${sizes ?? `${width}px`}`}
         layout="fixed"
-        objectFit="contain"
+        objectFit={fit}
         unstyled
         priority={priority}
         onLoad={blurDataURL ? () => setSettledSrc(src) : undefined}

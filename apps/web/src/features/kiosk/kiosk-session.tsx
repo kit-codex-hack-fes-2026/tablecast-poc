@@ -890,15 +890,18 @@ function KioskMenuTabs({
     data.orders.toReversed().flatMap((order) => order.snapshot.lines),
   );
   const quantity = data.cart.lines.reduce((sum, line) => sum + line.quantity, 0);
-  const priceClass =
-    "block whitespace-nowrap text-xs tabular-nums @max-[32rem]/tablecast-order:text-[10px] [&_[aria-label]]:text-inherit";
-  const tabClass = "h-16 min-w-0 flex-col gap-1 p-1 text-xs [&_svg]:size-4";
+  const orderedQuantity = data.orders
+    .flatMap((order) => order.snapshot.lines)
+    .reduce((sum, line) => sum + line.quantity, 0);
+  const priceClass = "block whitespace-nowrap text-sm tabular-nums [&_[aria-label]]:text-inherit";
+  const tabClass =
+    "min-h-20 h-auto min-w-0 flex-col gap-1 px-1 py-2 text-sm whitespace-normal text-center [&_svg]:size-4";
   return (
     <div className="relative">
       {cartActions}
       <Tabs.List
         data-ui="menu-tabs"
-        className="grid w-full grid-cols-3 gap-1 rounded-none border-t border-border p-2"
+        className="grid w-full grid-cols-3 gap-1 rounded-none border-t border-border p-2 @max-[32rem]/tablecast-order:grid-cols-[4rem_minmax(0,1fr)_minmax(0,1fr)]"
       >
         <Tabs.Tab
           className={tabClass}
@@ -921,7 +924,10 @@ function KioskMenuTabs({
           <span className="flex h-8 max-w-full items-center justify-center gap-1">
             <ShoppingBag aria-hidden data-ui="cart-icon" className="shrink-0" />
             <span className="min-w-0 whitespace-normal leading-tight">
-              {t("kiosk_cart")} {quantity}
+              {t("kiosk_cart")}{" "}
+              <span data-ui="cart-count" className="tabular-nums">
+                {quantity}
+              </span>
             </span>
             <TabProductImages images={images} kind="cart" />
           </span>
@@ -939,7 +945,10 @@ function KioskMenuTabs({
           <span className="flex h-8 max-w-full items-center justify-center gap-1">
             <ReceiptText aria-hidden data-ui="orders-icon" className="shrink-0" />
             <span className="min-w-0 whitespace-normal leading-tight">
-              {t("kiosk_orders_bill")}
+              {t("kiosk_orders_bill")}{" "}
+              <span data-ui="orders-count" className="tabular-nums">
+                {orderedQuantity}
+              </span>
             </span>
             <TabProductImages images={orderedImages} kind="orders" />
           </span>
@@ -960,7 +969,7 @@ function TabProductImages({ images, kind }: { images: string[]; kind: "cart" | "
         <span
           key={imageKey}
           data-image-key={imageKey}
-          className="inline-flex size-8 shrink-0 overflow-hidden rounded-full border-2 border-card bg-card"
+          className="inline-flex size-8 shrink-0 overflow-hidden rounded-md bg-card"
         >
           <ProductImage
             src={`/media/${imageKey}`}

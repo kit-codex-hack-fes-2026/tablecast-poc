@@ -109,7 +109,7 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
   const labels = ja;
   // Given: 実在しないメディア参照と画像なしの選択肢を同じ商品に置く。
   await page.viewport(768, 1024);
-  const onSave = vi.fn<(line: CartLine) => void>();
+  const onSave = vi.fn<(line: CartLine, pointer: boolean, origin: DOMRect) => void>();
   const screen = await render(
     <LocaleProvider initialLocale={locale} persist={false}>
       <div className="max-w-md bg-card">
@@ -183,6 +183,7 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
       ],
     }),
     true,
+    expect.any(DOMRect),
   );
   await expect.element(screen.getByRole("textbox")).not.toBeInTheDocument();
   for (const [width, height] of [

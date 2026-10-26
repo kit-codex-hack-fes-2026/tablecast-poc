@@ -284,8 +284,12 @@ for (const count of [24, 120]) {
       )
       .toBe(true);
     const cartBounds = await cartImage.boundingBox();
-    expect(cartBounds?.width).toBeCloseTo(64, 2);
-    expect(cartBounds?.height).toBeCloseTo(64, 2);
+    expect(cartBounds?.width).toBeCloseTo(112, 2);
+    const cardHeight = await cartImage.evaluate(
+      (image) => image.closest("li")?.getBoundingClientRect().height,
+    );
+    expect(cartBounds?.height).toBeCloseTo(cardHeight ?? 0, 2);
+    expect(cartBounds?.height).toBeGreaterThanOrEqual(128);
     await testInfo.attach("tablecast-image-metrics", {
       body: JSON.stringify({ count, samples, cache, detailBounds, cartBounds }, null, 2),
       contentType: "application/json",

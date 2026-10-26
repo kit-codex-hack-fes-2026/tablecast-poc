@@ -16,6 +16,7 @@ it.each(["ja", "en"] as const)(
     fixture.current.staffCalled = false;
     const pictured = structuredClone(product);
     pictured.imageKey = "tablecast/images/tablecast-product.webp";
+    pictured.imageKind = "illustration";
     const option = fixtureValue(pictured.modifiers[0]).options.find(
       (item) => item.id === "tablecast-large-glass",
     );
@@ -62,7 +63,8 @@ it.each(["ja", "en"] as const)(
     );
     for (const price of document.querySelectorAll('[data-ui="tab-price"]')) {
       expect(getComputedStyle(price).whiteSpace).toBe("nowrap");
-      expect(price.getBoundingClientRect().height).toBeLessThan(20);
+      expect(parseFloat(getComputedStyle(price).fontSize)).toBeGreaterThanOrEqual(14);
+      expect(price.getBoundingClientRect().height).toBeLessThanOrEqual(24);
     }
     const choose = page
       .getByRole("button")
@@ -101,6 +103,28 @@ it.each(["ja", "en"] as const)(
     expect(
       pane.querySelector('[data-ui="cart-lines"] img[src*="tablecast-option"]'),
     ).not.toBeNull();
+    const picture = pane.querySelector('[data-ui="cart-product-image"]');
+    const card = picture?.closest("li");
+    if (!picture || !card) throw new Error("商品画像付きのカードが必要です");
+    expect(picture.getBoundingClientRect().height).toBeCloseTo(
+      card.getBoundingClientRect().height,
+      1,
+    );
+    const customisations = page.getByRole("region", {
+      name: labels.kiosk_customisations,
+      exact: true,
+    });
+    await expect
+      .element(customisations.getByRole("button", { name: labels.kiosk_edit, exact: true }))
+      .toBeVisible();
+    expect(customisations.element().textContent).toContain(
+      `${fixtureValue(pictured.modifiers[0]).text[locale].displayName}:`,
+    );
+    const illustration = picture.querySelector('[data-ui="illustration-label"]');
+    expect(illustration).not.toBeNull();
+    expect(
+      getComputedStyle(pane.querySelector('[data-ui="line-actions"]') ?? card).justifyContent,
+    ).toBe("flex-end");
     await page.getByRole("button", { name: labels.kiosk_call_staff, exact: true }).click();
     await expect
       .element(page.getByRole("dialog", { name: labels.kiosk_called_staff, exact: true }))
@@ -136,7 +160,12 @@ it("カゴの商品画像は3枚まで重ねて表示する", async () => {
   const frames = cart.element().querySelectorAll('[data-ui="cart-preview"] > span');
   expect(frames).toHaveLength(3);
   expect(cart.element().querySelector('[data-ui="cart-icon"]')).not.toBeNull();
-  for (const frame of frames) expect(frame.getBoundingClientRect().width).toBe(32);
+  for (const frame of frames) {
+    expect(frame.getBoundingClientRect().width).toBe(32);
+    expect(parseFloat(getComputedStyle(frame).borderRadius)).toBeGreaterThan(0);
+    expect(parseFloat(getComputedStyle(frame).borderRadius)).toBeLessThan(16);
+    expect(getComputedStyle(frame).borderTopWidth).toBe("0px");
+  }
   for (let index = 1; index < frames.length; index++) {
     expect(fixtureValue(frames[index]).getBoundingClientRect().left).toBeLessThan(
       fixtureValue(frames[index - 1]).getBoundingClientRect().right,
@@ -152,6 +181,7 @@ it("カゴの商品画像は3枚まで重ねて表示する", async () => {
       expect(getComputedStyle(price).whiteSpace).toBe("nowrap");
       expect(price.scrollWidth).toBeLessThanOrEqual(cart.element().clientWidth);
       expect(getComputedStyle(price).overflowX).toBe("visible");
+      expect(parseFloat(getComputedStyle(price).fontSize)).toBeGreaterThanOrEqual(14);
     }
     expect(
       cart.element().querySelector('[data-ui="cart-icon"]')?.getBoundingClientRect().width,
@@ -165,4 +195,6 @@ it("カゴの商品画像は3枚まで重ねて表示する", async () => {
     .toBe(3);
   expect(cart.element().querySelector('[data-ui="cart-preview"]')).toBeNull();
   expect(cart.element().querySelector('[data-ui="cart-icon"]')).not.toBeNull();
+  expect(cart.element().querySelector('[data-ui="cart-count"]')?.textContent).toBe("0");
+  expect(orders.element().querySelector('[data-ui="orders-count"]')?.textContent).toBe("4");
 });
