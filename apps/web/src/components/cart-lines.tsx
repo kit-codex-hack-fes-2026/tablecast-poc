@@ -1,8 +1,10 @@
 import type { PricedLine, Product } from "@tablecast/api/schema";
+import { NumberField } from "@base-ui/react/number-field";
+import { useHydrated } from "@tanstack/react-router";
 import { Minus, Pencil, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { AnimatePresence, useIsPresent, useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
-import { forwardRef, type ReactNode } from "react";
+import { forwardRef, type ReactNode, useId, useState } from "react";
 import { useI18n } from "../i18n/locale";
 import { ConditionSummary } from "./condition-summary";
 import { IllustrationNotice } from "./illustration-notice";
@@ -25,6 +27,7 @@ export function CartLines({
   onQuantity,
   products = [],
   disabled = false,
+  variant = "cards",
 }: {
   disabled?: boolean;
   lines: PricedLine[];
@@ -32,11 +35,20 @@ export function CartLines({
   onQuantity?: (line: PricedLine, quantity: number) => void;
   onRemove?: (line: PricedLine) => void;
   products?: Product[];
+  variant?: "cards" | "receipt";
 }) {
   const { locale, t } = useI18n();
   const productsById = new Map(products.map((product) => [product.id, product]));
   return (
-    <m.ul layoutScroll data-ui="cart-lines" className="relative flex flex-col gap-3 p-3">
+    <m.ul
+      layoutScroll
+      data-ui="cart-lines"
+      className={
+        variant === "receipt"
+          ? "relative divide-y divide-muted-foreground"
+          : "relative flex flex-col gap-3 p-3"
+      }
+    >
       <AnimatePresence initial={false} mode="popLayout">
         {lines.length === 0 && (
           <CartLineSurface key="empty">
@@ -54,7 +66,7 @@ export function CartLines({
             ),
           );
           return (
-            <CartLineSurface key={line.id}>
+            <CartLineSurface key={line.id} framed={variant === "cards"}>
               <div
                 className={
                   product?.imageKey
@@ -71,7 +83,6 @@ export function CartLines({
                       width={112}
                       height={112}
                       sizes="112px"
-                      fit="cover"
                       className="absolute inset-0 size-full"
                       src={`/media/${product.imageKey}`}
                       alt=""
@@ -89,8 +100,13 @@ export function CartLines({
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                    {!onQuantity && (
+                      <span>
+                        {t("common_quantity")}: {line.quantity}
+                      </span>
+                    )}
                     <span>
-                      {t("common_quantity")} {line.quantity} · <Money value={line.unitPrice} />
+                      {t("kiosk_unit_price")}: <Money value={line.unitPrice} />
                     </span>
                     {line.planCovered && (
                       <Badge variant="secondary">{t("kiosk_plan_included")}</Badge>
@@ -100,7 +116,7 @@ export function CartLines({
                     <section
                       data-ui="line-customisations"
                       aria-label={t("kiosk_customisations")}
-                      className="flex flex-wrap items-center justify-end gap-2 rounded-lg bg-card p-2"
+                      className="flex flex-wrap items-center justify-end gap-2 border-t border-muted-foreground pt-3"
                     >
                       <div className="flex min-w-0 flex-1 basis-64 flex-wrap gap-1.5">
                         {line.options.map((option) => {
@@ -108,7 +124,7 @@ export function CartLines({
                           return (
                             <span
                               key={option.id}
-                              className="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-md bg-muted px-2 py-1.5 text-sm"
+                              className="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
                             >
                               {context?.option.imageKey && (
                                 <ProductImage
@@ -156,37 +172,10 @@ export function CartLines({
                   {(onQuantity || onRemove) && (
                     <div
                       data-ui="line-actions"
-                      className="flex flex-wrap items-center justify-end gap-2"
+                      className="flex flex-wrap items-end justify-end gap-3"
                     >
                       {onQuantity && (
-                        <div className="flex items-center rounded-lg bg-card">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            disabled={disabled || line.quantity <= 1}
-                            aria-label={`${line.name[locale]}: ${t("common_decrease")}`}
-                            onClick={() => onQuantity(line, line.quantity - 1)}
-                          >
-                            <Minus />
-                          </Button>
-                          <output className="min-w-8 text-center text-base tabular-nums">
-                            <span
-                              key={line.quantity}
-                              className="inline-block motion-safe:animate-tablecast-state"
-                            >
-                              {line.quantity}
-                            </span>
-                          </output>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            disabled={disabled || line.quantity >= 20}
-                            aria-label={`${line.name[locale]}: ${t("common_increase")}`}
-                            onClick={() => onQuantity(line, line.quantity + 1)}
-                          >
-                            <Plus />
-                          </Button>
-                        </div>
+                        <LineQuantity line={line} disabled={disabled} onQuantity={onQuantity} />
                       )}
                       {onRemove && (
                         <Button
@@ -243,25 +232,93 @@ export function CartLines({
 }
 
 /** 取り除いた行は視覚的な退場だけを残し、操作と支援技術から直ちに外す。 */
-const CartLineSurface = forwardRef<HTMLLIElement, { children: ReactNode }>(function CartLineSurface(
-  { children },
-  ref,
-) {
-  const present = useIsPresent();
-  const reduced = useReducedMotion();
+const CartLineSurface = forwardRef<HTMLLIElement, { children: ReactNode; framed?: boolean }>(
+  function CartLineSurface({ children, framed = false }, ref) {
+    const present = useIsPresent();
+    const reduced = useReducedMotion();
+    return (
+      <m.li
+        ref={ref}
+        layout={reduced ? false : "position"}
+        inert={!present}
+        aria-hidden={!present || undefined}
+        initial={{ opacity: reduced ? 1 : 0, y: reduced ? 0 : 8 }}
+        animate={{ opacity: 1, x: 0, y: 0 }}
+        exit={{ opacity: 0, x: reduced ? 0 : -8 }}
+        transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
+        className={`@container/cart-line relative overflow-hidden bg-card ${framed ? "rounded-xl border border-muted-foreground" : ""}`}
+      >
+        {children}
+      </m.li>
+    );
+  },
+);
+
+/** 入力中の文字だけを保持し、確定した数量を既存APIへ渡す。応答後はAPIの数量へ同期する。 */
+function LineQuantity({
+  line,
+  disabled,
+  onQuantity,
+}: {
+  disabled: boolean;
+  line: PricedLine;
+  onQuantity: (line: PricedLine, quantity: number) => void;
+}) {
+  const { locale, t } = useI18n();
+  const id = useId();
+  const hydrated = useHydrated();
+  const [draft, setDraft] = useState<{ disabled: boolean; source: number; value: null | number }>({
+    source: line.quantity,
+    disabled,
+    value: line.quantity,
+  });
+  if (draft.source !== line.quantity || draft.disabled !== disabled) {
+    setDraft({ source: line.quantity, disabled, value: line.quantity });
+  }
   return (
-    <m.li
-      ref={ref}
-      layout={reduced ? false : "position"}
-      inert={!present}
-      aria-hidden={!present || undefined}
-      initial={{ opacity: reduced ? 1 : 0, y: reduced ? 0 : 8 }}
-      animate={{ opacity: 1, x: 0, y: 0 }}
-      exit={{ opacity: 0, x: reduced ? 0 : -8 }}
-      transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
-      className="@container/cart-line relative overflow-hidden rounded-xl bg-surface-subtle"
+    <NumberField.Root
+      id={id}
+      value={draft.value}
+      min={1}
+      max={20}
+      step={1}
+      smallStep={1}
+      snapOnStep
+      disabled={disabled || !hydrated}
+      onValueChange={(value) => setDraft({ ...draft, value })}
+      onValueCommitted={(quantity) => {
+        if (quantity === null || !Number.isInteger(quantity)) {
+          setDraft({ ...draft, value: line.quantity });
+          return;
+        }
+        if (quantity !== line.quantity) onQuantity(line, quantity);
+      }}
+      className="flex flex-col gap-1"
     >
-      {children}
-    </m.li>
+      <label htmlFor={id} className="text-sm font-medium">
+        {t("common_quantity")}
+      </label>
+      <NumberField.Group className="flex items-center rounded-lg border border-muted-foreground bg-card">
+        <NumberField.Decrement
+          render={<Button size="icon" variant="ghost" />}
+          aria-label={`${line.name[locale]}: ${t("common_decrease")}`}
+        >
+          <Minus aria-hidden />
+        </NumberField.Decrement>
+        <NumberField.Input
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+          }}
+          aria-label={`${line.name[locale]}: ${t("common_quantity")}`}
+          className="h-11 w-10 min-w-0 bg-transparent text-center text-base tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+        <NumberField.Increment
+          render={<Button size="icon" variant="ghost" />}
+          aria-label={`${line.name[locale]}: ${t("common_increase")}`}
+        >
+          <Plus aria-hidden />
+        </NumberField.Increment>
+      </NumberField.Group>
+    </NumberField.Root>
   );
-});
+}

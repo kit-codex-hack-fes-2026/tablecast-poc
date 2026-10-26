@@ -41,6 +41,7 @@ export default defineConfig({
             "@base-ui/react/collapsible",
             "@base-ui/react/dialog",
             "@base-ui/react/input",
+            "@base-ui/react/number-field",
             "@base-ui/react/menu",
             "@base-ui/react/merge-props",
             "@base-ui/react/select",
@@ -122,6 +123,7 @@ export default defineConfig({
           include: [
             "@base-ui/react/popover",
             "@base-ui/react/tooltip",
+            "@base-ui/react/number-field",
             "react",
             "react-dom/client",
             "react/jsx-runtime",

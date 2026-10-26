@@ -5,7 +5,7 @@ import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { money } from "../../i18n/format";
 import { fixtureValue } from "../../test-support/fixture-value";
-import { fixture, mountKiosk, orderPanel } from "./test-support/kiosk-fixture";
+import { cartWrites, fixture, mountKiosk, orderPanel } from "./test-support/kiosk-fixture";
 
 it.each(["ja", "en"] as const)(
   "%sで下部タブの金額・画像とペイン内詳細・成功通知を確認できる",
@@ -32,6 +32,14 @@ it.each(["ja", "en"] as const)(
     const cart = page.getByRole("tab", { name: new RegExp(`^${labels.kiosk_cart}`) });
     const orders = page.getByRole("tab", { name: new RegExp(`^${labels.kiosk_orders_bill}`) });
     await expect.element(cart).toBeVisible();
+    await expect
+      .element(
+        page.getByRole("tabpanel").getByRole("heading", { name: labels.kiosk_menu, exact: true }),
+      )
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("tabpanel").getByText(labels.kiosk_cart_total, { exact: true }))
+      .toBeVisible();
     const pane = orderPanel();
     if (!pane) throw new Error("注文ペインがありません");
     await expect
@@ -91,6 +99,17 @@ it.each(["ja", "en"] as const)(
     await dialog.getByRole("radio", { name: "90 mL", exact: true }).click();
     await dialog.getByRole("button", { name: labels.kiosk_add, exact: true }).click();
     await expect.element(cart).toHaveAttribute("aria-selected", "true");
+    await expect
+      .element(
+        page.getByRole("tabpanel").getByRole("heading", { name: labels.kiosk_cart, exact: true }),
+      )
+      .toBeVisible();
+    await expect
+      .element(
+        page.getByRole("tabpanel").getByRole("button", { name: labels.kiosk_review, exact: true }),
+      )
+      .toBeEnabled();
+    expect(document.querySelector('[data-ui="cart-callout"]')).toBeNull();
     await expect.element(page.getByText(labels.kiosk_cart_added, { exact: true })).toBeVisible();
     await page
       .getByRole("dialog", { name: labels.kiosk_cart_added, exact: true })
@@ -106,10 +125,13 @@ it.each(["ja", "en"] as const)(
     const picture = pane.querySelector('[data-ui="cart-product-image"]');
     const card = picture?.closest("li");
     if (!picture || !card) throw new Error("商品画像付きのカードが必要です");
-    expect(picture.getBoundingClientRect().height).toBeCloseTo(
-      card.getBoundingClientRect().height,
-      1,
-    );
+    expect(picture.getBoundingClientRect().height).toBeCloseTo(card.clientHeight, 1);
+    const cardImage = picture.querySelector("img");
+    if (!cardImage) throw new Error("カードの商品画像が必要です");
+    expect(getComputedStyle(cardImage).objectFit).toBe("contain");
+    const cardStyle = getComputedStyle(card);
+    expect(parseFloat(cardStyle.borderTopWidth)).toBeGreaterThanOrEqual(1);
+    expect(contrast(cardStyle.borderTopColor, cardStyle.backgroundColor)).toBeGreaterThanOrEqual(3);
     const customisations = page.getByRole("region", {
       name: labels.kiosk_customisations,
       exact: true,
@@ -197,4 +219,63 @@ it("カゴの商品画像は3枚まで重ねて表示する", async () => {
   expect(cart.element().querySelector('[data-ui="cart-icon"]')).not.toBeNull();
   expect(cart.element().querySelector('[data-ui="cart-count"]')?.textContent).toBe("0");
   expect(orders.element().querySelector('[data-ui="orders-count"]')?.textContent).toBe("4");
+  await orders.click();
+  await expect
+    .element(
+      page.getByRole("tabpanel").getByRole("heading", { name: en.kiosk_orders_bill, exact: true }),
+    )
+    .toBeVisible();
+  const receipt = document.querySelector('[data-ui="order-card"]');
+  const bill = document.querySelector('[data-ui="bill-summary"]');
+  if (!receipt || !bill) throw new Error("注文明細と会計内訳が必要です");
+  expect(receipt.getBoundingClientRect().top).toBeLessThan(bill.getBoundingClientRect().top);
 });
+
+it("数量はラベル付き入力で編集し、入力確定時だけAPIへ送る", async () => {
+  fixture.current.uiSection = "cart";
+  const line = fixtureValue(fixture.current.cart.lines[0]);
+  fixture.savedCart = {
+    ...fixture.current.cart,
+    version: 2,
+    total: 2250,
+    lines: [{ ...line, quantity: 3, total: 2250 }],
+  };
+  await mountKiosk();
+  const input = page.getByRole("textbox", {
+    name: `${line.name.ja}: ${ja.common_quantity}`,
+    exact: true,
+  });
+  await expect.element(input).toBeVisible();
+  expect(page.getByText(ja.common_quantity, { exact: true }).elements()).toHaveLength(1);
+  await input.fill("3");
+  expect(cartWrites).toHaveLength(0);
+  await userEvent.keyboard("{Enter}");
+  await expect.poll(() => cartWrites.length).toBe(1);
+  expect(cartWrites[0]?.lines[0]?.quantity).toBe(3);
+  await expect.element(input).toHaveValue("3");
+});
+
+function contrast(first: string, second: string) {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 1;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("色の比較にCanvasが必要です");
+  function luminance(colour: string) {
+    if (!context) throw new Error("Canvasがありません");
+    context.fillStyle = colour;
+    context.fillRect(0, 0, 1, 1);
+    const channels = Array.from(context.getImageData(0, 0, 1, 1).data)
+      .slice(0, 3)
+      .map((value) => {
+        const channel = value / 255;
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      });
+    return (
+      fixtureValue(channels[0]) * 0.2126 +
+      fixtureValue(channels[1]) * 0.7152 +
+      fixtureValue(channels[2]) * 0.0722
+    );
+  }
+  const values = [luminance(first), luminance(second)].toSorted((a, b) => b - a);
+  return (fixtureValue(values[0]) + 0.05) / (fixtureValue(values[1]) + 0.05);
+}

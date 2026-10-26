@@ -16,6 +16,7 @@ import { Bell, Check, ChevronRight, ReceiptText, ShoppingBag, Utensils } from "l
 import { useReducedMotion } from "motion/react";
 import {
   type ReactNode,
+  type RefObject,
   useCallback,
   useContext,
   useEffect,
@@ -115,6 +116,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   const reducedMotion = useReducedMotion();
   const orderPane = useRef<HTMLElement>(null);
   const detailTrigger = useRef<HTMLElement | null>(null);
+  const billingSummary = useRef<HTMLElement>(null);
   const receive = (updated: TableState) =>
     client.setQueryData<TableState>(tableKey, (current) => latestTable(current, updated));
   const screen = useMutation({
@@ -133,6 +135,9 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     }
   }, [data.configVersion, changeScreen]);
   const section = screen.isPending ? screen.variables.section : data.uiSection;
+  useEffect(() => {
+    if (section === "bill") billingSummary.current?.scrollIntoView({ block: "start" });
+  }, [section]);
   const selectedProductId = screen.isPending ? screen.variables.productId : data.selectedProductId;
   const setSection = (next: UiSection) => {
     setChosen(undefined);
@@ -359,18 +364,19 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   function renderCart() {
     return (
       <Tabs.Panel value="cart">
+        <KioskPaneHeader
+          title={snapshot ? t("kiosk_review_title") : t("kiosk_cart")}
+          amount={snapshot?.total ?? data.cart.total}
+          label={t("kiosk_cart_total")}
+          headingRef={snapshot ? confirmationHeading : undefined}
+        >
+          {renderOrderActions()}
+        </KioskPaneHeader>
         {snapshot ? (
           <section
             className="p-4 motion-safe:animate-tablecast-state"
             aria-label={t("kiosk_review_title")}
           >
-            <h2
-              ref={confirmationHeading}
-              tabIndex={-1}
-              className="text-lg font-semibold outline-none"
-            >
-              {t("kiosk_review_title")}
-            </h2>
             <p className="mt-2 text-sm">{t("kiosk_review_note")}</p>
             <CartLines lines={snapshot.lines} products={catalog.data?.configuration.products} />
             {snapshot.plan && (
@@ -378,12 +384,6 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                 {t("kiosk_plan")}: {snapshot.plan.name[locale]}
               </p>
             )}
-            <div className="my-3 flex justify-between text-lg font-semibold">
-              <span>{t("common_total")}</span>
-              <strong>
-                <Money value={snapshot.total} />
-              </strong>
-            </div>
           </section>
         ) : (
           <>
@@ -419,6 +419,11 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   function renderMenu() {
     return (
       <Tabs.Panel value="menu">
+        <KioskPaneHeader
+          title={t("kiosk_menu")}
+          amount={data.cart.total}
+          label={t("kiosk_cart_total")}
+        />
         {catalog.data ? (
           <ProductMenu catalog={catalog.data} onChoose={choose} />
         ) : catalog.isPending ? (
@@ -430,21 +435,10 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       </Tabs.Panel>
     );
   }
-  function renderCheckout() {
-    if (data.cart.lines.length === 0 || section === "orders" || section === "bill") return null;
+  function renderOrderActions() {
     const reviewing = snapshot && section === "cart";
     return (
-      <div
-        role="group"
-        aria-label={t("kiosk_cart")}
-        data-ui="cart-callout"
-        data-theme-part="checkout"
-        className="absolute bottom-[calc(100%+0.75rem)] left-1/2 z-20 w-max max-w-[calc(100cqw-1.5rem)] -translate-x-1/2 rounded-2xl border border-border bg-card p-2 shadow-xl"
-      >
-        <span
-          aria-hidden
-          className="absolute top-full left-1/2 -mt-1.5 size-3 -translate-x-1/2 rotate-45 border-r border-b border-border bg-card"
-        />
+      <div className="min-w-0 space-y-2">
         <ErrorNotice error={submit.error} />
         {reviewing ? (
           <div className="grid w-80 max-w-full grid-cols-3 gap-2">
@@ -486,6 +480,24 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             </Button>
           </div>
         )}
+      </div>
+    );
+  }
+  function renderCheckout() {
+    if (!data.cart.lines.length || section !== "menu") return null;
+    return (
+      <div
+        role="group"
+        aria-label={t("kiosk_cart")}
+        data-ui="cart-callout"
+        data-theme-part="checkout"
+        className="absolute bottom-[calc(100%+0.75rem)] left-1/2 z-20 w-max max-w-[calc(100cqw-1.5rem)] -translate-x-1/2 rounded-2xl border border-muted-foreground bg-card p-2 shadow-xl"
+      >
+        <span
+          aria-hidden
+          className="absolute top-full left-1/2 -mt-1.5 size-3 -translate-x-1/2 rotate-45 border-r border-b border-muted-foreground bg-card"
+        />
+        {renderOrderActions()}
       </div>
     );
   }
@@ -584,7 +596,11 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   function renderOrders() {
     return (
       <Tabs.Panel value="orders">
-        {renderBilling()}
+        <KioskPaneHeader
+          title={t("kiosk_orders_bill")}
+          amount={data.bill.orderedTotal}
+          label={t("kiosk_ordered_total")}
+        />
         <h3 className="px-4 pt-4 text-base font-semibold">{t("kiosk_orders")}</h3>
         {data.orders.length === 0 ? (
           <div className="text-muted-foreground flex items-center flex-col text-center py-10 px-5 gap-2.5 [&_h3]:text-sm [&_h3]:font-medium [&_p]:text-xs [&_p]:leading-loose">
@@ -594,14 +610,18 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           data.orders.map((order) => (
             <article
               data-ui="order-card"
-              className="border border-border rounded-md m-3.5 overflow-hidden"
+              className="m-3 overflow-hidden rounded-xl border border-muted-foreground bg-card"
               key={order.id}
             >
-              <div className="flex justify-between items-center gap-2 py-3 px-3.5 border-b border-b-border bg-background text-xs [&_strong]:text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-muted-foreground bg-background px-4 py-3 text-sm">
                 <time>{time(order.createdAt, locale)}</time>
                 <Badge variant="outline">{t(`order_${order.status}`)}</Badge>
+                <span className="ml-auto font-semibold">
+                  {t("common_total")}: <Money value={order.total} />
+                </span>
               </div>
               <CartLines
+                variant="receipt"
                 lines={order.snapshot.lines}
                 products={catalog.data?.configuration.products}
               />
@@ -611,12 +631,17 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             </article>
           ))
         )}
+        {renderBilling()}
       </Tabs.Panel>
     );
   }
   function renderBilling() {
     return (
-      <section aria-label={t("kiosk_bill")}>
+      <section
+        ref={billingSummary}
+        aria-label={t("kiosk_bill")}
+        className="mx-3 mb-3 rounded-xl border border-muted-foreground bg-card"
+      >
         <div
           data-ui="bill-summary"
           className="py-6 px-5 [&_dl_>_div]:flex [&_dl_>_div]:items-center [&_dl_>_div]:justify-between [&_dl_>_div]:py-2 [&_dl_>_div]:px-0 [&_dl_>_div]:gap-3 [&_dl_>_div]:text-sm [&_[data-ui=bill-total]]:border-t [&_[data-ui=bill-total]]:border-t-border [&_[data-ui=bill-total]]:pt-4 [&_[data-ui=bill-total]]:mt-2.5 [&_[data-ui=bill-total]_dd]:text-2xl [&_[data-ui=bill-total]_dd]:font-semibold [&_[data-slot=button][data-variant=default]]:mt-6 [&_[data-slot=button][data-variant=default]]:w-full"
@@ -755,7 +780,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                   >
                     <div
                       inert={Boolean(selection)}
-                      className={`flex-1 min-h-0 overflow-y-auto scrollbar-thin ${data.cart.lines.length && (section === "menu" || section === "cart") ? "pb-28" : ""}`}
+                      className={`flex-1 min-h-0 overflow-y-auto scrollbar-thin ${data.cart.lines.length && section === "menu" ? "pb-28" : ""}`}
                     >
                       {renderMenu()}
                       {renderCart()}
@@ -977,10 +1002,48 @@ function TabProductImages({ images, kind }: { images: string[]; kind: "cart" | "
             height={32}
             sizes="32px"
             alt=""
-            className="size-full object-cover"
+            className="size-full object-contain"
           />
         </span>
       ))}
     </span>
+  );
+}
+
+function KioskPaneHeader({
+  title,
+  label,
+  amount,
+  children,
+  headingRef,
+}: {
+  amount: number;
+  children?: ReactNode;
+  headingRef?: RefObject<HTMLHeadingElement | null>;
+  label: string;
+  title: string;
+}) {
+  return (
+    <header
+      data-ui="pane-heading"
+      className="sticky top-0 z-10 space-y-3 border-b border-muted-foreground bg-card p-4"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h2
+          ref={headingRef}
+          tabIndex={headingRef ? -1 : undefined}
+          className="text-lg font-semibold outline-none"
+        >
+          {title}
+        </h2>
+        <div className="ml-auto text-right">
+          <span className="block text-sm text-muted-foreground">{label}</span>
+          <strong className="block text-base">
+            <Money value={amount} />
+          </strong>
+        </div>
+      </div>
+      {children}
+    </header>
   );
 }

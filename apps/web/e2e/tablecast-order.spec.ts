@@ -239,7 +239,10 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
         selections,
       })),
     ).toEqual(chosen);
-    await expect(guest.getByRole("textbox")).toHaveCount(0);
+    await expect(guest.getByRole("textbox")).toHaveCount(1);
+    await expect(
+      guest.getByRole("textbox", { name: new RegExp(`${en.common_quantity}$`) }),
+    ).toHaveValue("1");
     await expect(guest.getByRole("button", { name: "Review order", exact: true })).toBeEnabled();
     await staff.goto(`/admin/stores/${storeId}/floor`);
     await expect(
@@ -288,6 +291,12 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     await expect(history.locator("img")).toHaveCount(historyImages);
     await history.scrollIntoViewIfNeeded();
     await expect(guest.getByRole("tabpanel")).toHaveCSS("opacity", "1");
+    // 通知を閉じて明細と見出しを隠さずに記録する。
+    const basketNotice = guest.getByRole("dialog", { name: en.kiosk_cart_added, exact: true });
+    if (await basketNotice.isVisible()) {
+      await basketNotice.getByRole("button", { name: en.common_close, exact: true }).click();
+      await expect(basketNotice).not.toBeVisible();
+    }
     await guest.screenshot({ path: testInfo.outputPath("tablecast-history.png") });
     await staff.goto(`/admin/stores/${storeId}/floor`);
     const billingMetric = staff
