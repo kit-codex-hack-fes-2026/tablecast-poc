@@ -141,6 +141,10 @@ it("外側へ切り替えると旧映像を解放し、外側のプレビュー�
     facingMode: true,
   });
   const screen = await render(<Surface />);
+  const before = screen
+    .getByRole("button", { name: ja.kiosk_camera_start })
+    .element()
+    .getBoundingClientRect();
   await screen.getByRole("button", { name: ja.kiosk_camera_start }).click();
   await expect
     .poll(() => {
@@ -148,6 +152,12 @@ it("外側へ切り替えると旧映像を解放し、外側のプレビュー�
       return video ? getComputedStyle(video).scale : "";
     })
     .toBe("-1 1");
+  const on = screen
+    .getByRole("button", { name: ja.kiosk_camera_stop })
+    .element()
+    .getBoundingClientRect();
+  expect(on.left).toBe(before.left);
+  expect(on.top).toBe(before.top);
   await screen.getByRole("button", { name: ja.kiosk_camera_use_back }).click();
   await expect
     .element(screen.getByRole("button", { name: ja.kiosk_camera_use_front }))

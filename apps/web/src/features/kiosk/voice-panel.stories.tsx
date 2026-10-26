@@ -23,7 +23,7 @@ export const Welcome: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const resume = canvas.getByRole("button", { name: "音声を再開" });
-    await expect(resume.closest("footer")).not.toBeNull();
+    await expect(resume.closest("footer")).toBeNull();
     await userEvent.click(resume);
     await expect(args.onStart).toHaveBeenCalledOnce();
     await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
@@ -56,6 +56,28 @@ export const Paused: Story = {
         interrupted: false,
       },
     ],
+  },
+};
+export const CompactPaused: Story = {
+  ...Paused,
+  name: "iPadの既定240px幅で中央から再開",
+  render: (args) => (
+    <div className="h-173 w-60">
+      <VoicePanel {...args} />
+    </div>
+  ),
+};
+export const CompactPausedEnglish: Story = {
+  ...CompactPaused,
+  name: "iPadの既定240px幅で中央から再開・英語",
+  globals: { locale: "en" },
+  args: {
+    ...Paused.args,
+    lines: Paused.args?.lines?.slice(1).map((line) => ({
+      ...line,
+      locale: "en",
+      text: "Would you prefer ninety or one hundred and eighty millilitres?",
+    })),
   },
 };
 export const LongEnglish: Story = {
@@ -261,7 +283,7 @@ export const EmptyInterruption: Story = {
     await expect(canvas.getAllByRole("article")).toHaveLength(2);
     await expect(canvas.queryByText("中断", { exact: true })).not.toBeInTheDocument();
     const resume = canvas.getByRole("button", { name: "音声を再開" });
-    await expect(resume.closest("footer")).not.toBeNull();
+    await expect(resume.closest("footer")).toBeNull();
     await userEvent.click(resume);
     await expect(args.onStart).toHaveBeenCalledOnce();
     await expect(canvas.getByText("この日本酒は温かくできますか？")).toBeVisible();
@@ -337,12 +359,8 @@ export const PausedWithStaleTool: Story = {
   args: { ...ToolAndCards.args, view: { status: "paused" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const visual = canvasElement.querySelector("figure[data-voice-state]");
-    if (!(visual instanceof HTMLElement)) throw new Error("音声の状態表示がありません");
-    await expect(visual).toBeVisible();
-    await expect(visual).toHaveAttribute("data-voice-state", "paused");
-    await expect(visual).toHaveAttribute("data-motion", "still");
-    await expect(within(visual).queryByText("商品を表示", { exact: true })).not.toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "音声を再開" })).toBeVisible();
+    await expect(canvas.queryByText("実行中", { exact: true })).not.toBeInTheDocument();
     await expect(canvas.getByText("中断", { exact: true })).toBeVisible();
   },
 };

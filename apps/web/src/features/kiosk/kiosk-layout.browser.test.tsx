@@ -145,7 +145,7 @@ it.each(["ja", "en"] as const)(
         .toBeGreaterThanOrEqual(width >= 896 ? 224 : 344);
       const resume = page.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
       const review = page.getByRole("button", { name: labels.kiosk_review, exact: true });
-      expect(resume.element().closest("[data-theme-part=voice-controls]")).not.toBeNull();
+      expect(resume.element().closest("[data-theme-part=voice-controls]")).toBeNull();
       expect(document.querySelector("[data-theme-part=header]")?.contains(resume.element())).toBe(
         false,
       );

@@ -1,5 +1,5 @@
 import type { TableEvent } from "@tablecast/api/schema";
-import { CircleAlert, LoaderCircle, Mic, MicOff, Pause, ShoppingBag } from "lucide-react";
+import { CircleAlert, LoaderCircle, MicOff, Pause, Play, ShoppingBag } from "lucide-react";
 import { lazy, Suspense } from "react";
 import type { voiceOperationState } from "./conversation-model";
 import type { VoiceView } from "./voice-connection";
@@ -160,10 +160,10 @@ export function VoiceControls({
   return (
     <footer
       data-theme-part="voice-controls"
-      className="grid min-w-0 shrink-0 gap-2 border-t border-border pt-2"
+      className={`grid min-w-0 shrink-0 gap-2 ${active ? "border-t border-border pt-2" : ""}`}
     >
-      <div className="min-w-0" data-ui="voice-media">
-        {active ? (
+      {active && (
+        <div className="min-w-0" data-ui="voice-media">
           <Suspense
             fallback={<VoiceIdle label={phase} state={visualState} toolLabel={toolLabel} />}
           >
@@ -175,12 +175,10 @@ export function VoiceControls({
               label={phase}
             />
           </Suspense>
-        ) : (
-          <VoiceIdle label={phase} state={visualState} />
-        )}
-      </div>
-      <div className="flex min-w-0 items-center gap-2">
-        <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />
+        </div>
+      )}
+      <div className="flex min-w-0 items-center justify-end gap-2">
+        {active && <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />}
         {onMicrophoneChange && onMicrophoneRefresh && (
           <MicrophoneSettings
             view={view}
@@ -195,31 +193,49 @@ export function VoiceControls({
   );
 }
 
-function VoiceToggle({
+function voiceControlLabel(status: VoiceView["status"], active: boolean) {
+  if (status === "stopping") return "kiosk_voice_stopping";
+  if (active) return "kiosk_voice_stop";
+  return status === "error" ? "kiosk_voice_retry" : "kiosk_voice_resume";
+}
+
+export function VoiceToggle({
   view,
   onStart,
   controlDisabled,
-}: Pick<VoicePanelProps, "controlDisabled" | "onStart" | "view">) {
+  prominent = false,
+}: Pick<VoicePanelProps, "controlDisabled" | "onStart" | "view"> & { prominent?: boolean }) {
   const { t } = useI18n();
   const active =
     view.error === "active" || !["idle", "paused", "error", "stopping"].includes(view.status);
+  const label = t(voiceControlLabel(view.status, active));
   return (
-    <span className="inline-flex w-full min-w-0 rounded-xl bg-(image:--voice-spectrum) p-0.5 shadow-control-dark">
+    <span
+      className={`pointer-events-auto relative inline-flex min-w-0 bg-(image:--voice-spectrum) p-0.5 shadow-control-dark ${prominent ? "rounded-3xl" : "w-full rounded-xl"}`}
+    >
       <Button
-        className="h-auto min-h-14 w-full min-w-0 whitespace-normal rounded-[inherit] px-3 py-2 text-center text-sm"
+        className={`min-w-0 rounded-[inherit] text-center ${prominent ? "h-20 w-28 p-0" : "h-auto min-h-14 w-full whitespace-normal px-3 py-2 text-sm"}`}
         variant="voice"
         onClick={onStart}
-        disabled={controlDisabled}
+        disabled={controlDisabled || view.status === "stopping"}
+        aria-label={label}
       >
-        {active ? <MicOff /> : <Mic />}
-        {view.status === "stopping"
-          ? t("kiosk_voice_stopping")
-          : active
-            ? t("kiosk_voice_stop")
-            : view.status === "error"
-              ? t("kiosk_voice_retry")
-              : t("kiosk_voice_resume")}
+        {active ? (
+          <MicOff className={prominent ? "size-10" : "size-4"} aria-hidden="true" />
+        ) : (
+          <Play
+            className={prominent ? "size-10" : "size-4"}
+            fill="currentColor"
+            aria-hidden="true"
+          />
+        )}
+        {!prominent && label}
       </Button>
+      {prominent && (
+        <span className="pointer-events-none absolute top-full left-1/2 mt-3 w-48 -translate-x-1/2 text-center text-sm font-medium text-foreground">
+          {label}
+        </span>
+      )}
     </span>
   );
 }

@@ -123,13 +123,11 @@ it.each(["listening", "speaking"] as const)(
           </MotionProvider>
         </LocaleProvider>,
       );
-      await expect
-        .element(page.getByRole("figure").filter({ hasText: ja.kiosk_voice_paused }))
-        .toBeVisible();
       const resume = page.getByRole("button", { name: ja.kiosk_voice_resume, exact: true });
       await expect.element(resume).toBeVisible();
-      expect(resume.element().closest("[data-theme-part=voice-controls]")).toBe(controls);
-      expect(controls.getBoundingClientRect().height).toBe(controlHeight);
+      expect(resume.element().closest("[data-theme-part=voice-controls]")).toBeNull();
+      expect(document.querySelector('[data-theme-part="voice-controls"]')).toBe(controls);
+      expect(controls.getBoundingClientRect().height).toBeLessThanOrEqual(controlHeight);
     } finally {
       oscillator.stop();
       oscillator.disconnect();

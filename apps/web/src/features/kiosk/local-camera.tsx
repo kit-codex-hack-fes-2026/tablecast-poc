@@ -231,7 +231,7 @@ export function LocalCamera({
   return (
     <figure
       ref={frame}
-      className="relative min-w-0 shrink-0 self-start overflow-hidden rounded-2xl bg-control shadow-surface"
+      className="pointer-events-auto relative min-w-0 shrink-0 self-start overflow-hidden rounded-2xl bg-control shadow-surface"
       style={{ width, aspectRatio }}
       data-ui="camera-frame"
       data-camera-state={camera.pending ? "pending" : camera.stream ? "on" : "off"}

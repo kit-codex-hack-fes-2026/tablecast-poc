@@ -22,32 +22,21 @@ export function ConversationContent({
   ...props
 }: ComponentProps<typeof StickToBottom.Content>) {
   return (
-    <StickToBottom.Content
-      className={cn("flex flex-col gap-3 pt-3 pb-12 pr-2", className)}
-      {...props}
-    />
+    <StickToBottom.Content className={cn("flex flex-col gap-3 py-3 pr-2", className)} {...props} />
   );
 }
-export function ConversationScrollButton({
-  label,
-  followLabel = label,
-}: {
-  followLabel?: string;
-  label: string;
-}) {
-  const { isAtBottom, scrollToBottom, stopScroll, escapedFromLock } = useStickToBottomContext();
+export function ConversationScrollButton({ label }: { label: string }) {
+  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
+  if (isAtBottom) return null;
   return (
     <Button
-      className="absolute bottom-2 right-2 h-9 rounded-full border-primary/30 bg-card px-3 text-xs shadow-sm"
-      aria-pressed={!escapedFromLock && isAtBottom}
-      variant="outline"
+      className="absolute bottom-2 right-2 z-20 h-11 rounded-full px-3 text-xs shadow-control-dark"
       onClick={() => {
-        if (!escapedFromLock && isAtBottom) stopScroll();
-        else void scrollToBottom();
+        void scrollToBottom();
       }}
     >
       <ArrowDown className="size-4" aria-hidden="true" />
-      {!escapedFromLock && isAtBottom ? followLabel : label}
+      {label}
     </Button>
   );
 }

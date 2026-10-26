@@ -4,6 +4,13 @@ import { VoiceReferenceCard } from "./voice-reference";
 const meta = {
   title: "客向け/参考情報",
   component: VoiceReferenceCard,
+  decorators: [
+    (Story) => (
+      <div className="w-48">
+        <Story />
+      </div>
+    ),
+  ],
   args: {
     reference: {
       url: "https://www.bbcgoodfood.com/howto/guide/how-make-tea",

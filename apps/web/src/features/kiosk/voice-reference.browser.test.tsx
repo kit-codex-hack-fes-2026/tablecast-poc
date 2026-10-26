@@ -1,6 +1,7 @@
 import QrScanner from "qr-scanner";
 import { expect, it } from "vitest";
 import { render } from "vitest-browser-react";
+import { page, userEvent } from "vitest/browser";
 import ja from "../../../messages/ja.json";
 import { Surface } from "./test-support/voice-panel-fixture";
 import { VoiceProgress } from "./voice-progress";
@@ -11,9 +12,10 @@ it.each([
   { label: "短いURL", url: "https://example.com/tea?from=tablecast" },
   { label: "上限に近いURL", url: `https://example.com/tea?data=${"a".repeat(950)}` },
 ])("$label: 中央favicon付き実描画QRをデコードし、出典リンクとOGPを表示する", async ({ url }) => {
+  await page.viewport(1180, 820);
   const screen = await render(
     <Surface>
-      <div className="w-96">
+      <div className="w-44">
         <VoiceReferenceCard
           reference={{
             url,
@@ -32,7 +34,15 @@ it.each([
   await expect
     .element(screen.getByRole("img", { name: "Tea guide" }))
     .toHaveAttribute("src", favicon);
-  const svg = document.querySelector('[data-ui="voice-reference"] svg:has(title)');
+  const card = document.querySelector('[data-ui="voice-reference"]');
+  if (!(card instanceof HTMLElement)) throw new Error("参考カードがありません");
+  expect(card.getBoundingClientRect().width).toBeLessThanOrEqual(176);
+  expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+  let svg = card.querySelector("svg:has(title)");
+  if (url.length > 400) {
+    await screen.getByRole("button", { name: ja.kiosk_reference_expand }).click();
+    svg = screen.getByRole("dialog").element().querySelector("svg:has(title)");
+  }
   if (!svg) throw new Error("QRが描画されていません");
   expect(svg.querySelector("image")?.getAttribute("href")).toBe(favicon);
   const rendered = svg.cloneNode(true);
@@ -45,6 +55,12 @@ it.each([
   await image.decode();
   const result = await QrScanner.scanImage(image, { returnDetailedScanResult: true });
   expect(result.data).toBe(url);
+  if (url.length <= 400)
+    await screen.getByRole("button", { name: ja.kiosk_reference_expand }).click();
+  await userEvent.keyboard("{Escape}");
+  await expect
+    .element(screen.getByRole("button", { name: ja.kiosk_reference_expand }))
+    .toHaveFocus();
 });
 it("画像取得失敗でもタイトル・QRを残し、処理状態と推論要約を展開できる", async () => {
   const screen = await render(

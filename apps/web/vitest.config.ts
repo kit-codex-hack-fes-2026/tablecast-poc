@@ -118,6 +118,7 @@ export default defineConfig({
                   "src/features/kiosk/local-camera-reading.browser.test.tsx",
                   "src/features/kiosk/voice-reference.browser.test.tsx",
                   "src/features/kiosk/voice-journey.browser.test.tsx",
+                  "src/features/kiosk/voice-pane-ui.browser.test.tsx",
                   "src/components/product-image.browser.test.tsx",
                   "src/components/game-frame.browser.test.tsx",
                   "src/components/menu-option-image.browser.test.tsx",

@@ -62,13 +62,19 @@ it.each(["ja", "en"] as const)(
       expect(frame.getBoundingClientRect().width).toBeLessThanOrEqual(128);
       expect(frame.getBoundingClientRect().left).toBe(panel.getBoundingClientRect().left + 12);
       const before = controls.getBoundingClientRect();
-      await screen.getByRole("button", { name: labels.kiosk_following }).click();
+      await expect
+        .element(screen.getByRole("button", { name: labels.kiosk_latest }))
+        .not.toBeInTheDocument();
+      scroller.dispatchEvent(new WheelEvent("wheel", { deltaY: -200, bubbles: true }));
       scroller.scrollTop = 0;
       await expect.poll(() => scroller.scrollTop).toBe(0);
       expect(controls.getBoundingClientRect().top).toBe(before.top);
       expect(controls.getBoundingClientRect().bottom).toBe(before.bottom);
       expect(history.scrollWidth).toBeLessThanOrEqual(history.clientWidth);
       await screen.getByRole("button", { name: labels.kiosk_latest }).click();
+      await expect
+        .element(screen.getByRole("button", { name: labels.kiosk_latest }))
+        .not.toBeInTheDocument();
       await expect
         .element(screen.getByText(labels.kiosk_tool_running, { exact: true }))
         .toBeVisible();

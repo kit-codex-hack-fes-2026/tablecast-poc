@@ -557,7 +557,6 @@
   "common_records": "件",
   "common_no_results": "該当するデータがありません",
   "kiosk_speech_speed": "話す速さ",
-  "kiosk_following": "自動追従中",
   "kiosk_reply_interrupted": "今回の照会を完了できませんでした。注文結果は注文かご・履歴で確認できます。",
   "kiosk_reply_generating": "返答を生成中",
   "kiosk_cast_loading": "店舗設定を読み込み中",
@@ -1175,7 +1174,6 @@
   "kiosk_camera_on": "カメラ使用中",
   "kiosk_camera_device": "カメラ",
   "kiosk_camera_resize": "カメラの大きさを変更",
-  "kiosk_camera_privacy": "オンの間、必要なときだけ画像をAIへ送信します。録画・保存はしません。",
   "kiosk_camera_permission": "カメラの許可が必要",
   "kiosk_camera_unavailable": "カメラを確認",
   "theme_bilingual_required": "見出しと説明は、日本語と英語を両方入力するか、両方を空にしてください。",
@@ -1476,6 +1474,6 @@
   "kiosk_reasoning_summary": "考え方の要約",
   "kiosk_sources": "参考情報の出典",
   "kiosk_reference_qr": "参考ページのQRコード",
-  "kiosk_reference_phone": "スマホのカメラで読み取ると、参考情報を開けます。",
-  "kiosk_tool_show_reference": "参考情報とQRを表示"
+  "kiosk_tool_show_reference": "参考情報とQRを表示",
+  "kiosk_reference_expand": "タップしてQRを拡大"
 }

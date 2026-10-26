@@ -40,7 +40,7 @@ const caption = (role: "assistant" | "user", delta: string, start_ms: number) =>
 function Panel({ voice, events }: { events: TableEvent[]; voice: VoiceConnection }) {
   const { locale, setLocale } = useI18n();
   return (
-    <div className="h-200 max-w-2xl">
+    <div className="h-173 w-60">
       <button
         onClick={() => {
           setLocale("en");
@@ -165,6 +165,9 @@ it("開始案内・候補選択・参考情報・言語切替・終了を同じ�
       ]),
     );
     await expect.element(screen.getByRole("link", { name: "Tea guide" })).toBeVisible();
+    await screen.getByRole("button", { name: ja.kiosk_reference_expand }).click();
+    await expect.element(screen.getByRole("dialog")).toBeVisible();
+    await screen.getByRole("button", { name: ja.common_close, exact: true }).click();
     await page.screenshot({
       path: `../../../test-results/tablecast-voice-reference-${server.browser}.png`,
     });

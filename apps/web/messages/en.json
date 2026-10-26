@@ -557,7 +557,6 @@
   "common_records": "records",
   "common_no_results": "No results",
   "kiosk_speech_speed": "Speech speed",
-  "kiosk_following": "Following",
   "kiosk_reply_interrupted": "This request could not be completed. Check your basket and order history for the result.",
   "kiosk_reply_generating": "Generating reply",
   "kiosk_cast_loading": "Loading cast settings",
@@ -1175,7 +1174,6 @@
   "kiosk_camera_on": "Camera on",
   "kiosk_camera_device": "Camera",
   "kiosk_camera_resize": "Resize camera",
-  "kiosk_camera_privacy": "While on, a still image may be sent to the AI when needed. Images are not recorded or stored.",
   "kiosk_camera_permission": "Camera blocked",
   "kiosk_camera_unavailable": "Camera unavailable",
   "theme_bilingual_required": "Enter both Japanese and English, or leave both languages blank.",
@@ -1476,6 +1474,6 @@
   "kiosk_reasoning_summary": "Reasoning summary",
   "kiosk_sources": "Sources",
   "kiosk_reference_qr": "Reference page QR code",
-  "kiosk_reference_phone": "Scan with your phone’s camera to open this reference.",
-  "kiosk_tool_show_reference": "Showing a reference and QR code"
+  "kiosk_tool_show_reference": "Showing a reference and QR code",
+  "kiosk_reference_expand": "Tap to enlarge the QR code"
 }

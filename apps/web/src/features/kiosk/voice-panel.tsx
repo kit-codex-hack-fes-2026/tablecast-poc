@@ -5,7 +5,7 @@ import {
   type TableEvent,
   voiceReferenceEventSchema,
 } from "@tablecast/api/schema";
-import { AudioLines, Check, CircleAlert, LoaderCircle, MicOff } from "lucide-react";
+import { Check, CircleAlert, LoaderCircle, MicOff } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import { useRef } from "react";
 import {
@@ -23,7 +23,7 @@ import {
 } from "./conversation-model";
 import { LocalCamera, useLocalCamera } from "./local-camera";
 import { type VoiceView } from "./voice-connection";
-import { VoiceAttention, VoiceControls } from "./voice-controls";
+import { VoiceAttention, VoiceControls, VoiceToggle } from "./voice-controls";
 import { ConversationEntry, ConversationMessage } from "./voice-conversation-message";
 import { VoiceProgress } from "./voice-progress";
 import { VoiceReferenceCard } from "./voice-reference";
@@ -224,13 +224,13 @@ export function VoicePanelContent({
       <section
         ref={panel}
         className="relative flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-hidden p-3 @container"
+        style={{ fontFamily: "var(--font-sans)" }}
         data-theme-part="conversation"
         aria-label={t("kiosk_conversation")}
       >
         <h2 className="sr-only">{t("kiosk_conversation")}</h2>
-        <div className="min-w-0 shrink-0">
+        <div className="pointer-events-none absolute inset-x-3 top-3 z-10">
           <LocalCamera camera={camera} boundsRef={panel} />
-          <p className="mt-1 text-xs text-muted-foreground">{t("kiosk_camera_privacy")}</p>
         </div>
         <div
           data-ui="conversation-history"
@@ -238,14 +238,6 @@ export function VoicePanelContent({
         >
           <Conversation>
             <ConversationContent tabIndex={0} className="relative">
-              {merged.length === 0 && !active && (
-                <div className="flex flex-col items-start gap-3 py-5">
-                  <AudioLines className="size-10 text-muted-foreground" strokeWidth={1.2} />
-                  <h1 className="whitespace-pre-line font-serif text-xl leading-relaxed">
-                    {t("kiosk_welcome")}
-                  </h1>
-                </div>
-              )}
               <AnimatePresence initial={false} mode="popLayout">
                 {timeline.map((entry) => {
                   const line = entry.line;
@@ -328,12 +320,19 @@ export function VoicePanelContent({
               )}
               <VoiceProgress view={view} />
             </ConversationContent>
-            <ConversationScrollButton
-              label={t("kiosk_latest")}
-              followLabel={t("kiosk_following")}
-            />
+            <ConversationScrollButton label={t("kiosk_latest")} />
           </Conversation>
         </div>
+        {!active && (
+          <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center">
+            <VoiceToggle
+              prominent
+              view={view}
+              onStart={onStart}
+              controlDisabled={controlDisabled}
+            />
+          </div>
+        )}
         <VoiceControls
           view={view}
           active={active}
