@@ -43,6 +43,11 @@ test("未認証で日英のヘルプとMarkdownを辿れ、管理画面と業務
   ])
     expect((await request.get(missing)).status(), missing).toBe(404);
 
+  const inflection = await request.get("/help/search?query=configurations&locale=en");
+  expect(inflection.status()).toBe(200);
+  expect(await inflection.text()).toContain("/help/en/configuration");
+  const japanese = await request.get("/help/search?query=ＭＣＰ&locale=ja");
+  expect(await japanese.text()).toContain("/help/ja/mcp");
   const search = await request.get("/help/search?query=expectedVersion&locale=en");
   expect(search.status()).toBe(200);
   expect(await search.text()).toContain("/help/en/configuration");
@@ -64,6 +69,12 @@ test("ヘルプをSSRで読み、関連章・言語・モバイル目次へ移�
   browser,
   baseURL,
 }, testInfo) => {
+  const identityRequests: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.startsWith("/api/auth/") || path.startsWith("/api/admin/"))
+      identityRequests.push(path);
+  });
   const anonymous = await browser.newContext({ baseURL, javaScriptEnabled: false });
   try {
     const ssr = await anonymous.newPage();
@@ -78,6 +89,12 @@ test("ヘルプをSSRで読み、関連章・言語・モバイル目次へ移�
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/help");
   await expect(page.getByRole("heading", { name: "TableCast ヘルプ", exact: true })).toBeVisible();
+  await expect(page.locator('[data-ui="app-header"]')).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "日本語", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   const helpGroup = page.getByRole("region", { name: "ヘルプ", exact: true });
   const groupTrigger = helpGroup.getByRole("button", { name: "ヘルプ", exact: true });
   await expect(groupTrigger).toHaveAttribute("aria-expanded", "true");
@@ -111,13 +128,39 @@ test("ヘルプをSSRで読み、関連章・言語・モバイル目次へ移�
     helpGroup.getByRole("link", { name: "MCP接続とagentの使い方", exact: true }),
   ).toHaveAttribute("aria-current", "page");
   await page.screenshot({ path: testInfo.outputPath("tablecast-help-ja.png"), fullPage: true });
-  await page.getByRole("link", { name: "English", exact: true }).click();
+  await page.getByRole("button", { name: "English", exact: true }).click();
   await expect(page).toHaveURL(/\/help\/en\/mcp\/?$/);
   await expect(
     page.getByRole("heading", { name: "MCP connections and agents", exact: true }),
   ).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page).toHaveTitle(/MCP connections and agents.*Help/);
+  await expect(page.getByRole("button", { name: "English", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByRole("searchbox", { name: "Search pages and help" }).fill("configurations");
+  const englishResults = page.getByRole("dialog", { name: "Search results" });
+  await expect(
+    englishResults.getByRole("link", { name: /Configuration and publishing/ }).first(),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("tablecast-help-en-search.png"),
+    fullPage: false,
+    animations: "disabled",
+  });
+  await page.getByRole("searchbox", { name: "Search pages and help" }).press("Escape");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('[data-ui="app-header"]')).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+    .toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath("tablecast-help-en-mobile.png"),
+    fullPage: false,
+    animations: "disabled",
+  });
   await page.goBack();
   await expect(
     page.getByRole("heading", { name: "MCP接続とagentの使い方", exact: true }),
@@ -126,7 +169,7 @@ test("ヘルプをSSRで読み、関連章・言語・モバイル目次へ移�
   await expect(
     page.getByRole("heading", { name: "MCP接続とagentの使い方", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "目次を開く", exact: true }).click();
+  await page.getByRole("button", { name: "ナビゲーション", exact: true }).click();
   await expect(
     page
       .getByRole("region", { name: "ヘルプ", exact: true })
@@ -151,10 +194,11 @@ test("ヘルプをSSRで読み、関連章・言語・モバイル目次へ移�
     .click();
   await expect(page.locator("#nd-sidebar-mobile")).toBeHidden();
   await expect(page.getByRole("heading", { name: "困ったとき", exact: true })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  );
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+    .toBe(true);
   await page.screenshot({ path: testInfo.outputPath("tablecast-help-mobile.png"), fullPage: true });
+  expect(identityRequests).toEqual([]);
 });
 
 test("店舗サイドバーのヘルプグループから公開ガイドへ進める", async ({
@@ -177,6 +221,25 @@ test("店舗サイドバーのヘルプグループから公開ガイドへ進�
   });
   await results.getByRole("link", { name: "商品 メニュー・接客" }).click();
   await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/menu\/products$/);
+  await expect(page.locator('[data-ui="app-header"]')).toHaveCount(1);
+  await page.getByRole("button", { name: "English", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("button", { name: "English", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+    .toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath("tablecast-admin-en-mobile.png"),
+    fullPage: false,
+    animations: "disabled",
+  });
+  await page.getByRole("button", { name: "日本語", exact: true }).click();
+  await page.setViewportSize({ width: 1440, height: 1000 });
   const help = page.getByRole("region", { name: "ヘルプ", exact: true });
   await expect(help.getByRole("button", { name: "ヘルプ", exact: true })).toHaveAttribute(
     "aria-expanded",

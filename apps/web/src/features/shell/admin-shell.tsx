@@ -3,7 +3,7 @@ import { PanelLeft, X } from "lucide-react";
 import { type ReactNode, type SyntheticEvent, useRef, useState } from "react";
 import { usePanelRef } from "react-resizable-panels";
 import type { SidebarSelection } from "./sidebar-model";
-import { LanguageSwitch } from "../../components/language-switch";
+import { AppHeader } from "../../components/app-header";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
 import {
@@ -109,40 +109,43 @@ export function AdminShell({
             data-scroll-restoration-id="tablecast-admin-main"
             className="h-full min-w-0 overflow-y-auto bg-card md:rounded-2xl md:shadow-surface"
           >
-            <header className="sticky top-0 z-20 flex min-h-18 flex-wrap items-center gap-3 border-b border-border bg-glass px-4 py-3 backdrop-blur-xl @container md:rounded-t-2xl">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="hidden md:inline-flex"
-                aria-label={t("admin_navigation")}
-                aria-expanded={!collapsed}
-                title={`${t("admin_navigation")} (⌘/Ctrl+B)`}
-                aria-keyshortcuts="Control+B Meta+B"
-                onClick={toggleSidebar}
-              >
-                <PanelLeft />
-              </Button>
-              <MobileNavigation
-                key={desktop ? "desktop" : "mobile"}
-                {...sidebar}
-                selection={selection}
-              />
-              {storeName && (!desktop || collapsed) && (
-                <span
-                  className={`min-w-0 truncate text-sm font-medium ${header ? "max-w-40" : "flex-1"}`}
-                >
-                  {storeName}
-                </span>
-              )}
-              {header && (
-                <div className="order-last min-w-0 basis-full text-base font-medium @3xl:order-0 @3xl:flex-1 @3xl:basis-72">
-                  {header}
-                </div>
-              )}
-              <div className="ml-auto">
-                <LanguageSwitch onChange={setLocale} />
-              </div>
-            </header>
+            <AppHeader
+              className="md:rounded-t-2xl"
+              onLocaleChange={setLocale}
+              navigation={
+                <>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="hidden md:inline-flex"
+                    aria-label={t("admin_navigation")}
+                    aria-expanded={!collapsed}
+                    title={`${t("admin_navigation")} (⌘/Ctrl+B)`}
+                    aria-keyshortcuts="Control+B Meta+B"
+                    onClick={toggleSidebar}
+                  >
+                    <PanelLeft />
+                  </Button>
+                  <MobileNavigation
+                    key={desktop ? "desktop" : "mobile"}
+                    {...sidebar}
+                    selection={selection}
+                  />
+                </>
+              }
+              context={
+                storeName &&
+                (!desktop || collapsed) && (
+                  <span
+                    className={`min-w-0 truncate text-sm font-medium ${header ? "max-w-40" : "flex-1"}`}
+                  >
+                    {storeName}
+                  </span>
+                )
+              }
+            >
+              {header}
+            </AppHeader>
             <div
               data-page-motion
               className="mx-auto w-full min-w-0 max-w-7xl space-y-6 @container p-4 sm:p-6 lg:p-8 [view-transition-name:tablecast-page]"

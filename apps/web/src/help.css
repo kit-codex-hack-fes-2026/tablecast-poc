@@ -4,6 +4,10 @@
 @source "./features/help";
 @source "./features/shell";
 @source "./components/ui";
+@source "./components/app-header.tsx";
+@source "./components/page-header.tsx";
+@source "./components/language-switch.tsx";
+@source "./components/language-label.tsx";
 
 @theme {
   --color-fd-primary: var(--green-11);

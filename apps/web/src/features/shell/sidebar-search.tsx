@@ -1,9 +1,8 @@
 import type { SortedResult } from "fumadocs-core/search";
 import { Popover } from "@base-ui/react/popover";
-import { useHotkey } from "@tanstack/react-hotkeys";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { fetchClient } from "fumadocs-core/search/client/fetch";
+import { detectPlatform } from "@tanstack/react-hotkeys";
+import { Link, useHydrated } from "@tanstack/react-router";
+import { useFetchSearch } from "fumadocs-core/search/client/fetch";
 import { ArrowUpRight, LoaderCircle, Search, X } from "lucide-react";
 import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import { cn } from "tailwind-variants";
@@ -17,20 +16,8 @@ import {
   navigationGroupStyle,
   searchNavigation,
 } from "./navigation-model";
-
-function helpResults(results: SortedResult[]) {
-  let title = "";
-  return results
-    .map((item) => {
-      if (item.type === "page") title = item.content;
-      return { ...item, title: item.type === "page" ? item.content : title };
-    })
-    .filter(
-      (item, index, all) =>
-        item.type !== "page" || all[index + 1]?.type === "page" || !all[index + 1],
-    )
-    .slice(0, 8);
-}
+import { useSearchKeyboard } from "./search-keyboard";
+import { SearchSnippet } from "./search-snippet";
 
 export function SidebarSearch({
   collapsed = false,
@@ -40,46 +27,29 @@ export function SidebarSearch({
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const anchor = useRef<HTMLDivElement>(null);
   const popup = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [debounced, setDebounced] = useState("");
   const term = query.trim();
   const visible = open && (collapsed || !!term);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(term), 150);
-    return () => clearTimeout(timer);
-  }, [term]);
-  const help = useQuery({
-    queryKey: ["tablecast-help-search", locale, debounced],
-    queryFn: async () => fetchClient({ api: "/help/search", locale }).search(debounced),
-    enabled: open && !!debounced,
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  });
   const pages = searchNavigation(term, t, context);
-  const loading = !!term && (term !== debounced || help.isPending);
-  const docs = !loading && term === debounced ? helpResults(help.data ?? []) : [];
-  const error = !loading && help.isError;
+  const keyboard = useSearchKeyboard({
+    anchor,
+    input,
+    popup,
+    query: term,
+    open: visible,
+    onOpen: () => setOpen(true),
+  });
   const finish = () => {
     setOpen(false);
     setQuery("");
     onNavigate?.();
   };
-  useHotkey(
-    "Mod+K",
-    () => {
-      if (!anchor.current?.getClientRects().length) return;
-      setOpen(true);
-      input.current?.focus();
-      input.current?.select();
-    },
-    { ignoreInputs: false },
-  );
 
   const searchInput = (
     <SidebarSearchInput
@@ -99,7 +69,7 @@ export function SidebarSearch({
 
   return (
     <Popover.Root open={visible} onOpenChange={setOpen} modal={false}>
-      <div ref={anchor} className="shrink-0 pb-3">
+      <div {...keyboard} ref={anchor} className="shrink-0 pb-3">
         {collapsed ? (
           <Popover.Trigger
             aria-label={t("navigation_search")}
@@ -123,6 +93,7 @@ export function SidebarSearch({
           className="z-50 max-w-[calc(100vw-1.5rem)]"
         >
           <Popover.Popup
+            {...keyboard}
             ref={popup}
             initialFocus={collapsed ? input : false}
             finalFocus={false}
@@ -132,6 +103,7 @@ export function SidebarSearch({
                 "w-[min(30rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl",
             })}
             onKeyDown={(event) => {
+              keyboard.onKeyDown(event);
               if (event.key === "Escape") {
                 if (!collapsed) input.current?.focus();
                 setOpen(false);
@@ -149,14 +121,7 @@ export function SidebarSearch({
                 </p>
               ) : (
                 <>
-                  <SearchResults
-                    pages={pages}
-                    docs={docs}
-                    loading={loading}
-                    error={error}
-                    onRetry={() => void help.refetch()}
-                    onNavigate={finish}
-                  />
+                  <SearchResults pages={pages} query={term} onNavigate={finish} />
                 </>
               )}
             </div>
@@ -246,34 +211,32 @@ function SidebarSearchInput({
 
 function SearchResults({
   pages,
-  docs,
-  loading,
-  error,
-  onRetry,
+  query,
   onNavigate,
 }: {
-  docs: ReturnType<typeof helpResults>;
-  error: boolean;
-  loading: boolean;
   onNavigate: () => void;
-  onRetry: () => void;
   pages: ReturnType<typeof searchNavigation>;
+  query: string;
 }) {
   const { t } = useI18n();
+  const [attempt, setAttempt] = useState(0);
+  const [cache] = useState(() => new Map<string, SortedResult[]>());
   return (
     <>
       <section aria-label={t("navigation_search_pages")}>
         <h3 className="px-3 py-2 text-xs font-semibold text-muted-foreground">
           {t("navigation_search_pages")}
         </h3>
-        {pages.map(({ id: pageId, title, description, Icon, group, url }) => (
+        {pages.map(({ id, title, description, Icon, group, url }, index) => (
           <SearchResult
-            key={pageId}
-            to={url}
+            key={id}
             title={title}
             description={description}
             Icon={Icon}
             group={group}
+            to={url}
+            position={index + 1}
+            query={query}
             onNavigate={onNavigate}
           />
         ))}
@@ -285,41 +248,102 @@ function SearchResults({
       </section>
       <section aria-label={t("help_title")} className="mt-2 border-t border-border pt-1">
         <h3 className="px-3 py-2 text-xs font-semibold text-muted-foreground">{t("help_title")}</h3>
-        {loading ? (
-          <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground p-3">
-            <LoaderCircle className="size-4 motion-safe:animate-spin" />
-            {t("navigation_search_loading")}
-          </p>
-        ) : error ? (
-          <div role="alert" className="space-y-2 text-sm p-3">
-            <p>{t("navigation_search_error")}</p>
-            <button
-              type="button"
-              className="rounded-sm text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              onClick={onRetry}
-            >
-              {t("navigation_search_retry")}
-            </button>
-          </div>
-        ) : docs.length ? (
-          docs.map((item) => (
-            <SearchResult
-              key={item.id}
-              to={item.url}
-              title={item.title}
-              description={item.type === "page" ? t("help_title") : item.content}
-              Icon={helpNavigationItem(item.url).Icon}
-              group="help"
-              onNavigate={onNavigate}
-            />
-          ))
-        ) : (
-          <p role="status" className="text-sm text-muted-foreground p-3">
-            {t("navigation_search_no_help")}
-          </p>
-        )}
+        <HelpSearchResults
+          key={attempt}
+          query={query}
+          offset={pages.length}
+          cache={cache}
+          onNavigate={onNavigate}
+          onRetry={() => setAttempt((value) => value + 1)}
+        />
       </section>
     </>
+  );
+}
+
+function helpResults(items: NonNullable<ReturnType<typeof useFetchSearch>["data"]>["items"]) {
+  let title = "";
+  const records = items.flatMap((item) => (item.type === "table" ? item.rows : [item]));
+  let titleTree: (typeof records)[number]["hastContent"] | undefined;
+  return records
+    .map((record) => {
+      if (record.type === "page") {
+        title = record.content;
+        titleTree = record.hastContent;
+      }
+      return { ...record, title, titleTree };
+    })
+    .filter(
+      (record, index) =>
+        record.type !== "page" || !records[index + 1] || records[index + 1]?.type === "page",
+    )
+    .slice(0, 8);
+}
+
+function HelpSearchResults({
+  query,
+  offset,
+  cache,
+  onNavigate,
+  onRetry,
+}: {
+  cache: Map<string, SortedResult[]>;
+  offset: number;
+  onNavigate: () => void;
+  onRetry: () => void;
+  query: string;
+}) {
+  const { t, locale } = useI18n();
+  const { onSearchChange, ...search } = useFetchSearch({
+    api: "/help/search",
+    locale,
+    cache,
+    delayMs: 150,
+  });
+  useEffect(() => {
+    onSearchChange(query);
+  }, [query, onSearchChange]);
+  if (search.search !== query || search.isLoading)
+    return (
+      <p role="status" className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+        <LoaderCircle className="size-4 motion-safe:animate-spin" />
+        {t("navigation_search_loading")}
+      </p>
+    );
+  if (search.error)
+    return (
+      <div role="alert" className="space-y-2 p-3 text-sm">
+        <p>{t("navigation_search_error")}</p>
+        <button
+          type="button"
+          className="rounded-sm text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={onRetry}
+        >
+          {t("navigation_search_retry")}
+        </button>
+      </div>
+    );
+  const docs = helpResults(search.data?.query === query ? search.data.items : []);
+  return docs.length ? (
+    docs.map((item, index) => (
+      <SearchResult
+        key={item.id}
+        title={item.title}
+        titleTree={item.titleTree}
+        description={item.type === "page" ? t("help_title") : item.content}
+        tree={item.type === "page" ? undefined : item.hastContent}
+        Icon={helpNavigationItem(item.url).Icon}
+        group="help"
+        to={item.url}
+        position={offset + index + 1}
+        query={query}
+        onNavigate={onNavigate}
+      />
+    ))
+  ) : (
+    <p role="status" className="p-3 text-sm text-muted-foreground">
+      {t("navigation_search_no_help")}
+    </p>
   );
 }
 
@@ -330,17 +354,31 @@ function SearchResult({
   Icon,
   group,
   onNavigate,
+  position,
+  query,
+  tree,
+  titleTree,
 }: {
   description: string;
   group: keyof typeof navigationGroups;
   Icon: typeof Search;
   onNavigate: () => void;
+  position: number;
+  query: string;
   title: string;
+  titleTree?: Parameters<typeof SearchSnippet>[0]["tree"];
   to: string;
+  tree?: Parameters<typeof SearchSnippet>[0]["tree"];
 }) {
+  const { locale } = useI18n();
+  const hydrated = useHydrated();
+  const modifier = hydrated && detectPlatform() === "mac" ? "⌘" : "Ctrl";
   return (
     <Link
       to={to}
+      data-search-result=""
+      data-search-query={query}
+      aria-keyshortcuts={position <= 4 ? `Meta+${position} Control+${position}` : undefined}
       preload={false}
       onClick={onNavigate}
       className={navigationGroupStyle({
@@ -356,13 +394,22 @@ function SearchResult({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium group-hover:text-[var(--nav-color)]">
-          {title}
+          <SearchSnippet text={title} tree={titleTree} query={query} locale={locale} />
         </span>
         <span className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-          {description}
+          <SearchSnippet text={description} tree={tree} query={query} locale={locale} />
         </span>
       </span>
-      <ArrowUpRight aria-hidden="true" className="mt-1 size-3.5 shrink-0 text-muted-foreground" />
+      {position <= 4 ? (
+        <kbd
+          aria-hidden="true"
+          className="mt-1 shrink-0 rounded-sm border border-border px-1 text-[0.65rem] text-muted-foreground"
+        >
+          {modifier} {position}
+        </kbd>
+      ) : (
+        <ArrowUpRight aria-hidden="true" className="mt-1 size-3.5 shrink-0 text-muted-foreground" />
+      )}
     </Link>
   );
 }

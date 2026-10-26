@@ -10,7 +10,7 @@ export const Route = createFileRoute("/help/search")({
         const locale = params.get("locale") ?? "ja";
         if (query.length > 200 || (locale !== "ja" && locale !== "en"))
           return Response.json({ error: "Invalid search query" }, { status: 400 });
-        return Response.json(query ? await helpSearch.search(query, { locale, limit: 16 }) : []);
+        return Response.json(query ? await helpSearch[locale].search(query, { limit: 16 }) : []);
       },
     },
   },

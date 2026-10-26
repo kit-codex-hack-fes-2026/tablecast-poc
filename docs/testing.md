@@ -415,3 +415,5 @@ Webの`billing-page.browser.test.tsx`と隣接Storyは、日本語でrole・無�
 ### 公開ヘルプの確認
 
 `tablecast-help.spec.ts`は実Web/APIへ接続し、未認証のHTML・日英切替・相対リンク・Markdown・LLM索引と、管理画面・MCP・業務APIの認証境界を確認する。本文の配信とリンクの解決はビルド後の成果物で確認し、原稿の文言を固定するunitテストは追加しない。サイドバーのグループ開閉は既存のBrowser統合、画面の証拠はこの代表E2Eで扱う。
+
+ヘルプ検索は日英別の実ZBSearchで全半角・英字大小文字・日本語の空白なし・英語の語形変化を確認する。Browser統合は番号付きショートカット、IME確定、遅い旧応答、MarkdownのDOMと語形変化後のハイライト、共通ヘッダーを所有する。実WebのE2Eは公開検索API・言語別SSR・同章の言語URLへの遷移とモバイルの目次へ限定する。

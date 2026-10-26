@@ -2,12 +2,15 @@ import type { InferPageType } from "fumadocs-core/source";
 import type { AnchorHTMLAttributes } from "react";
 import { defineI18nUI } from "fumadocs-ui/i18n";
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
-import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/layouts/docs/page";
+import { DocsBody, DocsPage } from "fumadocs-ui/layouts/docs/page";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { RootProvider } from "fumadocs-ui/provider/tanstack";
 import { createContext, useContext } from "react";
 import { Brand } from "../../components/brand";
+import { PageHeader } from "../../components/page-header";
 import { helpI18n, helpMarkdownUrl, helpSource, resolveHelpLink } from "../../lib/help-source";
+import { helpNavigationItem } from "../shell/navigation-model";
+import { HelpHeader } from "./help-header";
 import { HelpSidebarGroup, HelpSidebarItem, HelpSidebarSearch } from "./help-sidebar";
 
 const HelpPageContext = createContext<InferPageType<typeof helpSource> | undefined>(undefined);
@@ -20,6 +23,7 @@ function HelpLink({ href, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
 }
 
 const components = { ...defaultMdxComponents, a: HelpLink };
+const slots = { header: HelpHeader };
 const sidebarComponents = { Folder: HelpSidebarGroup, Item: HelpSidebarItem };
 
 const translations = defineI18nUI(helpI18n, {
@@ -45,6 +49,7 @@ export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
   const english = page.locale === "en";
   const Body = page.data.body;
   const tree = helpSource.getPageTree(page.locale);
+  const { Icon } = helpNavigationItem(page.url);
   return (
     <div lang={page.locale} className="min-h-dvh bg-background text-foreground">
       <RootProvider
@@ -53,6 +58,8 @@ export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
         i18n={translations.provider(page.locale)}
       >
         <DocsLayout
+          slots={slots}
+          containerProps={{ className: "[--fd-header-height:--spacing(18)]" }}
           tree={{
             ...tree,
             children: [
@@ -72,17 +79,14 @@ export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
           searchToggle={{ enabled: false }}
           themeSwitch={{ enabled: false }}
           i18n={false}
-          links={[
-            {
-              text: english ? "日本語" : "English",
-              url: `/help/${english ? "ja" : "en"}/${page.slugs.join("/")}`,
-            },
-            { text: english ? "Open TableCast" : "TableCastを開く", url: "/admin/live" },
-          ]}
+          links={[{ text: english ? "Open TableCast" : "TableCastを開く", url: "/admin/live" }]}
         >
           <DocsPage toc={page.data.toc}>
-            <DocsTitle>{page.data.title}</DocsTitle>
-            <DocsDescription>{page.data.description}</DocsDescription>
+            <PageHeader
+              title={page.data.title}
+              description={page.data.description}
+              icon={<Icon />}
+            />
             <div className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
               <span>
                 {english ? "Public help · No sign-in required" : "公開ヘルプ · ログイン不要"}
