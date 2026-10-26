@@ -86,6 +86,7 @@
   "kiosk_category_empty": "このカテゴリには商品がありません。別のカテゴリ、またはすべてを選んでください。",
   "kiosk_all": "すべて",
   "kiosk_cart": "注文かご",
+  "kiosk_orders_bill": "履歴・お会計",
   "kiosk_orders": "注文履歴",
   "kiosk_bill": "お会計",
   "kiosk_choose": "選ぶ",

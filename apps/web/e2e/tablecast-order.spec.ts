@@ -169,6 +169,37 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     await expect(guest.getByText(en.kiosk_cart_added, { exact: true })).toBeVisible();
     await expect(guest.getByText(en.kiosk_cart_empty, { exact: true })).not.toBeVisible();
     await guest.screenshot({ path: testInfo.outputPath("tablecast-basket-toast.png") });
+    if (browserName === "chromium") {
+      // 実データのカゴを各端末のCSS viewportで撮影する。
+      for (const [width, height] of [
+        [1512, 982],
+        [1180, 820],
+        [820, 1180],
+        [402, 874],
+      ] as const) {
+        const preview = await browser.newContext({
+          baseURL,
+          storageState: await guestContext.storageState(),
+          viewport: { width, height },
+          reducedMotion: "reduce",
+          serviceWorkers: "block",
+        });
+        try {
+          const responsive = await preview.newPage();
+          await responsive.goto("/");
+          await expect(responsive.getByRole("tab")).toHaveCount(3);
+          await expect(
+            responsive.getByRole("button", { name: en.kiosk_review, exact: true }),
+          ).toBeVisible();
+          await expect(responsive.locator('[data-ui="cart-preview"] img')).toHaveCount(1);
+          await responsive.screenshot({
+            path: testInfo.outputPath(`tablecast-basket-${width}.png`),
+          });
+        } finally {
+          await preview.close();
+        }
+      }
+    }
     const flights = await guest.evaluate(() =>
       Number(document.documentElement.dataset.tablecastCartFlights),
     );
@@ -205,7 +236,7 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     expect(ordered.orders).toHaveLength(1);
     expect(ordered.orders[0]?.snapshot.lines).toEqual(basket.lines);
     expect(ordered.billRequested).toBe(false);
-    await guest.getByRole("tab", { name: new RegExp(`^${en.kiosk_orders}`) }).click();
+    await guest.getByRole("tab", { name: new RegExp(`^${en.kiosk_orders_bill}`) }).click();
     const history = guest.locator('[data-ui="order-card"]');
     await expect(history).toBeVisible();
     // snapshotの名称・金額を保ったまま現在カタログの写真を添える。
@@ -223,6 +254,7 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     }, 0);
     expect(historyImages).toBeGreaterThan(1);
     await expect(history.locator("img")).toHaveCount(historyImages);
+    await history.scrollIntoViewIfNeeded();
     await guest.screenshot({ path: testInfo.outputPath("tablecast-history.png") });
     await staff.goto(`/admin/stores/${storeId}/floor`);
     const billingMetric = staff
@@ -237,7 +269,7 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
       (table) => table.billRequested && table.bill.due > 0,
     ).length;
     await expect(billingMetric).toHaveText(String(previousBilling));
-    await guest.getByRole("tab", { name: en.kiosk_bill, exact: true }).click();
+    await guest.getByRole("tab", { name: new RegExp(`^${en.kiosk_orders_bill}`) }).click();
     await guest.getByRole("button", { name: en.kiosk_bill_request, exact: true }).click();
     await expect(billingMetric).toHaveText(String(previousBilling + 1));
     await staff.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();

@@ -14,7 +14,7 @@ export function KioskPending() {
       <span className="sr-only">{t("common_loading")}</span>
       <div
         aria-hidden="true"
-        className="flex h-16 max-[56rem]:h-28 shrink-0 items-center gap-4 border-b border-border bg-card px-4"
+        className="flex h-16 max-[56rem]:h-28 max-sm:h-36 shrink-0 items-center gap-4 border-b border-border bg-card px-4"
       >
         <Brand />
         <Skeleton className="h-5 w-40" />
@@ -44,12 +44,8 @@ export function KioskPending() {
               </div>
             ))}
           </div>
-          <div className="flex h-20 shrink-0 items-center gap-4 border-t border-border p-4">
-            <Skeleton className="h-10 w-20" />
-            <Skeleton className="ml-auto h-12 w-1/2" />
-          </div>
-          <div className="flex h-14 shrink-0 items-center gap-4 border-b border-border p-3">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="flex h-20 shrink-0 items-center gap-4 border-t border-border p-3">
+            {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-5 flex-1" />
             ))}
           </div>

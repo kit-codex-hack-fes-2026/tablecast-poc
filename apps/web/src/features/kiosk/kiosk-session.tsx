@@ -12,17 +12,17 @@ import {
 } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useHydrated } from "@tanstack/react-router";
-import {
-  Bell,
-  Check,
-  ChevronRight,
-  ReceiptText,
-  ShoppingBag,
-  Utensils,
-  Wallet,
-} from "lucide-react";
+import { Bell, Check, ChevronRight, ReceiptText, ShoppingBag, Utensils } from "lucide-react";
 import { useReducedMotion } from "motion/react";
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { usePanelRef } from "react-resizable-panels";
 import { ActionToasts } from "../../components/action-toasts";
 import { Brand } from "../../components/brand";
@@ -405,12 +405,23 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     );
   }
   function renderCheckout() {
+    if (data.cart.lines.length === 0 || section === "orders" || section === "bill") return null;
     const reviewing = snapshot && section === "cart";
     return (
-      <footer data-theme-part="checkout" className="shrink-0 border-t border-border bg-card p-3">
+      <div
+        role="group"
+        aria-label={t("kiosk_cart")}
+        data-ui="cart-callout"
+        data-theme-part="checkout"
+        className="absolute bottom-[calc(100%+0.75rem)] left-1/2 z-20 w-max max-w-[calc(100cqw-1.5rem)] -translate-x-1/2 rounded-2xl border border-border bg-card p-2 shadow-xl"
+      >
+        <span
+          aria-hidden
+          className="absolute top-full left-1/2 -mt-1.5 size-3 -translate-x-1/2 rotate-45 border-r border-b border-border bg-card"
+        />
         <ErrorNotice error={submit.error} />
         {reviewing ? (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid w-80 max-w-full grid-cols-3 gap-2">
             <Button
               variant="outline"
               className="h-auto min-h-14 min-w-0 whitespace-normal px-3 py-2"
@@ -447,7 +458,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             </Button>
           </div>
         )}
-      </footer>
+      </div>
     );
   }
   function renderHeader() {
@@ -456,28 +467,31 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     return (
       <header
         data-theme-part="header"
-        className="grid h-16 shrink-0 grid-cols-[minmax(0,1fr)_auto_21rem] items-center gap-2 border-b border-border bg-card px-4 max-[56rem]:h-28 max-[56rem]:grid-cols-[minmax(0,1fr)_auto] max-[56rem]:grid-rows-2 max-[56rem]:gap-y-0 max-[56rem]:px-3"
+        className="grid h-16 shrink-0 grid-cols-[minmax(0,1fr)_auto_21rem] items-center gap-2 border-b border-border bg-card px-4 max-[56rem]:h-28 max-[56rem]:grid-cols-[minmax(0,1fr)_21rem] max-[56rem]:grid-rows-2 max-[56rem]:gap-y-0 max-[56rem]:px-3 max-sm:h-36 max-sm:grid-cols-1 max-sm:grid-rows-3"
       >
-        <div className="flex min-w-0 items-center gap-3">
-          <a
-            className="text-xl font-bold tracking-tight max-xl:hidden"
-            href={data.kind === "demo" ? "#" : "/"}
-          >
-            <Brand />
+        <div
+          data-ui="header-branding"
+          className="flex min-w-0 items-center gap-3 max-[56rem]:col-span-2 max-sm:col-span-1"
+        >
+          <a className="inline-flex shrink-0 items-center" href={data.kind === "demo" ? "#" : "/"}>
+            <Brand className="w-28" />
           </a>
-          <span data-ui="store-logo-banner" className="hidden w-40 shrink-0 sm:block">
-            <StoreLogo logo={logo} width={160} height={40} />
-          </span>
-          <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm max-[56rem]:flex-col max-[56rem]:items-start max-[56rem]:gap-0">
-            <span className="max-w-48 truncate max-[56rem]:max-w-full">
-              {storeName ?? data.storeName}
-            </span>
-            <strong className="max-[56rem]:max-w-full max-[56rem]:truncate">
-              {data.kind === "demo" ? t("demo_title") : data.tableName}
-            </strong>
+          <span
+            aria-hidden
+            data-ui="header-divider"
+            className="h-8 shrink-0 border-l border-border"
+          />
+          <div data-ui="store-logo-banner" className="flex min-w-0 max-w-80 items-center gap-2">
+            <StoreLogo logo={logo} width={40} height={40} />
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="truncate text-sm font-medium">{storeName ?? data.storeName}</span>
+              <strong className="truncate text-xs text-muted-foreground">
+                {data.kind === "demo" ? t("demo_title") : data.tableName}
+              </strong>
+            </div>
           </div>
         </div>
-        <div className="flex items-center justify-end gap-2 max-[56rem]:col-span-2 max-[56rem]:row-start-2 max-[56rem]:justify-between">
+        <div className="flex items-center justify-end gap-2 max-[56rem]:col-start-1 max-[56rem]:row-start-2 max-[56rem]:justify-start max-sm:justify-between">
           {renderVisitTools()}
           <Button
             variant="outline"
@@ -490,7 +504,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             {data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}
           </Button>
         </div>
-        <div className="flex w-full min-w-0 items-center justify-end gap-2 max-[56rem]:col-start-2 max-[56rem]:row-start-1 [&_[data-slot=button]]:h-11 [&_[data-slot=button]]:min-h-11 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:min-h-11">
+        <div className="flex w-full min-w-0 items-center justify-end gap-2 max-[56rem]:col-start-2 max-[56rem]:row-start-2 max-sm:col-start-1 max-sm:row-start-3 [&_[data-slot=button]]:h-11 [&_[data-slot=button]]:min-h-11 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:min-h-11">
           <LanguageSwitch
             onChange={(next) => language.mutate(next)}
             disabled={language.isPending}
@@ -542,6 +556,8 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   function renderOrders() {
     return (
       <Tabs.Panel value="orders">
+        {renderBilling()}
+        <h3 className="px-4 pt-4 text-base font-semibold">{t("kiosk_orders")}</h3>
         {data.orders.length === 0 ? (
           <div className="text-muted-foreground flex items-center flex-col text-center py-10 px-5 gap-2.5 [&_h3]:text-sm [&_h3]:font-medium [&_p]:text-xs [&_p]:leading-loose">
             {t("common_empty")}
@@ -572,7 +588,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   }
   function renderBilling() {
     return (
-      <Tabs.Panel value="bill">
+      <section aria-label={t("kiosk_bill")}>
         <div
           data-ui="bill-summary"
           className="py-6 px-5 [&_dl_>_div]:flex [&_dl_>_div]:items-center [&_dl_>_div]:justify-between [&_dl_>_div]:py-2 [&_dl_>_div]:px-0 [&_dl_>_div]:gap-3 [&_dl_>_div]:text-sm [&_[data-ui=bill-total]]:border-t [&_[data-ui=bill-total]]:border-t-border [&_[data-ui=bill-total]]:pt-4 [&_[data-ui=bill-total]]:mt-2.5 [&_[data-ui=bill-total]_dd]:text-2xl [&_[data-ui=bill-total]_dd]:font-semibold [&_[data-slot=button][data-variant=default]]:mt-6 [&_[data-slot=button][data-variant=default]]:w-full"
@@ -582,7 +598,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             <div>
               <dt className="text-muted-foreground">{t("admin_ordered")}</dt>
               <dd>
-                <Money value={data.bill.orderedTotal} compact />
+                <Money value={data.bill.orderedTotal} />
               </dd>
             </div>
             <div>
@@ -634,7 +650,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             </Button>
           )}
         </div>
-      </Tabs.Panel>
+      </section>
     );
   }
   function renderSession() {
@@ -692,13 +708,13 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                 <aside
                   ref={orderPane}
                   data-theme-part="menu"
-                  className="relative isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
+                  className="@container/tablecast-order relative isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
                 >
                   {renderPlanSummary()}
                   <ErrorNotice error={screen.error} />
                   <Tabs.Root
                     className="flex flex-col min-h-0 flex-1"
-                    value={section}
+                    value={section === "bill" ? "orders" : section}
                     onValueChange={(value: unknown) => {
                       if (
                         value === "menu" ||
@@ -711,16 +727,18 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                   >
                     <div
                       inert={Boolean(selection)}
-                      className="flex-1 min-h-0 overflow-y-auto scrollbar-thin"
+                      className={`flex-1 min-h-0 overflow-y-auto scrollbar-thin ${data.cart.lines.length && (section === "menu" || section === "cart") ? "pb-28" : ""}`}
                     >
                       {renderMenu()}
                       {renderCart()}
                       {renderOrders()}
-                      {renderBilling()}
                     </div>
                     <div inert={Boolean(selection)} className="shrink-0">
-                      {renderCheckout()}
-                      <KioskMenuTabs data={data} products={catalog.data?.configuration.products} />
+                      <KioskMenuTabs
+                        data={data}
+                        products={catalog.data?.configuration.products}
+                        cartActions={renderCheckout()}
+                      />
                     </div>
                   </Tabs.Root>
                   <PaneDialog.Root
@@ -801,7 +819,15 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   }
   return renderSession();
 }
-function KioskMenuTabs({ data, products = [] }: { data: TableState; products?: Product[] }) {
+function KioskMenuTabs({
+  data,
+  products = [],
+  cartActions,
+}: {
+  cartActions: ReactNode;
+  data: TableState;
+  products?: Product[];
+}) {
   const hydrated = useHydrated();
   const { t } = useI18n();
   const images = [
@@ -812,81 +838,80 @@ function KioskMenuTabs({ data, products = [] }: { data: TableState; products?: P
     ),
   ].slice(0, 3);
   const quantity = data.cart.lines.reduce((sum, line) => sum + line.quantity, 0);
+  const priceClass =
+    "block max-w-full overflow-x-auto whitespace-nowrap text-xs tabular-nums scrollbar-thin";
+  const tabClass = "h-16 min-w-0 flex-col gap-1 p-1 text-xs [&_svg]:size-4";
   return (
-    <Tabs.List
-      data-ui="menu-tabs"
-      className="grid w-full grid-cols-4 gap-1 rounded-none border-t border-border p-2"
-    >
-      <Tabs.Tab
-        className="h-16 min-w-0 flex-col gap-1 p-1 text-xs [&_svg]:size-4"
-        size="guest"
-        data-theme-part="menu-tab"
-        disabled={!hydrated}
-        value="menu"
+    <div className="relative">
+      {cartActions}
+      <Tabs.List
+        data-ui="menu-tabs"
+        className="grid w-full grid-cols-3 gap-1 rounded-none border-t border-border p-2"
       >
-        <Utensils aria-hidden />
-        {t("kiosk_menu")}
-      </Tabs.Tab>
-      <Tabs.Tab
-        className="h-16 min-w-0 flex-col gap-1 p-1 text-xs [&_svg]:size-4"
-        size="guest"
-        data-theme-part="menu-tab"
-        data-ui="cart-tab"
-        disabled={!hydrated}
-        value="cart"
-      >
-        <span className="flex items-center gap-1">
-          <ShoppingBag aria-hidden className="max-sm:hidden" />
-          {t("kiosk_cart")} <span className="text-xs">{quantity}</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <span aria-hidden data-ui="cart-preview" className="hidden -space-x-2 sm:flex">
-            {images.map((key) => (
-              <span
-                key={key}
-                className="inline-flex size-6 shrink-0 overflow-hidden rounded-full border-2 border-card bg-card"
-              >
-                <ProductImage
-                  src={`/media/${key}`}
-                  width={24}
-                  height={24}
-                  sizes="24px"
-                  alt=""
-                  className="size-full object-cover"
-                />
+        <Tabs.Tab
+          className={tabClass}
+          size="guest"
+          data-theme-part="menu-tab"
+          disabled={!hydrated}
+          value="menu"
+        >
+          <Utensils aria-hidden />
+          {t("kiosk_menu")}
+        </Tabs.Tab>
+        <Tabs.Tab
+          className={tabClass}
+          size="guest"
+          data-theme-part="menu-tab"
+          data-ui="cart-tab"
+          disabled={!hydrated}
+          value="cart"
+        >
+          <span className="flex max-w-full items-center gap-1">
+            {images.length ? (
+              <span aria-hidden data-ui="cart-preview" className="flex shrink-0 -space-x-1.5">
+                {images.map((key) => (
+                  <span
+                    key={key}
+                    className="inline-flex size-4 shrink-0 overflow-hidden rounded-full border border-card bg-card"
+                  >
+                    <ProductImage
+                      src={`/media/${key}`}
+                      width={16}
+                      height={16}
+                      sizes="16px"
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  </span>
+                ))}
               </span>
-            ))}
+            ) : (
+              <ShoppingBag aria-hidden className="max-sm:hidden" />
+            )}
+            <span>
+              {t("kiosk_cart")} {quantity}
+            </span>
           </span>
-          <span className="text-xs tabular-nums">
-            <Money value={data.cart.total} compact />
+          <span data-ui="tab-price" className={priceClass}>
+            <Money value={data.cart.total} />
           </span>
-        </span>
-      </Tabs.Tab>
-      <Tabs.Tab
-        className="h-16 min-w-0 flex-col gap-1 p-1 text-xs [&_svg]:size-4"
-        size="guest"
-        data-theme-part="menu-tab"
-        disabled={!hydrated}
-        value="orders"
-      >
-        <span className="flex items-center gap-1">
-          <ReceiptText aria-hidden className="max-sm:hidden" />
-          {t("kiosk_orders")}
-        </span>
-        <span className="text-xs tabular-nums">
-          <Money value={data.bill.orderedTotal} compact />
-        </span>
-      </Tabs.Tab>
-      <Tabs.Tab
-        className="h-16 min-w-0 flex-col gap-1 p-1 text-xs [&_svg]:size-4"
-        size="guest"
-        data-theme-part="menu-tab"
-        disabled={!hydrated}
-        value="bill"
-      >
-        <Wallet aria-hidden />
-        {t("kiosk_bill")}
-      </Tabs.Tab>
-    </Tabs.List>
+        </Tabs.Tab>
+        <Tabs.Tab
+          className={tabClass}
+          size="guest"
+          data-theme-part="menu-tab"
+          disabled={!hydrated}
+          value="orders"
+        >
+          <span className="flex items-center gap-1">
+            <ReceiptText aria-hidden className="max-sm:hidden" />
+            {t("kiosk_orders_bill")}
+          </span>
+          <span data-ui="tab-price" className={priceClass}>
+            <Money value={data.bill.orderedTotal} />
+          </span>
+        </Tabs.Tab>
+      </Tabs.List>
+    </div>
   );
 }

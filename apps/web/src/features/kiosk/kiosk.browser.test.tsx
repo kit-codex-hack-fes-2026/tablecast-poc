@@ -224,7 +224,7 @@ it("注文ペインの比率をCookieから復元し、縦横の切替でもタ�
 it("会計依頼後は操作を依頼済みの表示へ替え、画面を戻しても重複依頼しない", async () => {
   await page.viewport(390, 844);
   await mountKiosk();
-  await page.getByRole("tab", { name: ja.kiosk_bill, exact: true }).click();
+  await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_orders_bill}`) }).click();
   await page.getByRole("button", { name: ja.kiosk_bill_request, exact: true }).click();
   await expect
     .element(page.getByRole("status").filter({ hasText: ja.kiosk_bill_requested }))
@@ -233,7 +233,7 @@ it("会計依頼後は操作を依頼済みの表示へ替え、画面を戻し�
     .element(page.getByRole("button", { name: ja.kiosk_bill_request, exact: true }))
     .not.toBeInTheDocument();
   await page.getByRole("tab", { name: ja.kiosk_menu, exact: true }).click();
-  await page.getByRole("tab", { name: ja.kiosk_bill, exact: true }).click();
+  await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_orders_bill}`) }).click();
   await expect
     .element(page.getByRole("status").filter({ hasText: ja.kiosk_bill_requested }))
     .toBeVisible();

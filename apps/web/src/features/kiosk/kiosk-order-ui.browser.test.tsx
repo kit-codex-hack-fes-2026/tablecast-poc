@@ -29,7 +29,7 @@ it.each(["ja", "en"] as const)(
     await mountKiosk();
     const tabs = page.getByRole("tablist");
     const cart = page.getByRole("tab", { name: new RegExp(`^${labels.kiosk_cart}`) });
-    const orders = page.getByRole("tab", { name: new RegExp(`^${labels.kiosk_orders}`) });
+    const orders = page.getByRole("tab", { name: new RegExp(`^${labels.kiosk_orders_bill}`) });
     await expect.element(cart).toBeVisible();
     const pane = orderPanel();
     if (!pane) throw new Error("注文ペインがありません");
@@ -43,7 +43,27 @@ it.each(["ja", "en"] as const)(
       pane.getBoundingClientRect().bottom,
       0,
     );
-    expect(document.querySelector("header")?.getBoundingClientRect().height).toBe(64);
+    const header = document.querySelector("header");
+    expect(header?.getBoundingClientRect().height).toBe(64);
+    expect(page.getByRole("tab").elements()).toHaveLength(3);
+    const brand = header?.querySelector('img[alt="TableCast"]');
+    const divider = header?.querySelector('[data-ui="header-divider"]');
+    const banner = header?.querySelector('[data-ui="store-logo-banner"]');
+    if (!brand || !divider || !banner) throw new Error("ロゴ・区切り線・店舗バナーが必要です");
+    expect(brand.getBoundingClientRect().right).toBeLessThan(divider.getBoundingClientRect().left);
+    expect(divider.getBoundingClientRect().right).toBeLessThan(banner.getBoundingClientRect().left);
+    expect(document.querySelector("footer[data-theme-part=checkout]")).toBeNull();
+    const callout = page.getByRole("group", { name: labels.kiosk_cart, exact: true });
+    await expect
+      .element(callout.getByRole("button", { name: labels.kiosk_review, exact: true }))
+      .toBeVisible();
+    expect(callout.element().getBoundingClientRect().bottom).toBeLessThan(
+      tabs.element().getBoundingClientRect().top,
+    );
+    for (const price of document.querySelectorAll('[data-ui="tab-price"]')) {
+      expect(getComputedStyle(price).whiteSpace).toBe("nowrap");
+      expect(price.getBoundingClientRect().height).toBeLessThan(20);
+    }
     const choose = page
       .getByRole("button")
       .filter({ has: page.getByText(pictured.text[locale].displayName, { exact: true }) });
@@ -109,6 +129,9 @@ it("カゴの商品画像は3枚まで重ねて表示する", async () => {
   await mountKiosk();
   const cart = page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) });
   await expect.element(cart).toBeVisible();
+  await expect
+    .poll(() => cart.element().querySelectorAll('[data-ui="cart-preview"] > span').length)
+    .toBe(3);
   const frames = cart.element().querySelectorAll('[data-ui="cart-preview"] > span');
   expect(frames).toHaveLength(3);
   for (let index = 1; index < frames.length; index++) {
