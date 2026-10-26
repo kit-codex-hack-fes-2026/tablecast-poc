@@ -62,7 +62,6 @@ it.each(["ja", "en"] as const)(
       );
       await play.click();
       expect(start).toHaveBeenCalledOnce();
-      await page.screenshot({ path: `../../../test-results/tablecast-399-${locale}-${width}.png` });
       await screen.unmount();
     }
   },
@@ -121,9 +120,6 @@ it.each(["ja", "en"] as const)(
           }),
         )
         .toBeVisible();
-      await page.screenshot({
-        path: `../../../test-results/tablecast-399-reference-${locale}-${width}.png`,
-      });
       await screen.unmount();
     }
   },

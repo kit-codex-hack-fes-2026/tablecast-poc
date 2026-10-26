@@ -237,7 +237,7 @@ workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツ
 
 PRのマージ前に保証するE2EはChromiumであり、WebKit固有の回帰はstaging統合後のpush CIで検出する。stagingのWebKitが失敗した場合はstaging配備へ進めず、修正後の両browser成功を確認してからreleaseの受入判定を行う。PR CI成功をiPad実機やWebKitの確認済みと扱わない。
 
-Component Testの失敗PNGは`tablecast-components-<SHA>`、E2Eの失敗資料は`tablecast-e2e-<browser>-<shard>`へ1日保存する。Component Testは標準の`screenshotFailures: true`、E2Eは`screenshot: "only-on-failure"`を使う。pixel比較や観測に使わない成功時のPNG・動画を明示的に毎回生成せず、標準の失敗診断用の一時撮影は維持する。表示・focus・寸法・画像読込・転送量・CLSのassertionは維持し、viewport変更後の寸法は撮影を暗黙の待機にせず`expect.poll`で確認する。Component TestのartifactへCookieを含む可能性のあるtraceは追加しない。目視確認用の画像・動画は必要な作業で別途取得する。
+Component Testの失敗PNGは従来の`test-results/browser`とVitestの`test-results/attachments/failure-screenshots`から`tablecast-components-<SHA>`、E2Eの失敗資料は`tablecast-e2e-<browser>-<shard>`へ1日保存する。Component Testは標準の`screenshotFailures: true`、E2Eは`screenshot: "only-on-failure"`を使う。pixel比較や観測に使わない成功時のPNG・動画を明示的に毎回生成せず、標準の失敗診断用の一時撮影は維持する。表示・focus・寸法・画像読込・転送量・CLSのassertionは維持し、viewport変更後の寸法は撮影を暗黙の待機にせず`expect.poll`で確認する。Component TestのartifactへCookieを含む可能性のあるtraceは追加しない。目視確認用の画像・動画は必要な作業で別途取得する。
 
 Playwrightのreport用git差分収集は`captureGitInfo.diff: false`とし、浅いcheckoutの不足baseをmetadataのために取得しない。コミット情報と試験本体の`--only-changed`用の履歴取得は維持する。CIが先行取得したMailpit imageはglobal setupの`docker create --pull=missing`で再利用し、同じtagを再度pullしない。ローカルでimageがない場合はcreateが取得する。
 
