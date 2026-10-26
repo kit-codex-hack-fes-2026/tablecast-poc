@@ -45,7 +45,7 @@ export function CartLines({
       data-ui="cart-lines"
       className={
         variant === "receipt"
-          ? "relative divide-y divide-muted-foreground"
+          ? "relative divide-y divide-border"
           : "relative flex flex-col gap-3 p-3"
       }
     >
@@ -116,7 +116,7 @@ export function CartLines({
                     <section
                       data-ui="line-customisations"
                       aria-label={t("kiosk_customisations")}
-                      className="flex flex-wrap items-center justify-end gap-2 border-t border-muted-foreground pt-3"
+                      className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-3"
                     >
                       <div className="flex min-w-0 flex-1 basis-64 flex-wrap gap-1.5">
                         {line.options.map((option) => {
@@ -246,7 +246,7 @@ const CartLineSurface = forwardRef<HTMLLIElement, { children: ReactNode; framed?
         animate={{ opacity: 1, x: 0, y: 0 }}
         exit={{ opacity: 0, x: reduced ? 0 : -8 }}
         transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
-        className={`@container/cart-line relative overflow-hidden bg-card ${framed ? "rounded-xl border border-muted-foreground" : ""}`}
+        className={`@container/cart-line relative overflow-hidden bg-card ${framed ? "rounded-xl border border-border" : ""}`}
       >
         {children}
       </m.li>
@@ -298,7 +298,7 @@ function LineQuantity({
       <label htmlFor={id} className="text-sm font-medium">
         {t("common_quantity")}
       </label>
-      <NumberField.Group className="flex items-center rounded-lg border border-muted-foreground bg-card">
+      <NumberField.Group className="flex min-h-12 items-center rounded-xl border border-input bg-card inset-shadow-field hover:border-control-edge-hover focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
         <NumberField.Decrement
           render={<Button size="icon" variant="ghost" />}
           aria-label={`${line.name[locale]}: ${t("common_decrease")}`}
@@ -310,7 +310,7 @@ function LineQuantity({
             if (event.key === "Enter") event.currentTarget.blur();
           }}
           aria-label={`${line.name[locale]}: ${t("common_quantity")}`}
-          className="h-11 w-10 min-w-0 bg-transparent text-center text-base tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-11 w-10 min-w-0 bg-transparent text-center text-base tabular-nums outline-none"
         />
         <NumberField.Increment
           render={<Button size="icon" variant="ghost" />}

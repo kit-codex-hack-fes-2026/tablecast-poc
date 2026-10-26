@@ -491,11 +491,11 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
         aria-label={t("kiosk_cart")}
         data-ui="cart-callout"
         data-theme-part="checkout"
-        className="absolute bottom-[calc(100%+0.75rem)] left-1/2 z-20 w-max max-w-[calc(100cqw-1.5rem)] -translate-x-1/2 rounded-2xl border border-muted-foreground bg-card p-2 shadow-xl"
+        className="absolute bottom-[calc(100%+0.75rem)] left-1/2 z-20 w-max max-w-[calc(100cqw-1.5rem)] -translate-x-1/2 rounded-2xl border border-border bg-card p-2 shadow-xl"
       >
         <span
           aria-hidden
-          className="absolute top-full left-1/2 -mt-1.5 size-3 -translate-x-1/2 rotate-45 border-r border-b border-muted-foreground bg-card"
+          className="absolute top-full left-1/2 -mt-1.5 size-3 -translate-x-1/2 rotate-45 border-r border-b border-border bg-card"
         />
         {renderOrderActions()}
       </div>
@@ -610,10 +610,10 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           data.orders.map((order) => (
             <article
               data-ui="order-card"
-              className="m-3 overflow-hidden rounded-xl border border-muted-foreground bg-card"
+              className="m-3 overflow-hidden rounded-xl border border-border bg-card"
               key={order.id}
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-muted-foreground bg-background px-4 py-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-background px-4 py-3 text-sm">
                 <time>{time(order.createdAt, locale)}</time>
                 <Badge variant="outline">{t(`order_${order.status}`)}</Badge>
                 <span className="ml-auto font-semibold">
@@ -640,7 +640,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       <section
         ref={billingSummary}
         aria-label={t("kiosk_bill")}
-        className="mx-3 mb-3 rounded-xl border border-muted-foreground bg-card"
+        className="mx-3 mb-3 rounded-xl border border-border bg-card"
       >
         <div
           data-ui="bill-summary"
@@ -1026,7 +1026,7 @@ function KioskPaneHeader({
   return (
     <header
       data-ui="pane-heading"
-      className="sticky top-0 z-10 space-y-3 border-b border-muted-foreground bg-card p-4"
+      className="sticky top-0 z-10 space-y-3 border-b border-border bg-card p-4"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h2

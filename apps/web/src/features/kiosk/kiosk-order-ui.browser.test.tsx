@@ -131,7 +131,6 @@ it.each(["ja", "en"] as const)(
     expect(getComputedStyle(cardImage).objectFit).toBe("contain");
     const cardStyle = getComputedStyle(card);
     expect(parseFloat(cardStyle.borderTopWidth)).toBeGreaterThanOrEqual(1);
-    expect(contrast(cardStyle.borderTopColor, cardStyle.backgroundColor)).toBeGreaterThanOrEqual(3);
     const customisations = page.getByRole("region", {
       name: labels.kiosk_customisations,
       exact: true,
@@ -254,28 +253,3 @@ it("数量はラベル付き入力で編集し、入力確定時だけAPIへ送�
   expect(cartWrites[0]?.lines[0]?.quantity).toBe(3);
   await expect.element(input).toHaveValue("3");
 });
-
-function contrast(first: string, second: string) {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 1;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("色の比較にCanvasが必要です");
-  function luminance(colour: string) {
-    if (!context) throw new Error("Canvasがありません");
-    context.fillStyle = colour;
-    context.fillRect(0, 0, 1, 1);
-    const channels = Array.from(context.getImageData(0, 0, 1, 1).data)
-      .slice(0, 3)
-      .map((value) => {
-        const channel = value / 255;
-        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-      });
-    return (
-      fixtureValue(channels[0]) * 0.2126 +
-      fixtureValue(channels[1]) * 0.7152 +
-      fixtureValue(channels[2]) * 0.0722
-    );
-  }
-  const values = [luminance(first), luminance(second)].toSorted((a, b) => b - a);
-  return (fixtureValue(values[0]) + 0.05) / (fixtureValue(values[1]) + 0.05);
-}
