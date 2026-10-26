@@ -895,13 +895,13 @@ function KioskMenuTabs({
     .reduce((sum, line) => sum + line.quantity, 0);
   const priceClass = "block whitespace-nowrap text-sm tabular-nums [&_[aria-label]]:text-inherit";
   const tabClass =
-    "min-h-20 h-auto min-w-0 flex-col gap-1 px-1 py-2 text-sm whitespace-normal text-center [&_svg]:size-4";
+    "h-14 min-h-14 min-w-0 flex-col gap-0 px-1 py-0 text-sm leading-tight whitespace-normal text-center [&_svg]:size-4";
   return (
     <div className="relative">
       {cartActions}
       <Tabs.List
         data-ui="menu-tabs"
-        className="grid w-full grid-cols-3 gap-1 rounded-none border-t border-border p-2 @max-[32rem]/tablecast-order:grid-cols-[4rem_minmax(0,1fr)_minmax(0,1fr)]"
+        className="grid w-full grid-cols-3 gap-1 rounded-none border-t border-border px-2 pt-1 pb-3 @max-[32rem]/tablecast-order:grid-cols-[4rem_minmax(0,1fr)_minmax(0,1fr)]"
       >
         <Tabs.Tab
           className={tabClass}
@@ -923,7 +923,7 @@ function KioskMenuTabs({
         >
           <span className="flex h-8 max-w-full items-center justify-center gap-1">
             <ShoppingBag aria-hidden data-ui="cart-icon" className="shrink-0" />
-            <span className="min-w-0 whitespace-normal leading-tight">
+            <span className="min-w-0 whitespace-normal leading-none">
               {t("kiosk_cart")}{" "}
               <span data-ui="cart-count" className="tabular-nums">
                 {quantity}
@@ -944,7 +944,7 @@ function KioskMenuTabs({
         >
           <span className="flex h-8 max-w-full items-center justify-center gap-1">
             <ReceiptText aria-hidden data-ui="orders-icon" className="shrink-0" />
-            <span className="min-w-0 whitespace-normal leading-tight">
+            <span className="min-w-0 whitespace-normal leading-none">
               {t("kiosk_orders_bill")}{" "}
               <span data-ui="orders-count" className="tabular-nums">
                 {orderedQuantity}

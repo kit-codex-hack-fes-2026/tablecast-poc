@@ -192,7 +192,12 @@ it.each(["ja", "en"] as const)(
       .element(page.getByRole("button", { name: labels.kiosk_history_show }))
       .not.toBeInTheDocument();
     for (const tab of page.getByRole("tab").elements()) {
-      expect(tab.getBoundingClientRect().height).toBeGreaterThanOrEqual(80);
+      expect(tab.getBoundingClientRect().height).toBe(
+        page
+          .getByRole("button", { name: labels.kiosk_voice_resume, exact: true })
+          .element()
+          .getBoundingClientRect().height,
+      );
       expect(parseFloat(getComputedStyle(tab).fontSize)).toBeGreaterThanOrEqual(14);
       expect(tab.scrollWidth).toBeLessThanOrEqual(tab.clientWidth);
     }

@@ -44,7 +44,7 @@ export function KioskPending() {
               </div>
             ))}
           </div>
-          <div className="flex h-24 shrink-0 items-center gap-4 border-t border-border p-3">
+          <div className="flex h-18 shrink-0 items-center gap-4 border-t border-border p-3">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-5 flex-1" />
             ))}
