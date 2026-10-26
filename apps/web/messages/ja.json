@@ -1446,6 +1446,7 @@
   "auth_passkey_title": "パスキーでかんたんログイン",
   "auth_passkey_later": "あとで設定",
   "help_title": "ヘルプ",
+  "help_open_app": "TableCast アプリを開く",
   "help_overview": "使い方ガイド",
   "help_mcp": "MCP・agentガイド",
   "help_troubleshooting": "困ったとき",

@@ -2,7 +2,8 @@ import type { InferPageType } from "fumadocs-core/source";
 import type { AnchorHTMLAttributes } from "react";
 import { defineI18nUI } from "fumadocs-ui/i18n";
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
-import { DocsBody, DocsPage } from "fumadocs-ui/layouts/docs/page";
+import { DocsBody, DocsPage, PageBreadcrumb, PageFooter } from "fumadocs-ui/layouts/docs/page";
+import { TOCProvider } from "fumadocs-ui/layouts/docs/page/slots/toc";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { RootProvider } from "fumadocs-ui/provider/tanstack";
 import { createContext, useContext } from "react";
@@ -10,8 +11,13 @@ import { Brand } from "../../components/brand";
 import { PageHeader } from "../../components/page-header";
 import { helpI18n, helpMarkdownUrl, helpSource, resolveHelpLink } from "../../lib/help-source";
 import { helpNavigationItem } from "../shell/navigation-model";
-import { HelpHeader } from "./help-header";
-import { HelpSidebarGroup, HelpSidebarItem, HelpSidebarSearch } from "./help-sidebar";
+import { HelpLayoutContainer, HelpPageContainer, HelpTableOfContents } from "./help-layout";
+import {
+  HelpSidebarFooter,
+  HelpSidebarGroup,
+  HelpSidebarItem,
+  HelpSidebarSearch,
+} from "./help-sidebar";
 
 const HelpPageContext = createContext<InferPageType<typeof helpSource> | undefined>(undefined);
 
@@ -23,7 +29,14 @@ function HelpLink({ href, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
 }
 
 const components = { ...defaultMdxComponents, a: HelpLink };
-const slots = { header: HelpHeader };
+function Hidden() {
+  return null;
+}
+const helpLayoutSlots = { container: HelpLayoutContainer, header: Hidden };
+const helpPageSlots = {
+  container: HelpPageContainer,
+  toc: { provider: TOCProvider, main: Hidden, popover: Hidden },
+};
 const sidebarComponents = { Folder: HelpSidebarGroup, Item: HelpSidebarItem };
 
 const translations = defineI18nUI(helpI18n, {
@@ -51,22 +64,26 @@ export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
   const tree = helpSource.getPageTree(page.locale);
   const { Icon } = helpNavigationItem(page.url);
   return (
-    <div lang={page.locale} className="min-h-dvh bg-background text-foreground">
+    <div lang={page.locale} className="text-foreground">
       <RootProvider
         theme={{ enabled: false }}
         search={{ enabled: false }}
         i18n={translations.provider(page.locale)}
       >
         <DocsLayout
-          slots={slots}
-          containerProps={{ className: "[--fd-header-height:--spacing(18)]" }}
+          slots={helpLayoutSlots}
           tree={{
             ...tree,
             children: [
               { type: "folder", name: english ? "Help" : "ヘルプ", children: tree.children },
             ],
           }}
-          sidebar={{ components: sidebarComponents, banner: <HelpSidebarSearch /> }}
+          sidebar={{
+            className: "border-e-0 bg-transparent",
+            components: sidebarComponents,
+            banner: <HelpSidebarSearch />,
+            footer: <HelpSidebarFooter />,
+          }}
           nav={{
             title: (
               <>
@@ -79,30 +96,44 @@ export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
           searchToggle={{ enabled: false }}
           themeSwitch={{ enabled: false }}
           i18n={false}
-          links={[{ text: english ? "Open TableCast" : "TableCastを開く", url: "/admin/live" }]}
         >
-          <DocsPage toc={page.data.toc}>
+          <DocsPage
+            toc={page.data.toc}
+            slots={helpPageSlots}
+            breadcrumb={{ enabled: false }}
+            footer={{ enabled: false }}
+          >
             <PageHeader
               title={page.data.title}
               description={page.data.description}
               icon={<Icon />}
             />
-            <div className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-              <span>
-                {english ? "Public help · No sign-in required" : "公開ヘルプ · ログイン不要"}
-              </span>
-              <a className="underline underline-offset-4" href={helpMarkdownUrl(page)}>
-                Markdown
-              </a>
-              <a className="underline underline-offset-4" href="/llms.txt">
-                {english ? "Agent index" : "Agent向け索引"}
-              </a>
+            <div
+              data-ui="page-body"
+              className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_16rem]"
+            >
+              <HelpTableOfContents />
+              <div className="min-w-0 space-y-6 xl:col-start-1 xl:row-start-1">
+                <PageBreadcrumb />
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+                  <span>
+                    {english ? "Public help · No sign-in required" : "公開ヘルプ · ログイン不要"}
+                  </span>
+                  <a className="underline underline-offset-4" href={helpMarkdownUrl(page)}>
+                    Markdown
+                  </a>
+                  <a className="underline underline-offset-4" href="/llms.txt">
+                    {english ? "Agent index" : "Agent向け索引"}
+                  </a>
+                </div>
+                <DocsBody>
+                  <HelpPageContext value={page}>
+                    <Body components={components} />
+                  </HelpPageContext>
+                </DocsBody>
+                <PageFooter />
+              </div>
             </div>
-            <DocsBody>
-              <HelpPageContext value={page}>
-                <Body components={components} />
-              </HelpPageContext>
-            </DocsBody>
           </DocsPage>
         </DocsLayout>
       </RootProvider>

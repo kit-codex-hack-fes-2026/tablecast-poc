@@ -1446,6 +1446,7 @@
   "auth_passkey_title": "Sign in more easily with a passkey",
   "auth_passkey_later": "Maybe later",
   "help_title": "Help",
+  "help_open_app": "Open TableCast app",
   "help_overview": "User guide",
   "help_mcp": "MCP & agent guide",
   "help_troubleshooting": "Troubleshooting",

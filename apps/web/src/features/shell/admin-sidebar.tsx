@@ -7,6 +7,7 @@ import { Brand } from "../../components/brand";
 import { useI18n } from "../../i18n/locale";
 import { navigationItemClass as sidebarItemClass } from "./navigation-group";
 import { NavigationLink } from "./navigation-link";
+import { SidebarFooter } from "./sidebar-footer";
 import { SidebarNavigation } from "./sidebar-navigation";
 import { SidebarSearch } from "./sidebar-search";
 import { SidebarUserMenu } from "./sidebar-user-menu";
@@ -91,7 +92,7 @@ export function AdminSidebar({
         onNavigate={onNavigate}
         menuNavigation={renderMenuNavigation?.({ collapsed, onNavigate })}
       />
-      <div className="flex flex-col gap-2 border-t border-border py-3">
+      <SidebarFooter>
         {selectedStore && manager && (
           <DemoLink
             storeId={selectedStore}
@@ -117,7 +118,7 @@ export function AdminSidebar({
           signingOut={signingOut}
           onSignOut={onSignOut}
         />
-      </div>
+      </SidebarFooter>
     </Tooltip.Provider>
   );
 }

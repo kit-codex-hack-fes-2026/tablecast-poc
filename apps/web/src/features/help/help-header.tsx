@@ -19,7 +19,6 @@ export function HelpHeader(props: ComponentProps<"header">) {
     <AppHeader
       {...props}
       id="nd-subnav"
-      className="[grid-area:header] top-(--fd-docs-row-1)"
       onLocaleChange={(locale) => {
         if (locale !== lang)
           void navigate({

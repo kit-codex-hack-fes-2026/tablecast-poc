@@ -6,6 +6,7 @@ import type { SidebarSelection } from "./sidebar-model";
 import { AppHeader } from "../../components/app-header";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
+import { appFrame, pageContent, pageSurface } from "../../components/ui/page-layout";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -57,7 +58,10 @@ export function AdminShell({
     <>
       <ResizablePanelGroup
         orientation="horizontal"
-        className="h-dvh! bg-secondary/50 md:p-2 max-md:[&>#tablecast-admin-sidebar]:hidden motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:transition-[flex-grow] motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:duration-(--motion-state) motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:ease-(--motion-ease-out) motion-reduce:[&>[data-panel]]:transition-none"
+        className={appFrame({
+          className:
+            "h-dvh! max-md:[&>#tablecast-admin-sidebar]:hidden motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:transition-[flex-grow] motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:duration-(--motion-state) motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:ease-(--motion-ease-out) motion-reduce:[&>[data-panel]]:transition-none",
+        })}
         data-sidebar-transition={sidebarTransition}
         onPointerDownCapture={resizeDirectly}
         onKeyDownCapture={resizeDirectly}
@@ -107,10 +111,9 @@ export function AdminShell({
           <main
             id="tablecast-admin-main"
             data-scroll-restoration-id="tablecast-admin-main"
-            className="h-full min-w-0 overflow-y-auto bg-card md:rounded-2xl md:shadow-surface"
+            className={pageSurface()}
           >
             <AppHeader
-              className="md:rounded-t-2xl"
               onLocaleChange={setLocale}
               navigation={
                 <>
@@ -146,10 +149,7 @@ export function AdminShell({
             >
               {header}
             </AppHeader>
-            <div
-              data-page-motion
-              className="mx-auto w-full min-w-0 max-w-7xl space-y-6 @container p-4 sm:p-6 lg:p-8 [view-transition-name:tablecast-page]"
-            >
+            <div data-page-motion className={pageContent()}>
               {children}
             </div>
           </main>

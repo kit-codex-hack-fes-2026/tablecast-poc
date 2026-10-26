@@ -21,7 +21,7 @@ export function AppHeader({
       {...props}
       data-ui="app-header"
       className={cn(
-        "sticky top-0 z-20 flex min-h-18 flex-wrap items-center gap-3 border-b border-border bg-glass px-4 py-3 backdrop-blur-xl @container",
+        "sticky top-0 z-20 flex min-h-18 flex-wrap items-center gap-3 border-b border-border bg-glass px-4 py-3 backdrop-blur-xl @container md:rounded-t-2xl",
         className,
       )}
     >
