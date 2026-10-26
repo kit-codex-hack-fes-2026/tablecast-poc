@@ -35,12 +35,14 @@ export type MicrophoneView = {
 };
 export const initialMicrophone: MicrophoneView = { devices: [], selectedId: "default" };
 export type VoiceView = {
+  citations?: { title: string; url: string }[];
   error?: "active" | "connection" | "permission" | "unconfigured";
   inputTrack?: MediaStreamTrack;
   interim?: string;
   messages?: LiveMessage[];
   microphone?: MicrophoneView;
   outputTrack?: MediaStreamTrack;
+  progress?: { stage: "reading" | "searching" | "thinking"; summary: string };
   status: VoiceStatus;
   suggestions?: string[];
 };

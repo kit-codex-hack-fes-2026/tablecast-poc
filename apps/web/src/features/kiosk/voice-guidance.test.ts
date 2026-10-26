@@ -55,6 +55,9 @@ const caption = (role: "assistant" | "user", delta: string) =>
     end_ms: 400,
   });
 
+const receive = (delegation_id: null | string, event: unknown, client_event_id?: string) =>
+  peer().channel.receive({ type: "response.event", delegation_id, event, client_event_id });
+
 it("同じ接続の開始案内は一回だけ送信する", async () => {
   const { value } = connection();
   await value.start("ja");
@@ -101,4 +104,70 @@ it("候補生成中の発話・言語切替では遅着した候補を表示し�
   await vi.advanceTimersByTimeAsync(10);
   expect(changes.at(-1)?.suggestions).toEqual([]);
   expect(changes.at(-1)?.status).not.toBe("error");
+});
+
+it("候補の返答はclient_event_idで対応付け、前の委任の遅着toolを新しい発言へ流用しない", async () => {
+  vi.useFakeTimers();
+  const { value } = connection();
+  await value.start("ja");
+  peer().channel.receive({
+    type: "session.delegation.created",
+    delegation: { id: "tablecast-previous", target: "responses" },
+  });
+  receive("tablecast-previous", {
+    type: "response.created",
+    response: { id: "tablecast-previous-response" },
+  });
+  receive("tablecast-previous", {
+    type: "response.completed",
+    response: { id: "tablecast-previous-response" },
+  });
+  await vi.advanceTimersByTimeAsync(100);
+  caption("assistant", "お茶はいかがですか？");
+  await vi.advanceTimersByTimeAsync(1500);
+  const source = value.getSnapshot().suggestions;
+  await value.sendSuggestion(suggestions[0] ?? "", source);
+  const command = peer()
+    .channel.send.mock.calls.map(([data]) =>
+      z.object({ type: z.string(), event_id: z.string().optional() }).parse(JSON.parse(data)),
+    )
+    .findLast((event) => event.type === "response.create");
+  expect(command?.event_id).toBeDefined();
+  receive("tablecast-previous", {
+    type: "response.created",
+    response: { id: "tablecast-stale-response" },
+  });
+  receive("tablecast-previous", {
+    type: "response.output_item.done",
+    item: {
+      type: "function_call",
+      call_id: "tablecast-stale-staff",
+      name: "callStaff",
+      arguments: "{}",
+    },
+  });
+  receive("tablecast-previous", {
+    type: "response.completed",
+    response: { id: "tablecast-stale-response" },
+  });
+  receive(
+    null,
+    { type: "response.created", response: { id: "tablecast-selected-response" } },
+    command?.event_id,
+  );
+  receive(null, {
+    type: "response.output_item.done",
+    response_id: "tablecast-selected-response",
+    item: {
+      type: "function_call",
+      call_id: "tablecast-selected-state",
+      name: "getTableState",
+      arguments: "{}",
+    },
+  });
+  receive(null, { type: "response.completed", response: { id: "tablecast-selected-response" } });
+  await vi.advanceTimersByTimeAsync(100);
+  expect(
+    fixture.requests.filter(({ path }) => path.endsWith("/tools")).map(({ body }) => body),
+  ).toMatchObject([{ toolName: "getTableState", toolCallId: "tablecast-selected-state" }]);
 });

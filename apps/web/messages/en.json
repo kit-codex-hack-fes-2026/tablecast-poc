@@ -1471,5 +1471,11 @@
   "kiosk_camera_reading": "Reading image",
   "kiosk_camera_use_back": "Switch to rear camera",
   "kiosk_camera_use_front": "Switch to front camera",
-  "kiosk_tool_capture_camera": "Reading the camera image"
+  "kiosk_tool_capture_camera": "Reading the camera image",
+  "kiosk_searching": "Searching the web",
+  "kiosk_reasoning_summary": "Reasoning summary",
+  "kiosk_sources": "Sources",
+  "kiosk_reference_qr": "Reference page QR code",
+  "kiosk_reference_phone": "Scan with your phone’s camera to open this reference.",
+  "kiosk_tool_show_reference": "Showing a reference and QR code"
 }

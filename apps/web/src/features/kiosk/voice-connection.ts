@@ -40,11 +40,13 @@ export class VoiceConnection {
   private startingRequest?: AbortController;
   private delegation?: AbortController;
   private delegations = new Map<string, Promise<string | undefined>>();
+  private delegationLocales = new Map<string, Locale>();
   private responses = new Map<string, PendingResponse>();
   private responseIds = new Map<string, string>();
   private activeDelegation?: string;
   private transcriptEvents = new Set<string>();
   private captions: Caption[] = [];
+  private localeTranscriptFloor = { user: 0, assistant: 0 };
   private pendingCaptions = new Map<string, SavedCaption>();
   private saving?: Promise<void>;
   private saveTimer?: ReturnType<typeof setTimeout>;
@@ -55,13 +57,14 @@ export class VoiceConnection {
   private endingQuietTimer?: ReturnType<typeof setTimeout>;
   private ending = false;
   private activityObservers: (() => void)[] = [];
+  private inputActivity?: () => void;
   private locale: Locale = "ja";
   private opening?: string;
   private openingSent = false;
   private guidanceEnabled = false;
   private guidanceVersion = 0;
   private suggestionsRequest?: AbortController;
-  private manualDelegation?: string;
+  private responseCommands = new Map<string, string>();
   private hasUserInput = false;
   private speechSpeed = 1;
   private requestedSpeechSpeed = 1;
@@ -97,13 +100,15 @@ export class VoiceConnection {
     this.locale = locale;
     this.openingSent = false;
     this.hasUserInput = false;
-    this.manualDelegation = undefined;
+    this.responseCommands.clear();
     this.clearGuidance();
     this.speechSpeed = speechSpeed;
     this.requestedSpeechSpeed = speechSpeed;
     this.captions = [];
+    this.localeTranscriptFloor = { user: 0, assistant: 0 };
     this.pendingCaptions.clear();
     this.delegations.clear();
+    this.delegationLocales.clear();
     this.responses.clear();
     this.responseIds.clear();
     this.activeDelegation = undefined;
@@ -189,17 +194,21 @@ export class VoiceConnection {
     this.ready = false;
     this.ending = false;
     this.clearGuidance();
+    this.emit({ progress: undefined, citations: [] });
     this.cameraRequest?.abort();
     this.camera?.complete();
     clearTimeout(this.endingTimer);
     clearTimeout(this.endingQuietTimer);
     this.activityObservers.forEach((dispose) => dispose());
     this.activityObservers = [];
+    this.inputActivity?.();
+    this.inputActivity = undefined;
     ++this.attempt;
     this.startingRequest?.abort();
     this.startingRequest = undefined;
     this.delegation?.abort();
     this.delegation = undefined;
+    this.responseCommands.clear();
     clearTimeout(this.proactiveTimer);
     clearTimeout(this.readyTimer);
     clearTimeout(this.saveTimer);
@@ -384,6 +393,11 @@ export class VoiceConnection {
     return stream;
   }
   private observeMicrophone(stream: MediaStream, attempt: number) {
+    this.inputActivity?.();
+    const track = stream.getAudioTracks()[0];
+    this.inputActivity = track
+      ? observeVoiceActivity(track, () => this.audioActivity(attempt, false))
+      : undefined;
     stream.getAudioTracks()[0]?.addEventListener(
       "ended",
       () => {
@@ -415,14 +429,18 @@ export class VoiceConnection {
     if (this.transcriptEvents.has(event.event_id) || event.end_ms < event.start_ms || !event.delta)
       return;
     this.transcriptEvents.add(event.event_id);
-    this.clearGuidance();
     const role = event.type === "session.input_transcript.delta" ? "user" : "assistant";
-    if (role === "user") this.hasUserInput = true;
-    else this.camera?.complete();
+    if (event.start_ms < this.localeTranscriptFloor[role]) return;
+    this.clearGuidance();
+    if (role === "user") {
+      this.hasUserInput = true;
+      this.emit({ progress: undefined, citations: [] });
+    } else this.camera?.complete();
     // 字幕のまとまりは表示だけに使い、委任開始や業務の中断条件には使わない。
     let caption = this.captions.findLast(
       (row) =>
         row.message.role === role &&
+        row.message.locale === this.locale &&
         !row.message.interrupted &&
         row.message.text.length + event.delta.length <= 10000 &&
         event.start_ms <= row.end + 1500 &&
@@ -484,6 +502,7 @@ export class VoiceConnection {
     caption.message = { ...caption.message, final: true, interrupted };
     this.pendingCaptions.set(caption.message.id, {
       itemId: caption.message.id,
+      locale: caption.message.locale,
       role: caption.message.role,
       text: caption.message.text,
       interrupted,
@@ -524,6 +543,7 @@ export class VoiceConnection {
     attempt: number,
   ): Promise<string | undefined> {
     if (!this.current(attempt) || !this.sessionId) return undefined;
+    if (id) this.delegationLocales.set(id, this.locale);
     try {
       const response = await this.client.voice.delegations.$post(
         {
@@ -544,20 +564,93 @@ export class VoiceConnection {
       return undefined;
     }
   }
+  private continueResponse(delegationId: string) {
+    const eventId = crypto.randomUUID();
+    this.responseCommands.set(eventId, delegationId);
+    this.channel?.send(JSON.stringify({ type: "response.create", event_id: eventId }));
+  }
   private async receiveResponse(envelope: z.infer<typeof responseEnvelope>, attempt: number) {
     const event = envelope.event;
-    const id = this.manualDelegation ?? envelope.delegation_id;
+    const commandOwner = envelope.client_event_id
+      ? this.responseCommands.get(envelope.client_event_id)
+      : undefined;
+    const responseId = "response" in event ? event.response.id : event.response_id;
+    const currentResponse = this.responses.get(
+      responseId ?? this.responseIds.get(commandOwner ?? envelope.delegation_id ?? "") ?? "",
+    );
+    const id = currentResponse?.delegationId ?? commandOwner ?? envelope.delegation_id;
     if (!this.current(attempt)) return;
+    if (!id || !this.delegations.has(id)) return;
     if (event.type === "response.created") {
-      this.responses.set(event.response.id, { calls: [], handled: false, locale: this.locale });
+      if (id !== this.activeDelegation) return;
+      this.responses.set(event.response.id, {
+        calls: [],
+        delegationId: id,
+        handled: false,
+        locale: this.delegationLocales.get(id) ?? this.locale,
+      });
+      if (
+        this.activeDelegation === id &&
+        (this.delegationLocales.get(id) ?? this.locale) === this.locale
+      )
+        this.emit({ progress: { stage: "thinking", summary: this.view.progress?.summary ?? "" } });
       this.responseIds.set(id, event.response.id);
       return;
     }
-    if (event.type === "response.output_item.done") {
+    const showProgress =
+      Boolean(currentResponse && !currentResponse.handled) &&
+      this.activeDelegation === id &&
+      (currentResponse?.locale ?? this.delegationLocales.get(id) ?? this.locale) === this.locale;
+    if (event.type === "response.reasoning_summary_text.delta") {
+      if (showProgress)
+        this.emit({
+          progress: {
+            stage: this.view.progress?.stage ?? "thinking",
+            summary: ((this.view.progress?.summary ?? "") + event.delta).slice(0, 10000),
+          },
+        });
+      return;
+    }
+    if (event.type === "response.output_text.annotation.added") {
+      if (showProgress) this.addCitation(event.annotation.url, event.annotation.title);
+      return;
+    }
+    if (
+      event.type === "response.web_search_call.in_progress" ||
+      event.type === "response.web_search_call.searching" ||
+      event.type === "response.web_search_call.completed"
+    ) {
+      if (showProgress)
+        this.emit({
+          progress: {
+            stage: event.type === "response.web_search_call.completed" ? "thinking" : "searching",
+            summary: this.view.progress?.summary ?? "",
+          },
+        });
+      return;
+    }
+    if (event.type === "response.output_item.done" || event.type === "response.output_item.added") {
       const item = event.item;
+      if (showProgress) {
+        if (item.type === "reasoning" && item.summary?.length)
+          this.emit({
+            progress: {
+              stage: this.view.progress?.stage ?? "thinking",
+              summary: item.summary
+                .map((part) => part.text)
+                .join("\n")
+                .slice(0, 10000),
+            },
+          });
+        for (const content of item.content ?? [])
+          for (const annotation of content.annotations ?? [])
+            if (annotation.type === "url_citation" && annotation.url)
+              this.addCitation(annotation.url, annotation.title ?? annotation.url);
+      }
       const pending = this.responses.get(event.response_id ?? this.responseIds.get(id) ?? "");
       if (
         pending &&
+        event.type === "response.output_item.done" &&
         item.type === "function_call" &&
         item.call_id &&
         item.name &&
@@ -567,11 +660,15 @@ export class VoiceConnection {
         pending.calls.push({ callId: item.call_id, name: item.name, arguments: item.arguments });
       return;
     }
+    if (!("response" in event)) return;
     const pending = this.responses.get(event.response.id);
     if (!pending || pending.handled) return;
     pending.handled = true;
     const turnId = await this.delegations.get(id);
-    if (!this.current(attempt) || this.activeDelegation !== id || !this.sessionId) return;
+    if (!this.current(attempt) || this.activeDelegation !== id || !this.sessionId) {
+      this.responses.delete(event.response.id);
+      return;
+    }
     if (!turnId) {
       // 登録失敗でもfunction結果を返し、backendを未応答toolの待機に残さない。
       for (const call of pending.calls)
@@ -587,10 +684,7 @@ export class VoiceConnection {
           }),
         );
       this.responses.delete(event.response.id);
-      if (pending.calls.length)
-        this.channel?.send(
-          JSON.stringify({ type: "response.create", event_id: crypto.randomUUID() }),
-        );
+      if (pending.calls.length) this.continueResponse(id);
       else this.reportFailure();
       return;
     }
@@ -646,6 +740,9 @@ export class VoiceConnection {
             return;
           output = result.result;
           if (result.cameraAction === "capture") {
+            this.emit({
+              progress: { stage: "reading", summary: this.view.progress?.summary ?? "" },
+            });
             if (pending.locale !== this.locale) throw new Error("Stale camera request");
             const question = z.object({ question: z.string() }).parse(result.result).question;
             const maxBytes = Math.min(this.peer?.sctp?.maxMessageSize || 64000, 64000);
@@ -706,6 +803,10 @@ export class VoiceConnection {
               output = { error: "DISPLAY_CURRENCY_CHANGED" };
           }
         } catch (error) {
+          if (call.name === "captureCamera") {
+            this.cameraRequest = undefined;
+            this.camera?.complete();
+          }
           output = { error: apiError(error)?.code ?? "VOICE_TOOL_FAILED" };
         }
         if (this.current(attempt) && this.activeDelegation === id && !controller.signal.aborted)
@@ -731,10 +832,13 @@ export class VoiceConnection {
         }
       }
       await Promise.all(reads);
-      if (this.current(attempt) && this.activeDelegation === id && !controller.signal.aborted)
-        this.channel?.send(
-          JSON.stringify({ type: "response.create", event_id: crypto.randomUUID() }),
-        );
+      if (
+        this.current(attempt) &&
+        this.activeDelegation === id &&
+        !controller.signal.aborted &&
+        !this.ending
+      )
+        this.continueResponse(id);
     } catch {
       if (this.current(attempt) && !controller.signal.aborted) this.reportFailure();
     } finally {
@@ -819,6 +923,12 @@ export class VoiceConnection {
     } catch {
       this.onSync();
     }
+  }
+  private addCitation(url: string, title: string) {
+    if (!url.startsWith("https://")) return;
+    const current = this.view.citations ?? [];
+    if (current.some((citation) => citation.url === url) || current.length >= 8) return;
+    this.emit({ citations: [...current, { url, title: title.slice(0, 200) }] });
   }
   private clearGuidance() {
     ++this.guidanceVersion;
@@ -916,7 +1026,6 @@ export class VoiceConnection {
         return;
       const id = `tablecast-input-${itemId}`;
       this.activeDelegation = id;
-      this.manualDelegation = id;
       const registered = this.registerDelegation(id, "user", attempt);
       this.delegations.set(id, registered);
       if (!(await registered) || !this.current(attempt) || version !== this.guidanceVersion) return;
@@ -927,16 +1036,27 @@ export class VoiceConnection {
           item: { type: "message", role: "user", content: [{ type: "input_text", text }] },
         }),
       );
-      this.channel?.send(
-        JSON.stringify({ type: "response.create", event_id: crypto.randomUUID() }),
-      );
+      this.continueResponse(id);
     } catch {
       if (this.current(attempt)) this.reportFailure();
     }
   }
   private updateLocale(locale: Locale) {
     if (locale === this.locale || !this.ready || !this.desired) return;
+    for (const caption of this.captions) {
+      this.localeTranscriptFloor[caption.message.role] = Math.max(
+        this.localeTranscriptFloor[caption.message.role],
+        caption.end,
+      );
+      if (!caption.message.final) this.finishCaption(caption, true);
+    }
     this.locale = locale;
+    this.emit({
+      progress: undefined,
+      citations: [],
+      messages: this.captions.map((caption) => caption.message),
+    });
+    this.scheduleSave();
     this.cameraRequest?.abort();
     this.camera?.complete();
     this.clearGuidance();
@@ -1082,8 +1202,15 @@ export class VoiceConnection {
             if (!this.delegations.has(id)) {
               if (this.ending) return;
               this.clearGuidance();
-              this.manualDelegation = undefined;
-              this.emit({ status: "thinking" });
+              this.cameraRequest?.abort();
+              this.camera?.complete();
+              this.responses.clear();
+              this.responseIds.clear();
+              this.emit({
+                status: "thinking",
+                progress: { stage: "thinking", summary: "" },
+                citations: [],
+              });
               clearTimeout(this.proactiveTimer);
               this.activeDelegation = id;
               this.delegation?.abort();
@@ -1117,9 +1244,6 @@ export class VoiceConnection {
     if (!track) throw new DOMException("Microphone has no audio track", "NotFoundError");
     this.microphoneSender = peer.addTrack(track, microphone);
     this.observeMicrophone(microphone, attempt);
-    this.activityObservers.push(
-      observeVoiceActivity(track, () => this.audioActivity(attempt, false)),
-    );
     this.updateMicrophone({ activeLabel: track.label, error: undefined });
     this.emit({ inputTrack: track });
     void this.refreshMicrophones();

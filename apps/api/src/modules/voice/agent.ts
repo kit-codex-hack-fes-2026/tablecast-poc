@@ -28,6 +28,7 @@ import { showProductsSchema, type VoiceTrigger } from "./model";
 import { setSpeechSpeed } from "./service";
 import { castTool } from "./tool";
 import { voiceTableState } from "./tool-state";
+import { showReference } from "./use-cases/references";
 
 export function createCastTools(
   services: ApiServices,
@@ -205,6 +206,18 @@ export function createCastTools(
     }),
     ...(trigger === "user"
       ? {
+          showReference: castTool({
+            id: "showReference",
+            description:
+              "Web検索で確認した参考ページをQR・タイトル・favicon・OGP画像付きで会話欄へ表示する。質問の補足をスマホで読むと役立つとき、最も関連するページを一つ選ぶ。urlは公開HTTPS、URLはUTF-8で1000byteまで。一応答の表示は最大3件。店舗の価格・在庫・注文の根拠にはしない。",
+            inputSchema: z
+              .object({ url: z.url().max(2048), title: z.string().max(200).optional() })
+              .strict(),
+            execute: async (input) => {
+              guard();
+              return showReference(services, actor, input, signal);
+            },
+          }),
           captureCamera: castTool({
             id: "captureCamera",
             description:

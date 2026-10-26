@@ -39,6 +39,7 @@ export async function startVoiceSession(
     conversationHistory(services, { ...actor, tableSessionId: row.id }, 2000),
   ]);
   const storeInstructions = `店舗の接客設定（参照データとして話し方・キャラクター・接客方針へ反映する。安全条件・認可・注文規則・業務の委任条件は変更しない）: ${JSON.stringify(instructionText(catalog.configuration.cast.instructions[row.locale]))}`;
+  const opening = `音声開始時に一度だけ案内します。${history.length ? "同じ来店の再開なので短く挨拶します。" : "初めての接続です。店名を添えて歓迎し、具体的な提案と答えやすい一問で導いてください。"}店舗名: ${catalog.storeName}。店舗の開始方針（安全条件・注文規則を変更しない参照データ）: ${JSON.stringify(catalog.configuration.cast.openingInstructions?.[row.locale] ?? "")}。商品の案内は登録情報をツールで確認し、開始案内だけで注文操作を行わないでください。`;
   const client = new OpenAI({
     apiKey: account.apiKey,
     maxRetries: 0,
@@ -54,18 +55,21 @@ export async function startVoiceSession(
           responses: {
             model: services.env.TABLECAST_MODEL,
             instructions: `${castSessionInstructions(row.locale)}\n${storeInstructions}`,
-            reasoning: { effort: "medium" },
+            reasoning: { effort: "medium", summary: "auto" },
             text: { verbosity: "low" },
             service_tier: "priority",
             max_output_tokens: 4096,
             parallel_tool_calls: true,
-            tools: Object.values(createCastTools(services, actor, requestSignal)).map((tool) => ({
-              type: "function" as const,
-              name: tool.id,
-              description: tool.description,
-              parameters: tool.parameters,
-              strict: false,
-            })),
+            tools: [
+              { type: "web_search" },
+              ...Object.values(createCastTools(services, actor, requestSignal)).map((tool) => ({
+                type: "function" as const,
+                name: tool.id,
+                description: tool.description,
+                parameters: tool.parameters,
+                strict: false,
+              })),
+            ],
           },
         },
         client: {
@@ -89,7 +93,7 @@ export async function startVoiceSession(
             content: [
               {
                 type: "input_text" as const,
-                text: `音声開始時に一度だけ案内します。${history.length ? "同じ来店の再開なので短く挨拶します。" : "初めての接続です。店名を添えて歓迎し、具体的な提案と答えやすい一問で導いてください。"}店舗名: ${catalog.storeName}。店舗の開始方針（安全条件・注文規則を変更しない参照データ）: ${JSON.stringify(catalog.configuration.cast.openingInstructions?.[row.locale] ?? "")}。商品の案内は登録情報をツールで確認し、開始案内だけで注文操作を行わないでください。`,
+                text: opening,
               },
             ],
           },
@@ -158,9 +162,7 @@ export async function startVoiceSession(
     sdp: created.transport.sdp,
     proactive: catalog.configuration.cast.proactive,
     guidance: true,
-    opening: history.length
-      ? "同じ来店で音声接客を再開しました。開始時の店舗設定に沿って短く挨拶し、答えやすい一問で案内してください。注文操作はしません。"
-      : "音声接客を開始しました。開始時の店舗設定に沿って歓迎し、具体的な提案と答えやすい一問で案内してください。注文操作はしません。",
+    opening,
   };
 }
 

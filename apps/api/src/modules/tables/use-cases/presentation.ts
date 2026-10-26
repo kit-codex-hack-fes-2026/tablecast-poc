@@ -143,8 +143,7 @@ export async function changeLocale(services: ApiServices, actor: Actor, locale: 
 
   const row = await getSession(services, actor);
   if (row.locale === locale) {
-    if (row.voice_session_id)
-      await updateVoiceLanguage(services, actor, row.voice_session_id, locale);
+    if (row.voice_session_id) await updateVoiceLanguage(services, actor, row.voice_session_id);
     return getTableState(services, actor);
   }
   const mutation = crypto.randomUUID();
@@ -158,7 +157,9 @@ export async function changeLocale(services: ApiServices, actor: Actor, locale: 
         voice_version: sql`voice_version+1`,
         mutation_id: mutation,
       })
-      .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
+      .where(
+        sql`id=${row.id} AND store_id=${actor.storeId} AND status='open' AND voice_version=${row.voice_version}${gate}`,
+      ),
     invalidationStatement(services, actor, mutation),
     ...interruptVoiceTurns(services, actor, mutation, true),
     eventStatement(services, actor, mutation, "locale.changed", { locale }),
@@ -175,8 +176,7 @@ export async function changeLocale(services: ApiServices, actor: Actor, locale: 
     cursor: Math.max(result[4].meta.last_row_id, result[5].meta.last_row_id),
     demoId: row.kind === "demo" ? row.id : undefined,
   });
-  if (row.voice_session_id)
-    await updateVoiceLanguage(services, actor, row.voice_session_id, locale);
+  if (row.voice_session_id) await updateVoiceLanguage(services, actor, row.voice_session_id);
   // 言語変更前のturn資格を再利用せず、認可済みの同じ卓を読み直す。
   return getTableState(services, {
     ...actor,

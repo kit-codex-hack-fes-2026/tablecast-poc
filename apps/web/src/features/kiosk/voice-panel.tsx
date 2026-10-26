@@ -1,4 +1,10 @@
-import { type Catalog, type Product, type Snapshot, type TableEvent } from "@tablecast/api/schema";
+import {
+  type Catalog,
+  type Product,
+  type Snapshot,
+  type TableEvent,
+  voiceReferenceEventSchema,
+} from "@tablecast/api/schema";
 import { AudioLines, Check, CircleAlert, LoaderCircle, MicOff } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import { useRef } from "react";
@@ -19,8 +25,11 @@ import { LocalCamera, useLocalCamera } from "./local-camera";
 import { type VoiceView } from "./voice-connection";
 import { VoiceAttention, VoiceControls } from "./voice-controls";
 import { ConversationEntry, ConversationMessage } from "./voice-conversation-message";
+import { VoiceProgress } from "./voice-progress";
+import { VoiceReferenceCard } from "./voice-reference";
 
 const toolLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]>> = {
+  showReference: "kiosk_tool_show_reference",
   captureCamera: "kiosk_tool_capture_camera",
   getCatalog: "kiosk_tool_get_catalog",
   getTableState: "kiosk_tool_get_table_state",
@@ -58,7 +67,9 @@ function conversationTimeline(merged: ConversationLine[], events: TableEvent[]) 
   // 字幕の表示IDと業務turnを結び付けず、操作と商品カードを一か所に並べる。
   for (const turnId of new Set(
     events.flatMap((event) =>
-      (event.kind === "voice.tool" || event.kind === "voice.products") &&
+      (event.kind === "voice.tool" ||
+        event.kind === "voice.products" ||
+        event.kind === "voice.reference") &&
       typeof event.data.turnId === "string"
         ? [event.data.turnId]
         : [],
@@ -66,7 +77,9 @@ function conversationTimeline(merged: ConversationLine[], events: TableEvent[]) 
   )) {
     const first = events.find(
       (event) =>
-        (event.kind === "voice.tool" || event.kind === "voice.products") &&
+        (event.kind === "voice.tool" ||
+          event.kind === "voice.products" ||
+          event.kind === "voice.reference") &&
         event.data.turnId === turnId,
     );
     if (first)
@@ -255,6 +268,20 @@ export function VoicePanelContent({
                     <ConversationEntry key={entry.id} className="w-11/12 space-y-2">
                       {toolCards(entry.turnId)}
                       {products(entry.turnId)}
+                      {events
+                        .filter(
+                          (event) =>
+                            event.kind === "voice.reference" && event.data.turnId === entry.turnId,
+                        )
+                        .map((event) => {
+                          const parsed = voiceReferenceEventSchema.safeParse(event.data);
+                          return parsed.success ? (
+                            <VoiceReferenceCard
+                              key={event.cursor}
+                              reference={parsed.data.reference}
+                            />
+                          ) : null;
+                        })}
                     </ConversationEntry>
                   );
                 })}
@@ -283,6 +310,23 @@ export function VoicePanelContent({
                 latestBusinessTurn={latestBusinessTurn}
                 view={view}
               />
+              {active && Boolean(view.suggestions?.length) && (
+                <div className="flex flex-wrap gap-2" aria-label={t("kiosk_suggestions")}>
+                  {view.suggestions?.map((text) => (
+                    <Button
+                      key={text}
+                      variant="outline"
+                      size="lg"
+                      className="h-auto max-w-full whitespace-normal text-left text-sm"
+                      disabled={view.status !== "listening" || !onSuggestion}
+                      onClick={() => onSuggestion?.(text, view.suggestions)}
+                    >
+                      {text}
+                    </Button>
+                  ))}
+                </div>
+              )}
+              <VoiceProgress view={view} />
             </ConversationContent>
             <ConversationScrollButton
               label={t("kiosk_latest")}
@@ -290,22 +334,6 @@ export function VoicePanelContent({
             />
           </Conversation>
         </div>
-        {active && Boolean(view.suggestions?.length) && (
-          <div className="flex shrink-0 flex-wrap gap-2" aria-label={t("kiosk_suggestions")}>
-            {view.suggestions?.map((text) => (
-              <Button
-                key={text}
-                variant="outline"
-                size="lg"
-                className="h-auto max-w-full whitespace-normal text-left text-sm"
-                disabled={view.status !== "listening" || !onSuggestion}
-                onClick={() => onSuggestion?.(text, view.suggestions)}
-              >
-                {text}
-              </Button>
-            ))}
-          </div>
-        )}
         <VoiceControls
           view={view}
           active={active}

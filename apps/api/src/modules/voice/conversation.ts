@@ -45,7 +45,7 @@ export async function recordConversationItems(
       turnId: item.itemId,
       voiceSessionId: input.voiceSessionId,
       role: item.role,
-      locale: session.locale,
+      locale: item.locale ?? session.locale,
       text: item.text,
       interrupted: item.interrupted,
     });

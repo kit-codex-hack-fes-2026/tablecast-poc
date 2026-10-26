@@ -1,5 +1,12 @@
 import { env } from "cloudflare:workers";
 import { afterEach, expect, it, vi } from "vitest";
+import { getCatalog } from "../src/modules/catalog/queries";
+import {
+  createDraft,
+  updateDraft,
+  validateDraft,
+} from "../src/modules/configuration/use-cases/drafts";
+import { publishDraft } from "../src/modules/configuration/use-cases/publish";
 import { getTableState } from "../src/modules/tables/queries";
 import { recordConversationItems } from "../src/modules/voice/conversation";
 import { invokeVoiceTool } from "../src/modules/voice/realtime";
@@ -73,6 +80,36 @@ it("旧設定を変更せず読み込み、日英の開始方針を保存でき�
   expect(configurationSchema.parse(value).cast.openingInstructions).toEqual(
     value.cast.openingInstructions,
   );
+});
+
+it("開始方針は下書きだけでは公開せず、差分確認と公開後に客向け設定へ反映する", async () => {
+  const { staff } = await setupFixture();
+  const services = createApiServices(env);
+  const draft = await createDraft(services, staff);
+  const openingInstructions = { ja: "お茶をご案内する", en: "Offer a tea recommendation." };
+  const edited = await updateDraft(services, staff, draft.id, {
+    expectedVersion: draft.version,
+    configuration: {
+      ...draft.configuration,
+      cast: { ...draft.configuration.cast, openingInstructions },
+    },
+  });
+  expect(edited.changes.some((change) => change.path.startsWith("cast.openingInstructions"))).toBe(
+    true,
+  );
+  expect(
+    (await getCatalog(services, staff.storeId)).configuration.cast.openingInstructions,
+  ).toBeUndefined();
+  const ready = await validateDraft(services, staff, edited.id, edited.version);
+  await publishDraft(services, staff, ready.id, {
+    expectedVersion: ready.version,
+    baseVersion: ready.baseVersion,
+    idempotencyKey: "tablecast-opening-publish",
+    approved: true,
+  });
+  expect(
+    (await getCatalog(services, staff.storeId)).configuration.cast.openingInstructions,
+  ).toEqual(openingInstructions);
 });
 
 it("同じ字幕の並行要求では一度だけ候補を生成し、予約で会話履歴を圧迫しない", async () => {

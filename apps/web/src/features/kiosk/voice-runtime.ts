@@ -1,7 +1,7 @@
 // 実MediaStreamの音量だけを観測する。音声の録音・保存・文字起こしは行わない。
 export function observeVoiceActivity(track: MediaStreamTrack, onActivity: () => void) {
   if (typeof AudioContext === "undefined") return () => undefined;
-  let context: AudioContext;
+  let context: AudioContext | undefined;
   try {
     context = new AudioContext();
     const source = context.createMediaStreamSource(new MediaStream([track]));
@@ -19,9 +19,10 @@ export function observeVoiceActivity(track: MediaStreamTrack, onActivity: () => 
     return () => {
       clearInterval(timer);
       source.disconnect();
-      void context.close();
+      void context?.close();
     };
   } catch {
+    void context?.close();
     return () => undefined;
   }
 }
