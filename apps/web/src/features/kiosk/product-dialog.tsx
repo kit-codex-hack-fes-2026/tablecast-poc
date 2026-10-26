@@ -27,7 +27,7 @@ export function ProductPage({
   error?: unknown;
   initial?: CartLine;
   onClose: () => void;
-  onSave: (line: CartLine, pointer: boolean) => void;
+  onSave: (line: CartLine, pointer: boolean, origin: DOMRect) => void;
   product: Product;
 }) {
   const { locale, t } = useI18n();
@@ -307,6 +307,7 @@ export function ProductPage({
                 selections,
               },
               event.detail > 0,
+              event.currentTarget.getBoundingClientRect(),
             )
           }
         >

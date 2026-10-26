@@ -109,6 +109,7 @@ it.each(["ja", "en"] as const)(
 );
 
 it("カゴの商品画像は3枚まで重ねて表示する", async () => {
+  fixture.current.locale = "en";
   fixture.current.uiSection = "menu";
   const products = Array.from({ length: 4 }, (_, index) => ({
     ...product,
@@ -127,16 +128,41 @@ it("カゴの商品画像は3枚まで重ねて表示する", async () => {
   });
   await page.viewport(1024, 768);
   await mountKiosk();
-  const cart = page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) });
+  const cart = page.getByRole("tab", { name: new RegExp(`^${en.kiosk_cart}`) });
   await expect.element(cart).toBeVisible();
   await expect
     .poll(() => cart.element().querySelectorAll('[data-ui="cart-preview"] > span').length)
     .toBe(3);
   const frames = cart.element().querySelectorAll('[data-ui="cart-preview"] > span');
   expect(frames).toHaveLength(3);
+  expect(cart.element().querySelector('[data-ui="cart-icon"]')).not.toBeNull();
+  for (const frame of frames) expect(frame.getBoundingClientRect().width).toBe(32);
   for (let index = 1; index < frames.length; index++) {
     expect(fixtureValue(frames[index]).getBoundingClientRect().left).toBeLessThan(
       fixtureValue(frames[index - 1]).getBoundingClientRect().right,
     );
   }
+  for (const [width, height] of [
+    [1024, 768],
+    [402, 874],
+  ] as const) {
+    await page.viewport(width, height);
+    for (const price of document.querySelectorAll('[data-ui="tab-price"]')) {
+      await expect.poll(() => price.querySelector("[aria-label]")?.textContent).toContain("US$");
+      expect(getComputedStyle(price).whiteSpace).toBe("nowrap");
+      expect(price.scrollWidth).toBeLessThanOrEqual(cart.element().clientWidth);
+      expect(getComputedStyle(price).overflowX).toBe("visible");
+    }
+    expect(
+      cart.element().querySelector('[data-ui="cart-icon"]')?.getBoundingClientRect().width,
+    ).toBeGreaterThan(0);
+  }
+  await page.getByRole("button", { name: en.kiosk_review, exact: true }).click();
+  await page.getByRole("button", { name: en.kiosk_confirm, exact: true }).click();
+  const orders = page.getByRole("tab", { name: new RegExp(`^${en.kiosk_orders_bill}`) });
+  await expect
+    .poll(() => orders.element().querySelectorAll('[data-ui="orders-preview"] > span').length)
+    .toBe(3);
+  expect(cart.element().querySelector('[data-ui="cart-preview"]')).toBeNull();
+  expect(cart.element().querySelector('[data-ui="cart-icon"]')).not.toBeNull();
 });

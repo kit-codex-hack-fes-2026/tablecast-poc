@@ -165,10 +165,26 @@ beforeEach(() => {
         return Response.json(current.snapshot);
       }
       if (request.method === "POST" && path === "/api/table/orders") {
-        orderWrites.push(submitSchema.parse(await request.json()));
+        const submission = submitSchema.parse(await request.json());
+        orderWrites.push(submission);
+        const snapshot = current.snapshot;
+        if (!snapshot) throw new Error("注文確認のsnapshotが必要です");
         current = {
           ...current,
           cursor: current.cursor + 1,
+          orders: [
+            ...current.orders,
+            {
+              id: "tablecast-confirmed-order",
+              tableSessionId: current.id,
+              snapshotId: snapshot.id,
+              idempotencyKey: submission.idempotencyKey,
+              status: "submitted",
+              snapshot,
+              total: snapshot.total,
+              createdAt: Date.now(),
+            },
+          ],
           cart: { ...current.cart, lines: [], total: 0, version: current.cart.version + 1 },
           snapshot: null,
         };

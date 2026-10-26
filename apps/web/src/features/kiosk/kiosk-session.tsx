@@ -111,7 +111,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   const [prepared, setSnapshot] = useState<Snapshot>();
   const confirmationHeading = useRef<HTMLHeadingElement>(null);
   const toasts = Toast.useToastManager();
-  const [flight, setFlight] = useState<CartFlight>();
+  const [flights, setFlights] = useState<CartFlight[]>([]);
   const reducedMotion = useReducedMotion();
   const orderPane = useRef<HTMLElement>(null);
   const detailTrigger = useRef<HTMLElement | null>(null);
@@ -222,13 +222,16 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     onSuccess: (updated, input) => {
       receive(updated);
       if (input.message) toasts.add({ title: input.message });
-      const target = orderPane.current?.querySelector('[data-ui="cart-tab"]');
+      const target = orderPane.current?.querySelector('[data-ui="cart-icon"]');
       if (input.addition && target && !reducedMotion)
-        setFlight({
-          ...input.addition,
-          to: target.getBoundingClientRect(),
-          id: crypto.randomUUID(),
-        });
+        setFlights([
+          {
+            ...input.addition,
+            destination: "cart",
+            to: target.getBoundingClientRect(),
+            id: crypto.randomUUID(),
+          },
+        ]);
       setChosen(undefined);
       screen.mutate({ section: "cart", productId: null });
       setSnapshot(undefined);
@@ -264,14 +267,37 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     onError: refresh,
   });
   const submit = useMutation({
-    mutationFn: (confirmation: Snapshot) => {
+    mutationFn: ({ confirmation }: { confirmation: Snapshot; pointer: boolean }) => {
       return parseResponse(
         endpoint.client.orders.$post({
           json: { snapshotId: confirmation.id, idempotencyKey: submitKey, approved: true },
         }),
       );
     },
-    onSuccess: () => {
+    onMutate: ({ pointer }) => {
+      const target = orderPane.current?.querySelector('[data-ui="orders-icon"]');
+      if (!pointer || reducedMotion || !target) return [];
+      const to = target.getBoundingClientRect();
+      return Array.from(
+        orderPane.current?.querySelectorAll<HTMLElement>('[data-ui="cart-preview"] > span') ?? [],
+      ).flatMap((frame, index) => {
+        const imageKey = frame.dataset.imageKey;
+        return imageKey
+          ? [
+              {
+                destination: "orders" as const,
+                from: frame.getBoundingClientRect(),
+                to,
+                imageKey,
+                id: crypto.randomUUID(),
+                delay: index * 0.035,
+              },
+            ]
+          : [];
+      });
+    },
+    onSuccess: (_result, _input, images) => {
+      setFlights(images ?? []);
       setSnapshot(undefined);
       toasts.add({ title: t("kiosk_ordered") });
       void client.invalidateQueries({ queryKey: tableKey });
@@ -433,7 +459,9 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             <Button
               className="col-span-2 h-auto min-h-14 min-w-0 whitespace-normal px-3 py-2"
               disabled={submit.isPending}
-              onClick={() => submit.mutate(snapshot)}
+              onClick={(event) =>
+                submit.mutate({ confirmation: snapshot, pointer: event.detail > 0 })
+              }
             >
               {t("kiosk_confirm")}
               <Check />
@@ -771,10 +799,20 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                             busy={updateCart.isPending}
                             error={updateCart.error}
                             onClose={() => setSection("menu")}
-                            onSave={(line, pointer) => {
+                            onSave={(line, pointer, origin) => {
                               const image = orderPane.current?.querySelector(
                                 '[data-ui="product-detail"] img',
                               );
+                              const imageBounds = image?.getBoundingClientRect();
+                              const paneBounds = orderPane.current?.getBoundingClientRect();
+                              // 詳細をスクロールして写真が見えないときは、押した追加ボタンから運ぶ。
+                              const from =
+                                imageBounds &&
+                                paneBounds &&
+                                imageBounds.top >= paneBounds.top &&
+                                imageBounds.bottom <= paneBounds.bottom
+                                  ? imageBounds
+                                  : origin;
                               updateCart.mutate({
                                 lines: [
                                   ...currentLines().filter((item) => item.id !== line.id),
@@ -785,10 +823,10 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                                   selection.line ? "kiosk_cart_updated" : "kiosk_cart_added",
                                 ),
                                 addition:
-                                  pointer && !selection.line && selection.product.imageKey && image
+                                  pointer && !selection.line && selection.product.imageKey
                                     ? {
                                         imageKey: selection.product.imageKey,
-                                        from: image.getBoundingClientRect(),
+                                        from,
                                       }
                                     : undefined,
                               });
@@ -798,7 +836,15 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                       </PaneDialog.Popup>
                     </PaneDialog.Portal>
                   </PaneDialog.Root>
-                  <CartFlightImage flight={flight} onComplete={() => setFlight(undefined)} />
+                  {flights.map((flight) => (
+                    <CartFlightImage
+                      key={flight.id}
+                      flight={flight}
+                      onComplete={() =>
+                        setFlights((current) => current.filter((item) => item.id !== flight.id))
+                      }
+                    />
+                  ))}
                   <ActionToasts />
                   <ErrorNotice
                     error={
@@ -830,16 +876,22 @@ function KioskMenuTabs({
 }) {
   const hydrated = useHydrated();
   const { t } = useI18n();
-  const images = [
-    ...new Set(
-      data.cart.lines
-        .map((line) => products.find((product) => product.id === line.productId)?.imageKey)
-        .filter((key): key is string => Boolean(key)),
-    ),
-  ].slice(0, 3);
+  function imagesFor(lines: { productId: string }[]) {
+    return [
+      ...new Set(
+        lines
+          .map((line) => products.find((product) => product.id === line.productId)?.imageKey)
+          .filter((key): key is string => Boolean(key)),
+      ),
+    ].slice(0, 3);
+  }
+  const images = imagesFor(data.cart.lines);
+  const orderedImages = imagesFor(
+    data.orders.toReversed().flatMap((order) => order.snapshot.lines),
+  );
   const quantity = data.cart.lines.reduce((sum, line) => sum + line.quantity, 0);
   const priceClass =
-    "block max-w-full overflow-x-auto whitespace-nowrap text-xs tabular-nums scrollbar-thin";
+    "block whitespace-nowrap text-xs tabular-nums @max-[32rem]/tablecast-order:text-[10px] [&_[aria-label]]:text-inherit";
   const tabClass = "h-16 min-w-0 flex-col gap-1 p-1 text-xs [&_svg]:size-4";
   return (
     <div className="relative">
@@ -866,31 +918,12 @@ function KioskMenuTabs({
           disabled={!hydrated}
           value="cart"
         >
-          <span className="flex max-w-full items-center gap-1">
-            {images.length ? (
-              <span aria-hidden data-ui="cart-preview" className="flex shrink-0 -space-x-1.5">
-                {images.map((key) => (
-                  <span
-                    key={key}
-                    className="inline-flex size-4 shrink-0 overflow-hidden rounded-full border border-card bg-card"
-                  >
-                    <ProductImage
-                      src={`/media/${key}`}
-                      width={16}
-                      height={16}
-                      sizes="16px"
-                      alt=""
-                      className="size-full object-cover"
-                    />
-                  </span>
-                ))}
-              </span>
-            ) : (
-              <ShoppingBag aria-hidden className="max-sm:hidden" />
-            )}
-            <span>
+          <span className="flex h-8 max-w-full items-center justify-center gap-1">
+            <ShoppingBag aria-hidden data-ui="cart-icon" className="shrink-0" />
+            <span className="min-w-0 whitespace-normal leading-tight">
               {t("kiosk_cart")} {quantity}
             </span>
+            <TabProductImages images={images} kind="cart" />
           </span>
           <span data-ui="tab-price" className={priceClass}>
             <Money value={data.cart.total} />
@@ -903,9 +936,12 @@ function KioskMenuTabs({
           disabled={!hydrated}
           value="orders"
         >
-          <span className="flex items-center gap-1">
-            <ReceiptText aria-hidden className="max-sm:hidden" />
-            {t("kiosk_orders_bill")}
+          <span className="flex h-8 max-w-full items-center justify-center gap-1">
+            <ReceiptText aria-hidden data-ui="orders-icon" className="shrink-0" />
+            <span className="min-w-0 whitespace-normal leading-tight">
+              {t("kiosk_orders_bill")}
+            </span>
+            <TabProductImages images={orderedImages} kind="orders" />
           </span>
           <span data-ui="tab-price" className={priceClass}>
             <Money value={data.bill.orderedTotal} />
@@ -913,5 +949,29 @@ function KioskMenuTabs({
         </Tabs.Tab>
       </Tabs.List>
     </div>
+  );
+}
+
+function TabProductImages({ images, kind }: { images: string[]; kind: "cart" | "orders" }) {
+  if (!images.length) return null;
+  return (
+    <span aria-hidden data-ui={`${kind}-preview`} className="flex shrink-0 -space-x-5">
+      {images.map((imageKey) => (
+        <span
+          key={imageKey}
+          data-image-key={imageKey}
+          className="inline-flex size-8 shrink-0 overflow-hidden rounded-full border-2 border-card bg-card"
+        >
+          <ProductImage
+            src={`/media/${imageKey}`}
+            width={32}
+            height={32}
+            sizes="32px"
+            alt=""
+            className="size-full object-cover"
+          />
+        </span>
+      ))}
+    </span>
   );
 }

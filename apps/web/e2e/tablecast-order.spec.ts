@@ -84,13 +84,36 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     await guest.goto("/");
     await guest.evaluate(() => {
       document.documentElement.dataset.tablecastCartFlights = "0";
+      document.documentElement.dataset.tablecastOrderFlights = "0";
+      document.documentElement.dataset.tablecastFlightsInViewport = "true";
       new MutationObserver((records) => {
         for (const record of records)
           for (const node of record.addedNodes) {
-            if (node instanceof Element && node.matches('[data-ui="cart-flight"]'))
-              document.documentElement.dataset.tablecastCartFlights = String(
-                Number(document.documentElement.dataset.tablecastCartFlights) + 1,
+            if (
+              node instanceof Element &&
+              node.matches('[data-ui="cart-flight"], [data-ui="order-flight"]')
+            ) {
+              const key = node.matches('[data-ui="cart-flight"]')
+                ? "tablecastCartFlights"
+                : "tablecastOrderFlights";
+              document.documentElement.dataset[key] = String(
+                Number(document.documentElement.dataset[key]) + 1,
               );
+              const bounds = node.getBoundingClientRect();
+              if (
+                bounds.left < 0 ||
+                bounds.top < 0 ||
+                bounds.right > innerWidth ||
+                bounds.bottom > innerHeight
+              ) {
+                document.documentElement.dataset.tablecastFlightsInViewport = "false";
+                document.documentElement.dataset.tablecastFlightViolation = JSON.stringify({
+                  kind: node.getAttribute("data-ui"),
+                  bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+                  viewport: [innerWidth, innerHeight],
+                });
+              }
+            }
           }
       }).observe(document.body, { childList: true, subtree: true });
     });
@@ -192,6 +215,7 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
             responsive.getByRole("button", { name: en.kiosk_review, exact: true }),
           ).toBeVisible();
           await expect(responsive.locator('[data-ui="cart-preview"] img')).toHaveCount(1);
+          await expect(responsive.locator('[data-ui="tab-price"] [aria-label]')).toHaveCount(2);
           await responsive.screenshot({
             path: testInfo.outputPath(`tablecast-basket-${width}.png`),
           });
@@ -230,6 +254,14 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     await guest.getByRole("button", { name: en.kiosk_confirm, exact: true }).click();
     const orderNotice = guest.getByRole("dialog", { name: en.kiosk_ordered, exact: true });
     await expect(orderNotice).toBeVisible();
+    expect(
+      await guest.evaluate(() => Number(document.documentElement.dataset.tablecastOrderFlights)),
+    ).toBe(browserName === "webkit" ? 0 : 1);
+    expect(
+      await guest.evaluate(() => document.documentElement.dataset.tablecastFlightsInViewport),
+      await guest.evaluate(() => document.documentElement.dataset.tablecastFlightViolation),
+    ).toBe("true");
+    await expect(guest.locator('[data-ui="orders-preview"] img')).toHaveCount(1);
     await orderNotice.getByRole("button", { name: en.common_close, exact: true }).click();
     const ordered = tableStateSchema.parse(await (await guest.request.get("/api/table")).json());
     expect(ordered.cart.lines).toHaveLength(0);
@@ -255,6 +287,7 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     expect(historyImages).toBeGreaterThan(1);
     await expect(history.locator("img")).toHaveCount(historyImages);
     await history.scrollIntoViewIfNeeded();
+    await expect(guest.getByRole("tabpanel")).toHaveCSS("opacity", "1");
     await guest.screenshot({ path: testInfo.outputPath("tablecast-history.png") });
     await staff.goto(`/admin/stores/${storeId}/floor`);
     const billingMetric = staff
