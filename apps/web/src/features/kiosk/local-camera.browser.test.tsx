@@ -124,7 +124,7 @@ it("明示開始だけで映像を取得し、表示切替では保持し音声�
   await expect.poll(() => document.querySelector("video")?.srcObject).toBe(stream);
   expect(capture).toHaveBeenCalledWith({
     audio: false,
-    video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+    video: { facingMode: { ideal: "user" }, width: { ideal: 640 }, height: { ideal: 480 } },
   });
   await screen.getByRole("button", { name: "表示切替" }).click();
   expect(capture).toHaveBeenCalledTimes(1);

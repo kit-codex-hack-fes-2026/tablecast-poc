@@ -19,6 +19,7 @@ import {
   initialMicrophone,
   type MicrophoneError,
   type MicrophoneView,
+  type VoiceCamera,
   type VoiceView,
 } from "./voice-model";
 import { observeVoiceActivity } from "./voice-runtime";
@@ -64,6 +65,8 @@ export class VoiceConnection {
   private hasUserInput = false;
   private speechSpeed = 1;
   private requestedSpeechSpeed = 1;
+  private camera?: VoiceCamera;
+  private cameraRequest?: AbortController;
   private microphoneView = initialMicrophone;
   private deviceRequest = 0;
   private microphoneErrorSource?: "capture" | "devices";
@@ -158,6 +161,15 @@ export class VoiceConnection {
       this.updateLocale(locale);
     }
   }
+  connectCamera(camera: VoiceCamera) {
+    this.camera = camera;
+    return () => {
+      if (this.camera !== camera) return;
+      this.cameraRequest?.abort();
+      camera.complete();
+      this.camera = undefined;
+    };
+  }
   clearCustomerContext() {
     void this.stop({ serverStopped: true });
     for (const caption of this.captions) clearTimeout(caption.timer);
@@ -177,6 +189,8 @@ export class VoiceConnection {
     this.ready = false;
     this.ending = false;
     this.clearGuidance();
+    this.cameraRequest?.abort();
+    this.camera?.complete();
     clearTimeout(this.endingTimer);
     clearTimeout(this.endingQuietTimer);
     this.activityObservers.forEach((dispose) => dispose());
@@ -404,6 +418,7 @@ export class VoiceConnection {
     this.clearGuidance();
     const role = event.type === "session.input_transcript.delta" ? "user" : "assistant";
     if (role === "user") this.hasUserInput = true;
+    else this.camera?.complete();
     // 字幕のまとまりは表示だけに使い、委任開始や業務の中断条件には使わない。
     let caption = this.captions.findLast(
       (row) =>
@@ -584,6 +599,7 @@ export class VoiceConnection {
     this.delegation = controller;
     try {
       if (event.type !== "response.completed" || pending.calls.length === 0) {
+        this.camera?.complete();
         await parseResponse(
           this.client.voice.finish.$post({
             json: {
@@ -626,7 +642,52 @@ export class VoiceConnection {
               },
             ),
           );
+          if (!this.current(attempt) || this.activeDelegation !== id || controller.signal.aborted)
+            return;
           output = result.result;
+          if (result.cameraAction === "capture") {
+            if (pending.locale !== this.locale) throw new Error("Stale camera request");
+            const question = z.object({ question: z.string() }).parse(result.result).question;
+            const maxBytes = Math.min(this.peer?.sctp?.maxMessageSize || 64000, 64000);
+            const cameraRequest = new AbortController();
+            this.cameraRequest = cameraRequest;
+            const captured = (await this.camera?.capture(
+              AbortSignal.any([controller.signal, cameraRequest.signal]),
+              Math.max(0, maxBytes - 2048),
+            )) ?? { error: "CAMERA_OFF" };
+            if (
+              !this.current(attempt) ||
+              this.activeDelegation !== id ||
+              controller.signal.aborted ||
+              cameraRequest.signal.aborted ||
+              pending.locale !== this.locale
+            )
+              return;
+            if ("error" in captured) {
+              output = captured;
+              this.camera?.complete();
+            } else {
+              const imageEvent = JSON.stringify({
+                type: "response.item.create",
+                event_id: crypto.randomUUID(),
+                item: {
+                  type: "message",
+                  role: "user",
+                  content: [
+                    { type: "input_text", text: question },
+                    { type: "input_image", image_url: captured.imageUrl, detail: "auto" },
+                  ],
+                },
+              });
+              if (new TextEncoder().encode(imageEvent).byteLength > maxBytes)
+                output = { error: "CAMERA_IMAGE_TOO_LARGE" };
+              else {
+                this.channel?.send(imageEvent);
+                output = { captured: true };
+              }
+            }
+            if (this.cameraRequest === cameraRequest) this.cameraRequest = undefined;
+          }
           if (result.conversationAction === "language" && result.locale) {
             this.updateLocale(result.locale);
             controlAction = true;
@@ -876,6 +937,8 @@ export class VoiceConnection {
   private updateLocale(locale: Locale) {
     if (locale === this.locale || !this.ready || !this.desired) return;
     this.locale = locale;
+    this.cameraRequest?.abort();
+    this.camera?.complete();
     this.clearGuidance();
     this.channel?.send(
       JSON.stringify({

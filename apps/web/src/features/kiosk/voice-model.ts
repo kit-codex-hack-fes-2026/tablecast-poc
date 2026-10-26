@@ -44,3 +44,11 @@ export type VoiceView = {
   status: VoiceStatus;
   suggestions?: string[];
 };
+
+export type VoiceCamera = {
+  capture: (
+    signal: AbortSignal,
+    maxBytes: number,
+  ) => Promise<{ error: "CAMERA_OFF" | "CAMERA_UNAVAILABLE" } | { imageUrl: string }>;
+  complete: () => void;
+};

@@ -205,6 +205,16 @@ export function createCastTools(
     }),
     ...(trigger === "user"
       ? {
+          captureCamera: castTool({
+            id: "captureCamera",
+            description:
+              "客がONにしたカメラから現在の画像を必要時に1枚読み取る。questionに確認したい内容を指定する。OFFならON操作を案内し、連続撮影・本人識別・画像からの価格やアレルギー安全性の断定はしない。画像が届くまで見えたと答えない。",
+            inputSchema: z.object({ question: z.string().min(1).max(300) }).strict(),
+            execute: async ({ question }) => {
+              guard();
+              return { question };
+            },
+          }),
           endConversation: castTool({
             id: "endConversation",
             description:

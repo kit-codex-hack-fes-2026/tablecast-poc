@@ -128,6 +128,7 @@ export async function invokeVoiceTool(
               }
             : {}),
           result,
+          ...(input.toolName === "captureCamera" ? { cameraAction: "capture" as const } : {}),
           ...(input.toolName === "setDisplayCurrency"
             ? {
                 displayCurrencyAction: displayCurrencyActionSchema.parse({

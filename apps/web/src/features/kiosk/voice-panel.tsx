@@ -21,6 +21,7 @@ import { VoiceAttention, VoiceControls } from "./voice-controls";
 import { ConversationEntry, ConversationMessage } from "./voice-conversation-message";
 
 const toolLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]>> = {
+  captureCamera: "kiosk_tool_capture_camera",
   getCatalog: "kiosk_tool_get_catalog",
   getTableState: "kiosk_tool_get_table_state",
   updateCart: "kiosk_tool_update_cart",
@@ -76,7 +77,11 @@ function conversationTimeline(merged: ConversationLine[], events: TableEvent[]) 
 }
 
 const emptyEvents: NonNullable<VoicePanelProps["events"]> = [];
-export function VoicePanel({
+export function VoicePanel(props: VoicePanelProps) {
+  const camera = useLocalCamera();
+  return <VoicePanelContent {...props} camera={camera} />;
+}
+export function VoicePanelContent({
   view,
   lines,
   onStart,
@@ -92,8 +97,8 @@ export function VoicePanel({
   onMicrophoneChange,
   onMicrophoneRefresh,
   onSuggestion,
-}: VoicePanelProps) {
-  const camera = useLocalCamera();
+  camera,
+}: VoicePanelProps & { camera: ReturnType<typeof useLocalCamera> }) {
   const panel = useRef<HTMLElement>(null);
   const { locale, t } = useI18n();
   const merged = mergeConversation(lines, view, locale);
@@ -212,6 +217,7 @@ export function VoicePanel({
         <h2 className="sr-only">{t("kiosk_conversation")}</h2>
         <div className="min-w-0 shrink-0">
           <LocalCamera camera={camera} boundsRef={panel} />
+          <p className="mt-1 text-xs text-muted-foreground">{t("kiosk_camera_privacy")}</p>
         </div>
         <div
           data-ui="conversation-history"
