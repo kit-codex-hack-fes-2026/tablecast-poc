@@ -41,7 +41,7 @@ export const CompactDock: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.queryByRole("button", { name: "会話履歴を表示" })).not.toBeInTheDocument();
     await expect(canvas.getByText("この日本酒は温かくできますか？")).toBeVisible();
-    await expect(canvas.getByRole("button", { name: "音声を再開" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "声で相談・注文" })).toBeVisible();
     await expect(canvas.getByRole("button", { name: "カメラをオン" })).toBeVisible();
   },
 };

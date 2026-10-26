@@ -28,7 +28,11 @@ it.each(["ja", "en"] as const)(
         </Surface>,
       );
       const panel = screen.getByRole("region", { name: labels.kiosk_conversation }).element();
-      const play = screen.getByRole("button", { name: labels.kiosk_voice_resume });
+      const play = screen.getByRole("button", { name: labels.kiosk_voice_start, exact: true });
+      const resume = screen.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
+      expect(resume.element().closest("footer")).not.toBeNull();
+      await expect.element(screen.getByText(labels.kiosk_voice_banner_title)).toBeVisible();
+      await expect.element(screen.getByText(labels.kiosk_voice_banner_description)).toBeVisible();
       const panelBounds = panel.getBoundingClientRect();
       const playBounds = play.element().getBoundingClientRect();
       expect(playBounds.width).toBeGreaterThanOrEqual(100);
@@ -62,6 +66,8 @@ it.each(["ja", "en"] as const)(
       );
       await play.click();
       expect(start).toHaveBeenCalledOnce();
+      await resume.click();
+      expect(start).toHaveBeenCalledTimes(2);
       await screen.unmount();
     }
   },

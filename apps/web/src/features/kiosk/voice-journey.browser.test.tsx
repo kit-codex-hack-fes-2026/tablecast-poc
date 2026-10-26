@@ -109,7 +109,7 @@ it("開始案内・候補選択・参考情報・言語切替・終了を同じ�
   );
   const screen = await render(surface());
   try {
-    await screen.getByRole("button", { name: ja.kiosk_voice_resume, exact: true }).click();
+    await screen.getByRole("button", { name: ja.kiosk_voice_start, exact: true }).click();
     await expect
       .element(screen.getByRole("button", { name: ja.kiosk_voice_stop, exact: true }))
       .toBeVisible();

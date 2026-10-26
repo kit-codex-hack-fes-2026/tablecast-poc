@@ -1,5 +1,5 @@
 import type { TableEvent } from "@tablecast/api/schema";
-import { CircleAlert, LoaderCircle, MicOff, Pause, Play, ShoppingBag } from "lucide-react";
+import { CircleAlert, LoaderCircle, Mic, MicOff, Pause, Play, ShoppingBag } from "lucide-react";
 import { lazy, Suspense } from "react";
 import type { voiceOperationState } from "./conversation-model";
 import type { VoiceView } from "./voice-connection";
@@ -160,7 +160,7 @@ export function VoiceControls({
   return (
     <footer
       data-theme-part="voice-controls"
-      className={`mt-auto grid min-w-0 shrink-0 gap-2 ${active ? "border-t border-border pt-2" : ""}`}
+      className="mt-auto grid min-w-0 shrink-0 gap-2 border-t border-border pt-2"
     >
       {active && (
         <div className="min-w-0" data-ui="voice-media">
@@ -178,7 +178,7 @@ export function VoiceControls({
         </div>
       )}
       <div className="flex min-w-0 items-center justify-end gap-2">
-        {active && <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />}
+        <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />
         {onMicrophoneChange && onMicrophoneRefresh && (
           <MicrophoneSettings
             view={view}
@@ -193,9 +193,10 @@ export function VoiceControls({
   );
 }
 
-function voiceControlLabel(status: VoiceView["status"], active: boolean) {
+function voiceControlLabel(status: VoiceView["status"], active: boolean, prominent: boolean) {
   if (status === "stopping") return "kiosk_voice_stopping";
   if (active) return "kiosk_voice_stop";
+  if (prominent) return "kiosk_voice_start";
   return status === "error" ? "kiosk_voice_retry" : "kiosk_voice_resume";
 }
 
@@ -208,13 +209,13 @@ export function VoiceToggle({
   const { t } = useI18n();
   const active =
     view.error === "active" || !["idle", "paused", "error", "stopping"].includes(view.status);
-  const label = t(voiceControlLabel(view.status, active));
+  const label = t(voiceControlLabel(view.status, active, prominent));
   return (
     <span
-      className={`pointer-events-auto relative inline-flex min-w-0 bg-(image:--voice-spectrum) p-0.5 shadow-control-dark ${prominent ? "rounded-3xl" : "w-full rounded-xl"}`}
+      className={`pointer-events-auto relative inline-flex min-w-0 bg-(image:--voice-spectrum) p-0.5 shadow-control-dark ${prominent ? "mx-3 w-[calc(100%_-_1.5rem)] max-w-64 rounded-2xl" : "w-full rounded-xl"}`}
     >
       <Button
-        className={`min-w-0 rounded-[inherit] text-center ${prominent ? "h-20 w-28 p-0" : "h-auto min-h-14 w-full whitespace-normal px-3 py-2 text-sm"}`}
+        className={`min-w-0 rounded-[inherit] text-center ${prominent ? "h-auto min-h-28 w-full gap-3 px-3 py-4" : "h-auto min-h-14 w-full whitespace-normal px-3 py-2 text-sm"}`}
         variant="voice"
         onClick={onStart}
         disabled={controlDisabled || view.status === "stopping"}
@@ -223,17 +224,36 @@ export function VoiceToggle({
         {active ? (
           <MicOff className={prominent ? "size-10" : "size-4"} aria-hidden="true" />
         ) : (
-          <Play
-            className={prominent ? "size-10" : "size-4"}
-            fill="currentColor"
-            aria-hidden="true"
-          />
+          <VoiceStartIcon prominent={prominent} />
         )}
-        {!prominent && label}
+        {prominent ? (
+          <VoiceStartCopy label={label} available={!active && view.status !== "stopping"} />
+        ) : (
+          label
+        )}
       </Button>
-      {prominent && (
-        <span className="pointer-events-none absolute top-full left-1/2 mt-3 w-48 -translate-x-1/2 text-center text-sm font-medium text-foreground">
-          {label}
+    </span>
+  );
+}
+
+function VoiceStartIcon({ prominent }: { prominent: boolean }) {
+  return prominent ? (
+    <Play className="size-10" fill="currentColor" aria-hidden="true" />
+  ) : (
+    <Mic className="size-4" aria-hidden="true" />
+  );
+}
+
+function VoiceStartCopy({ available, label }: { available: boolean; label: string }) {
+  const { t } = useI18n();
+  return (
+    <span className="min-w-0 flex-1 text-left">
+      <strong className="block text-sm leading-snug">
+        {available ? t("kiosk_voice_banner_title") : label}
+      </strong>
+      {available && (
+        <span className="mt-1 block text-xs leading-relaxed opacity-90">
+          {t("kiosk_voice_banner_description")}
         </span>
       )}
     </span>

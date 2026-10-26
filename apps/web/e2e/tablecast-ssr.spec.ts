@@ -186,7 +186,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       });
       await interactive.goto("/");
       await expect(
-        interactive.getByRole("button", { name: "音声を再開", exact: true }),
+        interactive.getByRole("button", { name: ja.kiosk_voice_resume, exact: true }),
       ).toBeEnabled();
       await expect(
         interactive
