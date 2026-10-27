@@ -32,7 +32,7 @@ export function Money({
         <>
           {" "}
           <span
-            className={`${secondaryColor} opacity-75`}
+            className={`${secondaryColor} ${secondaryTone === "inherit" ? "opacity-75" : ""}`}
             aria-label={`${t("currency_approximate")}: ${estimate}`}
           >
             ≈ {estimate}

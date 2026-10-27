@@ -293,7 +293,8 @@ it("商品カードだけの業務イベントも字幕と独立して時系列�
   expect(
     card.element().compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
-  await card.click();
+  // 停止中の中央音声ボタンを避け、見えている商品名から選択する。
+  await card.getByText(product.text.ja.displayName, { exact: true }).click();
   expect(choose).toHaveBeenCalledOnce();
   expect(choose).toHaveBeenCalledWith(product);
 });
