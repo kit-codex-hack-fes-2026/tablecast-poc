@@ -1,8 +1,9 @@
 // 左がimport元、右が許可する依存先。外部packageとContextのtype-onlyは別に制限する。
 export const dependencies = {
   "config-type": ["config", "worker"],
-  app: ["route", "store-routes", "http", "context"],
+  app: ["app", "route", "store-routes", "auth-middleware", "http", "context"],
   worker: [
+    "pure",
     "app",
     "runtime",
     "telemetry",
@@ -28,7 +29,16 @@ export const dependencies = {
   email: ["email", "error"],
   runtime: ["telemetry"],
   "auth-factory": ["auth-factory", "model", "db", "email", "error"],
-  "auth-middleware": ["auth-middleware", "query", "model", "pure", "auth-factory", "http", "error"],
+  "auth-middleware": [
+    "auth-middleware",
+    "query",
+    "model",
+    "pure",
+    "auth-factory",
+    "http",
+    "error",
+    "telemetry",
+  ],
   integration: ["pure", "model", "error"],
   "mcp-tools": ["service", "use-case", "query", "provider", "model", "pure", "error"],
   pure: ["model", "pure", "error"],
@@ -79,6 +89,7 @@ export const dependencies = {
     "error",
   ],
   route: [
+    "telemetry",
     "mcp-tools",
     "use-case",
     "route",

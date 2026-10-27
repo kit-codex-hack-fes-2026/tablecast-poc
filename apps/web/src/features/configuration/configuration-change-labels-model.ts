@@ -1,6 +1,7 @@
 export const labels = {
   branding: "theme_logo",
   logo: "theme_logo",
+  banner: "theme_header_banner",
   appearance: "theme_title",
   banners: "theme_banners",
   alt: "theme_alt",

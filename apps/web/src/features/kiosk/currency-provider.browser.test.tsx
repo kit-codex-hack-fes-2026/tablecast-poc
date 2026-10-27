@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import { LanguageSwitch } from "../../components/language-switch";
-import { Money } from "../../components/money";
+import { Money, PriceChange } from "../../components/money";
 import { CurrencyContext } from "../../i18n/currency-context";
 import { LocaleProvider, useI18n } from "../../i18n/locale";
 import { tableEndpoint } from "../../lib/api";
@@ -61,7 +61,13 @@ function Harness({ sessionId }: { sessionId: string }) {
     >
       <LanguageSwitch onChange={setLocale} />
       <CurrencySelector />
-      <Money value={1000} />
+      <span className="text-lg font-semibold">
+        <Money value={1000} taxIncluded />
+      </span>
+      <section aria-label="価格の増減">
+        <PriceChange value={80} />
+        <PriceChange value={-20} />
+      </section>
       <AgentControls />
     </CurrencyProvider>
   );
@@ -82,6 +88,11 @@ async function select(code: string) {
 it("円を主表示に保ち、通貨の選択後は言語連動と再取得を行わない", async () => {
   await mount();
   await expect.element(page.getByText("¥1,000", { exact: true })).toBeVisible();
+  const amount = page.getByText("¥1,000", { exact: true }).element();
+  const tax = page.getByText("(税込)", { exact: true }).first().element();
+  expect(getComputedStyle(tax).fontSize).toBe(getComputedStyle(amount).fontSize);
+  expect(getComputedStyle(tax).fontWeight).toBe(getComputedStyle(amount).fontWeight);
+  expect(tax.getBoundingClientRect().bottom).toBeCloseTo(amount.getBoundingClientRect().bottom, 0);
   await page.getByRole("combobox", { name: /通貨|currency/i }).click();
   await expect
     .element(page.getByText("外貨は目安です。お支払いは日本円となります。"))
@@ -89,7 +100,22 @@ it("円を主表示に保ち、通貨の選択後は言語連動と再取得を�
   await expect.element(page.getByText("A$ AUD · オーストラリア ドル")).toBeVisible();
   await page.getByRole("option", { name: /AUD/ }).click();
   await expect.element(page.getByText("≈ A$9.67", { exact: true })).toBeVisible();
+  const changes = page.getByRole("region", { name: "価格の増減", exact: true }).element().children;
+  expect(changes).toHaveLength(2);
+  const [increase, decrease] = Array.from(changes);
+  if (!increase || !decrease) throw new Error("追加料金と割引の表示が必要です");
+  expect(getComputedStyle(increase).color).not.toBe(getComputedStyle(decrease).color);
+  for (const change of changes) {
+    const color = getComputedStyle(change).color;
+    for (const text of change.querySelectorAll("span")) {
+      expect(getComputedStyle(text).color).toBe(color);
+    }
+    const estimate = change.querySelector("[aria-label]");
+    if (!estimate) throw new Error("補助通貨の表示が必要です");
+    expect(getComputedStyle(estimate).opacity).toBe("0.75");
+  }
   await page.getByRole("button", { name: "English", exact: true }).click();
+  await expect.element(page.getByText("(incl. tax)", { exact: true }).first()).toBeVisible();
   await expect
     .element(page.getByRole("combobox", { name: /通貨|currency/i }))
     .toHaveTextContent("A$ AUD");

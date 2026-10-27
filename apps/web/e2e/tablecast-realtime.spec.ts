@@ -1,5 +1,6 @@
 import { expect, type WebSocketRoute } from "@playwright/test";
 import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
+import ja from "../messages/ja.json" with { type: "json" };
 import { approveGuestDevice, signInStaff } from "./support/session";
 import { test } from "./support/test";
 
@@ -70,14 +71,18 @@ test("実WebSocketの通知切断中はHTTPで回復し、再接続後の変更�
   await changeQuantity(1);
   await page.getByRole("tab", { name: /^注文かご/ }).click();
   const basket = page.getByRole("tabpanel");
-  await expect(basket.getByText(/数量 1/)).toBeVisible();
+  const quantity = basket.getByRole("textbox", {
+    name: `${product.text.ja.displayName}: ${ja.common_quantity}`,
+    exact: true,
+  });
+  await expect(quantity).toHaveValue("1");
 
   // 通知だけを失い、HTTPのevent再取得と実DBへの書込みは利用できる状態にする。
   dropped = true;
   await Promise.all(sockets.map((socket) => socket.close({ code: 1001 })));
   await changeQuantity(2);
   await expect(basket.getByText(product.text.ja.displayName, { exact: true })).toHaveCount(1);
-  await expect(basket.getByText(/数量 2/)).toBeVisible();
+  await expect(quantity).toHaveValue("2");
 
   // 実サーバーへ再接続し、新しい通知でも同じ行を重複追加しないことを確認する。
   const beforeReconnect = connected;
@@ -86,6 +91,6 @@ test("実WebSocketの通知切断中はHTTPで回復し、再接続後の変更�
   const beforeNotification = notifications;
   await changeQuantity(3);
   await expect.poll(() => notifications).toBeGreaterThan(beforeNotification);
-  await expect(basket.getByText(/数量 3/)).toBeVisible();
+  await expect(quantity).toHaveValue("3");
   await expect(basket.getByText(product.text.ja.displayName, { exact: true })).toHaveCount(1);
 });

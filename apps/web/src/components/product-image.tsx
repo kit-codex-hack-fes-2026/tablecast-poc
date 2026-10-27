@@ -61,7 +61,6 @@ export function ProductImage({
         height={height}
         sizes={priority ? sizes : `auto, ${sizes ?? `${width}px`}`}
         layout="fixed"
-        objectFit="contain"
         unstyled
         priority={priority}
         onLoad={blurDataURL ? () => setSettledSrc(src) : undefined}
@@ -70,7 +69,7 @@ export function ProductImage({
           onError?.();
         }}
         className={cn(
-          "aspect-(--tablecast-image-ratio) [background-image:var(--tablecast-image-placeholder)] bg-contain bg-center bg-no-repeat",
+          "object-contain aspect-(--tablecast-image-ratio) [background-image:var(--tablecast-image-placeholder)] bg-contain bg-center bg-no-repeat",
           className,
         )}
         transformer={transformImage}

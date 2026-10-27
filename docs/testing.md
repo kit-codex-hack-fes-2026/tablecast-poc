@@ -110,7 +110,7 @@ Component jobのBrowser統合とStorybook自動試験は日本語で実行する
 | `realtime`                     | Kiosk Browserの古い通知/遅着/unmount、API realtimeの実DO                                                                            | 実WS切断→HTTP回収→再接続通知で同じカート行だけを更新                                                                                                                     |
 | `publication`                  | Kiosk Browserの通知後表示、API configurationの版/店舗分離                                                                           | WS拒否中の実公開→HTTP回復だけで価格更新、document再読込なし                                                                                                              |
 | `admin-realtime`               | TableDetail/Floor Browser、ActivityLog Story、API realtime                                                                          | 支払前に対象sessionのHTTP events待ちを登録し、payment cursorまで回収→実WS復帰、表示重複なし                                                                              |
-| `image-performance`            | ProductImage Browserの枠/失敗/hydration、API mediaのR2/Images/cache                                                                 | 24/120商品・3標本・DPR 2・cold 500,000byte以下・warm転送0・計測可能なCLS 0.1未満・cart 64pxを維持。viewport内の実画像成功を待つ                                          |
+| `image-performance`            | ProductImage Browserの枠/失敗/hydration、API mediaのR2/Images/cache                                                                 | 24/120商品・3標本・DPR 2・cold 500,000byte以下・warm転送0・計測可能なCLS 0.1未満・cart 112px幅・角丸の正方形枠・画像の比率を維持。viewport内の実画像成功を待つ           |
 | `pwa`                          | pwa-update unitで3manifestの静的値/実icon、Pwa Browserで通常/会員の案内開閉。Query/更新拒否分岐もBrowser                            | build資産のHTTP配信、実SW control/cache/offline/quota、二画面の未保存保護→controller交代→各一回reload                                                                    |
 | `runtime-isolation`            | root scriptsの実TCP/OAuth・APIのbinding reset                                                                                       | 意図したserial二ケースで、case内restartはD1/assetsを保持し、次caseで閉じたtemplateから復元                                                                               |
 
@@ -144,7 +144,7 @@ runtime再起動はlisten markerだけで完了とせず、入口の実API・Mai
 | ssrの無予算の4標本反復・Worker restart                        | 各featureの取得/操作はBrowserへ。計測回数自体は保証にしない                                                                                                                                  | 代表URLを各1回のSSR/hydration、JS無効・匿名隔離・session/PWA redirect                                                                     |
 | image-performance・runtime-isolation                          | 既存予算とruntime fixtureの実物を維持                                                                                                                                                        | 下記の画像予算とケース間の配信資産隔離を引き続き実E2Eで検証                                                                               |
 
-画像性能は[`tablecast-image-performance.spec.ts`](../apps/web/e2e/tablecast-image-performance.spec.ts)の24/120商品で、取得済みURLの再訪転送0、cold画像転送合計500,000byte以下、計測可能なCLS 0.1未満、実画像の縦横比・カート画像64pxを保つ。WebKitでbyte値が取得できない場合は制限を記録し、Chromiumの予算検証で補う。件数の多いfixtureや上限を緩和して高速化済みにはしない。Resource Timingの収集枠は1,000件を確保し、満杯になった標本は転送量が欠けるため失敗とする。記録の収集枠と画像転送の予算を区別する。
+画像性能は[`tablecast-image-performance.spec.ts`](../apps/web/e2e/tablecast-image-performance.spec.ts)の24/120商品で、取得済みURLの再訪転送0、cold画像転送合計500,000byte以下、計測可能なCLS 0.1未満、実画像の縦横比・カート画像112pxの角丸枠と元の比率を保つ。WebKitでbyte値が取得できない場合は制限を記録し、Chromiumの予算検証で補う。件数の多いfixtureや上限を緩和して高速化済みにはしない。Resource Timingの収集枠は1,000件を確保し、満杯になった標本は転送量が欠けるため失敗とする。記録の収集枠と画像転送の予算を区別する。
 
 [`tablecast-runtime-isolation.spec.ts`](../apps/web/e2e/tablecast-runtime-isolation.spec.ts)は、同じworkerでケース内の再起動がassets変更を保持し、次のケースで変更・追加ファイルを復元する保証を維持する。稼働中stateのcopyやfixture共有で業務テストを速くしない。
 
@@ -417,3 +417,7 @@ Webの`billing-page.browser.test.tsx`と隣接Storyは、日本語でrole・無�
 `tablecast-help.spec.ts`は実Web/APIへ接続し、未認証のHTML・日英切替・相対リンク・Markdown・LLM索引と、管理画面・MCP・業務APIの認証境界を確認する。本文の配信とリンクの解決はビルド後の成果物で確認し、原稿の文言を固定するunitテストは追加しない。サイドバーのグループ開閉は既存のBrowser統合、画面の証拠はこの代表E2Eで扱う。
 
 ヘルプ検索は日英別の実ZBSearchで全半角・英字大小文字・日本語の空白なし・英語の語形変化を確認する。Browser統合は番号付きショートカット、IME確定、遅い旧応答、MarkdownのDOMと語形変化後のハイライト、共通ヘッダーを所有する。実WebのE2Eは公開検索API・言語別SSR・同章の言語URLへの遷移とモバイルの目次へ限定する。
+
+### 注文操作の性能計測
+
+APIの`performance` projectは本番Hono・Cookie・実D1で8操作、8／120商品・カゴと履歴1／100件を測る。通常の`bun run --cwd apps/api test`に含め、Vitest標準の`sequence.groupOrder: 1`で他のAPI検査の終了後に1 workerで実行する。並列の別fileのworkerd起動待ちを性能の比較へ混ぜないための測定環境であり、300ms予算と初回を含む全31標本は変えない。個別診断は`bun run --cwd apps/api test -- --project performance`を使う。単独成功でpreviewや負荷中の達成と扱わず、失敗した元の全標本も残す。

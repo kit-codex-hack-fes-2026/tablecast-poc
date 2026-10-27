@@ -220,4 +220,6 @@ export const bannerSchema = z
   })
   .strict();
 export type Banner = z.infer<typeof bannerSchema>;
-export const brandingSchema = z.object({ logo: themeImageSchema.nullable() }).strict();
+export const brandingSchema = z
+  .object({ logo: themeImageSchema.nullable(), banner: themeImageSchema.nullable().optional() })
+  .strict();

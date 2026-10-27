@@ -26,7 +26,9 @@ export const initialRoutes = apiFactory.createApp().get(
   ),
   async (c) => {
     const services = c.get("services");
-    const { response: session, headers } = await services.auth.api.getSession({
+    const { response: session, headers } = await (
+      await services.getIdentity()
+    ).api.getSession({
       headers: c.req.raw.headers,
       returnHeaders: true,
     });

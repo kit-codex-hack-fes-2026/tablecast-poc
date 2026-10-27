@@ -1,0 +1,34 @@
+{
+  "generator": "built-in image_gen",
+  "source": "synthetic-demo",
+  "description": "架空店舗向けに横長の店名ロゴとして生成した透過バナー。正方形アイコンからの合成ではない。",
+  "assets": [
+    {
+      "slug": "komorebi",
+      "prompt": "Use case: logo-brand. Create a finished production-ready horizontal Japanese restaurant WORDMARK asset, landscape 3:1 canvas, genuinely transparent background. Exact brand text: 「京料理 こもれび 四条店」. The large hand-lettered name こもれび is the primary artwork, with refined expressive continuous brush calligraphy extending horizontally; 京料理 and 四条店 are smaller, integrated into the same wide typographic lockup. Quiet Kyoto machiya restaurant identity, charcoal ink with a very restrained warm gold brush accent woven through the lettering. It must resemble an actual high-quality restaurant logo supplied by a designer, readable at 160px wide. Build the complete design as a wide wordmark from the outset, filling most of the canvas with a modest transparent safe margin. No separate square symbol or icon next to typed text, no avatar, no circular badge, no crest, no sign photograph, no mockup, no web UI, no watermark, no explanatory labels. Return only the flat transparent logo artwork.",
+      "file": "komorebi-banner.webp",
+      "generatedFile": "exec-3ff72f62-07b5-4b8e-943d-e0008d95854e.png",
+      "width": 1200,
+      "height": 400,
+      "sha256": "5ec2d2a44ed5b2b2cf11f53b3d0fcfe3e420bb0693e9a21d612869f5fe18d003"
+    },
+    {
+      "slug": "hanul",
+      "prompt": "Use case: logo-brand. Create a finished production-ready WIDE HORIZONTAL WORDMARK for a fictional Korean restaurant in Kyoto. Native landscape 3:1 canvas with a genuinely transparent background. Exact main Japanese name: 「ハヌル」. Supporting text integrated into the wordmark: 「韓国食堂」 and 「三条」, with small Korean lettering 「하늘」. Use confident friendly custom lettering with subtle Korean geometric influence, deep brick red and restrained charcoal ink. The letters themselves form the entire horizontal identity; professionally balanced restaurant brand asset, readable at 160px wide, a small safe transparent margin, like a real restaurant branding file. No separate square logo or icon followed by normal text, no avatar, no round badge, no restaurant photo, no signage mockup, no interface, no watermarks. Return just the flat transparent wide logo.",
+      "file": "hanul-banner.webp",
+      "generatedFile": "exec-af31a10e-2f78-4691-ad64-9a4958258062.png",
+      "width": 1200,
+      "height": 400,
+      "sha256": "ec79c9243166a3fc7840dc3ad901ae63bd15a55e8f41fbdd0695b95ee4c4345e"
+    },
+    {
+      "slug": "westward",
+      "prompt": "Use case: logo-brand. Create a finished production-ready wide horizontal WORDMARK for a fictional burger restaurant. Native landscape 3:1 canvas, genuinely transparent background. Exact main text: \"WESTWARD\". Small integrated supporting text: \"BURGERS · KYOTO\". Design the letters themselves as a distinctive bold slightly slanted custom American diner wordmark, warm rust red with charcoal accents, subtle long horizontal swash integrated into the lettering. Authentic contemporary burger restaurant branding, clean flat artwork readable at 160px wide, modest transparent safe margin. Entire asset must be a wide logo from the outset. No separate square or round burger icon next to normal text, no badge or crest, no photo, no signage mockup, no app UI, no watermark. Return only the finished transparent wordmark artwork.",
+      "file": "westward-banner.webp",
+      "generatedFile": "exec-99d9fdc2-6dea-42b4-ae6c-4bda9f9d0dc8.png",
+      "width": 1200,
+      "height": 400,
+      "sha256": "04f0ac461464b5bb22c0bbd7b3756df3bf7534c28c5bc777e12dc00d704cebeb"
+    }
+  ]
+}

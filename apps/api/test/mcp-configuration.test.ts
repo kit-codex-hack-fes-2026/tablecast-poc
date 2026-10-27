@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
+import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
@@ -106,6 +107,8 @@ async function authorise(cookie: string, scope = "tablecast:read tablecast:write
 
 async function connect(token: string, storeId = "tablecast-store", configured?: TablecastEnv) {
   const client = new Client({ name: "tablecast-integration", version: "1.0.0" });
+  const context = createExecutionContext();
+  onTestFinished(() => waitOnExecutionContext(context));
   onTestFinished(() => client.close());
   await client.connect(
     new StreamableHTTPClientTransport(
@@ -114,7 +117,7 @@ async function connect(token: string, storeId = "tablecast-store", configured?: 
         requestInit: { headers: { Authorization: `Bearer ${token}` } },
         fetch: async (url, init) =>
           await (configured
-            ? app.fetch(new Request(url, init), configured)
+            ? app.fetch(new Request(url, init), configured, context)
             : exports.default.fetch(new Request(url, init))),
       },
     ),
@@ -342,6 +345,8 @@ it("MCPとGUIの下書き検証が同じ音声・商品規則を使い、公開�
   const { cookie } = await setupFixture();
   const { token } = await authorise(cookie);
   const configured = env;
+  const context = createExecutionContext();
+  onTestFinished(() => waitOnExecutionContext(context));
   const client = await connect(token, "tablecast-store", configured);
   let draft = toolData(
     await client.callTool({ name: "create_draft", arguments: {} }),
@@ -375,6 +380,7 @@ it("MCPとGUIの下書き検証が同じ音声・商品規則を使い、公開�
       body: JSON.stringify({ expectedVersion: draft.version }),
     },
     configured,
+    context,
   );
   expect(gui.status).toBe(200);
   expect(configDraftSchema.parse(await gui.json()).errors).toEqual(mcp.errors);
@@ -420,6 +426,7 @@ it("MCPとGUIの下書き検証が同じ音声・商品規則を使い、公開�
       }),
     },
     configured,
+    context,
   );
   expect(publication.status).toBe(200);
   expect((await client.listTools()).tools.map((tool) => tool.name)).not.toContain("publish_draft");

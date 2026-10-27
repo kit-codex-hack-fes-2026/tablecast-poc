@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { and, asc, desc, eq, isNotNull, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, lt, notInArray, sql, sum } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { CustomerActor } from "../customers/model";
@@ -12,6 +12,7 @@ import {
   customerPointPolicies,
   customerPointVisits,
 } from "../../db/rewards-schema";
+import { orders, payments, tableSessions } from "../../db/table-schema";
 import { ensure } from "../../platform/errors";
 import { requireCustomer } from "../customers/queries";
 import { getSession } from "../tables/queries";
@@ -166,4 +167,63 @@ export async function getCustomerPoints(
     totals: totals[0] ?? { visits: 0, allocatedYen: 0 },
     nextCursor: rows.length > query.limit ? (entries.at(-1)?.id ?? null) : null,
   };
+}
+
+export function pointBillingCorrectionQueries(services: ApiServices, actor: Actor) {
+  // 配分の合計ではなく会計原本を読み、呼出し元の会計版で成立する差額だけを反映する。
+  const orderedTotal = services.db
+    .select({ total: sum(orders.total) })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.store_id, actor.storeId),
+        eq(orders.table_session_id, actor.tableSessionId ?? ""),
+        notInArray(orders.status, ["cancelled", "rejected"]),
+      ),
+    );
+  const adjustmentTotal = services.db
+    .select({ total: sum(payments.amount) })
+    .from(payments)
+    .where(
+      and(
+        eq(payments.store_id, actor.storeId),
+        eq(payments.table_session_id, actor.tableSessionId ?? ""),
+        eq(payments.kind, "adjustment"),
+      ),
+    );
+  return [
+    services.db
+      .select({
+        sessionId: customerPointVisits.sessionId,
+        rulesJson: customerPointVisits.rulesJson,
+        planJson: tableSessions.plan_json,
+        guestCount: tableSessions.guest_count,
+        orderedTotal: sql<number>`coalesce((${orderedTotal}),0)`.mapWith(Number),
+        adjustmentTotal: sql<number>`coalesce((${adjustmentTotal}),0)`.mapWith(Number),
+      })
+      .from(customerPointVisits)
+      .innerJoin(
+        tableSessions,
+        and(
+          eq(tableSessions.id, customerPointVisits.sessionId),
+          eq(tableSessions.store_id, customerPointVisits.storeId),
+        ),
+      )
+      .where(
+        and(
+          eq(customerPointVisits.sessionId, actor.tableSessionId ?? ""),
+          eq(customerPointVisits.storeId, actor.storeId),
+          isNotNull(customerPointVisits.confirmedAt),
+        ),
+      ),
+    services.db
+      .select()
+      .from(customerPointAllocations)
+      .where(
+        and(
+          eq(customerPointAllocations.sessionId, actor.tableSessionId ?? ""),
+          eq(customerPointAllocations.storeId, actor.storeId),
+        ),
+      ),
+  ] as const;
 }

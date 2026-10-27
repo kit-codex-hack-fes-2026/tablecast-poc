@@ -62,6 +62,9 @@ it("未充足行の修正は競合後も選択を保持し、再送でも同じ�
   await detail.getByRole("button", { name: ja.common_update, exact: true }).click();
   await expect.element(detail.getByRole("alert")).toBeVisible();
   await expect.element(choice).toBeChecked();
+  expect(cartWrites[0]?.lines[0]?.selections).toEqual(
+    fixtureValue(fixture.savedCart.lines[0]).selections,
+  );
   expect(fixture.current.cart.complete).toBe(false);
   fixture.cartFailure = 0;
   await detail.getByRole("button", { name: ja.common_update, exact: true }).click();
@@ -69,6 +72,7 @@ it("未充足行の修正は競合後も選択を保持し、再送でも同じ�
   expect(cartWrites).toEqual(
     [1, 2].map(() => ({
       expectedVersion: table.cart.version,
+      dismissProductId: product.id,
       lines: [
         {
           id: line.id,
@@ -102,9 +106,12 @@ it("確認の期限が失効したら確定操作を閉じる", async () => {
     await expect.element(confirmation).toBeVisible();
     await vi.advanceTimersByTimeAsync(1);
     await expect.element(confirmation).not.toBeInTheDocument();
-    expect(requests.some((request) => new URL(request.url).pathname === "/api/table/orders")).toBe(
-      false,
-    );
+    expect(
+      requests.some(
+        (request) =>
+          request.method === "POST" && new URL(request.url).pathname === "/api/table/orders",
+      ),
+    ).toBe(false);
   } finally {
     vi.useRealTimers();
   }
@@ -124,9 +131,12 @@ it.each(["カート版", "公開版"] as const)("確認の%sが失効したら�
   }
   notify(reason === "公開版" ? "configuration.published" : "cart.updated");
   await expect.element(confirmation).not.toBeInTheDocument();
-  expect(requests.some((request) => new URL(request.url).pathname === "/api/table/orders")).toBe(
-    false,
-  );
+  expect(
+    requests.some(
+      (request) =>
+        request.method === "POST" && new URL(request.url).pathname === "/api/table/orders",
+    ),
+  ).toBe(false);
 });
 
 it("公開通知で開いた商品を閉じて新価格を取得し、同じ通知でもカート行を重複しない", async () => {
@@ -168,7 +178,12 @@ it("注文操作は確認から修正・明示確定へ一箇所で切り替わ�
   await expect
     .element(page.getByRole("button", { name: ja.kiosk_review, exact: true }))
     .not.toBeInTheDocument();
-  expect(requests.filter((request) => request.url.endsWith("/table/orders"))).toHaveLength(0);
+  expect(
+    requests.filter(
+      (request) =>
+        request.method === "POST" && new URL(request.url).pathname.endsWith("/table/orders"),
+    ),
+  ).toHaveLength(0);
   await page.getByRole("button", { name: ja.kiosk_edit, exact: true }).click();
   await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
   const confirm = page.getByRole("button", { name: ja.kiosk_confirm, exact: true });
@@ -176,7 +191,12 @@ it("注文操作は確認から修正・明示確定へ一箇所で切り替わ�
   confirm.element().focus();
   await userEvent.keyboard("{Enter}");
   await expect.element(page.getByText(ja.kiosk_ordered, { exact: true })).toBeVisible();
-  expect(requests.filter((request) => request.url.endsWith("/table/orders"))).toHaveLength(1);
+  expect(
+    requests.filter(
+      (request) =>
+        request.method === "POST" && new URL(request.url).pathname.endsWith("/table/orders"),
+    ),
+  ).toHaveLength(1);
   expect(fixture.current.cart.lines).toHaveLength(0);
   expect(orderWrites).toHaveLength(1);
   expect(orderWrites[0]?.snapshotId).toBe("tablecast-confirmation");
@@ -224,7 +244,7 @@ it("注文ペインの比率をCookieから復元し、縦横の切替でもタ�
 it("会計依頼後は操作を依頼済みの表示へ替え、画面を戻しても重複依頼しない", async () => {
   await page.viewport(390, 844);
   await mountKiosk();
-  await page.getByRole("tab", { name: ja.kiosk_bill, exact: true }).click();
+  await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_orders_bill}`) }).click();
   await page.getByRole("button", { name: ja.kiosk_bill_request, exact: true }).click();
   await expect
     .element(page.getByRole("status").filter({ hasText: ja.kiosk_bill_requested }))
@@ -233,9 +253,14 @@ it("会計依頼後は操作を依頼済みの表示へ替え、画面を戻し�
     .element(page.getByRole("button", { name: ja.kiosk_bill_request, exact: true }))
     .not.toBeInTheDocument();
   await page.getByRole("tab", { name: ja.kiosk_menu, exact: true }).click();
-  await page.getByRole("tab", { name: ja.kiosk_bill, exact: true }).click();
+  await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_orders_bill}`) }).click();
   await expect
     .element(page.getByRole("status").filter({ hasText: ja.kiosk_bill_requested }))
     .toBeVisible();
-  expect(requests.filter((request) => request.url.endsWith("/table/bill/request"))).toHaveLength(1);
+  expect(
+    requests.filter(
+      (request) =>
+        request.method === "POST" && new URL(request.url).pathname.endsWith("/table/bill/request"),
+    ),
+  ).toHaveLength(1);
 });

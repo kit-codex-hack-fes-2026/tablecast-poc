@@ -1,6 +1,7 @@
 import {
   type CartUpdate,
   cartUpdateSchema,
+  coreStateSchema,
   submitSchema,
   type TableState,
   uiSectionInputSchema,
@@ -50,6 +51,8 @@ let selectedParticipant: null | string;
 
 let participantNames: string[];
 
+let beforeRequest: ((request: Request) => Promise<void>) | undefined;
+
 export const cartWrites: CartUpdate[] = [];
 
 export const targetWrites: unknown[] = [];
@@ -80,6 +83,7 @@ beforeEach(() => {
   confirmationDuration = 60_000;
   selectedParticipant = null;
   participantNames = [];
+  beforeRequest = undefined;
   savedCart = structuredClone(table.cart);
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   vi.stubGlobal(
@@ -87,7 +91,13 @@ beforeEach(() => {
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = new Request(input, init);
       requests.push(request);
-      const path = new URL(request.url).pathname;
+      await beforeRequest?.(request);
+      const url = new URL(request.url);
+      const path = url.pathname;
+      const stateResponse = () =>
+        Response.json(
+          url.searchParams.get("view") === "core" ? coreStateSchema.parse(current) : current,
+        );
       if (request.method === "GET" && path === "/api/table/participants")
         return Response.json({
           participants: participantNames.map((name, index) => ({
@@ -110,13 +120,19 @@ beforeEach(() => {
           expiresAt: Date.now() + 300000,
           url: `${window.location.origin}/member/join?code=${"a".repeat(64)}`,
         });
-      if (request.method === "GET" && path === "/api/table") return Response.json(current);
+      if (request.method === "GET" && path === "/api/table") return stateResponse();
       if (request.method === "GET" && path === "/api/table/exchange-rates")
         return Response.json({
           base: "JPY",
           source: "currency-api",
           date: "2026-10-22",
           rates: { USD: 0.0065, AUD: 0.00967 },
+        });
+      if (request.method === "GET" && path === "/api/table/orders")
+        return Response.json({
+          orders: current.orders.toReversed(),
+          nextCursor: null,
+          cursor: current.cursor,
         });
       if (request.method === "GET" && path === "/api/table/catalog") return catalogResponse.clone();
       if (request.method === "GET" && path.endsWith("/events")) {
@@ -127,15 +143,25 @@ beforeEach(() => {
         });
       }
       if (request.method === "PUT" && path === "/api/table/cart") {
-        cartWrites.push(cartUpdateSchema.parse(await request.json()));
+        const cartInput = cartUpdateSchema.parse(await request.json());
+        cartWrites.push(cartInput);
         if (cartFailure)
           return Response.json({ error: { code: "CART_CONFLICT" } }, { status: cartFailure });
-        current = { ...current, cursor: current.cursor + 1, cart: savedCart, snapshot: null };
-        return Response.json(current);
+        current = {
+          ...current,
+          cursor: current.cursor + 1,
+          cart: savedCart,
+          snapshot: null,
+          selectedProductId:
+            cartInput.dismissProductId === current.selectedProductId
+              ? null
+              : current.selectedProductId,
+        };
+        return stateResponse();
       }
       if (request.method === "POST" && path === "/api/table/call") {
         current = { ...current, staffCalled: true, cursor: current.cursor + 1 };
-        return Response.json(current);
+        return stateResponse();
       }
       if (request.method === "POST" && path === "/api/table/bill/request") {
         current = {
@@ -144,7 +170,7 @@ beforeEach(() => {
           billRequested: true,
           cursor: current.cursor + 1,
         };
-        return Response.json(current);
+        return stateResponse();
       }
       if (request.method === "POST" && path === "/api/table/confirm") {
         current.snapshot = {
@@ -165,14 +191,46 @@ beforeEach(() => {
         return Response.json(current.snapshot);
       }
       if (request.method === "POST" && path === "/api/table/orders") {
-        orderWrites.push(submitSchema.parse(await request.json()));
+        const submission = submitSchema.parse(await request.json());
+        orderWrites.push(submission);
+        const snapshot = current.snapshot;
+        if (!snapshot) throw new Error("注文確認のsnapshotが必要です");
         current = {
           ...current,
           cursor: current.cursor + 1,
+          orders: [
+            ...current.orders,
+            {
+              id: "tablecast-confirmed-order",
+              tableSessionId: current.id,
+              snapshotId: snapshot.id,
+              idempotencyKey: submission.idempotencyKey,
+              status: "submitted",
+              snapshot,
+              total: snapshot.total,
+              createdAt: Date.now(),
+            },
+          ],
           cart: { ...current.cart, lines: [], total: 0, version: current.cart.version + 1 },
           snapshot: null,
         };
-        return Response.json({ orderId: "tablecast-confirmed-order" });
+        current.orderSummary = {
+          quantity: current.orders
+            .flatMap((order) => order.snapshot.lines)
+            .reduce((sum, line) => sum + line.quantity, 0),
+          productIds: [
+            ...new Set(
+              current.orders
+                .toReversed()
+                .flatMap((order) => order.snapshot.lines.map((line) => line.productId)),
+            ),
+          ].slice(0, 3),
+        };
+        return Response.json(
+          url.searchParams.get("view") === "core"
+            ? { order: current.orders.at(-1), state: coreStateSchema.parse(current) }
+            : current.orders.at(-1),
+        );
       }
       if (request.method === "PATCH" && path === "/api/table/ui") {
         const screenInput = uiSectionInputSchema.parse(await request.json());
@@ -182,7 +240,7 @@ beforeEach(() => {
           selectedProductId: screenInput.productId ?? null,
           cursor: current.cursor + 1,
         };
-        return Response.json(current);
+        return stateResponse();
       }
       if (request.method === "POST" && path === "/api/table/voice/stop")
         return Response.json({ ok: true });
@@ -251,6 +309,9 @@ export function Subscription({ storeId, onChange }: { onChange: () => void; stor
 }
 
 export const fixture = {
+  set beforeRequest(value: typeof beforeRequest) {
+    beforeRequest = value;
+  },
   get catalogResponse() {
     return catalogResponse;
   },

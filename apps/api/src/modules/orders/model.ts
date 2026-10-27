@@ -24,6 +24,7 @@ export const cartUpdateSchema = z
   .object({
     expectedVersion: z.number().int().nonnegative(),
     lines: z.array(cartLineSchema).max(100),
+    dismissProductId: id.optional(),
   })
   .strict();
 
@@ -38,6 +39,7 @@ export type Cart = z.infer<typeof cartSchema>;
 export type Snapshot = z.infer<typeof snapshotSchema>;
 
 export type Order = z.infer<typeof orderSchema>;
+export const inactiveOrderStatuses = ["cancelled", "rejected"] as const;
 
 export type Bill = z.infer<typeof billSchema>;
 
@@ -113,3 +115,9 @@ export const billSchema = z.object({
   cartTotal: z.number().int(),
   planTotal: z.number().int(),
 });
+
+export const planUsageSchema = z.object({
+  quantity: z.number(),
+  lastOrderAt: z.number().nullable(),
+});
+export type PlanUsage = z.infer<typeof planUsageSchema>;

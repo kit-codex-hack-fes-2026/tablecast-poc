@@ -99,7 +99,12 @@ it("日本語の商品0件でも店員を呼べる", async () => {
   await expect
     .element(page.getByRole("button", { name: labels.kiosk_called_staff, exact: true }))
     .toBeDisabled();
-  expect(requests.filter((request) => request.url.endsWith("/table/call"))).toHaveLength(1);
+  expect(
+    requests.filter(
+      (request) =>
+        request.method === "POST" && new URL(request.url).pathname.endsWith("/table/call"),
+    ),
+  ).toHaveLength(1);
 });
 
 it("日本語の商品取得失敗は空状態にせず再試行できる", async () => {

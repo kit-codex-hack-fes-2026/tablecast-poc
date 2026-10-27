@@ -11,17 +11,18 @@ import { test } from "./support/test";
 test.use({ trace: "off", actionTimeout: 15_000, serviceWorkers: "block" });
 
 const labels = ja;
-test("日本語のスタッフと英語の客が端末認可・カスタマイズ注文・提供・会計を実DBへ反映する", async ({
+test("英語の客が端末認可後に日本語へ切り替え、スタッフと注文・提供・会計を実DBへ反映する", async ({
   page: staff,
   browser,
   baseURL,
-}) => {
-  const guestContext = await browser.newContext({
+  browserName,
+}, testInfo) => {
+  let guestContext = await browser.newContext({
     baseURL,
     viewport: { width: 1024, height: 768 },
     serviceWorkers: "block",
   });
-  const guest = await guestContext.newPage();
+  let guest = await guestContext.newPage();
   const storeId = "tablecast-komorebi";
   try {
     await staff.goto(`/login?returnTo=${encodeURIComponent(`/admin/stores/${storeId}/floor`)}`);
@@ -63,37 +64,129 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     await staff.getByRole("button", { name: labels.admin_approve, exact: true }).click();
     await expect(guest.getByRole("banner").getByText(vacant.name, { exact: true })).toBeVisible();
     await expect(guest.getByRole("tab", { name: en.kiosk_menu, exact: true })).toBeVisible();
+    await guest.getByRole("button", { name: "日本語", exact: true }).click();
+    await expect(guest.getByRole("tab", { name: ja.kiosk_menu, exact: true })).toBeVisible();
+    await guest.getByRole("combobox", { name: ja.currency_select, exact: true }).click();
+    await guest.getByRole("option", { name: /USD/ }).click();
+    // 認証入力・ペアリングコードを映さず、承認済みの注文画面から収録する。
+    const recording = await browser.newContext({
+      baseURL,
+      storageState: await guestContext.storageState(),
+      viewport: { width: 1024, height: 768 },
+      serviceWorkers: "block",
+      recordVideo: {
+        dir: testInfo.outputPath("tablecast-order-ui-video"),
+        size: { width: 1024, height: 768 },
+      },
+    });
+    await guestContext.close();
+    guestContext = recording;
+    guest = await guestContext.newPage();
+    await guest.emulateMedia({
+      reducedMotion: browserName === "webkit" ? "reduce" : "no-preference",
+    });
+    await guest.goto("/");
+    // 応答だけを1.5秒遅延し、実APIへの連続追加と即時表示を収録する。
+    let delayCart = true;
+    await guest.route("**/api/table/cart", async (route) => {
+      if (delayCart && route.request().method() === "PUT") {
+        delayCart = false;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      await route.continue();
+    });
+    await guest.evaluate(() => {
+      document.documentElement.dataset.tablecastCartFlights = "0";
+      document.documentElement.dataset.tablecastOrderFlights = "0";
+      document.documentElement.dataset.tablecastFlightsInViewport = "true";
+      new MutationObserver((records) => {
+        for (const record of records)
+          for (const node of record.addedNodes) {
+            if (
+              node instanceof Element &&
+              node.matches('[data-ui="cart-flight"], [data-ui="order-flight"]')
+            ) {
+              const key = node.matches('[data-ui="cart-flight"]')
+                ? "tablecastCartFlights"
+                : "tablecastOrderFlights";
+              document.documentElement.dataset[key] = String(
+                Number(document.documentElement.dataset[key]) + 1,
+              );
+              const bounds = node.getBoundingClientRect();
+              if (
+                bounds.left < 0 ||
+                bounds.top < 0 ||
+                bounds.right > innerWidth ||
+                bounds.bottom > innerHeight
+              ) {
+                document.documentElement.dataset.tablecastFlightsInViewport = "false";
+                document.documentElement.dataset.tablecastFlightViolation = JSON.stringify({
+                  kind: node.getAttribute("data-ui"),
+                  bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+                  viewport: [innerWidth, innerHeight],
+                });
+              }
+            }
+          }
+      }).observe(document.body, { childList: true, subtree: true });
+    });
+    await expect(guest.getByRole("tab", { name: ja.kiosk_menu, exact: true })).toBeVisible();
+    await expect(guest.locator('[data-ui="store-logo-banner"] img')).toBeVisible();
+    await expect(guest.locator('[data-ui="store-logo-banner"] img')).toHaveJSProperty(
+      "complete",
+      true,
+    );
+    expect(
+      await guest
+        .locator('[data-ui="store-logo-banner"] img')
+        .evaluate((image: HTMLImageElement) => image.naturalWidth),
+    ).toBeGreaterThan(0);
+    await expect(guest.locator('[data-ui="tab-price"] [aria-label]')).toHaveCount(2);
+    await guest.screenshot({ path: testInfo.outputPath("tablecast-menu.png") });
     const catalogue = catalogSchema.parse(
       await (await guest.request.get("/api/table/catalog")).json(),
     );
-    const products = ["single"].map((kind) => {
-      const product = catalogue.configuration.products.find(
-        (item) =>
-          item.available &&
-          item.modifiers.length > 0 &&
-          item.modifiers.every((modifier) => modifier.kind === kind),
-      );
-      if (!product) throw new Error(`${kind}の合成商品がありません`);
-      return product;
-    });
+    const customised = catalogue.configuration.products.find(
+      (item) =>
+        item.available &&
+        item.imageKey &&
+        item.modifiers.length > 0 &&
+        item.modifiers.every((modifier) => modifier.kind === "single"),
+    );
+    if (!customised) throw new Error("単一選択の商品が必要です");
+    const simpleByCategory = new Map(
+      catalogue.configuration.products
+        .filter(
+          (item) =>
+            item.available &&
+            item.imageKey &&
+            item.modifiers.length === 0 &&
+            item.categoryId !== customised.categoryId,
+        )
+        .map((item) => [item.categoryId, item]),
+    );
+    const products = [customised, ...Array.from(simpleByCategory.values()).slice(0, 2)];
+    if (products.length !== 3) throw new Error("複数商品を確認するため3商品が必要です");
     const chosen: Pick<CartLine, "productId" | "quantity" | "selections">[] = [];
     // 全modifier・文字拡大・音声失敗の分岐は部品とWebアプリ統合で所有する。
     for (const product of products) {
-      await test.step(`${product.text.en.displayName}をカスタマイズする`, async () => {
-        const menuTab = guest.getByRole("tab", { name: en.kiosk_menu, exact: true });
+      await test.step(`${product.text.ja.displayName}をカスタマイズする`, async () => {
+        const menuTab = guest.getByRole("tab", { name: ja.kiosk_menu, exact: true });
         await menuTab.click();
         await expect(menuTab).toHaveAttribute("aria-selected", "true");
         await guest
           .getByRole("tabpanel")
           .getByRole("button")
-          .filter({ has: guest.getByText(product.text.en.displayName, { exact: true }) })
+          .filter({ has: guest.getByText(product.text.ja.displayName, { exact: true }) })
           .click();
         const productPage = guest.getByRole("region", {
-          name: product.text.en.displayName,
+          name: product.text.ja.displayName,
           exact: true,
         });
         await expect(productPage).toBeVisible();
-        await expect(guest.getByRole("dialog")).toHaveCount(0);
+        await expect(
+          guest.getByRole("dialog", { name: product.text.ja.displayName, exact: true }),
+        ).toBeVisible();
         const selections: CartLine["selections"] = [];
         for (const modifier of product.modifiers) {
           const options = modifier.options.filter(
@@ -104,22 +197,99 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
           await productPage
             .getByRole("group", {
               name: new RegExp(
-                `^${modifier.text.en.displayName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+                `^${modifier.text.ja.displayName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
               ),
             })
-            .getByRole("radio", { name: first.text.en.displayName, exact: true })
+            .getByRole("radio", { name: first.text.ja.displayName, exact: true })
             .click();
           selections.push({ optionId: first.id, quantity: 1 });
         }
+        if (product.id === customised.id)
+          await guest.screenshot({ path: testInfo.outputPath("tablecast-product-dialog.png") });
         const quantity = 1;
-        await productPage.getByRole("button", { name: en.kiosk_add, exact: true }).click();
+        await productPage.getByRole("button", { name: ja.kiosk_add, exact: true }).click();
         await expect(productPage).not.toBeVisible();
-        await expect(
-          guest.getByRole("tab", { name: new RegExp(`^${en.kiosk_cart}`) }),
-        ).toHaveAttribute("aria-selected", "true");
+        await expect(guest.getByRole("tab", { name: ja.kiosk_menu, exact: true })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
         chosen.push({ productId: product.id, quantity, selections });
       });
     }
+    await guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
+    await expect(guest.getByText(ja.kiosk_cart_added, { exact: true }).first()).toBeVisible();
+    await expect(guest.getByText(ja.kiosk_cart_empty, { exact: true })).not.toBeVisible();
+    await guest.screenshot({ path: testInfo.outputPath("tablecast-basket-toast.png") });
+    await expect(guest.getByRole("button", { name: ja.kiosk_review, exact: true })).toBeEnabled();
+    // 通信完了を待ち、退出中・表示制限中の通知を操作対象にしない。
+    const basketToasts = guest
+      .getByRole("dialog", { name: ja.kiosk_cart_added, exact: true })
+      .and(guest.locator(":not([data-ending-style]):visible"));
+    while (await basketToasts.count()) {
+      await basketToasts
+        .first()
+        .getByRole("button", { name: ja.common_close, exact: true })
+        .press("Enter");
+    }
+    if (browserName === "chromium") {
+      // 実データのカゴを各端末のCSS viewportで撮影する。
+      for (const [width, height] of [
+        [1512, 982],
+        [1180, 820],
+        [820, 1180],
+        [402, 874],
+      ] as const) {
+        const preview = await browser.newContext({
+          baseURL,
+          storageState: await guestContext.storageState(),
+          viewport: { width, height },
+          reducedMotion: "reduce",
+          serviceWorkers: "block",
+        });
+        try {
+          const responsive = await preview.newPage();
+          await responsive.goto("/");
+          await expect(responsive.getByRole("tab")).toHaveCount(3);
+          await expect(
+            responsive.getByRole("button", { name: ja.kiosk_review, exact: true }),
+          ).toBeVisible();
+          await expect(responsive.locator('[data-ui="cart-preview"] img')).toHaveCount(
+            products.length,
+          );
+          await expect(responsive.locator('[data-ui="tab-price"] [aria-label]')).toHaveCount(2);
+          const branding = await responsive
+            .locator('[data-ui="store-logo-banner"]')
+            .evaluate((element) => {
+              const image = element.querySelector("img");
+              const caption = element.querySelector("div");
+              const name = caption?.querySelector("span");
+              if (!image || !caption || !name) throw new Error("店舗バナー・店名・卓名が必要です");
+              const picture = image.getBoundingClientRect();
+              const text = caption.getBoundingClientRect();
+              return {
+                imageCenter: picture.top + picture.height / 2,
+                textCenter: text.top + text.height / 2,
+                imageRight: picture.right,
+                textLeft: text.left,
+                nameWidth: name.clientWidth,
+                nameContentWidth: name.scrollWidth,
+              };
+            });
+          expect(branding.imageCenter).toBeCloseTo(branding.textCenter, 0);
+          expect(branding.textLeft).toBeGreaterThan(branding.imageRight);
+          expect(branding.nameContentWidth).toBeLessThanOrEqual(branding.nameWidth + 1);
+          await responsive.screenshot({
+            path: testInfo.outputPath(`tablecast-basket-${width}.png`),
+          });
+        } finally {
+          await preview.close();
+        }
+      }
+    }
+    const flights = await guest.evaluate(() =>
+      Number(document.documentElement.dataset.tablecastCartFlights),
+    );
+    expect(flights).toBe(browserName === "webkit" ? 0 : products.length);
     const basket = tableStateSchema.parse(
       await (await guest.request.get("/api/table")).json(),
     ).cart;
@@ -131,27 +301,59 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
         selections,
       })),
     ).toEqual(chosen);
-    await expect(guest.getByRole("textbox")).toHaveCount(0);
-    await expect(guest.getByRole("button", { name: "Review order", exact: true })).toBeEnabled();
+    await expect(guest.getByRole("textbox")).toHaveCount(products.length);
+    await expect(
+      guest.getByRole("textbox", { name: new RegExp(`${ja.common_quantity}$`) }).first(),
+    ).toHaveValue("1");
+    await expect(guest.getByRole("button", { name: ja.kiosk_review, exact: true })).toBeEnabled();
     await staff.goto(`/admin/stores/${storeId}/floor`);
     await expect(
       staff.getByRole("heading", { name: labels.admin_live, exact: true }),
     ).toBeVisible();
-    await guest.getByRole("tab", { name: /^Your basket/ }).click();
-    await guest.getByRole("button", { name: "Review order", exact: true }).click();
-    const review = guest.getByRole("region", { name: en.kiosk_review_title, exact: true });
+    await guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
+    await guest.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
+    const review = guest.getByRole("region", { name: ja.kiosk_review_title, exact: true });
     await expect(review).toBeVisible();
-    await expect(guest.getByRole("dialog")).toHaveCount(0);
-    for (const product of products) await expect(review).toContainText(product.text.en.displayName);
-    await guest.getByRole("button", { name: en.kiosk_confirm, exact: true }).click();
-    const orderNotice = guest.getByRole("status").filter({ hasText: en.kiosk_ordered });
+    await expect(guest.locator('[data-theme-part="dialog"]')).toHaveCount(0);
+    for (const product of products) await expect(review).toContainText(product.text.ja.displayName);
+    await guest.getByRole("button", { name: ja.kiosk_confirm, exact: true }).click();
+    const orderNotice = guest.getByRole("dialog", { name: ja.kiosk_ordered, exact: true });
     await expect(orderNotice).toBeVisible();
-    await orderNotice.getByRole("button", { name: en.common_close, exact: true }).click();
+    expect(
+      await guest.evaluate(() => Number(document.documentElement.dataset.tablecastOrderFlights)),
+    ).toBe(browserName === "webkit" ? 0 : products.length);
+    expect(
+      await guest.evaluate(() => document.documentElement.dataset.tablecastFlightsInViewport),
+      await guest.evaluate(() => document.documentElement.dataset.tablecastFlightViolation),
+    ).toBe("true");
+    await expect(guest.locator('[data-ui="orders-preview"] img')).toHaveCount(products.length);
+    await orderNotice.getByRole("button", { name: ja.common_close, exact: true }).click();
     const ordered = tableStateSchema.parse(await (await guest.request.get("/api/table")).json());
     expect(ordered.cart.lines).toHaveLength(0);
     expect(ordered.orders).toHaveLength(1);
     expect(ordered.orders[0]?.snapshot.lines).toEqual(basket.lines);
     expect(ordered.billRequested).toBe(false);
+    await guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_orders_bill}`) }).click();
+    const history = guest.locator('[data-ui="order-card"]');
+    await expect(history).toBeVisible();
+    // snapshotの名称・金額を保ったまま現在カタログの写真を添える。
+    const historyImages = basket.lines.reduce((sum, line) => {
+      const product = catalogue.configuration.products.find((item) => item.id === line.productId);
+      return (
+        sum +
+        (product?.imageKey ? 1 : 0) +
+        line.options.filter((option) =>
+          product?.modifiers
+            .flatMap((group) => group.options)
+            .some((item) => item.id === option.id && item.imageKey),
+        ).length
+      );
+    }, 0);
+    expect(historyImages).toBeGreaterThan(1);
+    await expect(history.locator("img")).toHaveCount(historyImages);
+    await expect(guest.getByRole("tabpanel")).toHaveCSS("opacity", "1");
+    await expect(guest.getByRole("banner")).toBeInViewport();
+    await guest.screenshot({ path: testInfo.outputPath("tablecast-history.png") });
     await staff.goto(`/admin/stores/${storeId}/floor`);
     const billingMetric = staff
       .getByRole("region", { name: labels.floor_current, exact: true })
@@ -165,8 +367,8 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
       (table) => table.billRequested && table.bill.due > 0,
     ).length;
     await expect(billingMetric).toHaveText(String(previousBilling));
-    await guest.getByRole("tab", { name: en.kiosk_bill, exact: true }).click();
-    await guest.getByRole("button", { name: en.kiosk_bill_request, exact: true }).click();
+    await guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_orders_bill}`) }).click();
+    await guest.getByRole("button", { name: ja.kiosk_bill_request, exact: true }).click();
     await expect(billingMetric).toHaveText(String(previousBilling + 1));
     await staff.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();
     await expect(staff).toHaveURL(
@@ -212,7 +414,7 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
       .getByRole("tabpanel")
       .getByRole("button", { name: labels.admin_close_session, exact: true })
       .click();
-    await expect(guest.getByRole("heading", { name: "Thank you for joining us" })).toBeVisible();
+    await expect(guest.getByRole("heading", { name: ja.kiosk_closed })).toBeVisible();
     const closed = tableStateSchema.parse(
       await (await staff.request.get(`/api/admin/stores/${storeId}/tables/${ordered.id}`)).json(),
     );
@@ -220,6 +422,12 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     expect(closed.status).toBe("closed");
   } finally {
     // DBとWorkerはcase専用fixtureが破棄する。後片付けのHTTPで元の失敗を上書きしない。
+    const video = guest.video();
     await guestContext.close();
+    if (video)
+      await testInfo.attach("tablecast-order-ui", {
+        path: await video.path(),
+        contentType: "video/webm",
+      });
   }
 });

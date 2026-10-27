@@ -3,7 +3,7 @@ import { configurationSchema } from "@tablecast/api/schema";
 import type { GroupKey } from "./types.ts";
 import { demoOptionImageKey } from "../tablecast-demo-option-images.ts";
 import { koreanDemoStore } from "../tablecast-korean-demo.ts";
-import { demoImageKey } from "../tablecast-seed-media.ts";
+import { demoImageKey, demoStoreBanner, demoStoreLogo } from "../tablecast-seed-media.ts";
 import { groupDefinitions } from "./modifiers.ts";
 import { sakeKinds, sakes } from "./sake.ts";
 import { categories, drinks, foods, stores } from "./store-data.ts";
@@ -11,7 +11,7 @@ import { allergenRecord, bilingual } from "./text.ts";
 import { westwardConfiguration } from "./westward.ts";
 
 export function demoStores(profile: "demo" | "history" | "smoke") {
-  return stores.map((store) => {
+  const seededStores = stores.map((store) => {
     if (store.id === "tablecast-hanul") return koreanDemoStore(profile);
     if (store.id === "tablecast-koharu") {
       return {
@@ -212,4 +212,14 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
       tableCount: profile === "smoke" ? 2 : 12,
     };
   });
+  return seededStores.map((store) => ({
+    ...store,
+    configuration: configurationSchema.parse({
+      ...store.configuration,
+      branding: {
+        logo: demoStoreLogo(store.id, store.name),
+        banner: demoStoreBanner(store.id, store.name),
+      },
+    }),
+  }));
 }

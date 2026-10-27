@@ -7,7 +7,9 @@ export const devicesRoutes = apiFactory
   .createApp()
   .post("/api/devices/request", async (c) =>
     c.json(
-      await c.get("services").auth.api.deviceCode({
+      await (
+        await c.get("services").getAuth()
+      ).api.deviceCode({
         body: { client_id: "tablecast-kiosk", scope: "tablecast:table" },
       }),
       200,

@@ -26,18 +26,52 @@ export async function measured<T>(
 ): Promise<T> {
   if (!trace.getActiveSpan()) return operation();
   return trace.getTracer("tablecast").startActiveSpan(name, async (span) => {
+    const started = performance.now();
     try {
       return await operation();
     } catch (error) {
       span.setStatus({ code: SpanStatusCode.ERROR });
       throw error;
     } finally {
+      recordTiming(name, performance.now() - started);
       span.end();
     }
   });
 }
 
 export const telemetryChannel = createContextKey("tablecast.channel");
+export const telemetryTimings = createContextKey("tablecast.timings");
+
+export function recordTiming(name: string, duration: number, description?: string) {
+  const timings = context.active().getValue(telemetryTimings);
+  if (timings instanceof Map) timings.set(name, { duration, description });
+}
+
+// Drizzleが保持する更新結果の実metadataだけを記録する。binding待ちとSQL時間を分ける。
+export function recordD1Update(meta: D1Meta) {
+  const location = [meta.served_by_region, meta.served_by_colo]
+    .filter((value) => value && /^[A-Z]{3,6}$/.test(value))
+    .join("/");
+  const sqlMs = meta.timings?.sql_duration_ms ?? meta.duration;
+  recordTiming("tablecast.d1.update.sql", sqlMs, location || undefined);
+  trace.getActiveSpan()?.setAttributes({
+    "cloudflare.d1.response.sql_duration_ms": sqlMs,
+    "cloudflare.d1.response.rows_read": meta.rows_read,
+    "cloudflare.d1.response.rows_written": meta.rows_written,
+    ...(meta.served_by_region
+      ? { "cloudflare.d1.response.served_by_region": meta.served_by_region }
+      : {}),
+    ...(meta.served_by_colo
+      ? { "cloudflare.d1.response.served_by_colo": meta.served_by_colo }
+      : {}),
+    ...(meta.served_by_primary === undefined
+      ? {}
+      : { "cloudflare.d1.response.served_by_primary": meta.served_by_primary }),
+    ...(meta.total_attempts === undefined
+      ? {}
+      : { "cloudflare.d1.response.total_attempts": meta.total_attempts }),
+  });
+}
 
 // 操作全体の完了ログはtraceのsamplingとは独立させ、集計の母数を保つ。
 export async function observeOperation<T>(

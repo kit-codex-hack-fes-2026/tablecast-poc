@@ -2,6 +2,7 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server.browser";
 import { expect, it } from "vitest";
 import { page } from "vitest/browser";
+import ja from "../../messages/ja.json";
 import { LocaleProvider } from "../i18n/locale";
 import { MenuOptionImage } from "./menu-option-image";
 
@@ -23,9 +24,12 @@ it("hydration前に失敗したSSR画像も代替表示へ切り替える", asyn
     // サーバーHTMLの画像が失敗してからReactを接続し、取り逃したerrorも復旧する。
     await expect.poll(() => image.complete).toBe(true);
     expect(image.naturalWidth).toBe(0);
-    await expect.element(page.getByText("イメージイラスト", { exact: true })).toBeVisible();
+    await expect.element(page.getByText(ja.kiosk_illustration, { exact: true })).toBeVisible();
     expect(
-      page.getByText("イメージイラスト", { exact: true }).element().closest('[aria-hidden="true"]'),
+      page
+        .getByText(ja.kiosk_illustration, { exact: true })
+        .element()
+        .closest('[aria-hidden="true"]'),
     ).toBeNull();
     const root = hydrateRoot(container, content);
     try {

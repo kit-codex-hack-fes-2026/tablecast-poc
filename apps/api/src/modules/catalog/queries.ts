@@ -13,6 +13,17 @@ export async function getCatalog(
   return observeOperation(
     "tablecast.catalog.read",
     async () => {
+      const pricing = services.tableAccess.pricing;
+      if (!demoId && pricing?.store.id === storeId)
+        return catalogValue({ store: pricing.store, demo: null });
+      const demo = services.tableAccess.demo;
+      if (demoId && demo?.id === demoId && demo.storeId === storeId)
+        return {
+          storeId,
+          storeName: demo.configuration.storeName,
+          version: demo.configuration.config_version,
+          configuration: configurationSchema.parse(JSON.parse(demo.configuration.config_json)),
+        };
       return catalogValue(await catalogQuery(services.db, storeId, demoId).get(), demoId);
     },
     { env: services.env, input: { storeId } },

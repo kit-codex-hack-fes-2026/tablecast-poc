@@ -161,9 +161,9 @@ it("音声開始が失敗しても実Queryのカートと画面操作を維持�
     await expect
       .element(page.getByText(/音声サービスの準備が整い次第ご利用いただけます。/))
       .toBeVisible();
-    await page.getByRole("tab", { name: "おしながき", exact: true }).click();
+    await page.getByRole("tab", { name: ja.kiosk_menu, exact: true }).click();
     await expect
-      .element(page.getByRole("tab", { name: "おしながき", exact: true }))
+      .element(page.getByRole("tab", { name: ja.kiosk_menu, exact: true }))
       .toHaveAttribute("aria-selected", "true");
     expect(fixture.client.getQueryData<TableState>(["tablecast-table"])?.cart).toEqual(before);
     expect(requests.filter((request) => request.url.endsWith("/voice/start"))).toHaveLength(1);

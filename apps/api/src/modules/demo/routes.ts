@@ -5,19 +5,13 @@ import { requireStore } from "../auth/middleware";
 import { requireManager } from "../auth/policy";
 import { instructionResponse } from "../configuration/instruction-response";
 import { tableOperations } from "../tables/operations-routes";
-import { getSession } from "../tables/queries";
+import { requireDemo } from "./middleware";
 import { demoUpdateSchema } from "./model";
 import { getDemo } from "./queries";
-import { createDemo, resetDemo, updateDemo } from "./service";
 
 const demoSessionRoutes = apiFactory
   .createApp()
-  .use("*", async (c, next) => {
-    const demoId = c.req.param("demoId");
-    c.set("actor", { ...c.get("actor"), demoId, tableSessionId: demoId });
-    await getSession(c.get("services"), c.get("actor"));
-    await next();
-  })
+  .use("*", requireDemo)
   .get("/", async (c) =>
     c.json(
       instructionResponse(
@@ -30,7 +24,9 @@ const demoSessionRoutes = apiFactory
   .patch("/", validate(demoUpdateSchema), async (c) =>
     c.json(
       instructionResponse(
-        await updateDemo(c.get("services"), c.get("actor"), c.req.valid("json")),
+        await (
+          await import("./service")
+        ).updateDemo(c.get("services"), c.get("actor"), c.req.valid("json")),
         c.req.header("X-Tablecast-Instructions"),
       ),
       200,
@@ -46,7 +42,9 @@ const demoSessionRoutes = apiFactory
     async (c) =>
       c.json(
         instructionResponse(
-          await resetDemo(c.get("services"), c.get("actor"), c.req.valid("json").expectedVersion),
+          await (
+            await import("./service")
+          ).resetDemo(c.get("services"), c.get("actor"), c.req.valid("json").expectedVersion),
           c.req.header("X-Tablecast-Instructions"),
         ),
         200,
@@ -55,18 +53,14 @@ const demoSessionRoutes = apiFactory
   .route("/table", tableOperations);
 export const demoRoutes = apiFactory
   .createApp()
-  .use("*", requireStore)
-  .use("*", async (c, next) => {
+  .post("/", requireStore, async (c) => {
     requireManager(c.get("actor"));
-    await next();
-  })
-  .post("/", async (c) =>
-    c.json(
+    return c.json(
       instructionResponse(
-        await createDemo(c.get("services"), c.get("actor")),
+        await (await import("./service")).createDemo(c.get("services"), c.get("actor")),
         c.req.header("X-Tablecast-Instructions"),
       ),
       200,
-    ),
-  )
+    );
+  })
   .route("/:demoId", demoSessionRoutes);

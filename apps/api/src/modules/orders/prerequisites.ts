@@ -6,6 +6,8 @@ import type { Actor } from "../auth/model";
 import type { submitSchema } from "./model";
 import * as business from "../../db/business-schema";
 import { catalogQuery } from "../catalog/queries";
+import { pointBillingCorrectionQueries } from "../customer-points/queries";
+import { planUsageQuery } from "./queries";
 
 export async function orderPrerequisites(
   services: ApiServices,
@@ -48,15 +50,7 @@ export async function orderPrerequisites(
       .limit(1),
     catalogQuery(db, actor.storeId, session.kind === "demo" ? session.id : undefined),
   ] as const;
-  const plan = db
-    .select()
-    .from(business.orders)
-    .where(
-      and(
-        eq(business.orders.table_session_id, session.id),
-        eq(business.orders.store_id, actor.storeId),
-      ),
-    );
+  const plan = planUsageQuery(db, session.id, actor.storeId);
   const turn = db
     .select({ started_at: business.voiceTurns.started_at })
     .from(business.voiceTurns)
@@ -69,11 +63,25 @@ export async function orderPrerequisites(
       ),
     )
     .limit(1);
-  if (session.plan_json && actor.kind === "voice") return db.batch([...base, plan, turn]);
-  if (session.plan_json) return [...(await db.batch([...base, plan])), []] as const;
-  if (actor.kind === "voice") {
-    const [orders, confirmations, coupons, catalogs, turns] = await db.batch([...base, turn]);
-    return [orders, confirmations, coupons, catalogs, [], turns] as const;
+  const points = pointBillingCorrectionQueries(services, actor);
+  if (session.plan_json && actor.kind === "voice")
+    return db.batch([...base, plan, turn, ...points]);
+  if (session.plan_json) {
+    const [orders, confirmations, coupons, catalogs, planOrders, visits, allocations] =
+      await db.batch([...base, plan, ...points]);
+    return [orders, confirmations, coupons, catalogs, planOrders, [], visits, allocations] as const;
   }
-  return [...(await db.batch(base)), [], []] as const;
+  if (actor.kind === "voice") {
+    const [orders, confirmations, coupons, catalogs, turns, visits, allocations] = await db.batch([
+      ...base,
+      turn,
+      ...points,
+    ]);
+    return [orders, confirmations, coupons, catalogs, [], turns, visits, allocations] as const;
+  }
+  const [orders, confirmations, coupons, catalogs, visits, allocations] = await db.batch([
+    ...base,
+    ...points,
+  ]);
+  return [orders, confirmations, coupons, catalogs, [], [], visits, allocations] as const;
 }

@@ -26,6 +26,21 @@ it.each(["ja", "en"] as const)(
     const labels = locale === "ja" ? ja : en;
     fixture.current.locale = locale;
     fixture.current.uiSection = "menu";
+    fixture.catalogResponse = Response.json({
+      ...catalog,
+      configuration: {
+        ...catalog.configuration,
+        branding: {
+          logo: null,
+          banner: {
+            imageKey: `tablecast/uploads/${"a".repeat(64)}.webp`,
+            alt: { ja: "店舗バナー", en: "Store banner" },
+            imageKind: "illustration",
+            imageSource: { generated: true, description: "横長バナーの配置試験用" },
+          },
+        },
+      },
+    });
     fixture.current.events = [
       {
         cursor: 1,
@@ -91,6 +106,8 @@ it.each(["ja", "en"] as const)(
     const conversation = page
       .getByRole("region", { name: labels.kiosk_conversation, exact: true })
       .element();
+    // イベントの独立queryが初期cursorを取得してから通知接続を開始する。
+    await expect.poll(() => TablecastSocket.instances.length).toBe(1);
     const socket = fixtureValue(TablecastSocket.instances[0]);
     const cart = structuredClone(fixture.current.cart);
     const order = orderPanel();
@@ -137,6 +154,11 @@ it.each(["ja", "en"] as const)(
       [402, 874],
     ] as const) {
       await page.viewport(width, height);
+      const brand = document.querySelector('header img[alt="TableCast"]');
+      const storeBanner = document.querySelector('header [data-ui="store-logo-banner"] img');
+      if (!brand || !storeBanner) throw new Error("ヘッダーのブランドと店舗バナーが必要です");
+      expect(brand.getBoundingClientRect().width).toBe(112);
+      expect(storeBanner.getBoundingClientRect().height).toBe(40);
       await expect
         .element(page.getByRole("separator", { name: labels.kiosk_resize_panes }))
         .toHaveAttribute("aria-orientation", width >= 896 ? "vertical" : "horizontal");
@@ -192,7 +214,13 @@ it.each(["ja", "en"] as const)(
       .element(page.getByRole("button", { name: labels.kiosk_history_show }))
       .not.toBeInTheDocument();
     for (const tab of page.getByRole("tab").elements()) {
-      expect(tab.getBoundingClientRect().height).toBe(56);
+      expect(tab.getBoundingClientRect().height).toBe(
+        page
+          .getByRole("button", { name: labels.kiosk_voice_resume, exact: true })
+          .element()
+          .getBoundingClientRect().height,
+      );
+      expect(parseFloat(getComputedStyle(tab).fontSize)).toBeGreaterThanOrEqual(14);
       expect(tab.scrollWidth).toBeLessThanOrEqual(tab.clientWidth);
     }
     await page.viewport(1024, 768);

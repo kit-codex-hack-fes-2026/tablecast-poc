@@ -37,7 +37,7 @@ export function apiCloudflareConfig(input: TablecastConfigOptions = {}) {
       compatibilityFlags: ["nodejs_compat", "nodejs_compat_do_not_populate_process_env"],
       workersDev: false,
       previewUrls: false,
-      placement: { mode: "smart" },
+      placement: { region: "aws:ap-southeast-1" },
       observability: { enabled: true, headSamplingRate: 1 },
       triggers: [triggers.scheduled({ schedule: "*/5 * * * *" })],
       exports: {

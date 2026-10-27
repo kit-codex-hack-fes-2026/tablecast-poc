@@ -18,10 +18,10 @@ export function CustomerOrderAttribution({
   const { t, locale } = useI18n();
   const client = useQueryClient();
   const participants = useQuery({
-    queryKey: ["tablecast-participants", order.tableSessionId, "attribution"],
+    queryKey: ["tablecast-participants", order.tableSessionId, endpoint.key],
     queryFn: ({ signal }) =>
       parseResponse(endpoint.client.participants.$get({}, { init: { signal } })),
-    gcTime: 0,
+    staleTime: 30_000,
   });
   const save = useMutation({
     mutationFn: (input: {

@@ -1,4 +1,5 @@
 import { displayCurrencyCodes } from "@tablecast/api/schema";
+import { Coins } from "lucide-react";
 import { useContext } from "react";
 import { Flag } from "../../components/flag";
 import { currencyFlags, jp } from "../../components/flags";
@@ -7,7 +8,7 @@ import { CurrencyContext } from "../../i18n/currency-context";
 import { currencyName, currencySymbol, yenRate } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 
-export function CurrencySelector() {
+export function CurrencySelector({ compact = false }: { compact?: boolean }) {
   const { currency, rates, pending, setCurrency } = useContext(CurrencyContext);
   const { locale, t } = useI18n();
   if (!setCurrency) return null;
@@ -21,8 +22,13 @@ export function CurrencySelector() {
     >
       <SelectTrigger
         aria-label={t("currency_select")}
-        className="min-h-14 w-auto shrink-0 gap-2 rounded-lg text-sm"
+        className={
+          compact
+            ? "h-13.5 min-h-13.5 w-auto shrink-0 gap-1.5 rounded-xl px-2 text-sm"
+            : "min-h-14 w-auto shrink-0 gap-2 rounded-xl text-sm"
+        }
       >
+        {compact && <Coins aria-hidden className="size-4 shrink-0" />}
         <Flag src={currency ? currencyFlags[currency] : jp} />
         <span>
           {currencySymbol(currency ?? "JPY")} {currency ?? "JPY"}

@@ -291,8 +291,8 @@ for (const count of [24, 120]) {
       )
       .toBe(true);
     const cartBounds = await cartImage.boundingBox();
-    expect(cartBounds?.width).toBe(64);
-    expect(cartBounds?.height).toBe(64);
+    expect(cartBounds?.width).toBeCloseTo(112, 2);
+    expect(cartBounds?.height).toBeCloseTo(cartBounds?.width ?? 0, 2);
     await testInfo.attach("tablecast-image-metrics", {
       body: JSON.stringify({ count, samples, cache, detailBounds, cartBounds }, null, 2),
       contentType: "application/json",

@@ -115,6 +115,7 @@ it("店舗ロゴ・装飾・チラシの他店舗画像を拒否し公開まで�
   };
   for (const change of [
     { branding: { logo: image } },
+    { branding: { logo: null, banner: image } },
     { appearance: { assets: { paper: image } } },
     { banners: [banner] },
   ]) {
@@ -132,7 +133,7 @@ it("店舗ロゴ・装飾・チラシの他店舗画像を拒否し公開まで�
     expectedVersion: draft.version,
     configuration: {
       ...configuration,
-      branding: { logo: image },
+      branding: { logo: image, banner: image },
       appearance: { assets: { paper: image } },
       banners: [banner],
     },
@@ -147,6 +148,7 @@ it("店舗ロゴ・装飾・チラシの他店舗画像を拒否し公開まで�
     approved: true,
   });
   expect((await getCatalog(services, staff.storeId)).configuration.branding?.logo).toEqual(image);
+  expect((await getCatalog(services, staff.storeId)).configuration.branding?.banner).toEqual(image);
   for (const logo of [{ ...image, imageKey: `tablecast/uploads/${"b".repeat(64)}.webp` }, null]) {
     if (logo)
       await env.TABLECAST_MEDIA.put(logo.imageKey, "replacement", {
@@ -155,7 +157,7 @@ it("店舗ロゴ・装飾・チラシの他店舗画像を拒否し公開まで�
     const edit = await createDraft(services, staff);
     const saved = await updateDraft(services, staff, edit.id, {
       expectedVersion: edit.version,
-      configuration: { ...edit.configuration, branding: { logo } },
+      configuration: { ...edit.configuration, branding: { ...edit.configuration.branding, logo } },
     });
     const validated = await validateDraft(services, staff, edit.id, saved.version);
     await publishDraft(services, staff, edit.id, {
@@ -166,6 +168,7 @@ it("店舗ロゴ・装飾・チラシの他店舗画像を拒否し公開まで�
     });
     const published = (await getCatalog(services, staff.storeId)).configuration;
     expect(published.branding?.logo).toEqual(logo);
+    expect(published.branding?.banner).toEqual(image);
     expect(published.appearance).toEqual(next.configuration.appearance);
     expect(published.products).toEqual(configuration.products);
   }

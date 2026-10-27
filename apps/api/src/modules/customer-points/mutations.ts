@@ -1,5 +1,6 @@
+import type { BatchResponse } from "drizzle-orm/batch";
 import type { z } from "zod";
-import { and, eq, isNotNull, notInArray, sql, type SQL, sum } from "drizzle-orm";
+import { and, eq, sql, type SQL } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import { customerMemberships } from "../../db/customer-schema";
@@ -9,11 +10,12 @@ import {
   customerPointPolicies,
   customerPointVisits,
 } from "../../db/rewards-schema";
-import { orders, payments, tableSessions } from "../../db/table-schema";
+import { tableSessions } from "../../db/table-schema";
 import { tablePlanSchema } from "../tables/model";
 import { mutationGate } from "../tables/mutations";
 import { billValue } from "../tables/values";
 import { noPointRules, pointRulesSchema } from "./model";
+import { pointBillingCorrectionQueries } from "./queries";
 
 export function pointEntryStatement(
   services: ApiServices,
@@ -105,63 +107,10 @@ export async function pointBillingCorrectionStatements(
   amountDelta: number,
   reference: string,
   mutation: string,
+  known?: BatchResponse<ReturnType<typeof pointBillingCorrectionQueries>>,
 ) {
-  // 配分の合計ではなく会計原本を読み、呼出し元の会計版で成立する差額だけを反映する。
-  const orderedTotal = services.db
-    .select({ total: sum(orders.total) })
-    .from(orders)
-    .where(
-      and(
-        eq(orders.store_id, actor.storeId),
-        eq(orders.table_session_id, actor.tableSessionId ?? ""),
-        notInArray(orders.status, ["cancelled", "rejected"]),
-      ),
-    );
-  const adjustmentTotal = services.db
-    .select({ total: sum(payments.amount) })
-    .from(payments)
-    .where(
-      and(
-        eq(payments.store_id, actor.storeId),
-        eq(payments.table_session_id, actor.tableSessionId ?? ""),
-        eq(payments.kind, "adjustment"),
-      ),
-    );
-  const [visits, allocations] = await services.db.batch([
-    services.db
-      .select({
-        sessionId: customerPointVisits.sessionId,
-        rulesJson: customerPointVisits.rulesJson,
-        planJson: tableSessions.plan_json,
-        guestCount: tableSessions.guest_count,
-        orderedTotal: sql<number>`coalesce((${orderedTotal}),0)`.mapWith(Number),
-        adjustmentTotal: sql<number>`coalesce((${adjustmentTotal}),0)`.mapWith(Number),
-      })
-      .from(customerPointVisits)
-      .innerJoin(
-        tableSessions,
-        and(
-          eq(tableSessions.id, customerPointVisits.sessionId),
-          eq(tableSessions.store_id, customerPointVisits.storeId),
-        ),
-      )
-      .where(
-        and(
-          eq(customerPointVisits.sessionId, actor.tableSessionId ?? ""),
-          eq(customerPointVisits.storeId, actor.storeId),
-          isNotNull(customerPointVisits.confirmedAt),
-        ),
-      ),
-    services.db
-      .select()
-      .from(customerPointAllocations)
-      .where(
-        and(
-          eq(customerPointAllocations.sessionId, actor.tableSessionId ?? ""),
-          eq(customerPointAllocations.storeId, actor.storeId),
-        ),
-      ),
-  ]);
+  const [visits, allocations] =
+    known ?? (await services.db.batch(pointBillingCorrectionQueries(services, actor)));
   const visit = visits[0];
   if (!visit) return [];
   const rules = pointRulesSchema.parse(JSON.parse(visit.rulesJson));

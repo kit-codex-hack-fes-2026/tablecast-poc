@@ -112,11 +112,20 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
           {
             role: "logo",
             target: "branding.logo",
-            suggestedSize: "1200×400 透過PNG",
+            suggestedSize: "1024×1024 透過PNG",
             brief:
               "提供された公式ロゴをそのまま使う。新規制作を依頼された場合だけ生成し、生成案と明示。文字を正確に、透明な余白を8%程度残し、280px幅でも読める太さにする。背景・影・UIを焼き込まない。",
             placement:
-              "ヘッダー枠は固定。メニューで大きく見せる場合はappearance.composition.mastheadのvisible/align/logoWidth/logoHeight/paddingを設定する。",
+              "正方形の店舗ロゴ。ヘッダーの横長画像はbranding.bannerへ別に設定する。メニューで大きく見せる場合はappearance.composition.mastheadのvisible/align/logoWidth/logoHeight/paddingを設定する。",
+          },
+          {
+            role: "header-banner",
+            target: "branding.banner",
+            suggestedSize: "1200×300（4:1を例とし任意比率）",
+            brief:
+              "店舗ロゴと別の横長バナー。提供された画像を優先し、切り抜きや引き伸ばしをしない。",
+            placement:
+              "注文画面のヘッダーで画像全体を元の比率のまま表示する。バナー・店名・卓名は同じ横一列に表示する。",
           },
           {
             role: "banner",
@@ -142,7 +151,7 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
     "upload_image",
     {
       description:
-        "店舗設定用の商品・店舗ロゴ・テーマ装飾・チラシ画像・クーポン券面を取り込む。画像テーマは先にget_theme_specで素材別の寸法と配置を確認し、クライアントの画像生成機能で別々に制作する。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品、branding.logo、appearance.assets、bannersの画像へ設定する。ロゴ・装飾・チラシにはaltの日英説明も設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
+        "店舗設定用の商品・店舗ロゴ・テーマ装飾・チラシ画像・クーポン券面を取り込む。画像テーマは先にget_theme_specで素材別の寸法と配置を確認し、クライアントの画像生成機能で別々に制作する。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品、branding.logo、branding.banner、appearance.assets、bannersの画像へ設定する。ロゴ・装飾・チラシにはaltの日英説明も設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
       inputSchema: uploadImageSchema.shape,
       outputSchema: uploadedImageSchema.shape,
       _meta: { "openai/fileParams": ["file"] },

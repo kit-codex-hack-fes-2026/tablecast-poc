@@ -16,6 +16,9 @@ export type UiSectionInput = z.infer<typeof uiSectionInputSchema>;
 export type TableEvent = z.infer<typeof tableEventSchema>;
 
 export type TableState = z.infer<typeof tableStateSchema>;
+export type CoreState = z.infer<typeof coreStateSchema>;
+export const stateViewSchema = z.object({ view: z.enum(["full", "core"]).default("full") });
+export type StateView = z.infer<typeof stateViewSchema>["view"];
 
 export const historyQuerySchema = z
   .object({
@@ -152,6 +155,10 @@ export const tableStateSchema = z.object({
   openedAt: z.number().int(),
   cart: cartSchema,
   orders: z.array(orderSchema),
+  orderSummary: z.object({
+    quantity: z.number().int().nonnegative(),
+    productIds: z.array(z.string()).max(3),
+  }),
   bill: billSchema,
   billRequested: z.boolean(),
   events: z.array(tableEventSchema),
@@ -160,6 +167,26 @@ export const tableStateSchema = z.object({
   staffCalled: z.boolean(),
   snapshot: snapshotSchema.nullable(),
 });
+
+export const coreStateSchema = tableStateSchema.omit({ orders: true, events: true });
+export const orderPageQuerySchema = z
+  .object({
+    beforeCreatedAt: decimalQuerySchema.pipe(z.number().int().nonnegative()).optional(),
+    beforeId: id.optional(),
+    limit: pageLimitSchema.default(50),
+  })
+  .strict()
+  .refine((query) => (query.beforeCreatedAt === undefined) === (query.beforeId === undefined), {
+    path: ["beforeId"],
+  });
+export const orderPageSchema = z.object({
+  orders: z.array(orderSchema),
+  nextCursor: z.object({ createdAt: z.number().int(), id }).nullable(),
+  cursor: z.number().int(),
+});
+export type OrderPage = z.infer<typeof orderPageSchema>;
+export type OrderPageQuery = z.infer<typeof orderPageQuerySchema>;
+export const submittedCoreOrderSchema = z.object({ order: orderSchema, state: coreStateSchema });
 
 export const eventsSchema = z.object({
   events: z.array(tableEventSchema),

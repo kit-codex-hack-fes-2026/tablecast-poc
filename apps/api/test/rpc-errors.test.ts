@@ -78,7 +78,9 @@ it("卓clientの認証失敗も標準DetailedErrorとして返す", async () => 
   });
   // When / Then: 401の型を公開し、実応答も標準例外にする。
   expectTypeOf<InferResponseType<typeof table.index.$get, 401>>().toHaveProperty("error");
-  await expect(parseResponse(table.index.$get())).rejects.toBeInstanceOf(DetailedError);
+  await expect(parseResponse(table.index.$get({ query: {} }))).rejects.toBeInstanceOf(
+    DetailedError,
+  );
 });
 
 it("サイズ制限による拒否でも業務RPCのコードとrequest IDを返す", async () => {

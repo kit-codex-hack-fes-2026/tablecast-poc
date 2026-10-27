@@ -32,10 +32,18 @@ const moduleContracts = {
   games: ["model", "queries", "use-cases/publication"],
   mcp: [],
   media: ["model", "service"],
-  orders: ["model", "use-cases/cart", "use-cases/confirmation"],
+  orders: ["queries", "model", "use-cases/cart", "use-cases/confirmation"],
   statistics: ["model", "service"],
   stores: ["queries"],
-  tables: ["model", "mutations", "queries", "use-cases/presentation", "values"],
+  tables: [
+    "model",
+    "mutations",
+    "queries",
+    "core-queries",
+    "state-read",
+    "use-cases/presentation",
+    "values",
+  ],
   voice: ["catalog", "model", "runtime", "service"],
 };
 

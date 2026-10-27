@@ -87,7 +87,11 @@ HTTPはHono公式のfactoryでEnvとmiddlewareの型を共有し、パスと操�
 価格計算等を `pricing.ts` に切り出すことは有用だが、そのための共有domain packageは不要。
 DB queryが十分短ければ操作関数内に置いてよい。複雑なqueryの所有ファイルを分ける場合も、単なる引数の中継層を追加しない。
 
-`app.ts`はHonoの共通middlewareとmoduleを組み立てる。`platform/context.ts`の`requestServices`がHTTPリクエストごとにDrizzleを一度生成し、同じ`ApiServices`をroute・service・Agentツールへ渡す。`db/client.ts`のDB factoryが認証schemaの関連queryを有効にする。schemaとfactoryはHonoや認証runtimeへ依存せず、D1 handleの寿命はWorkerまたは運用CLIが所有する。Better Authは最初の利用時に同じDBで生成し、スタッフsessionの取得PromiseはHono Contextで共有する。次のリクエストへDB・Auth・sessionを持ち越さず、healthや画像はAuth設定に依存しない。
+`platform/app.ts`は計測・request依存・security・body制限とprotocolエラーを共有する。`worker.ts`は通常端末とplaygroundの注文要求だけを`ordering-app.ts`へ振り分け、それ以外で全体の`app.ts`を遅延読込する。両入口は同じ`tables/ordering-routes.ts`と業務処理を使う。MCP・ゲーム・音声生成・課金は注文の初回要求で初期化しない。WebのAPI転送もSSR入口を読まず、ページ要求だけで`ssr.ts`を遅延読込する。`platform/context.ts`の`requestServices`がHTTPリクエストごとにDrizzleを一度生成し、同じ`ApiServices`をroute・service・Agentツールへ渡す。`db/client.ts`のDB factoryが認証schemaの関連queryを有効にする。schemaとfactoryはHonoや認証runtimeへ依存せず、D1 handleの寿命はWorkerまたは運用CLIが所有する。Better Authは最初の利用時に同じDBで生成する。GUIの`getIdentity()`は標準のsession検証とorganizationだけを使い、ログイン・OAuth・MCP等の`getAuth()`とCookie・追加fieldの設定を共有する。OAuth resource初期化をGUI認証へ含めず、スタッフsessionの取得PromiseはHono Contextで共有する。次のリクエストへDB・Auth・sessionを持ち越さず、healthや画像はAuth設定に依存しない。
+
+同じ要求で認可済みの卓行とデモ所有者の確認結果は`ApiServices.tableAccess`で共有する。`context.ts`から`db/records.ts`への型参照をこの境界に限り許可し、schemaのruntimeをplatformへ持ち込まない。卓行は最初の業務読取で消費し、更新後の状態は最新のD1 batchから構成する。デモの認可結果はデモID・店舗・利用者・音声sessionの一致を確認し、別要求へ保持しない。DB更新とイベント保存の確定後、通知は同じ要求の`backgroundTasks`からWorkerの`waitUntil`へ渡す。HTTPの成功を通知配送に依存させず、失敗ログとイベント再取得を維持する。
+
+HTTP認可のmiddlewareとrouteは共通のtelemetryへ依存し、認可と業務操作の時間を別々に測る。認可層からDB更新や業務処理への依存は増やさない。
 
 Drizzle ORM・Kitは`1.0.0-rc.5`を使い、認証のRelations v2とBetter Authの対応adapterを同時に扱う。DB列と同義の入力は`drizzle-orm/zod`から必要なfieldだけを選び、業務の制約を重ねる。JSON列内の設定・snapshot等は業務Zod schemaを正本にし、DBの文字列列から生成しない。行型はDrizzle、公開HTTPの入出力型はZodとHono Clientから推論する。WebへDB schemaのruntime依存を渡さない。
 
@@ -101,7 +105,7 @@ Drizzle ORM・Kitは`1.0.0-rc.5`を使い、認証のRelations v2とBetter Auth�
 | `modules/*/model.ts`                                                                    | 業務別の入出力schema・型。共通のID・言語は`platform/model.ts`              |
 | `db`、`migrations`                                                                      | D1 schema・制約・移行。汎用repositoryや別DBのadapterは設けない             |
 
-卓・フロア・下書きの表示読取は、既存のquery builderをD1の`db.batch()`へまとめる。卓・フロアの回復cursorは同じbatchの状態読取より先に取得し、取得後の更新をイベント経路で回収する。デモの作成者と現在の店舗権限はjoinで確認してから結果を返す。カタログのqueryと結果変換は単独取得・batchで共有し、D1が列名で返すbatch結果ではjoin先の重複列に別名を付ける。
+卓・フロア・下書きの表示読取は、既存のquery builderをD1の`db.batch()`へまとめる。卓・フロアの回復cursorは同じbatchの状態読取より先に取得し、取得後の更新をイベント経路で回収する。カゴ更新は更新・確認失効・イベント保存の後へ同じ状態読取queryを置き、一つのbatchで確定値を返す。更新成立の判定と通知はordersのuse-caseが所有し、queryは読取statementと型付き結果変換だけを公開する。デモの作成者と現在の店舗権限はjoinで確認してから結果を返す。通常端末のカゴ・確認では認可と同じjoinで商品設定を取得し、同じ卓・店舗のプランなし価格判定へ再利用する。デモの商品設定も認可時の値を同じデモ・店舗だけで共有する。他のGUI操作は認可時に設定JSONを余分に取得せず、プラン利用中は従来どおり注文履歴と価格設定をまとめて読む。いずれもリクエスト内に限り、更新時の設定版検査と更新後の再読取は維持する。カタログのqueryと結果変換は単独取得・batchで共有し、D1が列名で返すbatch結果ではjoin先の重複列に別名を付ける。
 
 GUI・音声・MCPは同じ所有moduleのuse-caseを利用する。注文確定のsnapshot、版の比較、mutation_id、`changes()`を用いた条件付きbatchは元の原子性を保つ。serviceからrouteを呼び戻さず、音声接続の制御は`voice/runtime.ts`へ依存する。
 
@@ -180,6 +184,10 @@ Honoの`app.ts`は共通middlewareと公開入口を組み立て、各`modules/*
 フロア取得は、店舗内の利用卓・注文・入金・確認・履歴をまとめて読み、卓ごとに投影する。店舗全体のイベントは100件、各卓の履歴は100件を上限とし、卓数に比例してDB問い合わせを発行しない。下書き一覧ではカタログを一度だけ読み、各下書きの差分へ共有する。
 
 WebはrequestごとにQueryClientを生成し、TanStack RouterのQuery SSR連携でdehydrate/hydrateする。route loaderと部品はfeatureごとのqueryOptionsを共有する。SSRのAPI呼出しはService Bindingへ現在のCookieとAbortSignalを渡す。認証済みHTMLは`private, no-store`とし、QueryClientや認証情報をmodule scopeへ保存しない。
+
+卓APIの既定応答は従来の`TableState`を保つ。GUIは`view=core`を指定し、注文snapshot一覧とイベントを持たない`CoreState`を使う。カゴ・会計・確認・店舗設定版はAPIの投影を正本とし、タブ用の注文数量と最大3商品のIDもDBで集計する。注文送信のcore応答は作成注文と更新後coreを返す。確認操作は既存snapshotの契約を維持する。
+
+履歴は`GET /table/orders`の`created_at`・ID降順cursorで既定50件、上限100件を取得する。イベントは既存の`/events`を使い、初回の`tail=true`は直近100件、その後は`after`から最大500件ずつ回復する。Query cacheはcore・ページ付き履歴・イベントを分け、mutationの応答を直接反映する。coreと履歴それぞれのcursorを通知と照合し、自己操作でcoreのcursorが進んでも他端末の履歴変更を隠さない。ブラウザーへ価格計算・認可・独自通信queueを追加しない。
 
 この分担はenterprise-agentic-saas-starterのroute・feature・データ所有者の境界を参考にし、TableCastの既存workspaceを維持している。参考先専用のpackageや階層は移植しない。
 
