@@ -105,7 +105,7 @@ test("ドキュメントをSSRで読み、関連章・言語・モバイル目�
   await expect(helpGroup.getByRole("link", { name: "はじめに", exact: true })).toBeHidden();
   await groupTrigger.press("Enter");
   await expect(helpGroup.getByRole("link", { name: "はじめに", exact: true })).toBeVisible();
-  const searchInput = page.getByRole("searchbox", { name: "ページとドキュメントを検索" });
+  const searchInput = page.getByRole("searchbox", { name: "検索", exact: true });
   await searchInput.fill("expectedVersion");
   const searchResults = page.getByRole("dialog", { name: "検索結果" });
   await expect(searchResults.getByRole("link", { name: /設定と公開/ }).first()).toBeVisible();
@@ -129,6 +129,29 @@ test("ドキュメントをSSRで読み、関連章・言語・モバイル目�
   await expect(
     helpGroup.getByRole("link", { name: "MCP接続とagentの使い方", exact: true }),
   ).toHaveAttribute("aria-current", "page");
+  const activeChapter = helpGroup.getByRole("link", {
+    name: "MCP接続とagentの使い方",
+    exact: true,
+  });
+  expect(
+    await activeChapter.evaluate((link) => {
+      const row = link.getBoundingClientRect();
+      const marker = link
+        .querySelector('[data-slot="navigation-selection"]')
+        ?.getBoundingClientRect();
+      const label = link.querySelector("span:not([aria-hidden])");
+      if (!marker || !label) throw new Error("選択線とリンク名が必要");
+      const text = label.getBoundingClientRect();
+      return {
+        markerInside:
+          marker.top >= row.top &&
+          marker.bottom <= row.bottom &&
+          Math.abs((marker.top + marker.bottom - row.top - row.bottom) / 2) <= 1,
+        textPadded: text.top > row.top && text.bottom < row.bottom,
+        multiline: text.height > parseFloat(getComputedStyle(label).lineHeight),
+      };
+    }),
+  ).toEqual({ markerInside: true, textPadded: true, multiline: true });
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight))
     .toBe(true);
@@ -161,9 +184,7 @@ test("ドキュメントをSSRで読み、関連章・言語・モバイル目�
     "aria-pressed",
     "true",
   );
-  await page
-    .getByRole("searchbox", { name: "Search pages and documentation" })
-    .fill("configurations");
+  await page.getByRole("searchbox", { name: "Search", exact: true }).fill("configurations");
   const englishResults = page.getByRole("dialog", { name: "Search results" });
   await expect(
     englishResults.getByRole("link", { name: /Configuration and publishing/ }).first(),
@@ -173,7 +194,7 @@ test("ドキュメントをSSRで読み、関連章・言語・モバイル目�
     fullPage: false,
     animations: "disabled",
   });
-  await page.getByRole("searchbox", { name: "Search pages and documentation" }).press("Escape");
+  await page.getByRole("searchbox", { name: "Search", exact: true }).press("Escape");
   await page.setViewportSize({ width: 402, height: 874 });
   await expect(page.locator('[data-ui="app-header"]')).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
@@ -210,7 +231,7 @@ test("ドキュメントをSSRで読み、関連章・言語・モバイル目�
     fullPage: false,
     animations: "disabled",
   });
-  await page.getByRole("searchbox", { name: "ページとドキュメントを検索" }).fill("困ったとき");
+  await page.getByRole("searchbox", { name: "検索", exact: true }).fill("困ったとき");
   const mobileResults = page.getByRole("dialog", { name: "検索結果" });
   await expect(mobileResults.getByRole("link", { name: /困ったとき/ }).first()).toBeVisible();
   await page.screenshot({
@@ -249,7 +270,7 @@ test("店舗サイドバーの検索から公開ガイドへ進める", async ({
     fullPage: false,
     animations: "disabled",
   });
-  await page.getByRole("searchbox", { name: "ページとドキュメントを検索" }).fill("商品");
+  await page.getByRole("searchbox", { name: "検索", exact: true }).fill("商品");
   const results = page.getByRole("dialog", { name: "検索結果" });
   await expect(results.getByRole("link", { name: "商品 メニュー・接客" })).toBeVisible();
   await expect(results.getByRole("status")).toHaveCount(0);
@@ -295,7 +316,7 @@ test("店舗サイドバーの検索から公開ガイドへ進める", async ({
   });
   await page.getByRole("button", { name: "日本語", exact: true }).click();
   await page.setViewportSize({ width: 1512, height: 982 });
-  await page.getByRole("searchbox", { name: "ページとドキュメントを検索" }).fill("MCP");
+  await page.getByRole("searchbox", { name: "検索", exact: true }).fill("MCP");
   const guide = results.getByRole("link", { name: /MCP接続とagentの使い方/ }).first();
   await expect(guide).toBeVisible();
   await guide.click();

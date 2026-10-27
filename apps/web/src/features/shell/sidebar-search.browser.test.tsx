@@ -64,7 +64,7 @@ async function show(
   );
   return router;
 }
-const input = () => page.getByRole("searchbox", { name: "ページとドキュメントを検索" });
+const input = () => page.getByRole("searchbox", { name: "検索", exact: true });
 it("入力を保って失敗を再試行でき、アプリ候補・0件・本文候補を区別する", async () => {
   let failed = true;
   await show(async (query) => {
@@ -129,7 +129,7 @@ it("折りたたんだサイドバーから検索を開き、入力と数字キ�
     async (query) => Response.json(query === "商品" ? candidates() : []),
     true,
   );
-  await page.getByRole("button", { name: "ページとドキュメントを検索", exact: true }).click();
+  await page.getByRole("button", { name: "検索", exact: true }).click();
   await expect.element(input()).toHaveFocus();
   await input().fill("statistics");
   await expect.element(page.getByText("一致するページはありません。")).toBeVisible();
@@ -250,7 +250,7 @@ it("Markdownのcode・強調を描画し、英語の語形変化で一致した�
     false,
     "en",
   );
-  await page.getByRole("searchbox", { name: "Search pages and documentation" }).fill("customers");
+  await page.getByRole("searchbox", { name: "Search", exact: true }).fill("customers");
   const result = page.getByRole("link", {
     name: "Membership A customer reads get_configuration and checks a guide.",
   });

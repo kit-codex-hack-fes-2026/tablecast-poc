@@ -3,8 +3,6 @@ import type { ReactNode } from "react";
 import { Tooltip } from "@base-ui/react/tooltip";
 import { useSidebar } from "fumadocs-ui/layouts/docs/slots/sidebar";
 import { ArrowUpRight, PanelsTopLeft } from "lucide-react";
-import { LayoutGroup } from "motion/react";
-import { useId } from "react";
 import { useI18n } from "../../i18n/locale";
 import { NavigationGroup, navigationItemClass } from "../shell/navigation-group";
 import { NavigationLink } from "../shell/navigation-link";
@@ -14,19 +12,16 @@ import { SidebarSearch } from "../shell/sidebar-search";
 
 export function HelpSidebarGroup({ children }: { children: ReactNode }) {
   const { t } = useI18n();
-  const layoutId = useId();
   return (
     <Tooltip.Provider delay={250}>
-      <LayoutGroup id={layoutId}>
-        <NavigationGroup
-          id="help"
-          label={t("help_title")}
-          icon={navigationGroups.help.Icon}
-          collapsed={false}
-        >
-          {children}
-        </NavigationGroup>
-      </LayoutGroup>
+      <NavigationGroup
+        id="help"
+        label={t("help_title")}
+        icon={navigationGroups.help.Icon}
+        collapsed={false}
+      >
+        {children}
+      </NavigationGroup>
     </Tooltip.Provider>
   );
 }
@@ -43,7 +38,7 @@ export function HelpSidebarItem({ item }: { item: Item }) {
       onClick={() => setOpen(false)}
     >
       <Icon className="size-5" />
-      {item.name}
+      <span className="min-w-0 flex-1 wrap-break-word">{item.name}</span>
     </NavigationLink>
   );
 }

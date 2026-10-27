@@ -9,7 +9,7 @@ import { type NavigationGroupId, useSidebarPreferences } from "./sidebar-prefere
 
 export const navigationItemClass =
   controlMotion +
-  " relative flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-base text-muted-foreground data-[collapsed=true]:justify-center data-[collapsed=true]:px-0 hover:bg-[var(--nav-surface,var(--color-control-hover))] hover:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:bg-[var(--nav-surface,var(--color-control-selected))] aria-[current=page]:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:font-semibold data-[status=active]:bg-[var(--nav-surface,var(--color-control-selected))] data-[status=active]:text-[var(--nav-color,var(--color-foreground))] data-[status=active]:font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:shrink-0 [&>svg]:size-5";
+  " relative flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-base text-muted-foreground data-[collapsed=true]:justify-center data-[collapsed=true]:px-0 hover:bg-[var(--nav-surface,var(--color-control-hover))] hover:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:bg-[var(--nav-surface,var(--color-control-selected))] aria-[current=page]:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:font-semibold data-[status=active]:bg-[var(--nav-surface,var(--color-control-selected))] data-[status=active]:text-[var(--nav-color,var(--color-foreground))] data-[status=active]:font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:shrink-0 [&>svg]:size-5";
 export function NavigationGroup({
   id,
   label,
