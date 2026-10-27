@@ -2,13 +2,82 @@
 
 [Issue #389](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/389) / [Draft PR #392](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/pull/392)
 
-## 条件と集計
+## 2026-10-28の追加診断と配置比較
+
+ローカルのGrafana LGTMで本番Web→API→D1→通知のtraceを比較した。Lokiは公式Grafana MCP、Tempoはtrace IDを指定した公式読取APIで取得した。a1b7b8e7では通常カゴを認可・価格読取・更新と状態読取の3往復、playgroundを所有者確認を含む5往復へ減らした。最終実装では、プランなし通常卓のカゴ・注文確認は認可と価格設定を同じjoinで取得する2往復へ減らした。他のGUI操作へ設定JSONを余分に取得せず、プラン利用中の注文履歴・価格設定のbatch取得は維持する。更新と状態読取は同じDrizzle batchに置き、価格・版条件・イベントの原子性を維持する。認可時のデモ設定はリクエスト内だけで共有し、プランなしの価格判定へ再利用する。
+
+本文収集を有効にした同じローカル60商品・1行・履歴なし、各31標本では、f392b6edからa1b7b8e7への変更でHTTPのwarm p50 / p95は54 / 64msから22 / 26msになった。代表traceのAPI区間は34→13ms、価格読取は13→1ms、確定batchは7→4ms。通知は両方約8msでHTTP応答後も継続する。通知区間は親子spanと重なるため単純に合計しない。SQL時間とbindingのwall timeは別であり、このローカル値をpreviewの代わりにしない。
+
+previewはmacOSのin-app Chromium、Cloudflare Accessと通常のスタッフ認証で測った。通常端末は追加許可後に空席T11を開き、計測用の端末だけを認可した。通常卓ではカゴだけを変更し、注文・店員呼出・会計依頼は行わない。playgroundは各比較で新しく作成し、60商品・カゴ1行・履歴0件から開始する。8操作の比較は最後に31件の架空注文が残る。開始・終了時に同じ配備SHAを確認する。
+
+cf-ray応答の拠点コードは、修正前の通常卓がLAX、Tokyoの通常卓がBOS、TokyoのplaygroundがSJCだった。Singapore版の正式標本は拠点コードを採取していない。応答の拠点コードを配置後のAPI実行先やD1の場所と同一視しない。日本の店舗やiPadからの通信とは条件が異なり、固定負荷・固定経路の試験ではない。sample 0を初回、sample 1〜30をwarm標本として従来と同じnearest rankで集計する。この区分だけで実際のcold isolateを判定しない。新しいbootstrap表示は最初のfetchと再利用を区別し、SDKのfaas.coldstartとは分ける。
+
+| 通常T11のカゴ                   | SHA      | p50 / p95 (ms) | 初回 (ms) |
+| ------------------------------- | -------- | -------------: | --------: |
+| batch統合前・自動配置           | f392b6ed |    1247 / 2455 |      2145 |
+| batch統合・自動配置             | a1b7b8e7 |    1240 / 2649 |      2173 |
+| batch統合・Singapore            | 6a08d42c |     623 / 2295 |      1919 |
+| batch統合・Tokyo                | a3f32424 |    1029 / 1909 |      1006 |
+| 認可と価格取得を統合・Singapore | da1d9c1a |     528 / 1881 |       585 |
+| 同版の再計測・Singapore         | da1d9c1a |      486 / 720 |       566 |
+
+batch削減だけではpreviewのp95は改善しなかった。a9431264の内訳1標本では、更新SQLは0.63ms、D1 metadataはAPAC/SIN、更新と状態読取batchは614ms、Hono APIは1040ms、WebのService Binding待ちは1133ms、本文受信まで1279msだった。
+
+Singapore指定後の通常卓では、最後の標本がHTTP531ms、Hono58ms、更新batch23ms、更新SQL0.70msだった。一方、遅い標本はHTTP2382ms、Hono615ms、Web2231msだった。遅延が残る主な区間はWeb→APIの待ちで、SQLそのものではない。差分をネットワークRTTだけの時間と断定しない。SDKのexportはwaitUntil経路を使っており、応答でexportをawaitする実装にはなっていない。
+
+| playgroundの操作 | 38ecbf29 p50 / p95 (ms) | 6a08d42c Singapore p50 / p95 (ms) | a3f32424 Tokyo p50 / p95 (ms) |
+| ---------------- | ----------------------: | --------------------------------: | ----------------------------: |
+| カゴ更新         |             1873 / 2765 |                        560 / 1190 |                   1022 / 1371 |
+| タブ切替         |             1411 / 1788 |                        601 / 1088 |                    923 / 1225 |
+| 言語変更         |             1418 / 2061 |                        583 / 1334 |                    958 / 1473 |
+| 話速変更         |             1398 / 1639 |                         564 / 857 |                    927 / 1213 |
+| 店員呼出         |             1499 / 2441 |                        559 / 1019 |                    913 / 1274 |
+| 会計依頼         |             1434 / 1871 |                         550 / 907 |                    960 / 1435 |
+| 注文確認         |             1433 / 1974 |                         476 / 636 |                     738 / 889 |
+| 注文送信         |             1596 / 2084 |                         514 / 624 |                   1037 / 1404 |
+
+通常卓とplaygroundの数値は認証方式と履歴量が違うため混ぜない。全操作でp95 1000ms未満という目標はこの時点で未達。改善しなかったbatch単独の結果もCSVへ残し、性能予算を変更しない。
+
+TokyoのAPI配置はaws:ap-northeast-1で指定できる。D1の作成時apacヒントにTokyo固定の指定はなく、既存DBは移転していない。APIの配置先とD1 metadataを分けて記録する。
+
+Tokyoのplaygroundでも8操作を各31標本で測定した。カゴp95は1371ms、注文送信は1404msで目標未達。D1はAPAC/SINのままで、TokyoからのDB待ちが増えることとSingaporeの通常時の待ちの小ささを踏まえてSingaporeを採用した。拠点コードが異なるため、数値の差を配置だけの効果とは断定しない。
+
+最終実装`da1d9c1a9b882ba7210eb2fbc915a527a74edb61`では通常カゴを2往復へ減らした。通常T11は同版で31標本を2回採取した。最初はp50 / p95が528 / 1881ms、再計測は486 / 720ms。全62標本では511 / 1402msで、初回fetchを含む全体目標は未達。Server-Timingのreused 55件は491 / 671ms、first-fetch 7件は1402 / 1885msだった。全標本を残し、遅い初回fetchを成功したwarmの母数へ黙って混ぜ替えない。実際のcold isolateの判定はSDKのfaas.coldstartとの照合を残す。最初の31標本はcf-ray応答がSJC、再計測31標本はLAXで、固定経路の比較ではない。
+
+API入口のfirst-fetchはTokyoの通常カゴ31標本中5件、playground248標本中1件だった。reusedにも遅い標本があり、全てをcold startとして除外しない。bootstrapが0msでもWorkersの時計はCPU実行中に進まないため初期化CPU時間がゼロだった証拠にはしない。[Workersの時計と性能計測](https://developers.cloudflare.com/workers/runtime-apis/performance/)
+
+## 最終配備da1d9c1aのplayground
+
+同じ配備で8操作を各31標本、合計248標本を測定した。cf-ray応答は全てLAX。各操作のsample 1〜30を従来と同じ方法で集計した。
+
+| 操作     | p50 / p95 (ms) | 初回 (ms) | reused件数 / p95 (ms) |
+| -------- | -------------: | --------: | --------------------: |
+| カゴ更新 |      529 / 775 |       563 |              31 / 775 |
+| タブ切替 |      530 / 729 |       534 |              30 / 721 |
+| 言語変更 |      558 / 724 |       433 |              31 / 724 |
+| 話速変更 |      540 / 894 |       539 |              31 / 894 |
+| 店員呼出 |      550 / 730 |       547 |              31 / 730 |
+| 会計依頼 |     531 / 1284 |       964 |             31 / 1284 |
+| 注文確認 |      500 / 693 |       809 |              31 / 809 |
+| 注文送信 |      527 / 681 |       902 |              31 / 683 |
+
+カゴ更新は38ecbf29のp95 2765msから775msへ改善した。通常卓のreused 55件もp95 671msだった。会計依頼はreusedでもp95 1284msで、全操作の目標は未達。初回fetchを含む通常卓の全62件もp95 1402msであり、初回待ち・会計依頼と、previewのCPU・通知spanおよびfaas.coldstartとの照合を残す。プランなし通常卓のカゴ・確認は2往復、playgroundのカゴは5往復で、小規模と多数件で同じ予算を維持する。
+
+実装版の[CI](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/actions/runs/40563878957)は全必須jobとpreview配備が成功した。ローカルはAPI 84file・596件、全workspaceの型、hooksが成功。価格公開との競合は実D1で拒否し、次要求の新価格で再試行できることを確認した。目標・timeout・retryを緩めていない。
+
+計測後にT11のカゴを空にし、作成した端末だけを失効して閉卓した。管理APIでT11が空席・closed、作成端末のrevokedAtが設定済み、端末のGET /api/tableが401になることを確認した。通常卓の注文は0件。ローカルLGTMとMailpitも自worktreeのcontainer・aliasだけを停止し、traceのvolumeを保持した。
+
+## 2026-10-27時点の比較
+
+以下は38ecbf29の実装で行った初回比較の記録。現在の追加診断と通常端末の結果は上記を参照する。
+
+### 条件と集計
 
 改善前は`cdbd64e04a60fa967454b213b64c0de421c29f3d`、改善後の実装は`38ecbf2989a6a65c51f41d8d1e5c47d831fa239e`。2026-10-27、macOS・Node 24.22.0・Bun 1.4.3。HTTP開始から本文受信完了までと、クリックから目的のDOM表示までを別々に測る。warmは各操作のsample 1〜30、最初の1標本は別集計。p50/p95はnearest rank、単位はms。通常GUIだけを対象とし、音声生成・ゲーム実行を含めない。
 
 previewはCloudflare Access認証済みのin-app Chromiumから、通常の管理者認証と公開APIを通した独立playgroundで測る。60商品の公開設定、肉じゃが1行・履歴0件で開始し、注文送信では毎回確認snapshotと明示承認を通して履歴が31件になる。計測用の認可迂回や専用APIを追加しない。初回要求はcold isolateの証明ではない。Grafana読取tokenがなく、既存Cloudflare資格でもObservability APIが403のため、previewのSQL・binding・通知spanと`faas.coldstart`は未取得。
 
-## Preview HTTP
+### Preview HTTP
 
 改善前後とも各操作のwarm 30標本と初回1標本を測った。改善後の開始時と終了時に`/api/health`から同じ対象SHAを確認した。両方とも同じ店舗設定を取り込んだ独立playgroundを使い、他の利用者の卓を更新していない。
 
@@ -31,7 +100,7 @@ previewのAPI p95 1000ms未満は未達。小さいSQLと固定した往復数�
 
 31操作の同期後、公開APIでカゴ版が125から156へ進み、最後に入力した数量1が保存されたことも確認した。CSVの`layer`でHTTPとUI、`phase`で改善前・改善後・ローカルを区別する。`count`はカゴ行数で、ローカルは同数の履歴から開始する。未取得の計測欄は空欄とし、`batchSqlMs`はbatchのmetaで得られたSQL時間だけを合計する。
 
-## ローカル実HTTP・D1
+### ローカル実HTTP・D1
 
 本番Hono・Cookie認証・Drizzle・workerdのD1/DOを使い、通常端末とplaygroundを比較する。小規模は8商品・カゴ1行・履歴1件、大規模は120商品・カゴ100行・履歴100件から開始する。各標本で注文を送るため履歴は最終131件へ増える。価格はAPIの400円の商品から検証し、DB版・承認snapshot・注文とカゴの原子性を毎回確認する。rootの全体検査と同じ実装、API maxWorkers 4で採取した992標本を使う。
 
@@ -50,7 +119,7 @@ previewのAPI p95 1000ms未満は未達。小さいSQLと固定した往復数�
 
 binding往復のwall time、statement数、D1 batchのSQL時間・読取行数、本文byte数を個別記録する。通知のdrain時間はHTTP後に残った後処理の時間であり、配送全体のspanとは区別する。HTTP応答より前にDBとイベントが確定し、通知を1.5秒保留しても応答が返ることを実D1で検査した。通知失敗のログとイベント再取得は維持する。
 
-## 表示と競合の検査
+### 表示と競合の検査
 
 実Kiosk・QueryClient・HTTP clientを接続し、外部fetchだけを保留・失敗へ差し替える。1.5秒遅延、数量連打、追加直後の詳細閉鎖・画像stack、タブ維持、409と他端末通知・後続削除・新たな詳細の競合、失敗入力の保持と再試行を確認した。価格を未確定行へ計算せず、同期中の確認を止める。
 
