@@ -41,6 +41,11 @@ it.each(["ja", "en"] as const)(
       const frame = panel.querySelector('[data-ui="camera-frame"]');
       const history = panel.querySelector('[data-ui="conversation-history"]');
       if (!frame || !history) throw new Error("カメラと履歴の領域がありません");
+      const cameraWindow = frame.parentElement;
+      if (!cameraWindow) throw new Error("カメラの操作領域がありません");
+      await expect
+        .poll(() => screen.getByText(line.text).element().getBoundingClientRect().top)
+        .toBeGreaterThanOrEqual(cameraWindow.getBoundingClientRect().bottom);
       expect(history.getBoundingClientRect().top).toBeLessThanOrEqual(
         frame.getBoundingClientRect().top,
       );
@@ -58,6 +63,67 @@ it.each(["ja", "en"] as const)(
       );
       await resume.click();
       expect(start).toHaveBeenCalledOnce();
+      await screen.unmount();
+    }
+  },
+);
+
+it.each(["ja", "en"] as const)(
+  "%sの初期案内から会話を始められ、マイク設定を開け、会話後は案内を重ねない",
+  async (locale) => {
+    const labels = locale === "ja" ? ja : en;
+    for (const [width, height, paneWidth, paneHeight] of [
+      [1180, 820, 240, 692],
+      [402, 874, 402, 360],
+    ] as const) {
+      await page.viewport(width, height);
+      const start = vi.fn<() => void>();
+      const refresh = vi.fn<() => void>();
+      const props = {
+        onStart: start,
+        onMicrophoneChange: vi.fn<(id: string) => void>(),
+        onMicrophoneRefresh: refresh,
+      };
+      const surface = (status: "connecting" | "idle" | "paused", hasHistory = false) => (
+        <Surface locale={locale}>
+          <div style={{ width: paneWidth, height: paneHeight }}>
+            <VoicePanel {...props} view={{ status }} lines={hasHistory ? [line] : []} />
+          </div>
+        </Surface>
+      );
+      const screen = await render(surface("idle"));
+      const begin = screen.getByRole("button", { name: labels.kiosk_welcome_start, exact: true });
+      await expect.element(begin).toBeVisible();
+      const scroller = screen.getByRole("log").element().firstElementChild;
+      if (!(scroller instanceof HTMLElement)) throw new Error("会話のスクロール領域がありません");
+      expect(begin.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(
+        scroller.getBoundingClientRect().bottom,
+      );
+      const welcome = document.querySelector('[data-ui="voice-welcome"]');
+      const pulse = document.querySelector('[data-ui="voice-welcome-pulse"]');
+      if (!welcome || !pulse) throw new Error("初期案内がありません");
+      expect(scroller.contains(welcome)).toBe(true);
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      await expect.poll(() => pulse.getAnimations().length).toBe(reduced ? 0 : 1);
+      const animations = pulse.getAnimations();
+      expect(animations.map((animation) => animation.effect?.getTiming().iterations)).toEqual(
+        reduced ? [] : [3],
+      );
+      await screen.getByRole("button", { name: labels.kiosk_input_settings }).click();
+      await expect.element(screen.getByRole("dialog")).toBeVisible();
+      expect(refresh).toHaveBeenCalledOnce();
+      expect(start).not.toHaveBeenCalled();
+      await screen.getByRole("button", { name: labels.common_close, exact: true }).click();
+      await begin.click();
+      expect(start).toHaveBeenCalledOnce();
+      await screen.rerender(surface("connecting"));
+      await expect.element(screen.getByText(labels.kiosk_welcome_title)).not.toBeInTheDocument();
+      expect(animations.filter((animation) => animation.playState === "running")).toHaveLength(0);
+      await screen.rerender(surface("paused", true));
+      await expect.element(screen.getByText(labels.kiosk_welcome_title)).not.toBeInTheDocument();
+      await expect
+        .element(screen.getByRole("button", { name: labels.kiosk_voice_resume, exact: true }))
+        .toBeVisible();
       await screen.unmount();
     }
   },

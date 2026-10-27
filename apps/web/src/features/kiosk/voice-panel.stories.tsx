@@ -14,26 +14,17 @@ const meta = {
       </div>
     ),
   ],
-  args: { view: { status: "idle" }, lines: [], onStart: fn() },
+  args: {
+    view: { status: "idle" },
+    lines: [],
+    onStart: fn(),
+    onMicrophoneChange: fn(),
+    onMicrophoneRefresh: fn(),
+    onSpeedChange: fn(),
+  },
 } satisfies Meta<typeof VoicePanel>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const Welcome: Story = {
-  name: "日本語の初回表示",
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
-    const resume = canvas.getByRole("button", { name: "音声を再開" });
-    await expect(resume.closest("footer")).not.toBeNull();
-    await userEvent.click(resume);
-    await expect(args.onStart).toHaveBeenCalledOnce();
-    await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
-  },
-};
-export const English: Story = {
-  name: "英語の初回表示",
-  tags: ["!test"],
-  globals: { locale: "en" },
-};
 export const Paused: Story = {
   name: "停止しても会話を保持",
   args: {
@@ -50,7 +41,7 @@ export const Paused: Story = {
       {
         id: "two",
         role: "assistant",
-        text: "はい、熱燗にできます。容量は九十ミリと百八十ミリ、どちらになさいますか？",
+        text: "はい、熱燗にできます。容量は90mLと180mL、どちらになさいますか？",
         locale: "ja",
         createdAt: 1788645005000,
         interrupted: false,
@@ -76,7 +67,7 @@ export const CompactPausedEnglish: Story = {
     lines: Paused.args?.lines?.slice(1).map((line) => ({
       ...line,
       locale: "en",
-      text: "Would you prefer ninety or one hundred and eighty millilitres?",
+      text: "Would you prefer 90mL or 180mL?",
     })),
   },
 };

@@ -1,5 +1,6 @@
 import { Globe, LoaderCircle, ScanLine, Sparkles } from "lucide-react";
 import type { VoiceView } from "./voice-model";
+import { Reasoning } from "../../components/ai-elements/reasoning";
 import { useI18n } from "../../i18n/locale";
 
 export function VoiceProgress({ view }: { view: VoiceView }) {
@@ -29,12 +30,9 @@ export function VoiceProgress({ view }: { view: VoiceView }) {
         </div>
       )}
       {progress?.summary && (
-        <details open={running || undefined}>
-          <summary className="cursor-pointer font-medium">{t("kiosk_reasoning_summary")}</summary>
-          <p className="mt-2 max-h-28 overflow-y-auto whitespace-pre-wrap wrap-break-word leading-relaxed text-muted-foreground">
-            {progress.summary}
-          </p>
-        </details>
+        <Reasoning isStreaming={running} label={t("kiosk_reasoning_summary")}>
+          {progress.summary}
+        </Reasoning>
       )}
       {Boolean(view.citations?.length) && (
         <ul className="flex flex-wrap gap-x-3 gap-y-1" aria-label={t("kiosk_sources")}>

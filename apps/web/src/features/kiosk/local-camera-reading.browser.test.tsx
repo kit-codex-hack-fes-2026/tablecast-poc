@@ -84,6 +84,7 @@ it("ON中の1枚をJPEGで取得し、読取状態を示して完了・OFFで解
   await screen.getByRole("button", { name: "画像を読み取る" }).click();
   await expect.element(screen.getByText("CAMERA_OFF")).toBeVisible();
   expect(capture).not.toHaveBeenCalled();
+  expect(document.querySelector('[data-ui="camera-shutter"]')).toBeNull();
   await screen.getByRole("button", { name: ja.kiosk_camera_start }).click();
   await expect
     .poll(() => {
@@ -98,7 +99,21 @@ it("ON中の1枚をJPEGで取得し、読取状態を示して完了・OFFで解
   await expect.element(screen.getByText("取得成功")).toBeVisible();
   expect(imageUrl).toMatch(/^data:image\/jpeg;base64,/);
   expect(new TextEncoder().encode(imageUrl).byteLength).toBeLessThanOrEqual(60000);
-  await expect.element(screen.getByText(ja.kiosk_camera_reading)).toBeVisible();
+  await expect.element(screen.getByRole("status")).toHaveTextContent(ja.kiosk_camera_reading);
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  await expect
+    .poll(() =>
+      document.querySelector('[data-ui="camera-shutter"]')?.getAttribute("data-capture-count"),
+    )
+    .toBe(reduced ? undefined : "1");
+  const firstShutter = document.querySelector('[data-ui="camera-shutter"]');
+  await screen.getByRole("button", { name: "画像を読み取る" }).click();
+  await expect
+    .poll(() =>
+      document.querySelector('[data-ui="camera-shutter"]')?.getAttribute("data-capture-count"),
+    )
+    .toBe(reduced ? undefined : "2");
+  expect(document.querySelector('[data-ui="camera-shutter"]') === firstShutter).toBe(reduced);
   const image = new Image();
   image.src = imageUrl ?? "";
   await image.decode();
