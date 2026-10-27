@@ -12,19 +12,11 @@ for (const locale of locales) {
 }
 
 /** compactは小さな旗と読み上げ用の言語名を使い、狭いバー内でも識別を保つ。 */
-export function LanguageLabel({
-  locale,
-  compact = false,
-  showFlag = true,
-}: {
-  compact?: boolean;
-  locale: Locale;
-  showFlag?: boolean;
-}) {
+export function LanguageLabel({ locale, compact = false }: { compact?: boolean; locale: Locale }) {
   const flag = languageFlags[locale];
   return (
     <span lang={locale} className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      {showFlag && flag && <Flag src={flag} />}
+      {flag && <Flag src={flag} />}
       <span className={compact ? "sr-only" : undefined}>{languageNames.get(locale)}</span>
     </span>
   );

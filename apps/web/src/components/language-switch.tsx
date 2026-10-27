@@ -29,7 +29,7 @@ export function LanguageSwitch({
   return (
     <fieldset
       data-ui="language-switch"
-      className={`flex shrink-0 items-center border border-border bg-muted p-1 ${withIcon ? "rounded-xl" : "rounded-lg"}`}
+      className={`flex shrink-0 items-center border border-border bg-muted p-1 ${withIcon ? "h-11 gap-1 rounded-xl border-0 bg-transparent p-0 [&_[data-slot=button]]:h-11 [&_[data-slot=button]]:min-h-11 [&_[data-slot=button]]:rounded-xl [&_[data-slot=button]]:py-0" : "rounded-lg"}`}
       aria-label={t("common_language")}
     >
       {withIcon && <Languages aria-hidden className="mx-1 size-4 shrink-0" />}
@@ -45,7 +45,7 @@ export function LanguageSwitch({
           disabled={disabled}
           onClick={() => onChange(language)}
         >
-          <LanguageLabel locale={language} showFlag={!withIcon} />
+          <LanguageLabel locale={language} />
         </Button>
       ))}
       {otherLanguages.length > 0 && (
@@ -66,7 +66,7 @@ export function LanguageSwitch({
           <SelectContent>
             {otherLanguages.map((language) => (
               <SelectItem key={language} value={language}>
-                <LanguageLabel locale={language} showFlag={!withIcon} />
+                <LanguageLabel locale={language} />
               </SelectItem>
             ))}
           </SelectContent>

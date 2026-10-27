@@ -8,11 +8,15 @@ export function MenuOptionImage({
   imageKey,
   imageKind,
   compact = false,
-}: Pick<Modifier["options"][number], "imageKey" | "imageKind"> & { compact?: boolean }) {
+  showIllustration = true,
+}: Pick<Modifier["options"][number], "imageKey" | "imageKind"> & {
+  compact?: boolean;
+  showIllustration?: boolean;
+}) {
   const [failedKey, setFailedKey] = useState<null | string>(null);
   if (!imageKey) return null;
   return (
-    <span className={`relative flex shrink-0 ${compact ? "w-12" : "w-24"}`}>
+    <span className={`relative flex shrink-0 ${compact ? "w-8" : "w-24"}`}>
       <span
         ref={(frame) => {
           const image = frame?.querySelector("img");
@@ -20,7 +24,7 @@ export function MenuOptionImage({
             setFailedKey(imageKey);
         }}
         aria-hidden="true"
-        className={`flex items-center justify-center overflow-hidden rounded-lg bg-muted ${compact ? "size-12" : "size-24"}`}
+        className={`flex items-center justify-center overflow-hidden rounded-lg bg-muted ${compact ? "size-8" : "size-24"}`}
       >
         {failedKey === imageKey ? (
           <ImageOff className="size-6 text-muted-foreground" />
@@ -28,15 +32,15 @@ export function MenuOptionImage({
           <ProductImage
             src={`/media/${imageKey}`}
             alt=""
-            width={compact ? 48 : 96}
-            height={compact ? 48 : 96}
-            sizes={compact ? "48px" : "96px"}
+            width={compact ? 32 : 96}
+            height={compact ? 32 : 96}
+            sizes={compact ? "32px" : "96px"}
             className="size-full object-contain"
             onError={() => setFailedKey(imageKey)}
           />
         )}
       </span>
-      {failedKey !== imageKey && imageKind === "illustration" && (
+      {showIllustration && failedKey !== imageKey && imageKind === "illustration" && (
         <IllustrationNotice compact={compact} />
       )}
     </span>

@@ -69,10 +69,10 @@ export function CustomerVisitPanel({
   return (
     <Dialog>
       <DialogPrimitive.Trigger
-        render={<Button variant="outline" size="icon" title={t("kiosk_visit_tools")} />}
+        render={<Button variant="outline" size="sm" title={t("kiosk_visit_tools")} />}
       >
         <QrCode aria-hidden="true" />
-        <span className="sr-only">{t("kiosk_visit_tools")}</span>
+        <span>{t("kiosk_visit_tools")}</span>
       </DialogPrimitive.Trigger>
       <DialogContent className="overflow-y-auto">
         <DialogHeader>

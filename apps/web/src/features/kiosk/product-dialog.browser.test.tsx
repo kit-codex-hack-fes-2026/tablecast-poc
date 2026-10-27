@@ -45,6 +45,12 @@ const pictured = productSchema.parse({
           text: text("プレーン", "Plain bun"),
         },
         {
+          id: "tablecast-discount",
+          priceDelta: -20,
+          available: true,
+          text: text("小さなバンズ", "Small bun"),
+        },
+        {
           id: "tablecast-sold-out",
           priceDelta: 0,
           text: text("ブリオッシュ", "Brioche"),
@@ -122,6 +128,15 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
       </div>
     </LocaleProvider>,
   );
+  await expect.element(screen.getByText("必須 · 1個選択", { exact: true })).toBeVisible();
+  await expect.element(screen.getByText("任意 · 2個まで選択", { exact: true })).toBeVisible();
+  await expect
+    .element(screen.getByText(labels.kiosk_option_price_note, { exact: true }))
+    .toBeVisible();
+  await expect.element(screen.getByText(`-${money(20, locale)}`, { exact: true })).toBeVisible();
+  const quantities = document.querySelectorAll('[data-ui="quantity-control"] output');
+  expect(quantities).toHaveLength(2);
+  for (const quantity of quantities) expect(quantity.getBoundingClientRect().width).toBe(40);
   const sesame = screen.getByRole("radio", {
     name: "ごまバンズ",
     exact: true,
@@ -129,7 +144,7 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
   await expect
     .element(sesame)
     .toHaveAccessibleDescription(
-      `${money(80, locale)} ${fixtureValue(fixtureValue(pictured.modifiers[0]).options[0]).text[locale].description}`,
+      `+${money(80, locale)} ${fixtureValue(fixtureValue(pictured.modifiers[0]).options[0]).text[locale].description}`,
     );
   await expect.poll(() => document.querySelectorAll("img").length).toBe(0);
   await expect.element(screen.getByText(labels.kiosk_sold_out, { exact: true })).toBeVisible();
@@ -159,12 +174,12 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
   await expect
     .element(increase)
     .toHaveAccessibleDescription(
-      `${money(100, locale)} ${fixtureValue(fixtureValue(pictured.modifiers[2]).options[0]).text[locale].description}`,
+      `+${money(100, locale)} ${fixtureValue(fixtureValue(pictured.modifiers[2]).options[0]).text[locale].description}`,
     );
   await expect
     .element(screen.getByRole("checkbox", { name: "レタス", exact: true }))
     .toHaveAccessibleDescription(
-      `${money(40, locale)} ${fixtureValue(fixtureValue(pictured.modifiers[1]).options[0]).text[locale].description}`,
+      `+${money(40, locale)} ${fixtureValue(fixtureValue(pictured.modifiers[1]).options[0]).text[locale].description}`,
     );
   await increase.click();
   await increase.click();

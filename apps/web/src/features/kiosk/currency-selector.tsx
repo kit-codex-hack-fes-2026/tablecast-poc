@@ -28,11 +28,8 @@ export function CurrencySelector({ compact = false }: { compact?: boolean }) {
             : "min-h-14 w-auto shrink-0 gap-2 rounded-xl text-sm"
         }
       >
-        {compact ? (
-          <Coins aria-hidden className="size-4 shrink-0" />
-        ) : (
-          <Flag src={currency ? currencyFlags[currency] : jp} />
-        )}
+        {compact && <Coins aria-hidden className="size-4 shrink-0" />}
+        <Flag src={currency ? currencyFlags[currency] : jp} />
         <span>
           {currencySymbol(currency ?? "JPY")} {currency ?? "JPY"}
         </span>

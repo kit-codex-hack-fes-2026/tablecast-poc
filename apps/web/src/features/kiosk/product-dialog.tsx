@@ -4,14 +4,15 @@ import { Minus, Plus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { ConditionSummary } from "../../components/condition-summary";
 import { ErrorNotice } from "../../components/error-notice";
-import { IllustrationNotice } from "../../components/illustration-notice";
-import { Money } from "../../components/money";
+import { Money, PriceChange } from "../../components/money";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
+import { quantityControl } from "../../components/ui/quantity-control-variants";
 import { RadioGroupItem } from "../../components/ui/radio-group";
 import { useI18n } from "../../i18n/locale";
+import { m } from "../../paraglide/messages.js";
 import { ProductAllergens } from "./product-allergens";
 import { OptionContent } from "./product-option-content";
 import { optionRow } from "./product-option-model";
@@ -52,38 +53,47 @@ export function ProductPage({
       className="@container/product-dialog flex h-full min-h-0 flex-col"
       aria-label={product.text[locale].displayName}
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-3 py-1">
-        <Button variant="outline" onClick={onClose} disabled={busy}>
+      <div
+        data-ui="product-detail-header"
+        className={`grid shrink-0 items-start gap-3 border-b border-border bg-card p-3 ${product.imageKey ? "grid-cols-[8rem_minmax(0,1fr)] @min-[36rem]/product-dialog:grid-cols-[10rem_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}
+      >
+        {product.imageKey && (
+          <ProductImage
+            priority
+            width={160}
+            height={160}
+            sizes="(min-width: 640px) 160px, 128px"
+            className="col-start-1 row-span-2 row-start-1 size-32 rounded-xl object-top-left @min-[36rem]/product-dialog:row-span-1 @min-[36rem]/product-dialog:size-40"
+            src={`/media/${product.imageKey}`}
+            alt={product.text[locale].displayName}
+          />
+        )}
+        <div
+          className={`min-w-0 ${product.imageKey ? "col-start-2 row-start-2 @min-[36rem]/product-dialog:row-start-1" : "col-start-1 row-start-1"}`}
+        >
+          <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold outline-none">
+            {product.text[locale].displayName}
+          </h2>
+          <div className="mt-2 text-lg font-semibold">
+            <Money value={product.price} />
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className={`row-start-1 justify-self-end rounded-xl ${product.imageKey ? "col-start-2 @min-[36rem]/product-dialog:col-start-3" : "col-start-2"}`}
+          onClick={onClose}
+          disabled={busy}
+        >
           <X />
           {t("common_close")}
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 scrollbar-thin">
-        <div className="flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold outline-none">
-              {product.text[locale].displayName}
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed">{product.text[locale].description}</p>
-            <div className="my-3 text-lg font-semibold">
-              <Money value={product.price} />
-            </div>
-          </div>
-          {product.imageKey && (
-            <div className="relative size-20 shrink-0 sm:size-24">
-              <ProductImage
-                priority
-                width={96}
-                height={96}
-                sizes="(min-width: 640px) 96px, 80px"
-                className="size-full rounded-xl object-contain"
-                src={`/media/${product.imageKey}`}
-                alt={product.text[locale].displayName}
-              />
-              {product.imageKind === "illustration" && <IllustrationNotice />}
-            </div>
-          )}
-        </div>
+        <p className="mb-2 text-sm leading-relaxed">{product.text[locale].description}</p>
+        {product.modifiers.length > 0 && (
+          <p className="mb-2 text-sm text-muted-foreground">{t("kiosk_option_price_note")}</p>
+        )}
         <div
           data-ui="customisation-groups"
           className="grid items-start gap-3 @min-[36rem]/product-dialog:grid-cols-2"
@@ -95,10 +105,14 @@ export function ProductPage({
                 <Badge
                   variant="secondary"
                   data-required={group.min > 0 || undefined}
-                  className="data-required:bg-accent-soft data-required:text-accent-foreground"
+                  className="h-7 shrink-0 whitespace-nowrap py-0 data-required:bg-accent-soft data-required:text-accent-foreground"
                 >
-                  {group.min > 0 ? t("kiosk_required") : t("kiosk_optional")} · {group.min}–
-                  {group.max}
+                  {group.min > 0 ? t("kiosk_required") : t("kiosk_optional")} ·{" "}
+                  {group.min === group.max
+                    ? m.kiosk_select_exact({ count: group.min }, { locale })
+                    : group.min === 0
+                      ? m.kiosk_select_at_most({ count: group.max }, { locale })
+                      : m.kiosk_select_range({ min: group.min, max: group.max }, { locale })}
                 </Badge>
               </legend>
               {group.kind === "single" ? (
@@ -150,7 +164,7 @@ export function ProductPage({
                         {!option.available ? (
                           t("kiosk_sold_out")
                         ) : option.priceDelta !== 0 ? (
-                          <Money value={option.priceDelta} />
+                          <PriceChange value={option.priceDelta} />
                         ) : (
                           ""
                         )}
@@ -200,18 +214,15 @@ export function ProductPage({
                         {!option.available ? (
                           t("kiosk_sold_out")
                         ) : option.priceDelta !== 0 ? (
-                          <Money value={option.priceDelta} />
+                          <PriceChange value={option.priceDelta} />
                         ) : (
                           ""
                         )}
                       </small>
                       {group.kind === "quantity" && (
-                        <div
-                          data-ui="quantity-control"
-                          className="inline-flex items-center rounded-2xl border border-input p-1 shrink-0"
-                        >
+                        <div data-ui="quantity-control" className={quantityControl().group()}>
                           <Button
-                            size="icon"
+                            size="icon-sm"
                             variant="outline"
                             type="button"
                             aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
@@ -221,9 +232,15 @@ export function ProductPage({
                           >
                             <Minus size={16} />
                           </Button>
-                          <output className="text-center text-base min-w-7">{amount}</output>
+                          <output
+                            className={quantityControl().value({
+                              className: "inline-flex items-center justify-center",
+                            })}
+                          >
+                            {amount}
+                          </output>
                           <Button
-                            size="icon"
+                            size="icon-sm"
                             variant="outline"
                             type="button"
                             aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
@@ -271,12 +288,9 @@ export function ProductPage({
         data-theme-part="checkout"
         className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-card p-3"
       >
-        <div
-          data-ui="quantity-control"
-          className="inline-flex items-center rounded-2xl border border-input p-1 shrink-0"
-        >
+        <div data-ui="quantity-control" className={quantityControl().group()}>
           <Button
-            size="icon"
+            size="icon-sm"
             variant="outline"
             type="button"
             aria-label={t("common_decrease")}
@@ -285,11 +299,16 @@ export function ProductPage({
           >
             <Minus size={18} />
           </Button>
-          <output className="text-center text-base min-w-7" aria-label={t("common_quantity")}>
+          <output
+            className={quantityControl().value({
+              className: "inline-flex items-center justify-center",
+            })}
+            aria-label={t("common_quantity")}
+          >
             {quantity}
           </output>
           <Button
-            size="icon"
+            size="icon-sm"
             variant="outline"
             type="button"
             aria-label={t("common_increase")}

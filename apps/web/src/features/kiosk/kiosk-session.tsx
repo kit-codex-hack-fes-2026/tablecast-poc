@@ -495,11 +495,11 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     return (
       <header
         data-theme-part="header"
-        className="grid h-16 shrink-0 grid-cols-[minmax(0,1fr)_auto_21rem_auto] items-center gap-2 border-b border-border bg-card px-4 max-[56rem]:h-28 max-[56rem]:grid-cols-[minmax(0,1fr)_21rem] max-[56rem]:grid-rows-2 max-[56rem]:gap-y-0 max-[56rem]:px-3 max-sm:h-36 max-sm:grid-cols-[minmax(0,1fr)_auto] max-sm:grid-rows-3"
+        className="grid h-16 shrink-0 grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2 border-b border-border bg-card px-4 max-[80rem]:h-28 max-[80rem]:grid-cols-[minmax(0,1fr)_auto] max-[80rem]:grid-rows-2 max-[80rem]:gap-y-0 max-[80rem]:px-3 max-sm:h-48 max-sm:grid-cols-[minmax(0,1fr)_auto] max-sm:grid-rows-4"
       >
         <div
           data-ui="header-branding"
-          className="flex min-w-0 items-center gap-3 max-[56rem]:col-start-1 max-[56rem]:row-start-1 max-sm:gap-2"
+          className="flex min-w-0 items-center gap-3 max-[80rem]:col-start-1 max-[80rem]:row-start-1 max-sm:col-span-2 max-sm:row-start-3 max-sm:gap-2"
         >
           <a className="inline-flex shrink-0 items-center" href={data.kind === "demo" ? "#" : "/"}>
             <Brand className="w-28 max-sm:w-18" />
@@ -525,10 +525,10 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-end gap-2 max-[56rem]:col-start-1 max-[56rem]:row-start-2 max-[56rem]:justify-start max-sm:col-span-2 max-sm:justify-start">
+        <div className="flex items-center justify-end gap-2 max-[80rem]:col-start-1 max-[80rem]:row-start-2 max-[80rem]:justify-start max-sm:col-span-1 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-start max-sm:pt-1 max-sm:justify-start">
           {renderVisitTools()}
         </div>
-        <div className="flex w-full min-w-0 items-center justify-end gap-2 max-[56rem]:col-start-2 max-[56rem]:row-start-2 max-sm:col-start-1 max-sm:col-span-2 max-sm:row-start-3 [&_[data-slot=button]]:h-11 [&_[data-slot=button]]:min-h-11 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:min-h-11">
+        <div className="flex w-full min-w-0 items-center justify-end gap-2 max-[80rem]:col-start-2 max-[80rem]:row-start-2 max-sm:col-start-1 max-sm:col-span-2 max-sm:row-start-4">
           <LanguageSwitch
             withIcon
             onChange={(next) => language.mutate(next)}
@@ -540,21 +540,19 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           variant="outline"
           size="lg"
           data-ui="call-staff"
-          className="h-11 min-h-11 shrink-0 whitespace-nowrap px-3 py-2 text-sm max-[56rem]:col-start-2 max-[56rem]:row-start-1 max-[56rem]:justify-self-end max-xl:size-11 max-xl:min-w-11 max-xl:p-0"
+          className="h-11 min-h-11 shrink-0 whitespace-nowrap px-3 py-2 text-sm max-[80rem]:col-start-2 max-[80rem]:row-start-1 max-[80rem]:justify-self-end"
           onClick={() => call.mutate(false)}
           disabled={call.isPending || data.staffCalled}
         >
           <Bell />
-          <span className="max-xl:sr-only">
-            {data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}
-          </span>
+          <span>{data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}</span>
         </Button>
       </header>
     );
   }
   function renderVisitTools() {
     return (
-      <div className="flex min-w-0 shrink-0 items-center gap-1">
+      <div className="flex min-w-0 items-center gap-1 max-sm:flex-wrap">
         {data.kind === "table" && (
           <CustomerVisitPanel
             key={data.id}
@@ -801,6 +799,10 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                     }}
                   >
                     <PaneDialog.Portal container={orderPane}>
+                      <PaneDialog.Backdrop
+                        data-ui="product-overlay"
+                        className="absolute inset-0 z-20 bg-overlay"
+                      />
                       <PaneDialog.Popup
                         aria-label={selection?.product.text[locale].displayName}
                         initialFocus={false}

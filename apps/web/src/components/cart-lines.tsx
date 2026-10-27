@@ -8,10 +8,11 @@ import { forwardRef, type ReactNode, useId, useState } from "react";
 import { useI18n } from "../i18n/locale";
 import { ConditionSummary } from "./condition-summary";
 import { IllustrationNotice } from "./illustration-notice";
-import { Money } from "./money";
+import { Money, PriceChange } from "./money";
 import { ProductImage } from "./product-image";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { quantityControl } from "./ui/quantity-control-variants";
 
 /**
  * 注文かごの行。
@@ -129,7 +130,7 @@ export function CartLines({
                                 return (
                                   <span
                                     key={option.id}
-                                    className="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-xl border border-border bg-background p-1 text-sm"
+                                    className="inline-flex max-w-full flex-wrap items-center gap-1.5 min-h-11 rounded-xl border border-border bg-background p-1 text-sm"
                                   >
                                     <span className="font-medium">
                                       {context?.group.text[locale].displayName ??
@@ -152,7 +153,7 @@ export function CartLines({
                                     </span>
                                     {option.priceDelta !== 0 && (
                                       <span>
-                                        (<Money value={option.priceDelta} />)
+                                        (<PriceChange value={option.priceDelta} />)
                                       </span>
                                     )}
                                   </span>
@@ -306,7 +307,7 @@ function LineQuantity({
       <label htmlFor={id} className="text-sm font-medium">
         {t("common_quantity")}
       </label>
-      <NumberField.Group className="flex min-h-12 items-center rounded-xl border border-input bg-card p-1 inset-shadow-field hover:border-control-edge-hover focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
+      <NumberField.Group className={quantityControl().group()}>
         <NumberField.Decrement
           render={<Button size="icon-sm" variant="outline" />}
           aria-label={`${line.name[locale]}: ${t("common_decrease")}`}
@@ -318,7 +319,7 @@ function LineQuantity({
             if (event.key === "Enter") event.currentTarget.blur();
           }}
           aria-label={`${line.name[locale]}: ${t("common_quantity")}`}
-          className="h-11 w-10 min-w-0 bg-transparent text-center text-base tabular-nums outline-none"
+          className={quantityControl().value()}
         />
         <NumberField.Increment
           render={<Button size="icon-sm" variant="outline" />}

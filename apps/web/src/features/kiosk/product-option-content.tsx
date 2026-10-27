@@ -12,7 +12,12 @@ export function OptionContent({
 }) {
   return (
     <span className="flex min-w-0 flex-1 items-center gap-2">
-      <MenuOptionImage compact imageKey={option.imageKey} imageKind={option.imageKind} />
+      <MenuOptionImage
+        showIllustration={false}
+        compact
+        imageKey={option.imageKey}
+        imageKind={option.imageKind}
+      />
       <span className="min-w-0">
         <span id={`${id}-name`} className="block font-medium wrap-break-word">
           {option.text[locale].displayName}

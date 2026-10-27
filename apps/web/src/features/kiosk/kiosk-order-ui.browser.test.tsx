@@ -51,7 +51,12 @@ it.each(["ja", "en"] as const)(
       0,
     );
     const header = document.querySelector("header");
-    expect(header?.getBoundingClientRect().height).toBe(64);
+    expect(header?.getBoundingClientRect().height).toBe(112);
+    expect(header?.querySelectorAll('img[aria-hidden="true"]')).toHaveLength(3);
+    const staffLabel = page
+      .getByRole("button", { name: labels.kiosk_call_staff, exact: true })
+      .getByText(labels.kiosk_call_staff, { exact: true });
+    expect(staffLabel.element().getBoundingClientRect().width).toBeGreaterThan(40);
     expect(page.getByRole("tab").elements()).toHaveLength(3);
     const brand = header?.querySelector('img[alt="TableCast"]');
     const divider = header?.querySelector('[data-ui="header-divider"]');
@@ -86,7 +91,18 @@ it.each(["ja", "en"] as const)(
     expect(bounds.left).toBeGreaterThan(pane.getBoundingClientRect().left);
     expect(bounds.right).toBeLessThan(pane.getBoundingClientRect().right);
     const image = dialog.element().querySelector("img");
-    expect(image?.getBoundingClientRect().width).toBeLessThanOrEqual(160);
+    expect(image?.getBoundingClientRect().width).toBe(160);
+    expect(image?.getBoundingClientRect().left).toBeCloseTo(bounds.left + 13, 0);
+    expect(image?.getBoundingClientRect().top).toBeCloseTo(bounds.top + 13, 0);
+    const close = dialog
+      .getByRole("button", { name: labels.common_close, exact: true })
+      .element()
+      .getBoundingClientRect();
+    expect(close.right).toBeCloseTo(bounds.right - 13, 0);
+    expect(close.top).toBeCloseTo(bounds.top + 13, 0);
+    const overlay = pane.querySelector('[data-ui="product-overlay"]');
+    expect(overlay?.getBoundingClientRect().width).toBe(pane.getBoundingClientRect().width);
+    expect(dialog.element().querySelector('[data-ui="illustration-label"]')).toBeNull();
     await expect
       .element(dialog.getByRole("button", { name: labels.kiosk_add, exact: true }))
       .toBeVisible();

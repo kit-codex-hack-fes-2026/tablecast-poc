@@ -20,7 +20,7 @@ const allergenLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18
 export function ProductAllergens({ product }: { product: Product }) {
   const { locale, t } = useI18n();
   return (
-    <div className="bg-surface-subtle rounded-md p-4 mt-1">
+    <div className="bg-surface-subtle rounded-xl p-3 mt-3">
       <h3 className="text-xs mb-2">{t("kiosk_allergens")}</h3>
       <p className="mb-2 text-sm font-semibold">
         {product.allergens.contains
@@ -33,14 +33,14 @@ export function ProductAllergens({ product }: { product: Product }) {
             ? t("kiosk_allergens_none")
             : t("kiosk_unknown"))}
       </p>
-      <p className="block text-xs leading-loose text-muted-foreground">
+      <p className="block text-xs leading-relaxed text-muted-foreground">
         {product.allergens.note[locale] || t("kiosk_unknown")}
       </p>
       {product.allergens.vegan === "yes" && (
-        <p className="block text-xs leading-loose text-muted-foreground">{t("kiosk_vegan")}</p>
+        <p className="block text-xs leading-relaxed text-muted-foreground">{t("kiosk_vegan")}</p>
       )}
       {product.allergens.crossContact !== "controlled" && !product.allergens.note[locale] && (
-        <p className="block text-xs leading-loose text-muted-foreground">
+        <p className="block text-xs leading-relaxed text-muted-foreground">
           {t("kiosk_cross_contact")}
         </p>
       )}
