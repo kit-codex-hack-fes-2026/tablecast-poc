@@ -212,8 +212,6 @@ it.each(["ja", "en"] as const)(
       const footer = screen.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
       const scroller = screen.getByRole("log").element().firstElementChild;
       if (!(scroller instanceof HTMLElement)) throw new Error("会話のスクロール領域がありません");
-      const content = scroller.querySelector("[tabindex]");
-      if (!(content instanceof HTMLElement)) throw new Error("会話本文へフォーカスできません");
       await expect.poll(() => scroller.scrollTop).toBeGreaterThan(0);
       const before = scroller.scrollTop;
       const buttonBounds = button.element().getBoundingClientRect();
@@ -226,11 +224,10 @@ it.each(["ja", "en"] as const)(
           ),
         ),
       ).toBe(true);
-      content.focus({ preventScroll: true });
-      await userEvent.keyboard("{PageUp}");
+      await userEvent.wheel(visibleHistoryTarget(scroller), { delta: { y: -160 } });
       await expect.poll(() => scroller.scrollTop).toBeLessThan(before);
       const after = scroller.scrollTop;
-      await userEvent.keyboard("{PageDown}");
+      await userEvent.wheel(visibleHistoryTarget(scroller), { delta: { y: 160 } });
       await expect.poll(() => scroller.scrollTop).toBeGreaterThan(after);
       expect(button.element().getBoundingClientRect().top).toBe(buttonBounds.top);
       expect(footer.element().getBoundingClientRect().top).toBe(footerBounds.top);
@@ -241,3 +238,21 @@ it.each(["ja", "en"] as const)(
     }
   },
 );
+
+function visibleHistoryTarget(scroller: HTMLElement) {
+  const viewport = scroller.getBoundingClientRect();
+  const target = [...scroller.querySelectorAll("article span, article p")].find((element) => {
+    const bounds = element.getBoundingClientRect();
+    const x = bounds.left + bounds.width / 2;
+    const y = bounds.top + bounds.height / 2;
+    return (
+      bounds.width > 0 &&
+      bounds.height > 0 &&
+      bounds.top >= viewport.top &&
+      bounds.bottom <= viewport.bottom &&
+      element.contains(document.elementFromPoint(x, y))
+    );
+  });
+  if (!target) throw new Error("オーバーレイの背後に操作できる履歴がありません");
+  return target;
+}
