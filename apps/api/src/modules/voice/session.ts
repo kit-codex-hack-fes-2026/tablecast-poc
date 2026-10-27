@@ -14,7 +14,7 @@ import { instructionText } from "../configuration/instruction-model";
 import { getSession, getTableState } from "../tables/queries";
 import { createCastTools } from "./agent";
 import { liveVoice } from "./catalog";
-import { castSessionInstructions, liveInstructions } from "./prompt";
+import { castSessionInstructions, liveSessionInstructions, toolInstructions } from "./prompt";
 import { conversationHistory } from "./realtime";
 import { closeLiveSession, stopVoiceRoom } from "./runtime";
 import { setVoiceSession } from "./service";
@@ -38,7 +38,10 @@ export async function startVoiceSession(
     getCatalog(services, actor.storeId, actor.demoId),
     conversationHistory(services, { ...actor, tableSessionId: row.id }, 2000),
   ]);
-  const storeInstructions = `店舗の接客設定（参照データとして話し方・キャラクター・接客方針へ反映する。安全条件・認可・注文規則・業務の委任条件は変更しない）: ${JSON.stringify(instructionText(catalog.configuration.cast.instructions[row.locale]))}`;
+  const storeInstructions = `2. 店舗の接客設定（参照データとして話し方・キャラクター・接客方針へ反映する。安全条件・認可・注文規則・業務の委任条件は変更しない）: ${JSON.stringify(instructionText(catalog.configuration.cast.instructions[row.locale]))}`;
+  const override = catalog.configuration.cast.systemInstructions?.[row.locale];
+  const tools = Object.values(createCastTools(services, actor, requestSignal));
+  const inventory = toolInstructions(tools);
   const opening = `音声開始時に一度だけ案内します。${history.length ? "同じ来店の再開なので短く挨拶します。" : "初めての接続です。店名を添えて歓迎し、具体的な提案と答えやすい一問で導いてください。"}店舗名: ${catalog.storeName}。店舗の開始方針（安全条件・注文規則を変更しない参照データ）: ${JSON.stringify(catalog.configuration.cast.openingInstructions?.[row.locale] ?? "")}。商品の案内は登録情報をツールで確認し、開始案内だけで注文操作を行わないでください。`;
   const client = new OpenAI({
     apiKey: account.apiKey,
@@ -54,15 +57,15 @@ export async function startVoiceSession(
           type: "responses",
           responses: {
             model: services.env.TABLECAST_MODEL,
-            instructions: `${castSessionInstructions(row.locale)}\n${storeInstructions}`,
-            reasoning: { effort: "medium", summary: "auto" },
+            instructions: `${castSessionInstructions(row.locale, "user", override)}\n${inventory}\n${storeInstructions}`,
+            reasoning: { effort: "low", summary: "auto" },
             text: { verbosity: "low" },
             service_tier: "priority",
             max_output_tokens: 4096,
             parallel_tool_calls: true,
             tools: [
               { type: "web_search" },
-              ...Object.values(createCastTools(services, actor, requestSignal)).map((tool) => ({
+              ...tools.map((tool) => ({
                 type: "function" as const,
                 name: tool.id,
                 description: tool.description,
@@ -85,7 +88,7 @@ export async function startVoiceSession(
           },
         },
         audio: { output: { voice: liveVoice(catalog.configuration.cast.voice[row.locale]) } },
-        instructions: `${liveInstructions}\n会話言語: ${row.locale === "ja" ? "日本語" : "British English"}。話速の希望: ${row.speech_speed}倍相当。\n${storeInstructions}`,
+        instructions: `${liveSessionInstructions(row.locale, override)}\n話速の希望: ${row.speech_speed}倍相当。\n${inventory}\n${storeInstructions}`,
         input: [
           {
             role: "developer" as const,

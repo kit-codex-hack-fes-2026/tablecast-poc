@@ -33,7 +33,7 @@ CloudflareのWorkers Paid・Containersの利用条件、D1、R2、Images、Acces
 | Environment `production` secret  | `TABLECAST_BETTER_AUTH_API_KEY`                                | Better Auth Dashboardで発行した本番プロジェクトのAPI key |
 | Repository secrets               | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`               | PRの機械通信用Access service token                       |
 
-`TABLECAST_RUNTIME_SECRETS`には公開環境用の `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を入れる。GPT-Live 1とResponses delegationの利用権限があるprojectを使い、配備jobは `TABLECAST_MODEL=gpt-6-luna` を明示指定し、JSON内の旧モデル名より優先する。委譲先はFast mode（`service_tier: "priority"`）とreasoning mediumを使う。この選択は自動fallbackではなく配備版の固定設定である。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。旧 `OPENAI_API_KEY`、LiveKit鍵、音声内部token、Mastra観測設定は利用しない。
+`TABLECAST_RUNTIME_SECRETS`には公開環境用の `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を入れる。GPT-Live 1とResponses delegationの利用権限があるprojectを使い、配備jobは `TABLECAST_MODEL=gpt-6.1-terra` を明示指定し、JSON内の旧モデル名より優先する。委譲先はFast mode（`service_tier: "priority"`）とreasoning lowを使う。この選択は自動fallbackではなく配備版の固定設定である。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。旧 `OPENAI_API_KEY`、LiveKit鍵、音声内部token、Mastra観測設定は利用しない。
 
 認証secretは固定masterからAPI Worker名・用途別にHMACで導出する。再配備で変化せず、PR間では異なる。masterの変更は全環境の認証に影響するため通常のキー追加時に再生成しない。
 

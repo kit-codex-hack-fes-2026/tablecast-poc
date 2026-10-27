@@ -1,4 +1,5 @@
 import { instructionText } from "@tablecast/api/schema";
+import { defaultCastInstructions } from "@tablecast/api/speech";
 import { expect, it, vi } from "vitest";
 import { cleanup } from "vitest-browser-react";
 import ja from "../../../messages/ja.json";
@@ -11,6 +12,39 @@ import {
   open,
   storeId,
 } from "./test-support/configuration-workflow-fixture";
+
+it("標準プロンプトを明示上書きして両層を保存し、解除すると既定へ戻る", async () => {
+  const { screen } = await open(`${base}/changes/${draftId}/cast/settings#system-ja`);
+  const original = structuredClone(fixture.current.configuration.cast.instructions);
+  const source = screen.getByRole("textbox", { name: ja.cast_system_layer, exact: true });
+  const toggle = screen.getByRole("checkbox", { name: ja.cast_system_override, exact: true });
+  await expect.element(toggle).toHaveFocus();
+  await expect.element(source).toHaveAttribute("readonly");
+  await expect.element(source).toHaveValue(defaultCastInstructions.ja);
+  await toggle.click();
+  await source.fill("回答は2文まで、数字は算用数字で表記する。");
+  await screen.getByRole("tab", { name: "English", exact: true }).click();
+  await screen.getByRole("checkbox", { name: ja.cast_system_override, exact: true }).click();
+  await screen
+    .getByRole("textbox", { name: ja.cast_system_layer, exact: true })
+    .fill("Answer in up to 2 sentences using Arabic digits.");
+  await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
+  await expect.element(screen.getByText(ja.account_saved, { exact: true })).toBeVisible();
+  expect(fixture.current.configuration.cast.systemInstructions).toEqual({
+    ja: "回答は2文まで、数字は算用数字で表記する。",
+    en: "Answer in up to 2 sentences using Arabic digits.",
+  });
+  expect(fixture.current.configuration.cast.instructions).toEqual(original);
+  await screen.getByRole("checkbox", { name: ja.cast_system_override, exact: true }).click();
+  await expect
+    .element(screen.getByRole("textbox", { name: ja.cast_system_layer, exact: true }))
+    .toHaveValue(defaultCastInstructions.en);
+  await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
+  await expect.poll(() => fixture.current.configuration.cast.systemInstructions?.en).toBeNull();
+  expect(fixture.current.configuration.cast.systemInstructions?.ja).toBe(
+    "回答は2文まで、数字は算用数字で表記する。",
+  );
+});
 
 it.each([503, 409])(
   "保存が%sで失敗しても入力を保持し、再試行で保存して変更確認へ進む",

@@ -73,11 +73,13 @@ const meta = {
             const label =
               target === "proactive"
                 ? t("cast_edit_proactive")
-                : target.startsWith("instructions")
-                  ? m.cast_edit_instructions({ language }, { locale })
-                  : target.startsWith("opening")
-                    ? `${t("cast_edit_opening")} (${language})`
-                    : m.cast_edit_voice({ language }, { locale });
+                : target.startsWith("system")
+                  ? `${t("cast_edit_system")} (${language})`
+                  : target.startsWith("instructions")
+                    ? m.cast_edit_instructions({ language }, { locale })
+                    : target.startsWith("opening")
+                      ? `${t("cast_edit_opening")} (${language})`
+                      : m.cast_edit_voice({ language }, { locale });
             return (
               <Button type="button" variant="outline" onClick={() => edit(target)}>
                 <Pencil />

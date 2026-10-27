@@ -117,6 +117,24 @@ it("並行発行を一度に制限し、失われた応答の固定名資源を�
 });
 it.each([
   {
+    pricingVersion: "openai-2026-10-21",
+    model: "gpt-6-luna",
+    serviceTier: "priority",
+    charge: 33600,
+  },
+  {
+    pricingVersion: billingPricingVersion,
+    model: "gpt-6.1-terra",
+    serviceTier: "priority",
+    charge: 328000,
+  },
+  {
+    pricingVersion: billingPricingVersion,
+    model: "gpt-6.1-terra",
+    serviceTier: "fast",
+    charge: 328000,
+  },
+  {
     pricingVersion: "openai-2026-10-18",
     model: "gpt-5.6-luna",
     serviceTier: "priority",

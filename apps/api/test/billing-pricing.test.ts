@@ -1,6 +1,34 @@
 import { expect, it } from "vitest";
 import { usageCharge, utcMonthRange } from "../src/modules/billing/pricing";
 
+it("Terraの公式単価と長文境界・Fastを新料金版だけへ適用する", () => {
+  const usage = {
+    model: "gpt-6.1-terra",
+    serviceTier: "default",
+    inputTokens: 1000,
+    cachedTokens: 500,
+    outputTokens: 100,
+  };
+  expect(usageCharge(usage, 10000)).toBe(164000);
+  for (const serviceTier of ["priority", "fast"])
+    expect(usageCharge({ ...usage, serviceTier }, 15000)).toBe(492000);
+  expect(
+    usageCharge({ ...usage, inputTokens: 272000, cachedTokens: 0, outputTokens: 0 }, 10000),
+  ).toBe(43_520_000);
+  expect(usageCharge({ ...usage, inputTokens: 272001, cachedTokens: 0 }, 10000)).toBe(87_160_320);
+  for (const version of ["openai-2026-10-18", "openai-2026-10-21"])
+    expect(() => usageCharge(usage, 10000, version)).toThrow("BILLING_MODEL_UNPRICED");
+  const old = {
+    model: "gpt-6-luna",
+    serviceTier: "priority",
+    inputTokens: 1000,
+    cachedTokens: 500,
+    outputTokens: 100,
+  };
+  expect(usageCharge(old, 10000, "openai-2026-10-21")).toBe(33600);
+  expect(usageCharge(old, 10000)).toBe(33600);
+});
+
 it("90秒の音声を円未満の精度で計算し、初期15秒を上乗せしない", () => {
   expect(usageCharge({ seconds: 90 }, 10000)).toBe(12_000_000);
   expect(usageCharge({ seconds: 1 }, 15000)).toBe(200_000);

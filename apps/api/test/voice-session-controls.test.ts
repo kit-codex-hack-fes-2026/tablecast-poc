@@ -9,7 +9,7 @@ import { recordConversationItems } from "../src/modules/voice/conversation";
 import { invokeVoiceTool } from "../src/modules/voice/realtime";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
-import { device, setupFixture } from "./fixture";
+import { configuration, device, setupFixture } from "./fixture";
 import { runVoiceTurn } from "./voice-fixture";
 
 afterEach(() => vi.restoreAllMocks());
@@ -17,6 +17,18 @@ afterEach(() => vi.restoreAllMocks());
 it("言語変更は同じ音声接続を保ち、sidebandの更新ACKと古いturnの失効を確認する", async () => {
   await setupFixture();
   const services = createApiServices({ ...env, TABLECAST_MODEL_API_KEY: "tablecast-test-key" });
+  await services.db
+    .update(business.stores)
+    .set({
+      config_json: JSON.stringify({
+        ...configuration,
+        cast: {
+          ...configuration.cast,
+          systemInstructions: { ja: "TableCast system JA", en: "TableCast system EN" },
+        },
+      }),
+    })
+    .where(eq(business.stores.id, device.storeId));
   await setVoiceSession(services, device, "tablecast-language-live");
   const turn = await runVoiceTurn({
     voiceSessionId: "tablecast-language-live",
@@ -58,6 +70,15 @@ it("言語変更は同じ音声接続を保ち、sidebandの更新ACKと古いtu
     );
     expect(events[1]).toHaveProperty("type", "session.instructions.append");
     expect(events[1]).toHaveProperty("content", expect.stringContaining("British English"));
+    for (const [event, path] of [
+      [events[0], "session.delegation.responses.instructions"],
+      [events[1], "content"],
+    ] as const) {
+      expect(event).toHaveProperty(path, expect.stringContaining("TableCast system EN"));
+      expect(event).toHaveProperty(path, expect.not.stringContaining("TableCast system JA"));
+      expect(event).toHaveProperty(path, expect.stringContaining("captureCamera:"));
+      expect(event).toHaveProperty(path, expect.stringContaining("showReference:"));
+    }
     await expect(
       invokeVoiceTool(
         services,

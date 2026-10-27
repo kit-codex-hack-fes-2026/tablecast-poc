@@ -1493,5 +1493,12 @@
   "kiosk_reference_qr": "参考ページのQRコード",
   "kiosk_tool_show_reference": "参考情報とQRを表示",
   "kiosk_reference_expand": "タップしてQRを拡大",
-  "kiosk_cart_syncing": "金額を確認中"
+  "kiosk_cart_syncing": "金額を確認中",
+  "cast_system_layer": "1. TableCastシステム",
+  "cast_store_layer": "2. 店舗",
+  "cast_system_hint": "通常は標準設定のまま使います。店舗の話し方や接客方針は、2. 店舗で設定してください。ツールの説明・会話言語・APIの認可や注文確認の規則は自動で追加されます。",
+  "cast_system_default": "標準設定",
+  "cast_system_overridden": "上書き中",
+  "cast_system_override": "標準プロンプトを上書きする（非推奨）",
+  "cast_edit_system": "TableCastシステムを編集"
 }

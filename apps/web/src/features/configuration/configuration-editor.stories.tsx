@@ -101,6 +101,44 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const PromptLayersJapanese: Story = {
+  name: "iPadで標準と店舗の2層を編集",
+  args: {
+    value: {
+      instructions: {
+        ja: "落ち着いた丁寧な話し方で、お茶と料理の組合せを提案してください。",
+        en: "Speak calmly and politely, and suggest tea and food pairings.",
+      },
+      voice: { ja: null, en: null },
+      proactive: true,
+    },
+  },
+  beforeEach: () => {
+    requests.mockImplementation(() =>
+      Response.json({
+        voices: [
+          { voiceId: "marin", displayName: "Marin", langCode: "ja" },
+          { voiceId: "cedar", displayName: "Cedar", langCode: "en" },
+        ],
+        nextPageToken: null,
+      }),
+    );
+  },
+  render: function PromptLayers(args) {
+    const [value, setValue] = useState(args.value);
+    return (
+      <main className="mx-auto max-w-5xl p-6">
+        <CastEditor {...args} value={value} onChange={setValue} />
+      </main>
+    );
+  },
+};
+export const PromptLayersEnglish: Story = {
+  ...PromptLayersJapanese,
+  name: "英語で標準と店舗の2層を編集",
+  globals: { locale: "en" },
+};
+
 export const RestorePublishedVoice: Story = {
   name: "未設定を保存した後も公開音声を再選択でき、別店舗の候補を残さない",
   beforeEach: () => {

@@ -1493,5 +1493,12 @@
   "kiosk_reference_qr": "Reference page QR code",
   "kiosk_tool_show_reference": "Showing a reference and QR code",
   "kiosk_reference_expand": "Tap to enlarge the QR code",
-  "kiosk_cart_syncing": "Updating prices"
+  "kiosk_cart_syncing": "Updating prices",
+  "cast_system_layer": "1. TableCast system",
+  "cast_store_layer": "2. Restaurant",
+  "cast_system_hint": "Keep the defaults for normal use. Set your tone and service style under 2. Restaurant. Tool descriptions, conversation language, API authorisation and order confirmation rules are added automatically.",
+  "cast_system_default": "Default",
+  "cast_system_overridden": "Overridden",
+  "cast_system_override": "Override the system prompt (not recommended)",
+  "cast_edit_system": "Edit TableCast system"
 }

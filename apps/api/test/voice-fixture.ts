@@ -6,7 +6,7 @@ import { createApiServices } from "../src/platform/context";
 export const voiceBindings = () => ({
   ...env,
   TABLECAST_MODEL_API_KEY: "tablecast-test-key",
-  TABLECAST_MODEL: "gpt-6-luna",
+  TABLECAST_MODEL: "gpt-6.1-terra",
 });
 export async function runVoiceTurn(input: unknown, bindings = voiceBindings()) {
   const ctx = createExecutionContext();

@@ -208,6 +208,10 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
     ],
     cast: {
       ...published.configuration.cast,
+      systemInstructions: {
+        ja: "標準の役割を保ち、回答は2文までにする。",
+        en: "Keep the standard role and answer in up to 2 sentences.",
+      },
       instructions: {
         ja: "料理の文化を短く説明する",
         en: "Briefly explain the cultural background of the dishes.",
@@ -274,6 +278,9 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
     difference.changes.some((change) => change.path.includes("price") && change.sensitive),
   ).toBe(true);
   expect(difference.changes.some((change) => change.path.includes("speechName"))).toBe(true);
+  expect(
+    difference.changes.some((change) => change.path.startsWith("cast.systemInstructions")),
+  ).toBe(true);
   expect(difference.changes).toContainEqual(
     expect.objectContaining({
       path: "products.1.modifiers.0.options.0.imageKey",

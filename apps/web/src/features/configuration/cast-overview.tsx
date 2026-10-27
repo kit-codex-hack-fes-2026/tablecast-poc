@@ -7,6 +7,7 @@ import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
+import { CastSystemSettings } from "./cast-system-settings";
 import { ConfigurationSection } from "./configuration-fields";
 import { InstructionView } from "./instruction-view";
 import { LanguageFields } from "./language-fields";
@@ -27,6 +28,12 @@ export function CastOverview({
       <LanguageFields>
         {(language) => (
           <>
+            <CastSystemSettings
+              value={value}
+              language={language}
+              action={renderEdit?.(`system-${language}`)}
+            />
+            <h2 className="text-lg font-semibold">{t("cast_store_layer")}</h2>
             <ConfigurationSection title={t("editor_cast_instructions")} icon={MessageSquareText}>
               <div lang={language} className="min-w-0">
                 {instructionText(value.instructions[language]).trim() ? (

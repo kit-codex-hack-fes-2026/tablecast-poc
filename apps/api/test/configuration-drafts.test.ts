@@ -11,9 +11,30 @@ import {
 } from "../src/modules/configuration/use-cases/drafts";
 import { publishDraft } from "../src/modules/configuration/use-cases/publish";
 import { createApiServices } from "../src/platform/context";
-import { configDraftSchema, configurationIssueSchema, draftChoicesPageSchema } from "../src/schema";
+import {
+  configDraftSchema,
+  configurationIssueSchema,
+  configurationSchema,
+  draftChoicesPageSchema,
+  instructionLimit,
+} from "../src/schema";
 import { insertFixture } from "./database-fixture";
 import { deviceToken, configuration as fixtureConfiguration, setupFixture, text } from "./fixture";
+
+const withSystem = (ja: unknown) => ({
+  ...fixtureConfiguration,
+  cast: { ...fixtureConfiguration.cast, systemInstructions: { ja, en: null } },
+});
+
+it("旧接客設定を変更せず受け付け、標準上書きは言語別の本文かnullに限定する", () => {
+  expect(configurationSchema.parse(fixtureConfiguration).cast).toEqual(fixtureConfiguration.cast);
+  expect(configurationSchema.parse(withSystem(null)).cast.systemInstructions).toEqual({
+    ja: null,
+    en: null,
+  });
+  for (const value of ["", "   ", "a".repeat(instructionLimit + 1), { text: "override" }])
+    expect(configurationSchema.safeParse(withSystem(value)).success).toBe(false);
+});
 
 it("再開候補は小さな概要だけを返し、同じ更新時刻の31件目以降も重複なく取得できる", async () => {
   const { staff, cookie } = await setupFixture();
