@@ -8,7 +8,9 @@ export function Money({
   value,
   signed = false,
   taxIncluded = false,
+  secondaryTone = "muted",
 }: {
+  secondaryTone?: "inherit" | "muted";
   signed?: boolean;
   taxIncluded?: boolean;
   value: number;
@@ -17,6 +19,7 @@ export function Money({
   const { currency, rates } = useContext(CurrencyContext);
   const rate = currency ? rates?.rates[currency] : undefined;
   const sign = signed && value > 0 ? "+" : "";
+  const secondaryColor = secondaryTone === "inherit" ? "text-inherit" : "text-muted-foreground";
   const estimate = currency && rate ? `${sign}${money(value * rate, locale, currency)}` : undefined;
   return (
     <span className="whitespace-nowrap tabular-nums">
@@ -24,12 +27,12 @@ export function Money({
         {sign}
         {money(value, locale)}
       </span>
-      {taxIncluded && <span className="ml-1 text-muted-foreground">{t("price_tax_included")}</span>}
+      {taxIncluded && <span className={`ml-1 ${secondaryColor}`}>{t("price_tax_included")}</span>}
       {estimate && (
         <>
           {" "}
           <span
-            className="text-muted-foreground opacity-75"
+            className={`${secondaryColor} opacity-75`}
             aria-label={`${t("currency_approximate")}: ${estimate}`}
           >
             ≈ {estimate}
@@ -46,7 +49,7 @@ export function PriceChange({ value }: { value: number }) {
     <span
       className={`inline-flex rounded-md px-1.5 py-0.5 ${value > 0 ? "bg-destructive-soft text-destructive" : "bg-success-soft text-success"}`}
     >
-      <Money value={value} signed taxIncluded />
+      <Money value={value} signed taxIncluded secondaryTone="inherit" />
     </span>
   );
 }
