@@ -109,9 +109,9 @@ it.each([
       const responded = performance.now();
       await waitOnExecutionContext(context);
       expect(response.status).toBe(200);
-      const businessBudget = operation === "cart" || operation === "order" ? 4 : 3;
+      const businessBudget = operation === "order" ? 4 : 3;
       expect(measured.stats.roundtrips).toBeLessThanOrEqual(
-        businessBudget + (kind === "demo" ? 3 : 0),
+        businessBudget + (kind === "demo" ? (operation === "cart" ? 2 : 3) : 0),
       );
       expect(new TextEncoder().encode(body).byteLength).toBeLessThanOrEqual(
         count === 100 ? 1024 * 1024 : 64 * 1024,

@@ -89,6 +89,8 @@ GUIで商品をカートへ入れ、確認画面を経て明示承認する。`/
 
 通知はDBとイベント確定後に`waitUntil`へ渡し、配送そのものは`tablecast.notification.deliver`で別計測する。操作側の`notify`は登録までであり、配送完了時間ではない。通知失敗も既存の`tablecast.notification_failed`へ記録し、WebSocket再接続とイベントpollで回復する。HTTPはレスポンス本文の受信完了、UIは操作イベントから件数・商品行など目的の表示更新までを別々に測る。応答サイズはHTTP本文のUTF-8 byte数で記録する。
 
+`Server-Timing`の`api`はHono内の応答確定までを示す。認可済みの成功要求には同じ要求の`measured`で完了したspanの所要時間も最大32件付ける。SQL・入力値・資格・店舗識別子は含めず、別originへの読取許可は追加しない。親子の時間は重なるため合算しない。応答後の通知・OTLP送信、API入口前のWorker初期化・Service Binding・HTTP転送は含まない。ローカルLGTMのtraceと対応させ、ブラウザーのHTTP時間との差をすべてDB時間として扱わない。
+
 `table-operation-performance.test.ts`は本番Hono入口・Cookie認証・実D1で、通常卓とデモの8/120商品、1/100行のカゴと履歴を比較する。操作ごとに初回1標本とwarm 30標本を分け、warm p95を1000ms未満とする。binding往復、statement数、batchのSQL時間、通知後処理、本文サイズと業務結果も残す。ローカルの初回要求をCloudflareのcold isolateと同一視しない。previewの比較では対象SHA・環境・標本数を付け、実際のcold startは`faas.coldstart`のtraceが取得できる場合に別集計する。
 
 ローカルの一例は全体24ms、注文service17ms、通知5ms、商品設定取得4ms、DB確定3ms。単発のローカル測定であり、previewの性能値やp95を示さない。CPU処理だけの小さい区間はWorkersの時計の制約で0msになりうる。

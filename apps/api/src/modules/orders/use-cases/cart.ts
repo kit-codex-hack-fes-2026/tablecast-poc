@@ -13,7 +13,12 @@ import {
   notifyStore,
   voiceCondition,
 } from "../../tables/mutations";
-import { getPricingContext, getSession, getTableState } from "../../tables/queries";
+import {
+  getPricingContext,
+  getSession,
+  tableStateFromRows,
+  tableStateQueries,
+} from "../../tables/queries";
 import { type CartUpdate } from "../model";
 
 export async function updateCart(
@@ -34,7 +39,7 @@ export async function updateCart(
       priceCart(catalog.configuration, input.lines, input.expectedVersion, plan);
       const mutation = crypto.randomUUID();
       const gate = voiceCondition(actor);
-      const result = await measured("tablecast.cart.commit", () =>
+      const [updated, , event, ...state] = await measured("tablecast.cart.commit", () =>
         db.batch([
           db
             .update(business.tableSessions)
@@ -56,14 +61,15 @@ export async function updateCart(
             version: input.expectedVersion + 1,
             source: actor.kind,
           }),
+          ...tableStateQueries(services, actor),
         ]),
       );
-      ensure(result[0]?.meta.changes === 1, "CART_CONFLICT");
+      ensure(updated.meta.changes === 1, "CART_CONFLICT");
       await notifyStore(services, actor.storeId, actor.tableSessionId, {
-        cursor: result.at(-1)?.meta.last_row_id ?? 0,
+        cursor: event.meta.last_row_id ?? 0,
         demoId: session.kind === "demo" ? session.id : undefined,
       });
-      return getTableState(services, actor);
+      return tableStateFromRows(services, actor, state);
     },
     { env: services.env, input: { actor, input } },
   );

@@ -26,18 +26,22 @@ export async function measured<T>(
 ): Promise<T> {
   if (!trace.getActiveSpan()) return operation();
   return trace.getTracer("tablecast").startActiveSpan(name, async (span) => {
+    const started = performance.now();
     try {
       return await operation();
     } catch (error) {
       span.setStatus({ code: SpanStatusCode.ERROR });
       throw error;
     } finally {
+      const timings = context.active().getValue(telemetryTimings);
+      if (timings instanceof Map) timings.set(name, performance.now() - started);
       span.end();
     }
   });
 }
 
 export const telemetryChannel = createContextKey("tablecast.channel");
+export const telemetryTimings = createContextKey("tablecast.timings");
 
 // 操作全体の完了ログはtraceのsamplingとは独立させ、集計の母数を保つ。
 export async function observeOperation<T>(

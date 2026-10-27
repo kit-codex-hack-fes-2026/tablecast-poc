@@ -1,6 +1,6 @@
 import type { BetterAuthOptions } from "better-auth";
 import { createMiddleware } from "hono/factory";
-import type { TableRecord } from "../db/records";
+import type { DemoRecord, TableRecord } from "../db/records";
 import type { Actor } from "../modules/auth/model";
 import { createDatabase } from "../db/client";
 import { createAuth } from "../modules/auth/service";
@@ -14,7 +14,13 @@ export function createApiServices(
   let auth: ReturnType<typeof createAuth> | undefined;
   // 認可時の行は最初の業務読取だけへ渡し、更新後の状態取得には再利用しない。
   const tableAccess: {
-    demo?: { id: string; storeId: string; userId?: string; voiceSessionId?: string };
+    demo?: {
+      configuration: Pick<DemoRecord, "config_json" | "config_version"> & { storeName: string };
+      id: string;
+      storeId: string;
+      userId?: string;
+      voiceSessionId?: string;
+    };
     session?: TableRecord;
   } = {};
   return {

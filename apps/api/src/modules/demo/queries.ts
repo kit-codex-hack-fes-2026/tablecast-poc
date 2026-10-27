@@ -11,7 +11,12 @@ import { tablePlanSchema } from "../tables/model";
 export async function getDemoRecord(services: ApiServices, actor: Actor) {
   ensure(actor.demoId && actor.demoId === actor.tableSessionId, "DEMO_NOT_FOUND", 404);
   const result = await services.db
-    .select({ demo: business.demoSessions, session: business.tableSessions, role: member.role })
+    .select({
+      demo: business.demoSessions,
+      session: business.tableSessions,
+      role: member.role,
+      storeName: business.stores.name,
+    })
     .from(business.demoSessions)
     .innerJoin(
       business.tableSessions,
@@ -41,6 +46,11 @@ export async function getDemoRecord(services: ApiServices, actor: Actor) {
     storeId: actor.storeId,
     userId: actor.userId,
     voiceSessionId: actor.voiceSessionId,
+    configuration: {
+      config_version: result.demo.config_version,
+      config_json: result.demo.config_json,
+      storeName: result.storeName,
+    },
   };
   return result;
 }
