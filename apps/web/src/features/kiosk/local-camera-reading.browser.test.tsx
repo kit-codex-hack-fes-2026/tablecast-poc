@@ -70,16 +70,20 @@ afterEach(async () => {
 });
 
 it("ON中の1枚をJPEGで取得し、読取状態を示して完了・OFFで解除する", async () => {
-  const stream = await sourceStream();
-  const track = stream.getVideoTracks()[0];
-  if (!track) throw new Error("映像trackが必要です");
-  const settings = track.getSettings();
-  vi.spyOn(track, "getSettings").mockReturnValue({ ...settings, facingMode: undefined });
-  vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(stream);
+  const capture = vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(async () => {
+    // 実画面と同じON操作内で取得し、未接続の映像を先に起動しない。
+    const stream = await sourceStream();
+    const track = stream.getVideoTracks()[0];
+    if (!track) throw new Error("映像trackが必要です");
+    const settings = track.getSettings();
+    vi.spyOn(track, "getSettings").mockReturnValue({ ...settings, facingMode: undefined });
+    return stream;
+  });
   vi.spyOn(navigator.mediaDevices, "enumerateDevices").mockResolvedValue([]);
   const screen = await render(<Surface />);
   await screen.getByRole("button", { name: "画像を読み取る" }).click();
   await expect.element(screen.getByText("CAMERA_OFF")).toBeVisible();
+  expect(capture).not.toHaveBeenCalled();
   await screen.getByRole("button", { name: ja.kiosk_camera_start }).click();
   await expect
     .poll(() => {
@@ -102,7 +106,8 @@ it("ON中の1枚をJPEGで取得し、読取状態を示して完了・OFFで解
   await screen.getByRole("button", { name: "読取を完了" }).click();
   await expect.element(screen.getByText(ja.kiosk_camera_reading)).not.toBeInTheDocument();
   await screen.getByRole("button", { name: ja.kiosk_camera_stop }).click();
-  expect(stream.getTracks()[0]?.readyState).toBe("ended");
+  expect(capture).toHaveBeenCalledOnce();
+  expect(streams[0]?.getTracks()[0]?.readyState).toBe("ended");
 });
 
 it("外側へ切り替えると旧映像を解放し、外側のプレビューを鏡像にしない", async () => {
