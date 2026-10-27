@@ -60,7 +60,7 @@ export const Paused: Story = {
 };
 export const CompactPaused: Story = {
   ...Paused,
-  name: "iPadの既定240px幅で中央から再開",
+  name: "iPadの既定240px幅で停止中の履歴を表示",
   render: (args) => (
     <div className="h-173 w-60">
       <VoicePanel {...args} />
@@ -69,7 +69,7 @@ export const CompactPaused: Story = {
 };
 export const CompactPausedEnglish: Story = {
   ...CompactPaused,
-  name: "iPadの既定240px幅で中央から再開・英語",
+  name: "iPadの既定240px幅で停止中の履歴を表示・英語",
   globals: { locale: "en" },
   args: {
     ...Paused.args,

@@ -8,7 +8,7 @@ import { event, line, startedAt, Surface } from "./test-support/voice-panel-fixt
 import { VoicePanel } from "./voice-panel";
 
 it.each(["ja", "en"] as const)(
-  "%sの未接続画面は中央の音声操作と履歴を保ち、カメラの周囲へ会話を表示する",
+  "%sの未接続画面は下部の音声操作と履歴を保ち、カメラの周囲へ会話を表示する",
   async (locale) => {
     const labels = locale === "ja" ? ja : en;
     for (const [width, height, paneWidth, paneHeight] of [
@@ -28,25 +28,11 @@ it.each(["ja", "en"] as const)(
         </Surface>,
       );
       const panel = screen.getByRole("region", { name: labels.kiosk_conversation }).element();
-      const play = screen.getByRole("button", { name: labels.kiosk_voice_start, exact: true });
       const resume = screen.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
       expect(resume.element().closest("footer")).not.toBeNull();
       await expect
         .element(resume)
         .toHaveTextContent(locale === "ja" ? "音声を再開" : "Resume voice");
-      await expect.element(play).toHaveTextContent(labels.kiosk_voice_start);
-      const panelBounds = panel.getBoundingClientRect();
-      const playBounds = play.element().getBoundingClientRect();
-      expect(playBounds.width).toBeGreaterThanOrEqual(100);
-      expect(playBounds.height).toBeCloseTo(playBounds.width, 0);
-      expect(playBounds.left + playBounds.width / 2).toBeCloseTo(
-        panelBounds.left + panelBounds.width / 2,
-        0,
-      );
-      expect(playBounds.top + playBounds.height / 2).toBeCloseTo(
-        panelBounds.top + panelBounds.height / 2,
-        0,
-      );
       expect(getComputedStyle(panel).fontFamily).toContain("sans-serif");
       expect(getComputedStyle(panel).fontFamily).not.toContain("Mincho");
       const heading = panel.querySelector("h2");
@@ -61,20 +47,17 @@ it.each(["ja", "en"] as const)(
       expect(history.getBoundingClientRect().right).toBeGreaterThan(
         frame.getBoundingClientRect().right,
       );
-      expect(history.getBoundingClientRect().bottom).toBeGreaterThan(playBounds.bottom);
-      const overlay = panel.querySelector('[data-ui="voice-start-overlay"]');
-      if (!overlay) throw new Error("停止中の暗幕がありません");
-      expect(overlay.getBoundingClientRect().width).toBe(panelBounds.width);
-      expect(overlay.getBoundingClientRect().height).toBe(panelBounds.height);
-      expect(getComputedStyle(overlay).backgroundImage).toContain("radial-gradient");
+      const controls = panel.querySelector("footer");
+      if (!controls) throw new Error("下部の音声操作がありません");
+      expect(history.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+        controls.getBoundingClientRect().top,
+      );
       await expect.element(screen.getByText(line.text)).toBeVisible();
       expect(panel.textContent).not.toContain(
         locale === "ja" ? "録画・保存" : "recorded or stored",
       );
-      await play.click();
-      expect(start).toHaveBeenCalledOnce();
       await resume.click();
-      expect(start).toHaveBeenCalledTimes(2);
+      expect(start).toHaveBeenCalledOnce();
       await screen.unmount();
     }
   },
@@ -138,48 +121,8 @@ it.each(["ja", "en"] as const)(
   },
 );
 
-it("停止中の入口は短い波紋を出し、動きを減らす設定と接続後は波紋を止める", async () => {
-  await page.viewport(1180, 820);
-  const screen = await render(<VoiceRippleSurface status="paused" />);
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const ripples = [...document.querySelectorAll('[data-ui="voice-start-ripple"]')];
-  expect(ripples).toHaveLength(2);
-  await expect
-    .poll(() => ripples.flatMap((ripple) => ripple.getAnimations()).length)
-    .toBe(reduced ? 0 : 2);
-  const animations = ripples.flatMap((ripple) => ripple.getAnimations());
-  expect([
-    ...new Set(animations.map((animation) => animation.effect?.getTiming().iterations)),
-  ]).toEqual(reduced ? [] : [2]);
-  expect(
-    Math.max(
-      0,
-      ...animations.map((animation) => Number(animation.effect?.getComputedTiming().endTime ?? 0)),
-    ),
-  ).toBeLessThanOrEqual(2500);
-  await screen.rerender(<VoiceRippleSurface status="listening" />);
-  expect(document.querySelector('[data-ui="voice-start-overlay"]')).toBeNull();
-  expect(document.querySelector('[data-ui="voice-start-ripple"]')).toBeNull();
-  await expect
-    .poll(() => animations.filter((animation) => animation.playState === "running").length)
-    .toBe(0);
-  await expect
-    .element(screen.getByRole("button", { name: ja.kiosk_voice_stop, exact: true }))
-    .toBeVisible();
-});
-
-function VoiceRippleSurface({ status }: { status: "listening" | "paused" }) {
-  return (
-    <Surface>
-      <div style={{ width: 240, height: 692 }}>
-        <VoicePanel view={{ status }} lines={[]} onStart={() => {}} />
-      </div>
-    </Surface>
-  );
-}
-
 it.each(["ja", "en"] as const)(
-  "%sの停止中の履歴はオーバーレイの背後まで表示してスクロールでき、正方形の音声操作と下部ボタンを動かさない",
+  "%sの停止中の履歴を全高でスクロールでき、下部の音声操作を動かさない",
   async (locale) => {
     const labels = locale === "ja" ? ja : en;
     for (const [width, height, paneWidth, paneHeight] of [
@@ -208,7 +151,6 @@ it.each(["ja", "en"] as const)(
           </div>
         </Surface>,
       );
-      const button = screen.getByRole("button", { name: labels.kiosk_voice_start, exact: true });
       const footer = screen.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
       const scroller = screen.getByRole("log").element().firstElementChild;
       if (!(scroller instanceof HTMLElement)) throw new Error("会話のスクロール領域がありません");
@@ -217,16 +159,7 @@ it.each(["ja", "en"] as const)(
         .poll(() => Math.abs(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop))
         .toBeLessThanOrEqual(1);
       const before = scroller.scrollTop;
-      const buttonBounds = button.element().getBoundingClientRect();
       const footerBounds = footer.element().getBoundingClientRect();
-      expect(
-        scroller.contains(
-          document.elementFromPoint(
-            buttonBounds.left - 8,
-            buttonBounds.top + buttonBounds.height / 2,
-          ),
-        ),
-      ).toBe(true);
       const up = new Promise<void>((resolve) =>
         scroller.addEventListener("scrollend", () => resolve(), { once: true }),
       );
@@ -240,10 +173,9 @@ it.each(["ja", "en"] as const)(
       await userEvent.wheel(visibleHistoryTarget(scroller), { delta: { y: 160 } });
       await down;
       await expect.poll(() => scroller.scrollTop).toBeGreaterThan(after);
-      expect(button.element().getBoundingClientRect().top).toBe(buttonBounds.top);
       expect(footer.element().getBoundingClientRect().top).toBe(footerBounds.top);
       expect(start).not.toHaveBeenCalled();
-      await button.click();
+      await footer.click();
       expect(start).toHaveBeenCalledOnce();
       await screen.unmount();
     }
@@ -264,6 +196,6 @@ function visibleHistoryTarget(scroller: HTMLElement) {
       element.contains(document.elementFromPoint(x, y))
     );
   });
-  if (!target) throw new Error("オーバーレイの背後に操作できる履歴がありません");
+  if (!target) throw new Error("操作できる会話履歴がありません");
   return target;
 }
