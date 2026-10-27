@@ -502,7 +502,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           className="flex min-w-0 items-center gap-3 max-[56rem]:col-start-1 max-[56rem]:row-start-1 max-sm:gap-2"
         >
           <a className="inline-flex shrink-0 items-center" href={data.kind === "demo" ? "#" : "/"}>
-            <Brand className="w-28 max-sm:w-20" />
+            <Brand className="w-28 max-sm:w-18" />
           </a>
           <span
             aria-hidden
@@ -514,7 +514,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
               <img
                 src={`/media/${banner.imageKey}?width=480`}
                 alt={banner.alt[locale]}
-                className="h-10 w-auto max-w-40 shrink-0 object-contain object-left max-xl:h-8 max-xl:max-w-28 max-sm:h-6 max-sm:max-w-18"
+                className="h-10 w-auto max-w-40 shrink-0 object-contain object-left max-xl:h-8 max-xl:max-w-28 max-sm:h-6 max-sm:max-w-14"
               />
             )}
             <div className="flex min-w-0 max-w-full items-center gap-2 whitespace-nowrap text-sm max-xl:text-xs">
