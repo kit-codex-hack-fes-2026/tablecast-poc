@@ -125,7 +125,7 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
             brief:
               "店舗ロゴと別の横長バナー。提供された画像を優先し、切り抜きや引き伸ばしをしない。",
             placement:
-              "注文画面のヘッダーで画像全体を元の比率のまま表示する。店名と卓名は別の一行に表示する。",
+              "注文画面のヘッダーで画像全体を元の比率のまま表示する。バナー・店名・卓名は同じ横一列に表示する。",
           },
           {
             role: "banner",

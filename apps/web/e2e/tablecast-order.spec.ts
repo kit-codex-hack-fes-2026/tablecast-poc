@@ -244,6 +244,27 @@ test("英語の客が端末認可後に日本語へ切り替え、スタッフ�
             products.length,
           );
           await expect(responsive.locator('[data-ui="tab-price"] [aria-label]')).toHaveCount(2);
+          const branding = await responsive
+            .locator('[data-ui="store-logo-banner"]')
+            .evaluate((element) => {
+              const image = element.querySelector("img");
+              const caption = element.querySelector("div");
+              const name = caption?.querySelector("span");
+              if (!image || !caption || !name) throw new Error("店舗バナー・店名・卓名が必要です");
+              const picture = image.getBoundingClientRect();
+              const text = caption.getBoundingClientRect();
+              return {
+                imageCenter: picture.top + picture.height / 2,
+                textCenter: text.top + text.height / 2,
+                imageRight: picture.right,
+                textLeft: text.left,
+                nameWidth: name.clientWidth,
+                nameContentWidth: name.scrollWidth,
+              };
+            });
+          expect(branding.imageCenter).toBeCloseTo(branding.textCenter, 0);
+          expect(branding.textLeft).toBeGreaterThan(branding.imageRight);
+          expect(branding.nameContentWidth).toBeLessThanOrEqual(branding.nameWidth + 1);
           await responsive.screenshot({
             path: testInfo.outputPath(`tablecast-basket-${width}.png`),
           });
