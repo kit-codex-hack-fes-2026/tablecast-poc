@@ -1,5 +1,5 @@
 import type { TableEvent } from "@tablecast/api/schema";
-import { CircleAlert, LoaderCircle, Mic, MicOff, Pause, Play, ShoppingBag } from "lucide-react";
+import { CircleAlert, LoaderCircle, Mic, MicOff, Pause, ShoppingBag } from "lucide-react";
 import { lazy, Suspense } from "react";
 import type { voiceOperationState } from "./conversation-model";
 import type { VoiceView } from "./voice-connection";
@@ -160,7 +160,7 @@ export function VoiceControls({
   return (
     <footer
       data-theme-part="voice-controls"
-      className="mt-auto grid min-w-0 shrink-0 gap-2 border-t border-border pt-2"
+      className="relative z-30 mt-auto grid min-w-0 shrink-0 gap-2 border-t border-border pt-2"
     >
       {active && (
         <div className="min-w-0" data-ui="voice-media">
@@ -177,7 +177,7 @@ export function VoiceControls({
           </Suspense>
         </div>
       )}
-      <div className="flex min-w-0 items-center justify-end gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />
         {onMicrophoneChange && onMicrophoneRefresh && (
           <MicrophoneSettings
@@ -193,69 +193,91 @@ export function VoiceControls({
   );
 }
 
-function voiceControlLabel(status: VoiceView["status"], active: boolean, prominent: boolean) {
-  if (status === "stopping") return "kiosk_voice_stopping";
-  if (active) return "kiosk_voice_stop";
-  if (prominent) return "kiosk_voice_start";
-  return status === "error" ? "kiosk_voice_retry" : "kiosk_voice_resume";
-}
-
-export function VoiceToggle({
+function VoiceToggle({
   view,
   onStart,
   controlDisabled,
-  prominent = false,
-}: Pick<VoicePanelProps, "controlDisabled" | "onStart" | "view"> & { prominent?: boolean }) {
+}: Pick<VoicePanelProps, "controlDisabled" | "onStart" | "view">) {
   const { t } = useI18n();
   const active =
     view.error === "active" || !["idle", "paused", "error", "stopping"].includes(view.status);
-  const label = t(voiceControlLabel(view.status, active, prominent));
   return (
-    <span
-      className={`pointer-events-auto relative inline-flex min-w-0 bg-(image:--voice-spectrum) p-0.5 shadow-control-dark ${prominent ? "mx-3 w-[calc(100%_-_1.5rem)] max-w-64 rounded-2xl" : "w-full rounded-xl"}`}
-    >
+    <span className="inline-flex w-full min-w-0 rounded-xl bg-(image:--voice-spectrum) p-0.5 shadow-control-dark">
       <Button
-        className={`min-w-0 rounded-[inherit] text-center ${prominent ? "h-auto min-h-28 w-full gap-3 px-3 py-4" : "h-auto min-h-14 w-full whitespace-normal px-3 py-2 text-sm"}`}
+        className="h-auto min-h-14 w-full min-w-0 whitespace-normal rounded-[inherit] px-3 py-2 text-center text-sm"
         variant="voice"
         onClick={onStart}
-        disabled={controlDisabled || view.status === "stopping"}
-        aria-label={label}
+        disabled={controlDisabled}
       >
-        {active ? (
-          <MicOff className={prominent ? "size-10" : "size-4"} aria-hidden="true" />
-        ) : (
-          <VoiceStartIcon prominent={prominent} />
-        )}
-        {prominent ? (
-          <VoiceStartCopy label={label} available={!active && view.status !== "stopping"} />
-        ) : (
-          label
-        )}
+        {active ? <MicOff /> : <Mic />}
+        {view.status === "stopping"
+          ? t("kiosk_voice_stopping")
+          : active
+            ? t("kiosk_voice_stop")
+            : view.status === "error"
+              ? t("kiosk_voice_retry")
+              : t("kiosk_voice_resume")}
       </Button>
     </span>
   );
 }
 
-function VoiceStartIcon({ prominent }: { prominent: boolean }) {
-  return prominent ? (
-    <Play className="size-10" fill="currentColor" aria-hidden="true" />
-  ) : (
-    <Mic className="size-4" aria-hidden="true" />
+export function VoiceStartBanner({
+  view,
+  onStart,
+  controlDisabled,
+}: Pick<VoicePanelProps, "controlDisabled" | "onStart" | "view">) {
+  const { t } = useI18n();
+  const active =
+    view.error === "active" || !["idle", "paused", "error", "stopping"].includes(view.status);
+  const label =
+    view.status === "stopping"
+      ? t("kiosk_voice_stopping")
+      : active
+        ? t("kiosk_voice_stop")
+        : view.status === "error"
+          ? t("kiosk_voice_start_retry")
+          : t("kiosk_voice_start");
+  return (
+    <span className="pointer-events-auto relative mx-3 inline-flex w-[calc(100%-1.5rem)] min-w-0 max-w-64 rounded-2xl bg-(image:--voice-spectrum) p-0.5 shadow-control-dark">
+      <Button
+        className="h-auto min-h-36 w-full min-w-0 flex-col gap-3 rounded-[inherit] border-on-inverse bg-on-inverse bg-none p-3 text-center text-inverse hover:bg-on-inverse/90"
+        variant="voice"
+        onClick={onStart}
+        disabled={controlDisabled || view.status === "stopping"}
+        aria-label={label}
+      >
+        <span className="relative flex size-16 items-center justify-center rounded-full bg-inverse/5">
+          {!active && view.status !== "stopping" && <VoiceStartRipple />}
+          {active ? (
+            <MicOff className="relative size-10" aria-hidden="true" />
+          ) : (
+            <Mic className="relative size-10" aria-hidden="true" />
+          )}
+        </span>
+        <span className="text-sm font-medium leading-snug">{label}</span>
+      </Button>
+    </span>
   );
 }
 
-function VoiceStartCopy({ available, label }: { available: boolean; label: string }) {
-  const { t } = useI18n();
+function VoiceStartRipple() {
   return (
-    <span className="min-w-0 flex-1 text-left">
-      <strong className="block text-sm leading-snug">
-        {available ? t("kiosk_voice_banner_title") : label}
-      </strong>
-      {available && (
-        <span className="mt-1 block text-xs leading-relaxed opacity-90">
-          {t("kiosk_voice_banner_description")}
-        </span>
-      )}
-    </span>
+    <>
+      {[false, true].map((delayed) => (
+        <span
+          key={String(delayed)}
+          data-ui="voice-start-ripple"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-full border-2 border-inverse/25 opacity-40 motion-safe:animate-ping motion-reduce:hidden"
+          style={{
+            animationDelay: delayed ? "300ms" : undefined,
+            animationFillMode: "both",
+            animationIterationCount: 2,
+            animationTimingFunction: "var(--motion-ease-out)",
+          }}
+        />
+      ))}
+    </>
   );
 }

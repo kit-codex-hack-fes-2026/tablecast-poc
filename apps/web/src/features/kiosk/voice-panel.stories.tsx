@@ -22,7 +22,7 @@ export const Welcome: Story = {
   name: "日本語の初回表示",
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    const resume = canvas.getByRole("button", { name: "声で相談・注文" });
+    const resume = canvas.getByRole("button", { name: "音声を再開" });
     await expect(resume.closest("footer")).not.toBeNull();
     await userEvent.click(resume);
     await expect(args.onStart).toHaveBeenCalledOnce();
@@ -282,7 +282,7 @@ export const EmptyInterruption: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getAllByRole("article")).toHaveLength(2);
     await expect(canvas.queryByText("中断", { exact: true })).not.toBeInTheDocument();
-    const resume = canvas.getByRole("button", { name: "声で相談・注文" });
+    const resume = canvas.getByRole("button", { name: "音声を再開" });
     await expect(resume.closest("footer")).not.toBeNull();
     await userEvent.click(resume);
     await expect(args.onStart).toHaveBeenCalledOnce();
@@ -359,7 +359,7 @@ export const PausedWithStaleTool: Story = {
   args: { ...ToolAndCards.args, view: { status: "paused" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("button", { name: "声で相談・注文" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "音声を再開" })).toBeVisible();
     await expect(canvas.queryByText("実行中", { exact: true })).not.toBeInTheDocument();
     await expect(canvas.getByText("中断", { exact: true })).toBeVisible();
   },

@@ -38,11 +38,14 @@ it.each([
   if (!(card instanceof HTMLElement)) throw new Error("参考カードがありません");
   expect(card.getBoundingClientRect().width).toBeLessThanOrEqual(176);
   expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+  let readingSurface: Element = card;
   let svg = card.querySelector("svg:has(title)");
   if (url.length > 400) {
     await screen.getByRole("button", { name: ja.kiosk_reference_expand }).click();
-    svg = screen.getByRole("dialog").element().querySelector("svg:has(title)");
+    readingSurface = screen.getByRole("dialog").element();
+    svg = readingSurface.querySelector("svg:has(title)");
   }
+  await expect.poll(() => getComputedStyle(readingSurface).transform).toBe("none");
   if (!svg) throw new Error("QRが描画されていません");
   expect(svg.querySelector("image")?.getAttribute("href")).toBe(favicon);
   const rendered = svg.cloneNode(true);

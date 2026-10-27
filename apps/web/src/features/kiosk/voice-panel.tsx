@@ -23,7 +23,7 @@ import {
 } from "./conversation-model";
 import { LocalCamera, useLocalCamera } from "./local-camera";
 import { type VoiceView } from "./voice-connection";
-import { VoiceAttention, VoiceControls, VoiceToggle } from "./voice-controls";
+import { VoiceAttention, VoiceControls, VoiceStartBanner } from "./voice-controls";
 import { ConversationEntry, ConversationMessage } from "./voice-conversation-message";
 import { VoiceProgress } from "./voice-progress";
 import { VoiceReferenceCard } from "./voice-reference";
@@ -323,13 +323,11 @@ export function VoicePanelContent({
           </Conversation>
         </div>
         {!active && (
-          <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center">
-            <VoiceToggle
-              prominent
-              view={view}
-              onStart={onStart}
-              controlDisabled={controlDisabled}
-            />
+          <div
+            data-ui="voice-start-overlay"
+            className="pointer-events-none absolute inset-0 z-20 grid place-items-center bg-radial from-inverse/35 via-inverse/15 to-transparent"
+          >
+            <VoiceStartBanner view={view} onStart={onStart} controlDisabled={controlDisabled} />
           </div>
         )}
         <VoiceControls

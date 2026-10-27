@@ -31,8 +31,10 @@ it.each(["ja", "en"] as const)(
       const play = screen.getByRole("button", { name: labels.kiosk_voice_start, exact: true });
       const resume = screen.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
       expect(resume.element().closest("footer")).not.toBeNull();
-      await expect.element(screen.getByText(labels.kiosk_voice_banner_title)).toBeVisible();
-      await expect.element(screen.getByText(labels.kiosk_voice_banner_description)).toBeVisible();
+      await expect
+        .element(resume)
+        .toHaveTextContent(locale === "ja" ? "音声を再開" : "Resume voice");
+      await expect.element(play).toHaveTextContent(labels.kiosk_voice_start);
       const panelBounds = panel.getBoundingClientRect();
       const playBounds = play.element().getBoundingClientRect();
       expect(playBounds.width).toBeGreaterThanOrEqual(100);
@@ -60,6 +62,11 @@ it.each(["ja", "en"] as const)(
         frame.getBoundingClientRect().right,
       );
       expect(history.getBoundingClientRect().bottom).toBeLessThanOrEqual(playBounds.top);
+      const overlay = panel.querySelector('[data-ui="voice-start-overlay"]');
+      if (!overlay) throw new Error("停止中の暗幕がありません");
+      expect(overlay.getBoundingClientRect().width).toBe(panelBounds.width);
+      expect(overlay.getBoundingClientRect().height).toBe(panelBounds.height);
+      expect(getComputedStyle(overlay).backgroundImage).toContain("radial-gradient");
       await expect.element(screen.getByText(line.text)).toBeVisible();
       expect(panel.textContent).not.toContain(
         locale === "ja" ? "録画・保存" : "recorded or stored",
@@ -130,3 +137,43 @@ it.each(["ja", "en"] as const)(
     }
   },
 );
+
+it("停止中の入口は短い波紋を出し、動きを減らす設定と接続後は波紋を止める", async () => {
+  await page.viewport(1180, 820);
+  const screen = await render(<VoiceRippleSurface status="paused" />);
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const ripples = [...document.querySelectorAll('[data-ui="voice-start-ripple"]')];
+  expect(ripples).toHaveLength(2);
+  await expect
+    .poll(() => ripples.flatMap((ripple) => ripple.getAnimations()).length)
+    .toBe(reduced ? 0 : 2);
+  const animations = ripples.flatMap((ripple) => ripple.getAnimations());
+  expect([
+    ...new Set(animations.map((animation) => animation.effect?.getTiming().iterations)),
+  ]).toEqual(reduced ? [] : [2]);
+  expect(
+    Math.max(
+      0,
+      ...animations.map((animation) => Number(animation.effect?.getComputedTiming().endTime ?? 0)),
+    ),
+  ).toBeLessThanOrEqual(2500);
+  await screen.rerender(<VoiceRippleSurface status="listening" />);
+  expect(document.querySelector('[data-ui="voice-start-overlay"]')).toBeNull();
+  expect(document.querySelector('[data-ui="voice-start-ripple"]')).toBeNull();
+  await expect
+    .poll(() => animations.filter((animation) => animation.playState === "running").length)
+    .toBe(0);
+  await expect
+    .element(screen.getByRole("button", { name: ja.kiosk_voice_stop, exact: true }))
+    .toBeVisible();
+});
+
+function VoiceRippleSurface({ status }: { status: "listening" | "paused" }) {
+  return (
+    <Surface>
+      <div style={{ width: 240, height: 692 }}>
+        <VoicePanel view={{ status }} lines={[]} onStart={() => {}} />
+      </div>
+    </Surface>
+  );
+}

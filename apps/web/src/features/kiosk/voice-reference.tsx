@@ -94,7 +94,7 @@ export function VoiceReferenceCard({ reference }: { reference: VoiceReference })
             <ZoomIn className="size-3" aria-hidden="true" />
             {t("kiosk_reference_expand")}
           </p>
-          <DialogContent className="max-w-md font-sans">
+          <DialogContent className="max-w-xl font-sans">
             <DialogHeader>
               <DialogTitle className="text-base" style={{ fontFamily: "var(--font-sans)" }}>
                 {reference.title}
@@ -104,7 +104,7 @@ export function VoiceReferenceCard({ reference }: { reference: VoiceReference })
               </DialogClose>
             </DialogHeader>
             <div className="mx-auto max-w-full overflow-hidden rounded-xl bg-on-inverse">
-              {qr(400)}
+              {qr(512)}
             </div>
             <a
               className="mt-2 truncate text-sm underline"

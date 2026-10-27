@@ -87,6 +87,7 @@ export default defineConfig({
                   "src/features/floor/floor-calendar-layout.browser.test.tsx",
                   "src/features/kiosk/voice-panel.browser.test.tsx",
                   "src/features/kiosk/voice-panel-video.browser.test.tsx",
+                  "src/features/kiosk/voice-pane-ui.browser.test.tsx",
                   "src/features/kiosk/local-camera-reading.browser.test.tsx",
                   "src/components/motion-system.browser.test.tsx",
                   "src/components/route-motion.browser.test.tsx",
