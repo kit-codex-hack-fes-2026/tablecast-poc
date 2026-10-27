@@ -93,8 +93,8 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
       .waitForResponse((response) => response.url().endsWith("/customer-code") && response.ok())
       .then(async (response) => z.object({ url: z.url() }).parse(await response.json()));
     await tablet.goto("/");
-    const code = await codeResponse;
     await tablet.getByRole("button", { name: new RegExp(`^${ja.kiosk_visit_tools}`) }).click();
+    const code = await codeResponse;
     await expect(
       tablet
         .getByRole("region", { name: ja.customer_join_visit })
@@ -152,8 +152,8 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
       .waitForResponse((response) => response.url().endsWith("/customer-code") && response.ok())
       .then(async (response) => z.object({ url: z.url() }).parse(await response.json()));
     await tablet.reload();
-    const nextCode = await nextCodeResponse;
     await tablet.getByRole("button", { name: new RegExp(`^${ja.kiosk_visit_tools}`) }).click();
+    const nextCode = await nextCodeResponse;
     for (const phone of [first, second]) {
       let enrolments = 0;
       const observeEnrolment = (request: Request) => {

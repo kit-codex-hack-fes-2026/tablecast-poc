@@ -382,7 +382,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                       version: current.cart.version + 1,
                       lines: [],
                       total: 0,
-                      complete: true,
+                      complete: false,
                     },
                     snapshot: null,
                     bill: { ...current.bill, cartTotal: 0 },

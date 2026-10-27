@@ -213,6 +213,9 @@ it.each(["ja", "en"] as const)(
       const scroller = screen.getByRole("log").element().firstElementChild;
       if (!(scroller instanceof HTMLElement)) throw new Error("会話のスクロール領域がありません");
       await expect.poll(() => scroller.scrollTop).toBeGreaterThan(0);
+      await expect
+        .poll(() => Math.abs(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop))
+        .toBeLessThanOrEqual(1);
       const before = scroller.scrollTop;
       const buttonBounds = button.element().getBoundingClientRect();
       const footerBounds = footer.element().getBoundingClientRect();
@@ -224,10 +227,18 @@ it.each(["ja", "en"] as const)(
           ),
         ),
       ).toBe(true);
+      const up = new Promise<void>((resolve) =>
+        scroller.addEventListener("scrollend", () => resolve(), { once: true }),
+      );
       await userEvent.wheel(visibleHistoryTarget(scroller), { delta: { y: -160 } });
+      await up;
       await expect.poll(() => scroller.scrollTop).toBeLessThan(before);
       const after = scroller.scrollTop;
+      const down = new Promise<void>((resolve) =>
+        scroller.addEventListener("scrollend", () => resolve(), { once: true }),
+      );
       await userEvent.wheel(visibleHistoryTarget(scroller), { delta: { y: 160 } });
+      await down;
       await expect.poll(() => scroller.scrollTop).toBeGreaterThan(after);
       expect(button.element().getBoundingClientRect().top).toBe(buttonBounds.top);
       expect(footer.element().getBoundingClientRect().top).toBe(footerBounds.top);
