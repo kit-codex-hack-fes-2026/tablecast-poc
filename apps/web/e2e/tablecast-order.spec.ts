@@ -220,14 +220,16 @@ test("英語の客が端末認可後に日本語へ切り替え、スタッフ�
     await expect(guest.getByText(ja.kiosk_cart_added, { exact: true }).first()).toBeVisible();
     await expect(guest.getByText(ja.kiosk_cart_empty, { exact: true })).not.toBeVisible();
     await guest.screenshot({ path: testInfo.outputPath("tablecast-basket-toast.png") });
+    await expect(guest.getByRole("button", { name: ja.kiosk_review, exact: true })).toBeEnabled();
+    // 通信完了を待ち、退出中・表示制限中の通知を操作対象にしない。
     const basketToasts = guest
       .getByRole("dialog", { name: ja.kiosk_cart_added, exact: true })
-      .and(guest.locator(":not([data-ending-style])"));
+      .and(guest.locator(":not([data-ending-style]):visible"));
     while (await basketToasts.count()) {
       await basketToasts
         .first()
         .getByRole("button", { name: ja.common_close, exact: true })
-        .click();
+        .press("Enter");
     }
     if (browserName === "chromium") {
       // 実データのカゴを各端末のCSS viewportで撮影する。

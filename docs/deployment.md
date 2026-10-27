@@ -189,7 +189,7 @@ WorkerのrollbackはD1/R2/DOを戻さない。DB復元が必要なら営業書�
 
 D1作成時は `primary_location_hint: apac` を指定する。これはアジア太平洋への希望で、Tokyo固定や配置保証ではない。既存DBの再配備では作成場所を変更しない。previewも専用の通常D1を使用し、previewという環境名自体を遅延原因としない。[D1のデータ配置](https://developers.cloudflare.com/d1/configuration/data-location/)
 
-DBとの直列往復が多いAPI Workerに `placement.mode: smart` を設定する。Web Workerは受信側でSSRと静的配信を行い、APIへのService Bindingの `fetch` は維持する。Smart Placementは過去に実行された拠点と要求時間から判断するため、低トラフィックのpreviewや単一拠点からの利用では `INSUFFICIENT_INVOCATIONS` になることがある。分析には最大15分を要し、設定だけでD1との同居や高速化を保証しない。Tokyoへの明示配置はD1の実配置・通信時間を確認してから検討する。[Workers Placement](https://developers.cloudflare.com/workers/configuration/placement/)
+API Workerは `placement.region: aws:ap-southeast-1` でSingaporeに近い拠点を指定し、Webは受信側でSSRと静的配信を行う。2026-10-28のPR #392ではD1 metadataがAPAC/SIN、更新SQLは0.63msだった一方、更新・状態読取batchのwall timeは614msだった。実DBに近いAPI配置を選び、Web→APIのService Bindingの `fetch` は維持する。D1が別拠点になった場合はmetadataとHTTPを再測定して指定を見直す。過去の自動配置 `mode: smart` は、単一拠点・低トラフィックで最適な配置を保証しない。[Workers Placement](https://developers.cloudflare.com/workers/configuration/placement/)
 
 配備後はCloudflareのWorker設定でplacement状態を確認し、Grafanaで同一経路のwarm要求を比較する。APIの `cloudflare.placement` はCloudflareの `cf-placement` ヘッダー（例: `remote-SIN`）、SDKの `cloudflare.colo` は要求の `request.cf.colo` を表す。後者だけを移動先の証拠にしない。配置設定は生成・ビルド済みconfigを通じて配備し、効果がない場合はこの設定を戻せる。既存DB・Cookie・認証secretは維持する。
 
