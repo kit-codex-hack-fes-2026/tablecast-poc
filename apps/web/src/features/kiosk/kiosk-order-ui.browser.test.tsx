@@ -164,6 +164,27 @@ it.each(["ja", "en"] as const)(
     await expect
       .element(customisations.getByRole("button", { name: labels.kiosk_edit, exact: true }))
       .toBeVisible();
+    await expect
+      .element(
+        customisations
+          .getByRole("button", { name: labels.kiosk_edit, exact: true })
+          .getByText(labels.kiosk_edit, { exact: true }),
+      )
+      .toBeVisible();
+    const actions = pane.querySelector('[data-ui="line-actions"]');
+    if (!actions) throw new Error("商品行の操作が必要です");
+    const quantity = actions.querySelector('input:not([type="hidden"])')?.parentElement;
+    if (!quantity) throw new Error("数量の入力枠が必要です");
+    const controls = [
+      customisations.getByRole("button", { name: labels.kiosk_edit, exact: true }).element(),
+      quantity,
+      page.getByRole("button", { name: labels.common_remove, exact: true }).element(),
+    ].map((control) => control.getBoundingClientRect());
+    expect(controls).toHaveLength(3);
+    for (const control of controls) {
+      expect(control.height).toBe(54);
+      expect(control.top).toBeCloseTo(fixtureValue(controls[0]).top, 0);
+    }
     expect(customisations.element().textContent).toContain(
       `${fixtureValue(pictured.modifiers[0]).text[locale].displayName}:`,
     );

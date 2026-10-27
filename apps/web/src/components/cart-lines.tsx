@@ -103,8 +103,15 @@ export function CartLines({
                       <Money taxIncluded value={line.total} />
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    {(!onQuantity || line.planCovered || line.options.length > 0 || canEdit) && (
+                  <div
+                    role={line.options.length > 0 || canEdit ? "region" : undefined}
+                    data-ui={line.options.length > 0 || canEdit ? "line-customisations" : undefined}
+                    aria-label={
+                      line.options.length > 0 || canEdit ? t("kiosk_customisations") : undefined
+                    }
+                    className="flex flex-wrap items-center justify-between gap-2"
+                  >
+                    {(!onQuantity || line.planCovered || line.options.length > 0) && (
                       <div className="min-w-0 flex-1 basis-48 space-y-2">
                         {(!onQuantity || line.planCovered) && (
                           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -118,76 +125,70 @@ export function CartLines({
                             )}
                           </div>
                         )}
-                        {(line.options.length > 0 || canEdit) && (
-                          <section
-                            data-ui="line-customisations"
-                            aria-label={t("kiosk_customisations")}
-                            className="flex min-w-0 items-center justify-end gap-2"
-                          >
-                            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-                              {line.options.map((option) => {
-                                const context = optionsById.get(option.id);
-                                return (
-                                  <span
-                                    key={option.id}
-                                    className="inline-flex max-w-full flex-wrap items-center gap-1.5 min-h-11 rounded-xl border border-border bg-background p-1 text-sm"
-                                  >
-                                    <span className="font-medium">
-                                      {context?.group.text[locale].displayName ??
-                                        t("kiosk_customisations")}
-                                      :{" "}
-                                    </span>
-                                    {context?.option.imageKey && (
-                                      <ProductImage
-                                        src={`/media/${context.option.imageKey}`}
-                                        width={32}
-                                        height={32}
-                                        sizes="32px"
-                                        alt=""
-                                        className="size-8 shrink-0 rounded-lg object-contain"
-                                      />
-                                    )}
-                                    <span className="min-w-0 wrap-anywhere">
-                                      {option.name[locale]}
-                                      {option.quantity > 1 && ` × ${option.quantity}`}
-                                    </span>
-                                    {option.priceDelta !== 0 && (
-                                      <span>
-                                        (<PriceChange value={option.priceDelta} />)
-                                      </span>
-                                    )}
+                        {line.options.length > 0 && (
+                          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                            {line.options.map((option) => {
+                              const context = optionsById.get(option.id);
+                              return (
+                                <span
+                                  key={option.id}
+                                  className="inline-flex min-h-11 max-w-full flex-wrap items-center gap-1.5 rounded-xl border border-border bg-background p-1 text-sm"
+                                >
+                                  <span className="font-medium">
+                                    {context?.group.text[locale].displayName ??
+                                      t("kiosk_customisations")}
+                                    :{" "}
                                   </span>
-                                );
-                              })}
-                            </div>
-                            {canEdit && onEdit && (
-                              <Button
-                                className="ml-auto shrink-0"
-                                size="icon-sm"
-                                variant="outline"
-                                type="button"
-                                aria-label={t("kiosk_edit")}
-                                title={t("kiosk_edit")}
-                                disabled={disabled}
-                                onClick={() => onEdit(line)}
-                              >
-                                <Pencil aria-hidden />
-                              </Button>
-                            )}
-                          </section>
+                                  {context?.option.imageKey && (
+                                    <ProductImage
+                                      src={`/media/${context.option.imageKey}`}
+                                      width={32}
+                                      height={32}
+                                      sizes="32px"
+                                      alt=""
+                                      className="size-8 shrink-0 rounded-lg object-contain"
+                                    />
+                                  )}
+                                  <span className="min-w-0 wrap-anywhere">
+                                    {option.name[locale]}
+                                    {option.quantity > 1 && ` × ${option.quantity}`}
+                                  </span>
+                                  {option.priceDelta !== 0 && (
+                                    <span>
+                                      (<PriceChange value={option.priceDelta} />)
+                                    </span>
+                                  )}
+                                </span>
+                              );
+                            })}
+                          </div>
                         )}
                       </div>
                     )}
-                    {(onQuantity || onRemove) && (
+                    {(canEdit || onQuantity || onRemove) && (
                       <div
                         data-ui="line-actions"
-                        className="ml-auto flex flex-wrap items-end justify-end gap-2"
+                        className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2"
                       >
+                        {canEdit && onEdit && (
+                          <Button
+                            className="h-13.5 min-h-13.5 shrink-0 rounded-xl"
+                            size="sm"
+                            variant="outline"
+                            type="button"
+                            disabled={disabled}
+                            onClick={() => onEdit(line)}
+                          >
+                            <Pencil aria-hidden />
+                            {t("kiosk_edit")}
+                          </Button>
+                        )}
                         {onQuantity && (
                           <LineQuantity line={line} disabled={disabled} onQuantity={onQuantity} />
                         )}
                         {onRemove && (
                           <Button
+                            className="h-13.5 min-h-13.5 rounded-xl"
                             size="sm"
                             variant="destructive"
                             type="button"
@@ -302,12 +303,12 @@ function LineQuantity({
         }
         if (quantity !== line.quantity) onQuantity(line, quantity);
       }}
-      className="flex flex-col gap-1"
+      className="inline-flex"
     >
-      <label htmlFor={id} className="text-sm font-medium">
-        {t("common_quantity")}
-      </label>
       <NumberField.Group className={quantityControl().group()}>
+        <label htmlFor={id} className="px-2 text-sm font-medium">
+          {t("common_quantity")}
+        </label>
         <NumberField.Decrement
           render={<Button size="icon-sm" variant="outline" />}
           aria-label={`${line.name[locale]}: ${t("common_decrease")}`}
