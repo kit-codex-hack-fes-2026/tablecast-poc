@@ -4,7 +4,7 @@ import type { Actor } from "../../auth/model";
 import type { TableState } from "../../tables/model";
 import * as business from "../../../db/business-schema";
 import { ensure } from "../../../platform/errors";
-import { measured, observeOperation } from "../../../platform/telemetry";
+import { measured, observeOperation, recordTiming } from "../../../platform/telemetry";
 import { priceCart } from "../../catalog/pricing";
 import { sessionConfigVersion } from "../../catalog/queries";
 import {
@@ -65,6 +65,14 @@ export async function updateCart(
         ]),
       );
       ensure(updated.meta.changes === 1, "CART_CONFLICT");
+      const location = [updated.meta.served_by_region, updated.meta.served_by_colo]
+        .filter((value) => value && /^[A-Z]{3,6}$/.test(value))
+        .join("/");
+      recordTiming(
+        "tablecast.d1.update.sql",
+        updated.meta.timings?.sql_duration_ms ?? updated.meta.duration,
+        location || undefined,
+      );
       await notifyStore(services, actor.storeId, actor.tableSessionId, {
         cursor: event.meta.last_row_id ?? 0,
         demoId: session.kind === "demo" ? session.id : undefined,

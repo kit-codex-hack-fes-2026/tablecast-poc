@@ -33,8 +33,7 @@ export async function measured<T>(
       span.setStatus({ code: SpanStatusCode.ERROR });
       throw error;
     } finally {
-      const timings = context.active().getValue(telemetryTimings);
-      if (timings instanceof Map) timings.set(name, performance.now() - started);
+      recordTiming(name, performance.now() - started);
       span.end();
     }
   });
@@ -42,6 +41,11 @@ export async function measured<T>(
 
 export const telemetryChannel = createContextKey("tablecast.channel");
 export const telemetryTimings = createContextKey("tablecast.timings");
+
+export function recordTiming(name: string, duration: number, description?: string) {
+  const timings = context.active().getValue(telemetryTimings);
+  if (timings instanceof Map) timings.set(name, { duration, description });
+}
 
 // 操作全体の完了ログはtraceのsamplingとは独立させ、集計の母数を保つ。
 export async function observeOperation<T>(

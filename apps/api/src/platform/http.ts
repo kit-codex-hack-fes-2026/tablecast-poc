@@ -26,20 +26,27 @@ export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
     : c.req.path === "/mcp" || c.req.path.startsWith("/mcp/")
       ? "mcp"
       : "http";
-  const timings = new Map<string, number>();
+  const timings = new Map<string, { description?: string; duration: number }>();
   await context.with(
     context.active().setValue(telemetryChannel, channel).setValue(telemetryTimings, timings),
     next,
   );
   const status = c.res.status;
   const duration = Math.round((performance.now() - started) * 100) / 100;
+  const placement = c.req.header("cf-placement");
+  const validPlacement = placement && /^(local|remote)-[A-Z]{3}$/.test(placement);
   // 値やSQLは公開せず、認可済み要求のspan所要時間をHTTPと照合する。
   c.header(
     "Server-Timing",
     [
-      `api;dur=${duration}`,
+      `api;dur=${duration}${validPlacement ? `;desc=${JSON.stringify(placement)}` : ""}`,
       ...(c.get("actor") && status < 400
-        ? [...timings].slice(0, 32).map(([name, ms]) => `${name};dur=${ms.toFixed(2)}`)
+        ? [...timings]
+            .slice(0, 32)
+            .map(
+              ([name, value]) =>
+                `${name};dur=${value.duration.toFixed(2)}${value.description ? `;desc=${JSON.stringify(value.description)}` : ""}`,
+            )
         : []),
     ].join(", "),
   );
@@ -57,7 +64,6 @@ export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
           "exception.message": STATUS_CODES[status] ?? "HTTP error response",
         }
       : {};
-  const placement = c.req.header("cf-placement");
   const attributes = {
     ...(placement && /^(local|remote)-[A-Z]{3}$/.test(placement)
       ? { "cloudflare.placement": placement }

@@ -41,7 +41,10 @@ export default instrument(
             new Request(request, { headers, redirect: "manual" }),
           );
           status = response.status;
-          return response;
+          if (status === 101) return response;
+          const outgoing = new Response(response.body, response);
+          outgoing.headers.append("Server-Timing", `web;dur=${performance.now() - started}`);
+          return outgoing;
         }
         const response = await start.fetch(request);
         status = response.status;
