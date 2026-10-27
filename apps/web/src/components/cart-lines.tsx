@@ -94,7 +94,7 @@ export function CartLines({
                     {product.imageKind === "illustration" && <IllustrationNotice />}
                   </div>
                 )}
-                <div className="min-w-0 space-y-2 pl-2">
+                <div className="min-w-0 space-y-3 pl-2">
                   <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 text-base">
                     <h3 className="min-w-0 flex-1 basis-40 wrap-anywhere font-semibold">
                       {line.name[locale]}
@@ -109,10 +109,10 @@ export function CartLines({
                     aria-label={
                       line.options.length > 0 || canEdit ? t("kiosk_customisations") : undefined
                     }
-                    className="flex flex-wrap items-center justify-between gap-2"
+                    className="grid gap-4"
                   >
                     {(!onQuantity || line.planCovered || line.options.length > 0) && (
-                      <div className="min-w-0 flex-1 basis-48 space-y-2">
+                      <div className="min-w-0 space-y-3">
                         {(!onQuantity || line.planCovered) && (
                           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                             {!onQuantity && (
@@ -126,13 +126,13 @@ export function CartLines({
                           </div>
                         )}
                         {line.options.length > 0 && (
-                          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
                             {line.options.map((option) => {
                               const context = optionsById.get(option.id);
                               return (
                                 <span
                                   key={option.id}
-                                  className="inline-flex min-h-11 max-w-full flex-wrap items-center gap-1.5 rounded-xl border border-border bg-background p-1 text-sm"
+                                  className="inline-flex min-h-12.5 max-w-full flex-wrap items-center gap-2 rounded-2xl border border-border bg-background p-2 text-sm"
                                 >
                                   <span className="font-medium">
                                     {context?.group.text[locale].displayName ??
@@ -168,7 +168,7 @@ export function CartLines({
                     {(canEdit || onQuantity || onRemove) && (
                       <div
                         data-ui="line-actions"
-                        className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2"
+                        className="flex w-full max-w-full flex-wrap items-center justify-end gap-3"
                       >
                         {canEdit && onEdit && (
                           <Button

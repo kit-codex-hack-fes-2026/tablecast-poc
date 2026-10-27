@@ -61,7 +61,9 @@ function Harness({ sessionId }: { sessionId: string }) {
     >
       <LanguageSwitch onChange={setLocale} />
       <CurrencySelector />
-      <Money value={1000} />
+      <span className="text-lg font-semibold">
+        <Money value={1000} taxIncluded />
+      </span>
       <AgentControls />
     </CurrencyProvider>
   );
@@ -82,6 +84,11 @@ async function select(code: string) {
 it("円を主表示に保ち、通貨の選択後は言語連動と再取得を行わない", async () => {
   await mount();
   await expect.element(page.getByText("¥1,000", { exact: true })).toBeVisible();
+  const amount = page.getByText("¥1,000", { exact: true }).element();
+  const tax = page.getByText("(税込)", { exact: true }).element();
+  expect(getComputedStyle(tax).fontSize).toBe(getComputedStyle(amount).fontSize);
+  expect(getComputedStyle(tax).fontWeight).toBe(getComputedStyle(amount).fontWeight);
+  expect(tax.getBoundingClientRect().bottom).toBeCloseTo(amount.getBoundingClientRect().bottom, 0);
   await page.getByRole("combobox", { name: /通貨|currency/i }).click();
   await expect
     .element(page.getByText("外貨は目安です。お支払いは日本円となります。"))
@@ -90,6 +97,7 @@ it("円を主表示に保ち、通貨の選択後は言語連動と再取得を�
   await page.getByRole("option", { name: /AUD/ }).click();
   await expect.element(page.getByText("≈ A$9.67", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "English", exact: true }).click();
+  await expect.element(page.getByText("(incl. tax)", { exact: true })).toBeVisible();
   await expect
     .element(page.getByRole("combobox", { name: /通貨|currency/i }))
     .toHaveTextContent("A$ AUD");

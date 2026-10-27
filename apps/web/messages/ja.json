@@ -1448,7 +1448,7 @@
   "invite_unavailable": "この招待は利用できません。招待者に再送を依頼してください。",
   "auth_magic_invalid": "ログインリンクが無効か、有効期限が切れています。メールアドレスを入力して新しいリンクを送信してください。",
   "currency_approximate": "外貨の参考額",
-  "price_tax_included": "税込",
+  "price_tax_included": "(税込)",
   "currency_select": "通貨の補助表示",
   "currency_none": "日本円のみ",
   "currency_note": "外貨は目安です。お支払いは日本円となります。",

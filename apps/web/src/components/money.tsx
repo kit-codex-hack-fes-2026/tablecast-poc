@@ -24,11 +24,7 @@ export function Money({
         {sign}
         {money(value, locale)}
       </span>
-      {taxIncluded && (
-        <span className="ml-1 text-sm font-normal text-muted-foreground">
-          {t("price_tax_included")}
-        </span>
-      )}
+      {taxIncluded && <span className="ml-1 text-muted-foreground">{t("price_tax_included")}</span>}
       {estimate && (
         <>
           {" "}

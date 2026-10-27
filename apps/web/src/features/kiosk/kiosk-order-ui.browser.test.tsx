@@ -173,6 +173,12 @@ it.each(["ja", "en"] as const)(
       .toBeVisible();
     const actions = pane.querySelector('[data-ui="line-actions"]');
     if (!actions) throw new Error("商品行の操作が必要です");
+    const tagRow = customisations.element().firstElementChild;
+    if (!tagRow) throw new Error("カスタマイズの行が必要です");
+    expect(actions.getBoundingClientRect().top - tagRow.getBoundingClientRect().bottom).toBeCloseTo(
+      16,
+      0,
+    );
     const quantity = actions.querySelector('input:not([type="hidden"])')?.parentElement;
     if (!quantity) throw new Error("数量の入力枠が必要です");
     const controls = [
@@ -248,7 +254,9 @@ it("カゴの商品画像は3枚まで重ねて表示する", async () => {
     for (const price of document.querySelectorAll('[data-ui="tab-price"]')) {
       await expect.poll(() => price.querySelector("[aria-label]")?.textContent).toContain("US$");
       expect(getComputedStyle(price).whiteSpace).toBe("nowrap");
-      expect(price.scrollWidth).toBeLessThanOrEqual(cart.element().clientWidth);
+      const tab = price.closest('[role="tab"]');
+      if (!tab) throw new Error("価格を表示するタブが必要です");
+      expect(price.scrollWidth).toBeLessThanOrEqual(tab.clientWidth);
       expect(getComputedStyle(price).overflowX).toBe("visible");
       expect(parseFloat(getComputedStyle(price).fontSize)).toBeGreaterThanOrEqual(14);
     }

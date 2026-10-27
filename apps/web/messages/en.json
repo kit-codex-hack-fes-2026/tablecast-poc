@@ -1448,7 +1448,7 @@
   "invite_unavailable": "This invitation is unavailable. Ask the person who invited you to send a new one.",
   "auth_magic_invalid": "This sign-in link is invalid or has expired. Enter your email address to request a new link.",
   "currency_approximate": "Approximate foreign amount",
-  "price_tax_included": "incl. tax",
+  "price_tax_included": "(incl. tax)",
   "currency_select": "Display currency",
   "currency_none": "Japanese yen only",
   "currency_note": "Foreign amounts are estimates. Payment is in Japanese yen.",
