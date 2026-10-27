@@ -368,9 +368,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           amount={snapshot?.total ?? data.cart.total}
           label={t("kiosk_cart_total")}
           headingRef={snapshot ? confirmationHeading : undefined}
-        >
-          {renderOrderActions()}
-        </KioskPaneHeader>
+        />
         {snapshot ? (
           <section
             className="p-4 motion-safe:animate-tablecast-state"
@@ -435,7 +433,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       <div className="min-w-0 space-y-2">
         <ErrorNotice error={submit.error} />
         {reviewing ? (
-          <div className="grid w-80 max-w-full grid-cols-3 gap-2">
+          <div className="grid w-full grid-cols-3 gap-2">
             <Button
               variant="outline"
               className="h-auto min-h-14 min-w-0 whitespace-normal px-3 py-2"
@@ -478,19 +476,15 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     );
   }
   function renderCheckout() {
-    if (!data.cart.lines.length || section !== "menu") return null;
+    if (section !== "cart" && (section !== "menu" || !data.cart.lines.length)) return null;
     return (
       <div
         role="group"
         aria-label={t("kiosk_cart")}
-        data-ui="cart-callout"
+        data-ui="order-actions"
         data-theme-part="checkout"
-        className="absolute bottom-[calc(100%+0.75rem)] left-1/2 z-20 w-max max-w-[calc(100cqw-1.5rem)] -translate-x-1/2 rounded-2xl border border-border bg-card p-1 shadow-xl"
+        className="border-t border-border bg-card p-3"
       >
-        <span
-          aria-hidden
-          className="absolute top-full left-1/2 -mt-1.5 size-3 -translate-x-1/2 rotate-45 border-r border-b border-border bg-card"
-        />
         {renderOrderActions()}
       </div>
     );
@@ -501,14 +495,14 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     return (
       <header
         data-theme-part="header"
-        className="grid h-16 shrink-0 grid-cols-[minmax(0,1fr)_auto_21rem] items-center gap-2 border-b border-border bg-card px-4 max-[56rem]:h-28 max-[56rem]:grid-cols-[minmax(0,1fr)_21rem] max-[56rem]:grid-rows-2 max-[56rem]:gap-y-0 max-[56rem]:px-3 max-sm:h-36 max-sm:grid-cols-1 max-sm:grid-rows-3"
+        className="grid h-16 shrink-0 grid-cols-[minmax(0,1fr)_auto_21rem_auto] items-center gap-2 border-b border-border bg-card px-4 max-[56rem]:h-28 max-[56rem]:grid-cols-[minmax(0,1fr)_21rem] max-[56rem]:grid-rows-2 max-[56rem]:gap-y-0 max-[56rem]:px-3 max-sm:h-36 max-sm:grid-cols-[minmax(0,1fr)_auto] max-sm:grid-rows-3"
       >
         <div
           data-ui="header-branding"
-          className="flex min-w-0 items-center gap-3 max-[56rem]:col-span-2 max-sm:col-span-1"
+          className="flex min-w-0 items-center gap-3 max-[56rem]:col-start-1 max-[56rem]:row-start-1 max-sm:gap-2"
         >
           <a className="inline-flex shrink-0 items-center" href={data.kind === "demo" ? "#" : "/"}>
-            <Brand className="w-28 max-sm:w-24" />
+            <Brand className="w-28 max-sm:w-20" />
           </a>
           <span
             aria-hidden
@@ -520,7 +514,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
               <img
                 src={`/media/${banner.imageKey}?width=480`}
                 alt={banner.alt[locale]}
-                className="h-10 w-auto max-w-40 shrink-0 object-contain object-left max-xl:h-8 max-xl:max-w-28 max-sm:h-7 max-sm:max-w-24"
+                className="h-10 w-auto max-w-40 shrink-0 object-contain object-left max-xl:h-8 max-xl:max-w-28 max-sm:h-6 max-sm:max-w-18"
               />
             )}
             <div className="flex min-w-0 max-w-full items-center gap-2 whitespace-nowrap text-sm max-xl:text-xs">
@@ -531,26 +525,30 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-end gap-2 max-[56rem]:col-start-1 max-[56rem]:row-start-2 max-[56rem]:justify-start max-sm:justify-between">
+        <div className="flex items-center justify-end gap-2 max-[56rem]:col-start-1 max-[56rem]:row-start-2 max-[56rem]:justify-start max-sm:col-span-2 max-sm:justify-start">
           {renderVisitTools()}
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-11 min-h-11 whitespace-nowrap px-3 py-2 text-sm"
-            onClick={() => call.mutate(false)}
-            disabled={call.isPending || data.staffCalled}
-          >
-            <Bell />
-            {data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}
-          </Button>
         </div>
-        <div className="flex w-full min-w-0 items-center justify-end gap-2 max-[56rem]:col-start-2 max-[56rem]:row-start-2 max-sm:col-start-1 max-sm:row-start-3 [&_[data-slot=button]]:h-11 [&_[data-slot=button]]:min-h-11 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:min-h-11">
+        <div className="flex w-full min-w-0 items-center justify-end gap-2 max-[56rem]:col-start-2 max-[56rem]:row-start-2 max-sm:col-start-1 max-sm:col-span-2 max-sm:row-start-3 [&_[data-slot=button]]:h-11 [&_[data-slot=button]]:min-h-11 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:min-h-11">
           <LanguageSwitch
+            withIcon
             onChange={(next) => language.mutate(next)}
             disabled={language.isPending}
           />
           <CurrencySelector compact />
         </div>
+        <Button
+          variant="outline"
+          size="lg"
+          data-ui="call-staff"
+          className="h-11 min-h-11 shrink-0 whitespace-nowrap px-3 py-2 text-sm max-[56rem]:col-start-2 max-[56rem]:row-start-1 max-[56rem]:justify-self-end max-xl:size-11 max-xl:min-w-11 max-xl:p-0"
+          onClick={() => call.mutate(false)}
+          disabled={call.isPending || data.staffCalled}
+        >
+          <Bell />
+          <span className="max-xl:sr-only">
+            {data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}
+          </span>
+        </Button>
       </header>
     );
   }
@@ -780,13 +778,13 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                   >
                     <div
                       inert={Boolean(selection)}
-                      className={`flex-1 min-h-0 overflow-y-auto scrollbar-thin ${data.cart.lines.length && section === "menu" ? "pb-28" : ""}`}
+                      className="flex-1 min-h-0 overflow-y-auto scrollbar-thin"
                     >
                       {renderMenu()}
                       {renderCart()}
                       {renderOrders()}
                     </div>
-                    <div inert={Boolean(selection)} className="shrink-0">
+                    <div inert={Boolean(selection)} className="sticky bottom-0 shrink-0 bg-card">
                       <KioskMenuTabs
                         data={data}
                         products={catalog.data?.configuration.products}
@@ -920,13 +918,13 @@ function KioskMenuTabs({
     .reduce((sum, line) => sum + line.quantity, 0);
   const priceClass = "block whitespace-nowrap text-sm tabular-nums [&_[aria-label]]:text-inherit";
   const tabClass =
-    "h-14 min-h-14 min-w-0 flex-col gap-0 px-1 py-0 text-sm leading-tight whitespace-normal text-center [&_svg]:size-4";
+    "h-14 min-h-14 min-w-0 flex-col gap-0 px-1 py-0 text-sm leading-tight whitespace-nowrap text-center [&_svg]:size-4";
   return (
     <div className="relative">
       {cartActions}
       <Tabs.List
         data-ui="menu-tabs"
-        className="grid w-full grid-cols-3 gap-1 rounded-none border-t border-border px-2 pt-1 pb-3 @max-[32rem]/tablecast-order:grid-cols-[4rem_minmax(0,1fr)_minmax(0,1fr)]"
+        className="grid w-full grid-cols-3 gap-1 rounded-none border-t border-border px-2 pt-1 pb-3 overflow-x-auto @max-[32rem]/tablecast-order:grid-cols-[max-content_minmax(max-content,1fr)_minmax(max-content,1fr)] @max-[32rem]/tablecast-order:px-1"
       >
         <Tabs.Tab
           className={tabClass}
@@ -935,11 +933,10 @@ function KioskMenuTabs({
           disabled={!hydrated}
           value="menu"
         >
-          <span className="flex h-8 items-center justify-center gap-1.5">
+          <span className="flex h-full flex-col items-center justify-center gap-0.5">
             <Utensils aria-hidden />
-            {t("kiosk_menu")}
+            <span>{t("kiosk_menu")}</span>
           </span>
-          <span aria-hidden className="h-5" />
         </Tabs.Tab>
         <Tabs.Tab
           className={tabClass}
@@ -951,10 +948,10 @@ function KioskMenuTabs({
         >
           <span className="flex h-8 max-w-full items-center justify-center gap-1">
             <ShoppingBag aria-hidden data-ui="cart-icon" className="shrink-0" />
-            <span className="min-w-0 whitespace-normal leading-none">{t("kiosk_cart")}</span>
+            <span className="min-w-0 whitespace-nowrap leading-none">{t("kiosk_cart")}</span>
             <span
               data-ui="cart-count"
-              className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-control px-1 text-foreground tabular-nums"
+              className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-control px-1 text-foreground tabular-nums"
             >
               {quantity}
             </span>
@@ -973,10 +970,10 @@ function KioskMenuTabs({
         >
           <span className="flex h-8 max-w-full items-center justify-center gap-1">
             <ReceiptText aria-hidden data-ui="orders-icon" className="shrink-0" />
-            <span className="min-w-0 whitespace-normal leading-none">{t("kiosk_orders_bill")}</span>
+            <span className="min-w-0 whitespace-nowrap leading-none">{t("kiosk_orders_bill")}</span>
             <span
               data-ui="orders-count"
-              className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-control px-1 text-foreground tabular-nums"
+              className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-control px-1 text-foreground tabular-nums"
             >
               {orderedQuantity}
             </span>
@@ -994,12 +991,16 @@ function KioskMenuTabs({
 function TabProductImages({ images, kind }: { images: string[]; kind: "cart" | "orders" }) {
   if (!images.length) return null;
   return (
-    <span aria-hidden data-ui={`${kind}-preview`} className="ml-1 flex shrink-0 -space-x-6">
+    <span
+      aria-hidden
+      data-ui={`${kind}-preview`}
+      className="ml-2 flex shrink-0 -space-x-3 @max-[32rem]/tablecast-order:-space-x-4.5"
+    >
       {images.map((imageKey) => (
         <span
           key={imageKey}
           data-image-key={imageKey}
-          className="inline-flex size-8 shrink-0 overflow-hidden rounded-lg bg-card"
+          className="inline-flex size-8 shrink-0 overflow-hidden rounded-lg border border-card bg-card shadow-sm"
         >
           <ProductImage
             src={`/media/${imageKey}`}

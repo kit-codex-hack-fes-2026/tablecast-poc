@@ -98,7 +98,7 @@ export function KioskGames({
         <ErrorNotice error={enter.error || end.error} />
         <Button
           className="h-auto min-h-11 whitespace-normal px-3 py-2"
-          variant="ghost"
+          variant="outline"
           disabled={enter.isPending}
           onClick={() => enter.mutate()}
         >

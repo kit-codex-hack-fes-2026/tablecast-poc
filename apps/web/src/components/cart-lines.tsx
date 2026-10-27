@@ -93,7 +93,7 @@ export function CartLines({
                     {product.imageKind === "illustration" && <IllustrationNotice />}
                   </div>
                 )}
-                <div className="min-w-0 space-y-3 p-3">
+                <div className="min-w-0 space-y-2 pl-2">
                   <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 text-base">
                     <h3 className="min-w-0 flex-1 basis-40 wrap-anywhere font-semibold">
                       {line.name[locale]}
@@ -102,99 +102,104 @@ export function CartLines({
                       <Money value={line.total} />
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                    {!onQuantity && (
-                      <span>
-                        {t("common_quantity")}: {line.quantity}
-                      </span>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    {(!onQuantity || line.planCovered || line.options.length > 0 || canEdit) && (
+                      <div className="min-w-0 flex-1 basis-48 space-y-2">
+                        {(!onQuantity || line.planCovered) && (
+                          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                            {!onQuantity && (
+                              <span>
+                                {t("common_quantity")}: {line.quantity}
+                              </span>
+                            )}
+                            {line.planCovered && (
+                              <Badge variant="secondary">{t("kiosk_plan_included")}</Badge>
+                            )}
+                          </div>
+                        )}
+                        {(line.options.length > 0 || canEdit) && (
+                          <section
+                            data-ui="line-customisations"
+                            aria-label={t("kiosk_customisations")}
+                            className="flex min-w-0 items-center justify-end gap-2"
+                          >
+                            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                              {line.options.map((option) => {
+                                const context = optionsById.get(option.id);
+                                return (
+                                  <span
+                                    key={option.id}
+                                    className="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-xl border border-border bg-background p-1 text-sm"
+                                  >
+                                    <span className="font-medium">
+                                      {context?.group.text[locale].displayName ??
+                                        t("kiosk_customisations")}
+                                      :{" "}
+                                    </span>
+                                    {context?.option.imageKey && (
+                                      <ProductImage
+                                        src={`/media/${context.option.imageKey}`}
+                                        width={32}
+                                        height={32}
+                                        sizes="32px"
+                                        alt=""
+                                        className="size-8 shrink-0 rounded-lg object-contain"
+                                      />
+                                    )}
+                                    <span className="min-w-0 wrap-anywhere">
+                                      {option.name[locale]}
+                                      {option.quantity > 1 && ` × ${option.quantity}`}
+                                    </span>
+                                    {option.priceDelta !== 0 && (
+                                      <span>
+                                        (<Money value={option.priceDelta} />)
+                                      </span>
+                                    )}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                            {canEdit && onEdit && (
+                              <Button
+                                className="ml-auto shrink-0"
+                                size="icon-sm"
+                                variant="outline"
+                                type="button"
+                                aria-label={t("kiosk_edit")}
+                                title={t("kiosk_edit")}
+                                disabled={disabled}
+                                onClick={() => onEdit(line)}
+                              >
+                                <Pencil aria-hidden />
+                              </Button>
+                            )}
+                          </section>
+                        )}
+                      </div>
                     )}
-                    <span>
-                      {t("kiosk_unit_price")}: <Money value={line.unitPrice} />
-                    </span>
-                    {line.planCovered && (
-                      <Badge variant="secondary">{t("kiosk_plan_included")}</Badge>
+                    {(onQuantity || onRemove) && (
+                      <div
+                        data-ui="line-actions"
+                        className="ml-auto flex flex-wrap items-end justify-end gap-2"
+                      >
+                        {onQuantity && (
+                          <LineQuantity line={line} disabled={disabled} onQuantity={onQuantity} />
+                        )}
+                        {onRemove && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            type="button"
+                            disabled={disabled}
+                            onClick={() => onRemove(line)}
+                          >
+                            <Trash2 aria-hidden />
+                            {t("common_remove")}
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
-                  {(line.options.length > 0 || canEdit) && (
-                    <section
-                      data-ui="line-customisations"
-                      aria-label={t("kiosk_customisations")}
-                      className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-3"
-                    >
-                      <div className="flex min-w-0 flex-1 basis-64 flex-wrap gap-1.5">
-                        {line.options.map((option) => {
-                          const context = optionsById.get(option.id);
-                          return (
-                            <span
-                              key={option.id}
-                              className="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-2xl border border-border bg-background p-2 text-sm"
-                            >
-                              {context?.option.imageKey && (
-                                <ProductImage
-                                  src={`/media/${context.option.imageKey}`}
-                                  width={40}
-                                  height={40}
-                                  sizes="40px"
-                                  alt=""
-                                  className="size-10 shrink-0 rounded-lg object-contain"
-                                />
-                              )}
-                              <span className="min-w-0 wrap-anywhere">
-                                <span className="font-medium">
-                                  {context?.group.text[locale].displayName ??
-                                    t("kiosk_customisations")}
-                                  :{" "}
-                                </span>
-                                {option.name[locale]}
-                                {option.quantity > 1 && ` × ${option.quantity}`}
-                              </span>
-                              {option.priceDelta !== 0 && (
-                                <span>
-                                  (<Money value={option.priceDelta} />)
-                                </span>
-                              )}
-                            </span>
-                          );
-                        })}
-                      </div>
-                      {canEdit && onEdit && (
-                        <Button
-                          className="ml-auto shrink-0"
-                          size="sm"
-                          variant="ghost"
-                          type="button"
-                          disabled={disabled}
-                          onClick={() => onEdit(line)}
-                        >
-                          <Pencil aria-hidden />
-                          {t("kiosk_edit")}
-                        </Button>
-                      )}
-                    </section>
-                  )}
-                  {(onQuantity || onRemove) && (
-                    <div
-                      data-ui="line-actions"
-                      className="flex flex-wrap items-end justify-end gap-3"
-                    >
-                      {onQuantity && (
-                        <LineQuantity line={line} disabled={disabled} onQuantity={onQuantity} />
-                      )}
-                      {onRemove && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          type="button"
-                          className="text-muted-foreground"
-                          disabled={disabled}
-                          onClick={() => onRemove(line)}
-                        >
-                          <Trash2 aria-hidden />
-                          {t("common_remove")}
-                        </Button>
-                      )}
-                    </div>
-                  )}
                   {line.conditionIssues?.map((issue) => {
                     const expression = product?.modifiers
                       .flatMap((group) => group.options)
@@ -303,7 +308,7 @@ function LineQuantity({
       </label>
       <NumberField.Group className="flex min-h-12 items-center rounded-xl border border-input bg-card p-1 inset-shadow-field hover:border-control-edge-hover focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
         <NumberField.Decrement
-          render={<Button size="icon-sm" variant="ghost" />}
+          render={<Button size="icon-sm" variant="outline" />}
           aria-label={`${line.name[locale]}: ${t("common_decrease")}`}
         >
           <Minus aria-hidden />
@@ -316,7 +321,7 @@ function LineQuantity({
           className="h-11 w-10 min-w-0 bg-transparent text-center text-base tabular-nums outline-none"
         />
         <NumberField.Increment
-          render={<Button size="icon-sm" variant="ghost" />}
+          render={<Button size="icon-sm" variant="outline" />}
           aria-label={`${line.name[locale]}: ${t("common_increase")}`}
         >
           <Plus aria-hidden />

@@ -1,4 +1,5 @@
 import { displayCurrencyCodes } from "@tablecast/api/schema";
+import { Coins } from "lucide-react";
 import { useContext } from "react";
 import { Flag } from "../../components/flag";
 import { currencyFlags, jp } from "../../components/flags";
@@ -27,7 +28,11 @@ export function CurrencySelector({ compact = false }: { compact?: boolean }) {
             : "min-h-14 w-auto shrink-0 gap-2 rounded-xl text-sm"
         }
       >
-        <Flag src={currency ? currencyFlags[currency] : jp} />
+        {compact ? (
+          <Coins aria-hidden className="size-4 shrink-0" />
+        ) : (
+          <Flag src={currency ? currencyFlags[currency] : jp} />
+        )}
         <span>
           {currencySymbol(currency ?? "JPY")} {currency ?? "JPY"}
         </span>

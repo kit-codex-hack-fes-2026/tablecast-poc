@@ -64,7 +64,7 @@ it.each(["ja", "en"] as const)(
     await expect
       .element(callout.getByRole("button", { name: labels.kiosk_review, exact: true }))
       .toBeVisible();
-    expect(callout.element().getBoundingClientRect().bottom).toBeLessThan(
+    expect(callout.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(
       tabs.element().getBoundingClientRect().top,
     );
     for (const price of document.querySelectorAll('[data-ui="tab-price"]')) {
@@ -104,10 +104,19 @@ it.each(["ja", "en"] as const)(
       .toBeVisible();
     await expect
       .element(
-        page.getByRole("tabpanel").getByRole("button", { name: labels.kiosk_review, exact: true }),
+        page
+          .getByRole("group", { name: labels.kiosk_cart, exact: true })
+          .getByRole("button", { name: labels.kiosk_review, exact: true }),
       )
       .toBeEnabled();
-    expect(document.querySelector('[data-ui="cart-callout"]')).toBeNull();
+    const actionPosition = callout.element().getBoundingClientRect();
+    await callout.getByRole("button", { name: labels.kiosk_review, exact: true }).click();
+    await expect
+      .element(callout.getByRole("button", { name: labels.kiosk_confirm, exact: true }))
+      .toBeVisible();
+    expect(callout.element().getBoundingClientRect().top).toBeCloseTo(actionPosition.top, 0);
+    expect(callout.element().getBoundingClientRect().bottom).toBeCloseTo(actionPosition.bottom, 0);
+    await callout.getByRole("button", { name: labels.kiosk_edit, exact: true }).click();
     await expect.element(page.getByText(labels.kiosk_cart_added, { exact: true })).toBeVisible();
     await page
       .getByRole("dialog", { name: labels.kiosk_cart_added, exact: true })
@@ -186,7 +195,8 @@ it("カゴの商品画像は3枚まで重ねて表示する", async () => {
     expect(frame.getBoundingClientRect().width).toBe(32);
     expect(parseFloat(getComputedStyle(frame).borderRadius)).toBeGreaterThan(0);
     expect(parseFloat(getComputedStyle(frame).borderRadius)).toBeLessThan(16);
-    expect(getComputedStyle(frame).borderTopWidth).toBe("0px");
+    expect(getComputedStyle(frame).borderTopWidth).toBe("1px");
+    expect(getComputedStyle(frame).boxShadow).not.toBe("none");
   }
   for (let index = 1; index < frames.length; index++) {
     expect(fixtureValue(frames[index]).getBoundingClientRect().left).toBeLessThan(

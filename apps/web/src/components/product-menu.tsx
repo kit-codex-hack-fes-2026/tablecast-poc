@@ -68,7 +68,7 @@ export const ProductMenu = memo(function ProductMenu({
         <fieldset className="flex gap-2 overflow-x-auto p-4" aria-label={t("kiosk_menu")}>
           <Button
             className="max-w-full shrink-0 border-border px-4 aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
-            variant="ghost"
+            variant="outline"
             size="lg"
             type="button"
             data-theme-part="category-button"
@@ -80,7 +80,7 @@ export const ProductMenu = memo(function ProductMenu({
           {catalog.configuration.categories.map((item) => (
             <Button
               className="max-w-full shrink-0 border-border px-4 aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
-              variant="ghost"
+              variant="outline"
               size="lg"
               type="button"
               key={item.id}
@@ -105,9 +105,9 @@ export const ProductMenu = memo(function ProductMenu({
       <div className={productGrid({ recommended: Boolean(productIds) })}>
         {products.map((product) => (
           <Button
-            variant="ghost"
+            variant="outline"
             type="button"
-            className="h-full min-w-0 flex-col items-stretch justify-start gap-0 rounded-2xl p-2 text-left disabled:opacity-70"
+            className="h-full min-w-0 flex-col items-stretch justify-start gap-0 rounded-2xl border-border bg-card bg-none p-2 text-left shadow-none disabled:opacity-70"
             data-theme-part="product-card"
             key={product.id}
             onClick={() => onChoose(product)}

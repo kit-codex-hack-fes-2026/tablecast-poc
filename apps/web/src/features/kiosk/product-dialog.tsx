@@ -53,7 +53,7 @@ export function ProductPage({
       aria-label={product.text[locale].displayName}
     >
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-3 py-1">
-        <Button variant="ghost" onClick={onClose} disabled={busy}>
+        <Button variant="outline" onClick={onClose} disabled={busy}>
           <X />
           {t("common_close")}
         </Button>
@@ -212,7 +212,7 @@ export function ProductPage({
                         >
                           <Button
                             size="icon"
-                            variant="ghost"
+                            variant="outline"
                             type="button"
                             aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                             aria-label={`${option.text[locale].displayName}: ${t("common_decrease")}`}
@@ -224,7 +224,7 @@ export function ProductPage({
                           <output className="text-center text-base min-w-7">{amount}</output>
                           <Button
                             size="icon"
-                            variant="ghost"
+                            variant="outline"
                             type="button"
                             aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                             aria-label={`${option.text[locale].displayName}: ${t("common_increase")}`}
@@ -277,7 +277,7 @@ export function ProductPage({
         >
           <Button
             size="icon"
-            variant="ghost"
+            variant="outline"
             type="button"
             aria-label={t("common_decrease")}
             disabled={quantity <= 1 || busy}
@@ -290,7 +290,7 @@ export function ProductPage({
           </output>
           <Button
             size="icon"
-            variant="ghost"
+            variant="outline"
             type="button"
             aria-label={t("common_increase")}
             disabled={quantity >= 20 || busy}

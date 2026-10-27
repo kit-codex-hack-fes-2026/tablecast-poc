@@ -21,7 +21,7 @@ export function ActionToasts() {
             <Toast.Close
               aria-label={t("common_close")}
               aria-hidden={false}
-              render={<Button variant="ghost" size="icon-sm" />}
+              render={<Button variant="outline" size="icon-sm" />}
             >
               <X aria-hidden />
             </Toast.Close>
