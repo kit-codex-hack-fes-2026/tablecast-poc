@@ -50,7 +50,7 @@
   "common_time": "Time",
   "common_price_note": "JPY, including tax",
   "kiosk_welcome": "Welcome.\nWhat sounds good today?",
-  "kiosk_voice_start": "Tap to talk",
+  "kiosk_voice_start": "Ask or order by voice",
   "kiosk_voice_start_retry": "Try voice again",
   "kiosk_voice_resume": "Resume voice",
   "kiosk_voice_stop": "Stop voice",

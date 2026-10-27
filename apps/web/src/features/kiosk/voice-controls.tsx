@@ -239,9 +239,9 @@ export function VoiceStartBanner({
           ? t("kiosk_voice_start_retry")
           : t("kiosk_voice_start");
   return (
-    <span className="pointer-events-auto relative mx-3 inline-flex w-[calc(100%-1.5rem)] min-w-0 max-w-64 rounded-2xl bg-(image:--voice-spectrum) p-0.5 shadow-control-dark">
+    <span className="pointer-events-auto relative mx-3 inline-flex w-44 min-w-0 max-w-[calc(100%-1.5rem)] rounded-2xl bg-(image:--voice-spectrum) p-0.5 shadow-control-dark">
       <Button
-        className="h-auto min-h-36 w-full min-w-0 flex-col gap-3 rounded-[inherit] border-on-inverse bg-on-inverse bg-none p-3 text-center text-inverse hover:bg-on-inverse/90"
+        className="aspect-square h-auto w-full min-w-0 flex-col gap-3 rounded-[inherit] border-on-inverse bg-on-inverse bg-none p-3 text-center text-inverse hover:bg-on-inverse/90"
         variant="voice"
         onClick={onStart}
         disabled={controlDisabled || view.status === "stopping"}

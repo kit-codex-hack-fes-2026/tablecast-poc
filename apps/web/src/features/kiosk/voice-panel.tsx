@@ -233,7 +233,7 @@ export function VoicePanelContent({
         </div>
         <div
           data-ui="conversation-history"
-          className={`flex min-h-0 flex-1 flex-col overflow-hidden ${active ? "" : "max-h-[calc(50%_-_5rem)]"}`}
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
           <Conversation>
             <ConversationContent tabIndex={0} className="relative">

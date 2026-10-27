@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { StoreTheme } from "../../components/store-theme";
@@ -8,7 +8,7 @@ import { event, line, startedAt, Surface } from "./test-support/voice-panel-fixt
 import { VoicePanel } from "./voice-panel";
 
 it.each(["ja", "en"] as const)(
-  "%sの未接続画面は中央の再生操作と履歴を保ち、カメラの周囲へ会話を表示する",
+  "%sの未接続画面は中央の音声操作と履歴を保ち、カメラの周囲へ会話を表示する",
   async (locale) => {
     const labels = locale === "ja" ? ja : en;
     for (const [width, height, paneWidth, paneHeight] of [
@@ -38,7 +38,7 @@ it.each(["ja", "en"] as const)(
       const panelBounds = panel.getBoundingClientRect();
       const playBounds = play.element().getBoundingClientRect();
       expect(playBounds.width).toBeGreaterThanOrEqual(100);
-      expect(playBounds.height).toBeGreaterThanOrEqual(72);
+      expect(playBounds.height).toBeCloseTo(playBounds.width, 0);
       expect(playBounds.left + playBounds.width / 2).toBeCloseTo(
         panelBounds.left + panelBounds.width / 2,
         0,
@@ -61,7 +61,7 @@ it.each(["ja", "en"] as const)(
       expect(history.getBoundingClientRect().right).toBeGreaterThan(
         frame.getBoundingClientRect().right,
       );
-      expect(history.getBoundingClientRect().bottom).toBeLessThanOrEqual(playBounds.top);
+      expect(history.getBoundingClientRect().bottom).toBeGreaterThan(playBounds.bottom);
       const overlay = panel.querySelector('[data-ui="voice-start-overlay"]');
       if (!overlay) throw new Error("停止中の暗幕がありません");
       expect(overlay.getBoundingClientRect().width).toBe(panelBounds.width);
@@ -177,3 +177,67 @@ function VoiceRippleSurface({ status }: { status: "listening" | "paused" }) {
     </Surface>
   );
 }
+
+it.each(["ja", "en"] as const)(
+  "%sの停止中の履歴はオーバーレイの背後まで表示してスクロールでき、正方形の音声操作と下部ボタンを動かさない",
+  async (locale) => {
+    const labels = locale === "ja" ? ja : en;
+    for (const [width, height, paneWidth, paneHeight] of [
+      [1180, 820, 240, 692],
+      [402, 874, 402, 360],
+    ] as const) {
+      await page.viewport(width, height);
+      const start = vi.fn<() => void>();
+      const screen = await render(
+        <Surface locale={locale}>
+          <div style={{ width: paneWidth, height: paneHeight }}>
+            <VoicePanel
+              view={{ status: "paused" }}
+              lines={Array.from({ length: 24 }, (_, index) => ({
+                ...line,
+                id: `tablecast-paused-history-${index}`,
+                role: index % 2 === 0 ? ("user" as const) : ("assistant" as const),
+                text:
+                  locale === "ja"
+                    ? `${index + 1}：料理のおすすめと注文について相談します。`
+                    : `${index + 1}: Could you recommend a dish and help me order?`,
+                createdAt: startedAt + index * 1000,
+              }))}
+              onStart={start}
+            />
+          </div>
+        </Surface>,
+      );
+      const button = screen.getByRole("button", { name: labels.kiosk_voice_start, exact: true });
+      const footer = screen.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
+      const scroller = screen.getByRole("log").element().firstElementChild;
+      if (!(scroller instanceof HTMLElement)) throw new Error("会話のスクロール領域がありません");
+      const content = scroller.querySelector("[tabindex]");
+      if (!(content instanceof HTMLElement)) throw new Error("会話本文へフォーカスできません");
+      await expect.poll(() => scroller.scrollTop).toBeGreaterThan(0);
+      const before = scroller.scrollTop;
+      const buttonBounds = button.element().getBoundingClientRect();
+      const footerBounds = footer.element().getBoundingClientRect();
+      expect(
+        scroller.contains(
+          document.elementFromPoint(
+            buttonBounds.left - 8,
+            buttonBounds.top + buttonBounds.height / 2,
+          ),
+        ),
+      ).toBe(true);
+      content.focus({ preventScroll: true });
+      await userEvent.keyboard("{PageUp}");
+      await expect.poll(() => scroller.scrollTop).toBeLessThan(before);
+      const after = scroller.scrollTop;
+      await userEvent.keyboard("{PageDown}");
+      await expect.poll(() => scroller.scrollTop).toBeGreaterThan(after);
+      expect(button.element().getBoundingClientRect().top).toBe(buttonBounds.top);
+      expect(footer.element().getBoundingClientRect().top).toBe(footerBounds.top);
+      expect(start).not.toHaveBeenCalled();
+      await button.click();
+      expect(start).toHaveBeenCalledOnce();
+      await screen.unmount();
+    }
+  },
+);

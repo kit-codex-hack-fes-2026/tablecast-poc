@@ -50,7 +50,7 @@
   "common_time": "時刻",
   "common_price_note": "税込・日本円",
   "kiosk_welcome": "いらっしゃいませ。\n今日は、何にしましょう？",
-  "kiosk_voice_start": "タップして話す",
+  "kiosk_voice_start": "声で質問・注文する",
   "kiosk_voice_start_retry": "音声に接続し直す",
   "kiosk_voice_resume": "音声を再開",
   "kiosk_voice_stop": "音声を停止",
