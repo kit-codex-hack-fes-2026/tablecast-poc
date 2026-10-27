@@ -20,9 +20,56 @@ GUIのCoreStateは履歴・イベントを含まず、注文送信は作成注�
 
 CI初回のAPI shard 1では、小規模playgroundの話速で全31標本p95 392msとなった。最大418msの標本はbinding 414ms・SQL 0msで、失敗した992標本も保持する。他のAPI fileのworkerd起動と同時に測る構成から、Vitestの標準groupOrderで通常検査終了後の1 workerへ性能projectを分ける。計測予算・初回・標本数・SQL・認可・価格の検査は変えない。並列時の結果を削除したり、この変更を配備先の高速化と扱ったりしない。
 
-previewの再配備後の実測・Cloud照合・CIは今回の対象SHAで追記する。300ms未満に達しない区間と、日本からの固定経路を確認できない場合はその制限も残し、Draftを維持する。
+### 再設計後のpreview実測
 
-## 2026-10-28の追加診断と配置比較
+実装・Cloud照合は`9d400a1bfd714317b348eb9f1c1802c05753339d`。`b97de030f7786a55e2975e63203738ef2786213a`は性能projectの順序とPWAの履歴fixture・説明だけを変更し、配備する処理は同一。2026-10-28、同じmacOSのin-app Chromium 156・Access認証済みブラウザーで、独立playgroundと追加許可を受けた通常T11を各8操作・31標本、計496標本測定した。開始と終了のhealth SHAが一致する。初回を含むnearest rankのp95を使う。
+
+| 操作     | 変更前playground p95 | 再設計playground p50 / p95 | 通常T11 p50 / p95 | playground API p95 | 通常API p95 |
+| -------- | -------------------: | -------------------------: | ----------------: | -----------------: | ----------: |
+| カゴ更新 |                 1318 |                 484 / 1106 |         461 / 931 |                239 |          86 |
+| タブ切替 |                  621 |                  454 / 616 |         419 / 737 |                177 |         100 |
+| 言語変更 |                  673 |                  448 / 582 |         410 / 541 |                130 |          84 |
+| 話速変更 |                  765 |                  437 / 568 |         408 / 555 |                187 |         129 |
+| 店員呼出 |                  772 |                  466 / 725 |         411 / 526 |                160 |          77 |
+| 会計依頼 |                  702 |                  446 / 757 |         414 / 600 |                182 |         200 |
+| 注文確認 |                  600 |                  434 / 676 |         410 / 747 |                176 |         300 |
+| 注文送信 |                  667 |                  544 / 819 |         435 / 624 |                224 |         128 |
+
+単位はms。HTTP本文完了の目標300ms未満は全操作で未達。会計・確認・注文送信のplayground p95はこの直前比較で悪化したため、その標本も残す。注文送信は最新CoreStateも返し、従来の送信後の別GETを除くため、単独要求の契約が異なる。サーバー内部のAPI p95だけで目標達成とは扱わない。core本文は通常カゴ最大1027byte、playgroundカゴ1000byteで、従来のplayground言語18025byte・話速19385byteから、それぞれ997byte・999byteになった。
+
+playgroundカゴの初回は518.5ms、後続30件のp95は1106.4ms。handlerのfirst-fetchは4件でp95 1377.7ms、reusedは27件で600.3ms。通常カゴの初回は480.2ms、後続30件のp95は931.1msで、全31件のhandlerはreusedだった。最初の標本やhandlerの最初のfetchをSDKのcold startと同一視しない。全標本・初回・後続・handler区分を別々にCSVとJSONへ保存した。
+
+同一ブラウザーの`/cdn-cgi/trace`は測定後に`loc=JP`、`colo=LAX`を返し、全正式標本のcf-rayもLAXだった。国コードと経由拠点だけを保存しIPは保存しない。日本の店舗iPadやTokyoへの固定経路での計測ではなく、staging・productionの受入試験へ一般化しない。
+
+実際の日本語Kioskで数量増減を31回行い、pointerdownからカゴ件数DOM変更までp50 / p95が34.2 / 35.7ms、最大35.8msだった。同じ31要求のResource TimingによるHTTPは478.5 / 1058.3ms。画面は応答前に反映され、金額を確認中として確定操作を止める。1280×720、3商品の日本語かごと円・USD・数量stackを撮影した。計測用のUI分岐やfetch差替えは追加していない。
+
+### Cloudで残る区間
+
+Grafana Cloudの見えているtrace UIでrequest IDと`service.version`を照合した。以下は同じ配備の実標本であり、通知の延長を含むtrace全体のDurationをHTTP応答時間へ置き換えない。
+
+| 要求 / trace                                               |   HTTP | Web span | API span | DB操作のwall time | 更新SQL | SDK cold start |
+| ---------------------------------------------------------- | -----: | -------: | -------: | ----------------: | ------: | -------------- |
+| カゴ `bb4a79ad` / `19a3af94f7174d0b81143cd11f1e6d26`       |  518.5 |      370 |       80 |                24 |    0.48 | false          |
+| カゴ `ca4dbec7` / `f9c0a9357922669eff7b7adcc3aaddda`       | 1377.7 |     1187 |      293 |               178 |  0.5609 | true           |
+| 通常の確認 `8b95d42f` / `6c027ca701810f79babd91218f92b88d` |  747.4 |      561 |      351 |               275 |   0.529 | false          |
+
+coldカゴのAPI開始はtrace開始の559ms後だった。起動経路を軽量化しても起動前後の待ちが残る。後二つのD1 metadataはAPAC/SIN・primary=true・total_attempts=1で、再試行増加は観測しなかった。確認はwarmでもbinding待ち275msに対しSQLが0.529msで、SQLだけの最適化では説明できない。Web→APIとクライアント→Webの残差には転送・配置・実行開始前の待ちが含まれ得るが、残差を純粋なネットワークRTTやCPU時間と断定しない。
+
+通知は上記の順で838 / 581 / 176ms。DB・イベント確定後のwaitUntilで継続し、最初のカゴはHTTP518.5msに対してtrace全体1.01sだった。他の標本のSDK cold属性は未照合として空欄に保ち、既知3件から全体のcold比率を推定しない。
+
+### bundle・実D1・CI
+
+配備相当bundleの公式`cf workers check --prebuilt`による単発ローカルCPU profileは、APIのactive sample合計17.629ms（窓113.333ms、9 sample）、Webは6.341ms（窓64.946ms、3 sample）。全配布JSはAPI 10561007byte / gzip 2265902byte、Web 3950021byte / gzip 1220124byte。静的import到達範囲はAPI起動16 module・825379byte、注文経路21 module・1584205byte、Web起動3 module・98694byte。source mapを含む到達範囲にMCP・Stripe・OpenAI・Start SSRの実装はなかった。全bundleサイズと起動で実行する範囲は別で、CPU profileのsample数も少ないためCloud起動の予測値や改善率には使わない。
+
+ローカルの直列性能projectは全992標本、32条件のp95最大54ms。`b97de030`の[CI](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/actions/runs/40590181940)はAPI両shard・Web・Component・E2E両shard・静的検査・Workers build・Container・preview配備・必須集約jobが全て成功した。CIの性能992標本も全32条件で予算内、p95最大42msだった。先の並列時のp95 392msと、同構成の再実行の992標本も保持する。PWAは新しい独立履歴取得を実clientのfixtureへ追加し、稼働卓の更新ブロック8件が成功した。製品の待ちを隠す恒久mock・retry・予算緩和は追加しない。
+
+今回のCSVは変更前preview248・変更後playground248・通常卓248・数量DOM31・ローカルとCIの5回各992、計5735標本。JSON、初回・後続・handler別集計、Cloud照合、bundle graph、CPU profileも添付archiveへ保存する。以前の比較CSV・ローカルLGTMの証拠も履歴として残す。
+
+T11は31件の計測注文だけをIDとsnapshotの行prefixで確認して取り消した。カゴを空にし、呼出を解消し、今回作成した端末だけを失効して閉卓した。管理APIの空席・closed・revokedAtと端末GET `/api/table`の401を確認した。実決済・有料モデル・音声生成は行っていない。
+
+300msの予算は変えずDraftを維持する。次の判断材料は、JP→LAXを含むWeb/API配置とService Binding開始前の区間、および再試行なしで残るD1 bindingの裾である。保存先変更はこの結果を基に別途判断し、今回D1を移行しない。
+
+## 過去の追加診断と配置比較（da1d9c1a以前）
 
 ローカルのGrafana LGTMで本番Web→API→D1→通知のtraceを比較した。Lokiは公式Grafana MCP、Tempoはtrace IDを指定した公式読取APIで取得した。a1b7b8e7では通常カゴを認可・価格読取・更新と状態読取の3往復、playgroundを所有者確認を含む5往復へ減らした。最終実装では、プランなし通常卓のカゴ・注文確認は認可と価格設定を同じjoinで取得する2往復へ減らした。他のGUI操作へ設定JSONを余分に取得せず、プラン利用中の注文履歴・価格設定のbatch取得は維持する。更新と状態読取は同じDrizzle batchに置き、価格・版条件・イベントの原子性を維持する。認可時のデモ設定はリクエスト内だけで共有し、プランなしの価格判定へ再利用する。
 
@@ -66,7 +113,7 @@ Tokyoのplaygroundでも8操作を各31標本で測定した。カゴp95は1371m
 
 API入口のfirst-fetchはTokyoの通常カゴ31標本中5件、playground248標本中1件だった。reusedにも遅い標本があり、全てをcold startとして除外しない。bootstrapが0msでもWorkersの時計はCPU実行中に進まないため初期化CPU時間がゼロだった証拠にはしない。[Workersの時計と性能計測](https://developers.cloudflare.com/workers/runtime-apis/performance/)
 
-## 最終配備da1d9c1aのplayground
+## 過去の配備da1d9c1aのplayground
 
 同じ配備で8操作を各31標本、合計248標本を測定した。cf-ray応答は全てLAX。各操作のsample 1〜30を従来と同じ方法で集計した。
 
