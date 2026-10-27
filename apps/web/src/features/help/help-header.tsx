@@ -2,9 +2,8 @@ import type { ComponentProps } from "react";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useSidebar } from "fumadocs-ui/layouts/docs/slots/sidebar";
-import { PanelLeft } from "lucide-react";
 import { AppHeader } from "../../components/app-header";
-import { Button } from "../../components/ui/button";
+import { NavigationToggle } from "../../components/app-navigation";
 import { useI18n } from "../../i18n/locale";
 
 export function HelpHeader(props: ComponentProps<"header">) {
@@ -14,7 +13,7 @@ export function HelpHeader(props: ComponentProps<"header">) {
   const { open, setOpen, collapsed, setCollapsed, mode } = useSidebar();
   const expanded = mode === "drawer" ? open : !collapsed;
   const toggle = () => (mode === "drawer" ? setOpen(!open) : setCollapsed(!collapsed));
-  useHotkey("Mod+B", toggle, { ignoreInputs: true });
+  useHotkey("Mod+B", toggle, { enabled: mode === "full", ignoreInputs: true });
   return (
     <AppHeader
       {...props}
@@ -28,16 +27,12 @@ export function HelpHeader(props: ComponentProps<"header">) {
           });
       }}
       navigation={
-        <Button
-          size="icon"
-          variant="ghost"
-          aria-label={t("admin_navigation")}
-          aria-expanded={expanded}
-          aria-keyshortcuts="Control+B Meta+B"
+        <NavigationToggle
+          expanded={expanded}
+          controls={mode === "drawer" ? "nd-sidebar-mobile" : "nd-sidebar"}
+          shortcut={mode === "full"}
           onClick={toggle}
-        >
-          <PanelLeft />
-        </Button>
+        />
       }
       context={<span className="min-w-0 truncate text-sm font-medium">{t("help_title")}</span>}
     />

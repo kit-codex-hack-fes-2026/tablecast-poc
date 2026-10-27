@@ -1,11 +1,9 @@
 import { useHotkey } from "@tanstack/react-hotkeys";
-import { PanelLeft, X } from "lucide-react";
 import { type ReactNode, type SyntheticEvent, useRef, useState } from "react";
 import { usePanelRef } from "react-resizable-panels";
 import type { SidebarSelection } from "./sidebar-model";
 import { AppHeader } from "../../components/app-header";
-import { Button } from "../../components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
+import { NavigationDrawer, NavigationToggle } from "../../components/app-navigation";
 import { appFrame, pageContent, pageSurface } from "../../components/ui/page-layout";
 import {
   ResizableHandle,
@@ -117,18 +115,13 @@ export function AdminShell({
               onLocaleChange={setLocale}
               navigation={
                 <>
-                  <Button
-                    size="icon"
-                    variant="ghost"
+                  <NavigationToggle
                     className="hidden md:inline-flex"
-                    aria-label={t("admin_navigation")}
-                    aria-expanded={!collapsed}
-                    title={`${t("admin_navigation")} (⌘/Ctrl+B)`}
-                    aria-keyshortcuts="Control+B Meta+B"
+                    expanded={!collapsed}
+                    controls="tablecast-admin-sidebar"
+                    shortcut
                     onClick={toggleSidebar}
-                  >
-                    <PanelLeft />
-                  </Button>
+                  />
                   <MobileNavigation
                     key={desktop ? "desktop" : "mobile"}
                     {...sidebar}
@@ -160,35 +153,18 @@ export function AdminShell({
 }
 
 function MobileNavigation(sidebar: AdminSidebarProps & { selection: SidebarSelection }) {
-  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button
-        size="icon"
-        variant="ghost"
+      <NavigationToggle
         className="md:hidden"
-        aria-label={t("admin_navigation")}
-        aria-expanded={open}
+        expanded={open}
+        controls="tablecast-admin-mobile-sidebar"
         onClick={() => setOpen(true)}
-      >
-        <PanelLeft />
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent side="left" className="relative max-w-72 p-3">
-          <DialogTitle className="sr-only">{t("admin_navigation")}</DialogTitle>
-          <Button
-            className="absolute right-2 top-3"
-            size="icon"
-            variant="ghost"
-            aria-label={t("common_close")}
-            onClick={() => setOpen(false)}
-          >
-            <X />
-          </Button>
-          <AdminSidebar {...sidebar} onNavigate={() => setOpen(false)} />
-        </DialogContent>
-      </Dialog>
+      />
+      <NavigationDrawer id="tablecast-admin-mobile-sidebar" open={open} onOpenChange={setOpen}>
+        <AdminSidebar {...sidebar} onNavigate={() => setOpen(false)} />
+      </NavigationDrawer>
     </>
   );
 }

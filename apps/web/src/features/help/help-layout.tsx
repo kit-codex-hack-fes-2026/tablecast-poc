@@ -13,7 +13,7 @@ export function HelpLayoutContainer({ className, ...props }: ComponentProps<"div
       data-sidebar-collapsed={collapsed}
       className={appFrame({
         className: [
-          "grid min-h-0 grid-cols-[var(--fd-sidebar-col)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] overflow-hidden [grid-template-areas:'sidebar_main'] [--fd-docs-height:100dvh] [--fd-header-height:--spacing(18)] [--fd-docs-row-1:0px] [--fd-docs-row-2:--spacing(18)] [--fd-docs-row-3:--spacing(18)] [--fd-sidebar-width:0px] [--fd-sidebar-col:var(--fd-sidebar-width)] data-[sidebar-collapsed=true]:[--fd-sidebar-col:0px] md:[--fd-docs-height:calc(100dvh_-_--spacing(4))]",
+          "grid min-h-0 grid-cols-[var(--fd-sidebar-width)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] overflow-hidden [grid-template-areas:'sidebar_main'] [--fd-docs-height:100dvh] [--fd-header-height:--spacing(18)] [--fd-docs-row-1:0px] [--fd-docs-row-2:--spacing(18)] [--fd-docs-row-3:--spacing(18)] [--fd-sidebar-width:0px] md:[--fd-sidebar-width:16rem] md:data-[sidebar-collapsed=true]:[--fd-sidebar-width:4.5rem] md:[--fd-docs-height:calc(100dvh_-_--spacing(4))]",
           className,
         ],
       })}

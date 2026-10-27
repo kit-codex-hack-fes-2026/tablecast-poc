@@ -4,16 +4,17 @@ import { defineI18nUI } from "fumadocs-ui/i18n";
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import { DocsBody, DocsPage, PageBreadcrumb, PageFooter } from "fumadocs-ui/layouts/docs/page";
 import { TOCProvider } from "fumadocs-ui/layouts/docs/page/slots/toc";
+import { SidebarProvider, useSidebar } from "fumadocs-ui/layouts/docs/slots/sidebar";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { RootProvider } from "fumadocs-ui/provider/tanstack";
 import { createContext, useContext } from "react";
-import { Brand } from "../../components/brand";
 import { PageHeader } from "../../components/page-header";
 import { useI18n } from "../../i18n/locale";
 import { helpI18n, helpSource, resolveHelpLink } from "../../lib/help-source";
 import { helpNavigationItem } from "../shell/navigation-model";
 import { HelpLayoutContainer, HelpPageContainer, HelpTableOfContents } from "./help-layout";
 import {
+  HelpSidebar,
   HelpSidebarFooter,
   HelpSidebarGroup,
   HelpSidebarItem,
@@ -33,7 +34,11 @@ const components = { ...defaultMdxComponents, a: HelpLink };
 function Hidden() {
   return null;
 }
-const helpLayoutSlots = { container: HelpLayoutContainer, header: Hidden };
+const helpLayoutSlots = {
+  container: HelpLayoutContainer,
+  header: Hidden,
+  sidebar: { provider: SidebarProvider, root: HelpSidebar, trigger: Hidden, useSidebar },
+};
 const helpPageSlots = {
   container: HelpPageContainer,
   toc: { provider: TOCProvider, main: Hidden, popover: Hidden },
@@ -78,20 +83,13 @@ export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
             children: [{ type: "folder", name: t("help_title"), children: tree.children }],
           }}
           sidebar={{
-            className: "border-e-0 bg-transparent",
+            // 組み込みのボタンとMod+Bを外し、共通ヘッダーの操作だけを使う。
+            collapsible: false,
             components: sidebarComponents,
             banner: <HelpSidebarSearch />,
             footer: <HelpSidebarFooter />,
           }}
-          nav={{
-            title: (
-              <>
-                <Brand variant="symbol" />
-                <span>TableCast {t("help_title")}</span>
-              </>
-            ),
-            url: `/help/${page.locale}`,
-          }}
+          nav={{ enabled: false }}
           searchToggle={{ enabled: false }}
           themeSwitch={{ enabled: false }}
           i18n={false}

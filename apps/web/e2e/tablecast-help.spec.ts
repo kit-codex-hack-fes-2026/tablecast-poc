@@ -92,6 +92,24 @@ test("ドキュメントをSSRで読み、関連章・言語・モバイル目�
     page.getByRole("heading", { name: "TableCast ドキュメント", exact: true }),
   ).toBeVisible();
   await expect(page.locator('[data-ui="app-header"]')).toHaveCount(1);
+  const navigationToggle = page.getByRole("button", { name: "ナビゲーション", exact: true });
+  await expect(navigationToggle).toHaveCount(1);
+  await expect(page.locator('[data-ui="navigation-toggle"]')).toHaveCount(1);
+  await expect(page.locator('[data-ui="app-header"] [data-ui="navigation-toggle"]')).toHaveCount(1);
+  await expect(page.locator("[data-sidebar-panel]")).toHaveCount(0);
+  await page.keyboard.press("ControlOrMeta+b");
+  await expect(navigationToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator("#nd-sidebar")).toHaveAttribute("data-collapsed", "true");
+  await expect(
+    page.locator("#nd-sidebar").getByRole("link", { name: "はじめに", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("tablecast-help-collapsed.png"),
+    fullPage: false,
+    animations: "disabled",
+  });
+  await navigationToggle.click();
+  await expect(navigationToggle).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   await expect(page.getByRole("button", { name: "日本語", exact: true })).toHaveAttribute(
     "aria-pressed",
@@ -220,7 +238,23 @@ test("ドキュメントをSSRで読み、関連章・言語・モバイル目�
   await expect(
     page.getByRole("heading", { name: "MCP接続とagentの使い方", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "ナビゲーション", exact: true }).click();
+  await expect(navigationToggle).toHaveCount(1);
+  await navigationToggle.click();
+  const navigationDrawer = page.getByRole("dialog", { name: "ナビゲーション", exact: true });
+  await expect(navigationDrawer).toBeVisible();
+  await expect
+    .poll(() => navigationDrawer.evaluate((drawer) => drawer.getBoundingClientRect().left))
+    .toBe(0);
+  await expect(navigationDrawer.locator('[data-ui="navigation-toggle"]')).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(navigationDrawer).toBeHidden();
+  await expect(navigationToggle).toBeFocused();
+  await navigationToggle.click();
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await expect(navigationDrawer).toBeHidden();
+  await page.setViewportSize({ width: 402, height: 874 });
+  await expect(navigationDrawer).toBeHidden();
+  await navigationToggle.click();
   await expect(
     page
       .getByRole("region", { name: "ドキュメント", exact: true })
@@ -258,6 +292,14 @@ test("店舗サイドバーの検索から公開ガイドへ進める", async ({
   await page.goto("/admin/go/products");
   await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/menu\/products$/);
   await page.goto("/admin/live");
+  await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toHaveCount(1);
+  expect(
+    await page
+      .locator('[data-ui="navigation-toggle"]')
+      .evaluateAll((buttons) =>
+        buttons.every((button) => button.closest('[data-ui="app-header"]')),
+      ),
+  ).toBe(true);
   await expect(page.getByRole("region", { name: "ドキュメント", exact: true })).toHaveCount(0);
   const docsLink = page
     .locator('[data-ui="sidebar-footer"]')
@@ -314,6 +356,29 @@ test("店舗サイドバーの検索から公開ガイドへ進める", async ({
     fullPage: false,
     animations: "disabled",
   });
+  const mobileToggle = page.getByRole("button", { name: "Navigation", exact: true });
+  await expect(mobileToggle).toHaveCount(1);
+  await mobileToggle.click();
+  const navigationDrawer = page.getByRole("dialog", { name: "Navigation", exact: true });
+  await expect(navigationDrawer).toBeVisible();
+  await expect
+    .poll(() => navigationDrawer.evaluate((drawer) => drawer.getBoundingClientRect().left))
+    .toBe(0);
+  const brand = navigationDrawer.getByRole("img", { name: "TableCast", exact: true });
+  await brand.evaluate((image) => {
+    if (!(image instanceof HTMLImageElement)) throw new Error("ロゴ画像が必要");
+    return image.decode();
+  });
+  await expect(brand).toBeVisible();
+  await expect(navigationDrawer.locator('[data-ui="navigation-toggle"]')).toHaveCount(0);
+  await page.screenshot({
+    path: testInfo.outputPath("tablecast-admin-en-mobile-sidebar.png"),
+    fullPage: false,
+    animations: "disabled",
+  });
+  await page.keyboard.press("Escape");
+  await expect(navigationDrawer).toBeHidden();
+  await expect(mobileToggle).toBeFocused();
   await page.getByRole("button", { name: "日本語", exact: true }).click();
   await page.setViewportSize({ width: 1512, height: 982 });
   await page.getByRole("searchbox", { name: "検索", exact: true }).fill("MCP");
