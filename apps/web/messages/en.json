@@ -81,7 +81,7 @@
   "kiosk_generating": "Responding",
   "kiosk_latest": "Latest conversation",
   "kiosk_transcribing": "Transcribing",
-  "kiosk_menu": "Our menu",
+  "kiosk_menu": "Menu",
   "kiosk_menu_empty": "There are no items on the menu at the moment. Please use the button at the top of the screen to call a member of staff if you need help.",
   "kiosk_category_empty": "There are no items in this category. Please choose another category or All.",
   "kiosk_all": "All",
@@ -934,7 +934,7 @@
   "coupon_search": "Search by member name",
   "theme_title": "Store design",
   "theme_logo": "Store logo",
-  "theme_logo_hint": "The ordering screen logo. This does not change the organisation icon.",
+  "theme_logo_hint": "The square store logo. Configure the wide header banner and organisation icon separately.",
   "theme_basics": "Colours and fonts",
   "theme_ink": "Text colour",
   "theme_paper": "Background colour",
@@ -1452,5 +1452,7 @@
   "currency_loading": "Loading rates",
   "currency_unavailable": "Reference rate unavailable",
   "auth_passkey_title": "Sign in more easily with a passkey",
-  "auth_passkey_later": "Maybe later"
+  "auth_passkey_later": "Maybe later",
+  "theme_header_banner": "Store header banner",
+  "theme_header_banner_hint": "Upload a wide image separately from the square store logo. The ordering header shows the whole image at its original aspect ratio, including 4:1."
 }

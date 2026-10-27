@@ -13,7 +13,7 @@ export function ActionToasts() {
         <Toast.Root
           key={toast.id}
           toast={toast}
-          className="pointer-events-auto w-full max-w-sm rounded-xl border border-success-border bg-card p-3 text-foreground shadow-xl transition-[opacity,transform] duration-(--motion-state) ease-(--motion-ease-out) data-starting-style:translate-y-2 data-starting-style:opacity-0 data-ending-style:translate-y-2 data-ending-style:opacity-0 data-limited:hidden motion-reduce:transform-none"
+          className="pointer-events-auto w-full max-w-sm rounded-2xl border border-success-border bg-card p-2 text-foreground shadow-xl transition-[opacity,transform] duration-(--motion-state) ease-(--motion-ease-out) data-starting-style:translate-y-2 data-starting-style:opacity-0 data-ending-style:translate-y-2 data-ending-style:opacity-0 data-limited:hidden motion-reduce:transform-none"
         >
           <Toast.Content className="flex items-center gap-3">
             <Check aria-hidden className="size-5 shrink-0 text-success" />
@@ -21,7 +21,7 @@ export function ActionToasts() {
             <Toast.Close
               aria-label={t("common_close")}
               aria-hidden={false}
-              render={<Button variant="ghost" size="icon" />}
+              render={<Button variant="ghost" size="icon-sm" />}
             >
               <X aria-hidden />
             </Toast.Close>

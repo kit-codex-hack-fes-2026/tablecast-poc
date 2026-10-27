@@ -3,7 +3,7 @@ import { configurationSchema } from "@tablecast/api/schema";
 import type { GroupKey } from "./types.ts";
 import { demoOptionImageKey } from "../tablecast-demo-option-images.ts";
 import { koreanDemoStore } from "../tablecast-korean-demo.ts";
-import { demoImageKey, demoStoreLogo } from "../tablecast-seed-media.ts";
+import { demoImageKey, demoStoreBanner, demoStoreLogo } from "../tablecast-seed-media.ts";
 import { groupDefinitions } from "./modifiers.ts";
 import { sakeKinds, sakes } from "./sake.ts";
 import { categories, drinks, foods, stores } from "./store-data.ts";
@@ -216,7 +216,10 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
     ...store,
     configuration: configurationSchema.parse({
       ...store.configuration,
-      branding: { logo: demoStoreLogo(store.id, store.name) },
+      branding: {
+        logo: demoStoreLogo(store.id, store.name),
+        banner: demoStoreBanner(store.id, store.name),
+      },
     }),
   }));
 }

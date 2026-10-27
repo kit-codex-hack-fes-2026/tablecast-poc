@@ -31,7 +31,7 @@ export function CartFlightImage({
       key={flight.id}
       aria-hidden
       data-ui={flight.destination === "cart" ? "cart-flight" : "order-flight"}
-      className="pointer-events-none fixed z-50 overflow-hidden rounded-xl bg-card shadow-lg"
+      className="pointer-events-none fixed z-50 overflow-hidden rounded-lg bg-card shadow-lg"
       style={{
         left: from.left + (from.width - size) / 2,
         top: from.top + (from.height - size) / 2,

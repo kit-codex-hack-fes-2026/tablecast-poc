@@ -56,6 +56,7 @@ export function DesignEditor({
       onChange({
         ...value,
         branding: {
+          ...value.branding,
           logo: {
             imageKey: image.imageKey,
             imageKind: image.imageKind,
@@ -90,7 +91,20 @@ export function DesignEditor({
           value={value.branding?.logo ?? null}
           disabled={disabled}
           onStagedChange={onStagedChange}
-          onChange={(logo) => onChange({ ...value, branding: { logo } })}
+          onChange={(logo) => onChange({ ...value, branding: { ...value.branding, logo } })}
+        />
+      </section>
+      <section className="space-y-3 rounded-lg border border-border p-4">
+        <h2>{t("theme_header_banner")}</h2>
+        <p>{t("theme_header_banner_hint")}</p>
+        <ThemeImageEditor
+          storeId={storeId}
+          value={value.branding?.banner ?? null}
+          disabled={disabled}
+          onStagedChange={onStagedChange}
+          onChange={(banner) =>
+            onChange({ ...value, branding: { logo: null, ...value.branding, banner } })
+          }
         />
       </section>
       <section className="space-y-3 rounded-lg border border-border p-4">

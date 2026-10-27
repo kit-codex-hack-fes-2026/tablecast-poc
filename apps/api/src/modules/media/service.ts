@@ -184,6 +184,7 @@ export async function requireConfigurationImages(
   const images = [
     ...[
       configuration.branding?.logo,
+      configuration.branding?.banner,
       ...Object.values(configuration.appearance?.assets ?? {}),
       ...(configuration.banners ?? []).map((banner) => banner.image),
     ]

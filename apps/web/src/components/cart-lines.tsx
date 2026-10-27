@@ -60,6 +60,9 @@ export function CartLines({
         )}
         {lines.map((line) => {
           const product = productsById.get(line.productId);
+          const canEdit = Boolean(
+            onEdit && (product?.modifiers.length || line.options.length || line.missing.length),
+          );
           const optionsById = new Map(
             product?.modifiers.flatMap((group) =>
               group.options.map((option) => [option.id, { group, option }] as const),
@@ -77,13 +80,13 @@ export function CartLines({
                 {product?.imageKey && (
                   <div
                     data-ui="cart-product-image"
-                    className="relative min-h-32 self-stretch overflow-hidden bg-muted"
+                    className="relative aspect-square self-start overflow-hidden rounded-lg bg-muted"
                   >
                     <ProductImage
                       width={112}
                       height={112}
                       sizes="112px"
-                      className="absolute inset-0 size-full"
+                      className="size-full object-top-left"
                       src={`/media/${product.imageKey}`}
                       alt=""
                     />
@@ -112,7 +115,7 @@ export function CartLines({
                       <Badge variant="secondary">{t("kiosk_plan_included")}</Badge>
                     )}
                   </div>
-                  {(line.options.length > 0 || onEdit) && (
+                  {(line.options.length > 0 || canEdit) && (
                     <section
                       data-ui="line-customisations"
                       aria-label={t("kiosk_customisations")}
@@ -124,7 +127,7 @@ export function CartLines({
                           return (
                             <span
                               key={option.id}
-                              className="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                              className="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-2xl border border-border bg-background p-2 text-sm"
                             >
                               {context?.option.imageKey && (
                                 <ProductImage
@@ -133,7 +136,7 @@ export function CartLines({
                                   height={40}
                                   sizes="40px"
                                   alt=""
-                                  className="size-10 shrink-0 rounded-md object-contain"
+                                  className="size-10 shrink-0 rounded-lg object-contain"
                                 />
                               )}
                               <span className="min-w-0 wrap-anywhere">
@@ -154,7 +157,7 @@ export function CartLines({
                           );
                         })}
                       </div>
-                      {onEdit && (
+                      {canEdit && onEdit && (
                         <Button
                           className="ml-auto shrink-0"
                           size="sm"
@@ -246,7 +249,7 @@ const CartLineSurface = forwardRef<HTMLLIElement, { children: ReactNode; framed?
         animate={{ opacity: 1, x: 0, y: 0 }}
         exit={{ opacity: 0, x: reduced ? 0 : -8 }}
         transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
-        className={`@container/cart-line relative overflow-hidden bg-card ${framed ? "rounded-xl border border-border" : ""}`}
+        className={`@container/cart-line relative overflow-hidden bg-card p-2 ${framed ? "rounded-2xl border border-border" : ""}`}
       >
         {children}
       </m.li>
@@ -298,9 +301,9 @@ function LineQuantity({
       <label htmlFor={id} className="text-sm font-medium">
         {t("common_quantity")}
       </label>
-      <NumberField.Group className="flex min-h-12 items-center rounded-xl border border-input bg-card inset-shadow-field hover:border-control-edge-hover focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
+      <NumberField.Group className="flex min-h-12 items-center rounded-xl border border-input bg-card p-1 inset-shadow-field hover:border-control-edge-hover focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
         <NumberField.Decrement
-          render={<Button size="icon" variant="ghost" />}
+          render={<Button size="icon-sm" variant="ghost" />}
           aria-label={`${line.name[locale]}: ${t("common_decrease")}`}
         >
           <Minus aria-hidden />
@@ -313,7 +316,7 @@ function LineQuantity({
           className="h-11 w-10 min-w-0 bg-transparent text-center text-base tabular-nums outline-none"
         />
         <NumberField.Increment
-          render={<Button size="icon" variant="ghost" />}
+          render={<Button size="icon-sm" variant="ghost" />}
           aria-label={`${line.name[locale]}: ${t("common_increase")}`}
         >
           <Plus aria-hidden />

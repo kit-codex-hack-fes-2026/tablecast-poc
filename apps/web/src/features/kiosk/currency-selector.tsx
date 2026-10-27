@@ -23,8 +23,8 @@ export function CurrencySelector({ compact = false }: { compact?: boolean }) {
         aria-label={t("currency_select")}
         className={
           compact
-            ? "h-11 min-h-11 w-auto shrink-0 gap-2 rounded-lg text-sm"
-            : "min-h-14 w-auto shrink-0 gap-2 rounded-lg text-sm"
+            ? "h-11 min-h-11 w-auto shrink-0 gap-2 rounded-xl text-sm"
+            : "min-h-14 w-auto shrink-0 gap-2 rounded-xl text-sm"
         }
       >
         <Flag src={currency ? currencyFlags[currency] : jp} />

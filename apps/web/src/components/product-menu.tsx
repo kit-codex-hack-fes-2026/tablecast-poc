@@ -107,13 +107,13 @@ export const ProductMenu = memo(function ProductMenu({
           <Button
             variant="ghost"
             type="button"
-            className="h-full min-w-0 flex-col items-stretch justify-start gap-0 rounded-xl p-2 text-left disabled:opacity-70"
+            className="h-full min-w-0 flex-col items-stretch justify-start gap-0 rounded-2xl p-2 text-left disabled:opacity-70"
             data-theme-part="product-card"
             key={product.id}
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <span className="relative flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-md bg-muted">
+            <span className="relative flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-lg bg-muted">
               {product.imageKey ? (
                 <ProductImage
                   className="size-full object-contain"

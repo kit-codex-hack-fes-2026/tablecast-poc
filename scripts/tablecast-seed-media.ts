@@ -21,12 +21,19 @@ export function demoImageKey(file: string) {
   }
   return key;
 }
-function storeLogoAsset(storeId: string) {
-  const file = tablecastDemoStoreIcons[storeId];
+function storeLogoAsset(storeId: string, kind: "banner" | "logo" = "logo") {
+  const icon = tablecastDemoStoreIcons[storeId];
+  const file = kind === "banner" ? icon?.replace("-logo.webp", "-banner.webp") : icon;
   if (!file) throw new Error("店舗ロゴ素材がありません。");
   const metadata = {
     imageKind: "illustration" as const,
-    imageSource: { generated: true, description: "架空店舗のデモ用に生成したロゴ" },
+    imageSource: {
+      generated: true,
+      description:
+        kind === "banner"
+          ? "架空店舗の横長ロゴとして生成したデモ用バナー"
+          : "架空店舗のデモ用に生成したロゴ",
+    },
   };
   const bytes = readFileSync(resolve(directory, "identities", file));
   // 通常の画像取込と同じく、店舗・出所・画像内容を一つのidentityにする。
@@ -46,6 +53,15 @@ export function demoStoreLogo(storeId: string, name: string): ThemeImage {
   };
 }
 
+export function demoStoreBanner(storeId: string, name: string): ThemeImage {
+  const asset = storeLogoAsset(storeId, "banner");
+  return {
+    imageKey: asset.imageKey,
+    ...asset.metadata,
+    alt: { ja: `${name}の横長バナー`, en: `${name} header banner` },
+  };
+}
+
 export async function seedMenuImages(
   bucket: Parameters<typeof uploadPreviewImage>[0] & Pick<R2Bucket, "list">,
   legacy = false,
@@ -54,7 +70,7 @@ export async function seedMenuImages(
   const files = [
     ...(await readdir(directory)).filter((name) => /^[a-z0-9-]+\.(png|webp)$/.test(name)),
     ...(await readdir(resolve(directory, "identities")))
-      .filter((name) => name.endsWith("-logo.webp"))
+      .filter((name) => name.endsWith("-logo.webp") || name.endsWith("-banner.webp"))
       .map((name) => `identities/${name}`),
   ].sort();
   const required =
@@ -63,6 +79,7 @@ export async function seedMenuImages(
           configurations.flatMap((config) =>
             [
               config.branding?.logo?.imageKey,
+              config.branding?.banner?.imageKey,
               ...config.products.flatMap((product) => [
                 product.imageKey,
                 ...product.modifiers.flatMap((modifier) =>
@@ -108,9 +125,13 @@ export async function seedMenuImages(
               const bytes = await readFile(resolve(directory, file));
               const contentKey = imageKey(bytes, extname(file) === ".webp" ? "webp" : "png");
               const logoStore = Object.entries(tablecastDemoStoreIcons).find(
-                ([, icon]) => file === `identities/${icon}`,
+                ([, icon]) =>
+                  file === `identities/${icon}` ||
+                  file === `identities/${icon.replace("-logo.webp", "-banner.webp")}`,
               )?.[0];
-              const logo = logoStore ? storeLogoAsset(logoStore) : undefined;
+              const logo = logoStore
+                ? storeLogoAsset(logoStore, file.endsWith("-banner.webp") ? "banner" : "logo")
+                : undefined;
               const key = logo?.imageKey ?? contentKey;
               if (required && !required.has(key)) continue;
               for (const target of legacy ? [key, `tablecast/demo/${file}`] : [key]) {

@@ -81,7 +81,7 @@
   "kiosk_generating": "応答中",
   "kiosk_latest": "最新の会話へ",
   "kiosk_transcribing": "聞き取り中",
-  "kiosk_menu": "おしながき",
+  "kiosk_menu": "メニュー",
   "kiosk_menu_empty": "現在ご注文いただける商品はありません。ご不明な点は画面上部から店員をお呼びください。",
   "kiosk_category_empty": "このカテゴリには商品がありません。別のカテゴリ、またはすべてを選んでください。",
   "kiosk_all": "すべて",
@@ -105,7 +105,7 @@
   "kiosk_cart_total": "カゴ合計",
   "kiosk_ordered_total": "注文済み合計",
   "kiosk_customisations": "カスタマイズ",
-  "kiosk_illustration": "イメージイラスト",
+  "kiosk_illustration": "イラスト",
   "kiosk_allergens": "アレルギー・食事制限",
   "kiosk_allergen_note": "情報が不明な場合や重いアレルギーがある場合は、スタッフにご確認ください。",
   "kiosk_cross_contact": "調理時の交差接触を完全に避けられるとは限りません。",
@@ -934,7 +934,7 @@
   "coupon_search": "会員名で検索",
   "theme_title": "店舗デザイン",
   "theme_logo": "店舗ロゴ",
-  "theme_logo_hint": "注文画面に表示する店舗ロゴです。組織共通アイコンには影響しません。",
+  "theme_logo_hint": "店舗の正方形ロゴです。ヘッダー用の横長バナーと組織共通アイコンは別に設定します。",
   "theme_basics": "色と書体",
   "theme_ink": "文字色",
   "theme_paper": "背景色",
@@ -1452,5 +1452,7 @@
   "currency_loading": "レートを取得中",
   "currency_unavailable": "参考レートを取得できません",
   "auth_passkey_title": "パスキーでかんたんログイン",
-  "auth_passkey_later": "あとで設定"
+  "auth_passkey_later": "あとで設定",
+  "theme_header_banner": "ヘッダー用店舗バナー",
+  "theme_header_banner_hint": "正方形の店舗ロゴとは別に登録する横長の画像です。4:1など任意の縦横比を保ち、注文画面のヘッダーへ全体を表示します。"
 }

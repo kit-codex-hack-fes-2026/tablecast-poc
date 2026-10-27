@@ -77,16 +77,17 @@ it("実R2で遅い画像を待たず4枠を使い、再配備・欠損復旧・�
     expect(first.uploaded).toBeGreaterThan(100);
     expect(first.confirmed).toBe(0);
     for (const configuration of configurations) {
-      const logo = configuration.branding?.logo;
-      if (!logo) throw new Error("seedの店舗ロゴが必要です。");
-      const image = await real.get(logo.imageKey);
-      expect(image?.httpMetadata?.contentType).toBe("image/webp");
-      expect(image?.customMetadata?.storeId).toMatch(/^tablecast-/);
-      expect(JSON.parse(image?.customMetadata?.metadata ?? "null")).toEqual({
-        imageKind: logo.imageKind,
-        imageSource: logo.imageSource,
-      });
-      expect((await image?.arrayBuffer())?.byteLength).toBeGreaterThan(0);
+      for (const logo of [configuration.branding?.logo, configuration.branding?.banner]) {
+        if (!logo) throw new Error("seedの店舗ロゴが必要です。");
+        const image = await real.get(logo.imageKey);
+        expect(image?.httpMetadata?.contentType).toBe("image/webp");
+        expect(image?.customMetadata?.storeId).toMatch(/^tablecast-/);
+        expect(JSON.parse(image?.customMetadata?.metadata ?? "null")).toEqual({
+          imageKind: logo.imageKind,
+          imageSource: logo.imageSource,
+        });
+        expect((await image?.arrayBuffer())?.byteLength).toBeGreaterThan(0);
+      }
     }
     expect(await real.head(demoImageKey("prawn-tempura.png"))).toBeNull();
     expect(first.uploadedBytes).toBeGreaterThan(0);

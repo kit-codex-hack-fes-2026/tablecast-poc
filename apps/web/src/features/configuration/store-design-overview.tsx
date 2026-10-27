@@ -29,6 +29,7 @@ export function StoreDesignOverview({ catalog }: { catalog: Catalog }) {
                 className="flex min-h-16 items-center gap-3 border-b border-border bg-card px-4 py-3"
               >
                 <StoreLogo logo={configuration.branding?.logo} />
+                <StoreLogo logo={configuration.branding?.banner} width={240} height={60} />
                 <span className="font-semibold">
                   {configuration.storeName ?? catalog.storeName}
                 </span>

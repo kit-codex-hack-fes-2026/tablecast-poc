@@ -32,14 +32,12 @@ it.each(["ja", "en"] as const)(
     const cart = page.getByRole("tab", { name: new RegExp(`^${labels.kiosk_cart}`) });
     const orders = page.getByRole("tab", { name: new RegExp(`^${labels.kiosk_orders_bill}`) });
     await expect.element(cart).toBeVisible();
-    await expect
-      .element(
-        page.getByRole("tabpanel").getByRole("heading", { name: labels.kiosk_menu, exact: true }),
-      )
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("tabpanel").getByText(labels.kiosk_cart_total, { exact: true }))
-      .toBeVisible();
+    expect(
+      page
+        .getByRole("tabpanel")
+        .getByRole("heading", { name: labels.kiosk_menu, exact: true })
+        .elements(),
+    ).toHaveLength(0);
     const pane = orderPanel();
     if (!pane) throw new Error("注文ペインがありません");
     await expect
@@ -125,7 +123,10 @@ it.each(["ja", "en"] as const)(
     const picture = pane.querySelector('[data-ui="cart-product-image"]');
     const card = picture?.closest("li");
     if (!picture || !card) throw new Error("商品画像付きのカードが必要です");
-    expect(picture.getBoundingClientRect().height).toBeCloseTo(card.clientHeight, 1);
+    expect(picture.getBoundingClientRect().height).toBeCloseTo(
+      picture.getBoundingClientRect().width,
+      1,
+    );
     const cardImage = picture.querySelector("img");
     if (!cardImage) throw new Error("カードの商品画像が必要です");
     expect(getComputedStyle(cardImage).objectFit).toBe("contain");

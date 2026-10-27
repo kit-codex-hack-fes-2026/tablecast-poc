@@ -146,7 +146,12 @@ it("MCPのテーマ制作を商品を保持した検証済み下書きへ保存�
   );
   expect(spec.storeId).toBe("tablecast-store");
   expect(spec.schema.properties).toHaveProperty("appearance");
-  expect(spec.artwork.map((item) => item.role)).toEqual(["background", "logo", "banner"]);
+  expect(spec.artwork.map((item) => item.role)).toEqual([
+    "background",
+    "logo",
+    "header-banner",
+    "banner",
+  ]);
   expect(new URL(spec.editorUrl).pathname).toBe("/admin/stores/tablecast-store/design");
   const published = toolData(
     await client.callTool({ name: "get_configuration", arguments: {} }),

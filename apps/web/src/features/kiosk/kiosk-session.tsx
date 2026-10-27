@@ -34,7 +34,6 @@ import { LoadingState } from "../../components/loading-state";
 import { Money } from "../../components/money";
 import { ProductImage } from "../../components/product-image";
 import { ProductMenu } from "../../components/product-menu";
-import { StoreLogo } from "../../components/store-logo";
 import { StoreTheme } from "../../components/store-theme";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -183,7 +182,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       : undefined;
   const snapshotId = snapshot?.id;
   useEffect(() => {
-    if (snapshotId) confirmationHeading.current?.focus();
+    if (snapshotId) confirmationHeading.current?.focus({ preventScroll: true });
   }, [snapshotId]);
   useEffect(() => {
     setLocale(data.locale);
@@ -419,11 +418,6 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   function renderMenu() {
     return (
       <Tabs.Panel value="menu">
-        <KioskPaneHeader
-          title={t("kiosk_menu")}
-          amount={data.cart.total}
-          label={t("kiosk_cart_total")}
-        />
         {catalog.data ? (
           <ProductMenu catalog={catalog.data} onChoose={choose} />
         ) : catalog.isPending ? (
@@ -491,7 +485,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
         aria-label={t("kiosk_cart")}
         data-ui="cart-callout"
         data-theme-part="checkout"
-        className="absolute bottom-[calc(100%+0.75rem)] left-1/2 z-20 w-max max-w-[calc(100cqw-1.5rem)] -translate-x-1/2 rounded-2xl border border-border bg-card p-2 shadow-xl"
+        className="absolute bottom-[calc(100%+0.75rem)] left-1/2 z-20 w-max max-w-[calc(100cqw-1.5rem)] -translate-x-1/2 rounded-2xl border border-border bg-card p-1 shadow-xl"
       >
         <span
           aria-hidden
@@ -503,7 +497,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   }
   function renderHeader() {
     const { storeName, branding } = catalog.data?.configuration ?? {};
-    const logo = branding?.logo;
+    const banner = branding?.banner;
     return (
       <header
         data-theme-part="header"
@@ -521,11 +515,20 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             data-ui="header-divider"
             className="h-8 shrink-0 border-l border-border"
           />
-          <div data-ui="store-logo-banner" className="flex min-w-0 max-w-80 items-center gap-2">
-            <StoreLogo logo={logo} width={40} height={40} />
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="truncate text-sm font-medium">{storeName ?? data.storeName}</span>
-              <strong className="truncate text-xs text-muted-foreground">
+          <div
+            data-ui="store-logo-banner"
+            className="flex min-w-0 items-center gap-3 max-xl:flex-col max-xl:items-start max-xl:gap-0"
+          >
+            {banner && (
+              <img
+                src={`/media/${banner.imageKey}?width=480`}
+                alt={banner.alt[locale]}
+                className="h-10 w-auto max-w-40 shrink-0 object-contain object-left max-xl:h-8"
+              />
+            )}
+            <div className="flex min-w-0 max-w-full items-center gap-2 whitespace-nowrap text-sm max-xl:text-xs">
+              <span className="min-w-0 truncate font-medium">{storeName ?? data.storeName}</span>
+              <strong className="shrink-0 text-muted-foreground">
                 {data.kind === "demo" ? t("demo_title") : data.tableName}
               </strong>
             </div>
@@ -610,7 +613,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           data.orders.map((order) => (
             <article
               data-ui="order-card"
-              className="m-3 overflow-hidden rounded-xl border border-border bg-card"
+              className="m-3 overflow-hidden rounded-2xl border border-border bg-card"
               key={order.id}
             >
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-background px-4 py-3 text-sm">
@@ -640,7 +643,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       <section
         ref={billingSummary}
         aria-label={t("kiosk_bill")}
-        className="mx-3 mb-3 rounded-xl border border-border bg-card"
+        className="mx-3 mb-3 rounded-2xl border border-border bg-card"
       >
         <div
           data-ui="bill-summary"
@@ -814,7 +817,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                               ) ?? false)
                         }
                         data-theme-part="dialog"
-                        className="absolute inset-2 z-30 flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl sm:inset-3"
+                        className="absolute inset-2 z-30 flex min-h-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-xl sm:inset-3"
                       >
                         {selection && (
                           <ProductPage
@@ -935,8 +938,11 @@ function KioskMenuTabs({
           disabled={!hydrated}
           value="menu"
         >
-          <Utensils aria-hidden />
-          {t("kiosk_menu")}
+          <span className="flex h-8 items-center justify-center gap-1.5">
+            <Utensils aria-hidden />
+            {t("kiosk_menu")}
+          </span>
+          <span aria-hidden className="h-5" />
         </Tabs.Tab>
         <Tabs.Tab
           className={tabClass}
@@ -948,11 +954,12 @@ function KioskMenuTabs({
         >
           <span className="flex h-8 max-w-full items-center justify-center gap-1">
             <ShoppingBag aria-hidden data-ui="cart-icon" className="shrink-0" />
-            <span className="min-w-0 whitespace-normal leading-none">
-              {t("kiosk_cart")}{" "}
-              <span data-ui="cart-count" className="tabular-nums">
-                {quantity}
-              </span>
+            <span className="min-w-0 whitespace-normal leading-none">{t("kiosk_cart")}</span>
+            <span
+              data-ui="cart-count"
+              className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-control px-1 text-foreground tabular-nums"
+            >
+              {quantity}
             </span>
             <TabProductImages images={images} kind="cart" />
           </span>
@@ -969,11 +976,12 @@ function KioskMenuTabs({
         >
           <span className="flex h-8 max-w-full items-center justify-center gap-1">
             <ReceiptText aria-hidden data-ui="orders-icon" className="shrink-0" />
-            <span className="min-w-0 whitespace-normal leading-none">
-              {t("kiosk_orders_bill")}{" "}
-              <span data-ui="orders-count" className="tabular-nums">
-                {orderedQuantity}
-              </span>
+            <span className="min-w-0 whitespace-normal leading-none">{t("kiosk_orders_bill")}</span>
+            <span
+              data-ui="orders-count"
+              className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-control px-1 text-foreground tabular-nums"
+            >
+              {orderedQuantity}
             </span>
             <TabProductImages images={orderedImages} kind="orders" />
           </span>
@@ -989,12 +997,12 @@ function KioskMenuTabs({
 function TabProductImages({ images, kind }: { images: string[]; kind: "cart" | "orders" }) {
   if (!images.length) return null;
   return (
-    <span aria-hidden data-ui={`${kind}-preview`} className="flex shrink-0 -space-x-5">
+    <span aria-hidden data-ui={`${kind}-preview`} className="ml-1 flex shrink-0 -space-x-6">
       {images.map((imageKey) => (
         <span
           key={imageKey}
           data-image-key={imageKey}
-          className="inline-flex size-8 shrink-0 overflow-hidden rounded-md bg-card"
+          className="inline-flex size-8 shrink-0 overflow-hidden rounded-lg bg-card"
         >
           <ProductImage
             src={`/media/${imageKey}`}
