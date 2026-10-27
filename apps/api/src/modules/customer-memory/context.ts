@@ -3,7 +3,6 @@ import type { ApiServices } from "../../platform/context";
 import { customerContexts, customerVisitParticipants } from "../../db/customer-schema";
 import { confirmations, tableEvents, tableSessions, voiceTurns } from "../../db/table-schema";
 import { notifyStore } from "../tables/mutations";
-import { stopVoiceRoom } from "../voice/runtime";
 
 // 呼出し元の変更が一行成立した直後に同じbatchへ入れる。
 export function resetCustomerContextStatements(
@@ -154,9 +153,13 @@ export async function finishCustomerContextChange(
     [...notifications.values()].map((event) => notifyStore(services, storeId, undefined, event)),
   );
   await Promise.all(
-    contexts.flatMap((context) =>
-      context.previousVoiceSessionId
-        ? [stopVoiceRoom(services, context.previousVoiceSessionId)]
+    contexts.flatMap(({ previousVoiceSessionId }) =>
+      previousVoiceSessionId
+        ? [
+            import("../voice/runtime").then(({ stopVoiceRoom }) =>
+              stopVoiceRoom(services, previousVoiceSessionId),
+            ),
+          ]
         : [],
     ),
   );

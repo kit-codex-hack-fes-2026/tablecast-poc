@@ -6,11 +6,15 @@ import { saveIdentityImage } from "../media/service";
 import { getMcpSessions } from "./queries";
 export async function updateAvatar(services: ApiServices, headers: Headers, image: File) {
   const url = await saveIdentityImage(services.env, image);
-  await services.auth.api.updateUser({ headers, body: { image: url } });
+  await (await services.getAuth()).api.updateUser({ headers, body: { image: url } });
   return { ok: true };
 }
 export async function listMcpSessions(services: ApiServices, userId: string, headers: Headers) {
-  return getMcpSessions(services.db, userId, await services.auth.api.getOAuthConsents({ headers }));
+  return getMcpSessions(
+    services.db,
+    userId,
+    await (await services.getAuth()).api.getOAuthConsents({ headers }),
+  );
 }
 export async function revokeMcpSession(services: ApiServices, userId: string, id: string) {
   const { db } = services;

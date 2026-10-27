@@ -11,15 +11,8 @@ import { initialRoutes } from "./modules/stores/initial-routes";
 import { admin } from "./modules/stores/routes";
 import { systemRoutes } from "./modules/system/routes";
 import { table } from "./modules/tables/routes";
-import { requestServices } from "./platform/context";
-import {
-  apiFactory,
-  handleError,
-  handleRpcError,
-  requestBodyLimit,
-  requestSecurity,
-  requestTelemetry,
-} from "./platform/http";
+import { createHttpApp } from "./platform/app";
+import { apiFactory, handleRpcError } from "./platform/http";
 const rpcRoutes = apiFactory
   .createApp()
   .onError(handleRpcError)
@@ -32,13 +25,7 @@ const rpcRoutes = apiFactory
   .route("/api/admin/stores/:storeId/demo", demoRoutes)
   .route("/api/admin/stores/:storeId", admin)
   .route("/api/table", table);
-const app = apiFactory
-  .createApp()
-  .use("*", requestTelemetry)
-  .use("*", requestServices)
-  .use("*", requestSecurity)
-  .use("*", requestBodyLimit)
-  .onError(handleError)
+const app = createHttpApp()
   .route("/", operatingBillingRoutes)
   .route("/", systemRoutes)
   .route("/", authRoutes)

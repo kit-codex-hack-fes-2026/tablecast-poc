@@ -106,6 +106,8 @@ it.each(["ja", "en"] as const)(
     const conversation = page
       .getByRole("region", { name: labels.kiosk_conversation, exact: true })
       .element();
+    // イベントの独立queryが初期cursorを取得してから通知接続を開始する。
+    await expect.poll(() => TablecastSocket.instances.length).toBe(1);
     const socket = fixtureValue(TablecastSocket.instances[0]);
     const cart = structuredClone(fixture.current.cart);
     const order = orderPanel();

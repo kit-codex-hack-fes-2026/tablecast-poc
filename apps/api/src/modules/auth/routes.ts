@@ -21,19 +21,19 @@ export const authRoutes = apiFactory
       redirect: "manual",
     });
   })
-  .on(["GET", "POST"], "/api/auth/*", (c) => {
+  .on(["GET", "POST"], "/api/auth/*", async (c) => {
     ensure(
       !c.req.path.startsWith("/api/auth/tablecast/") && !c.req.path.startsWith("/api/auth/device"),
       "ROUTE_NOT_PUBLIC",
       404,
     );
-    return c.get("services").auth.handler(c.req.raw);
+    return (await c.get("services").getAuth()).handler(c.req.raw);
   })
-  .get("/.well-known/oauth-authorization-server/api/auth", (c) =>
-    oauthProviderAuthServerMetadata(c.get("services").auth)(c.req.raw),
+  .get("/.well-known/oauth-authorization-server/api/auth", async (c) =>
+    oauthProviderAuthServerMetadata(await c.get("services").getAuth())(c.req.raw),
   )
-  .get("/.well-known/openid-configuration/api/auth", (c) =>
-    oauthProviderOpenIdConfigMetadata(c.get("services").auth)(c.req.raw),
+  .get("/.well-known/openid-configuration/api/auth", async (c) =>
+    oauthProviderOpenIdConfigMetadata(await c.get("services").getAuth())(c.req.raw),
   )
   .get("/.well-known/oauth-protected-resource/mcp", (c) =>
     c.json({

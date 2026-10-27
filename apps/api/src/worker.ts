@@ -1,4 +1,5 @@
 import { instrument } from "@inference-net/otel-cf-workers";
+import { isOrderingRequest } from "./platform/ordering-path";
 import { type TelemetryEnv } from "./platform/telemetry-content";
 import { telemetryConfig } from "./platform/telemetry-export";
 export { TablecastEmulate } from "./containers";
@@ -26,7 +27,9 @@ export default instrument(
       const started = performance.now();
       const initial = firstFetch;
       firstFetch = false;
-      const { default: app } = await import("./app");
+      const { default: app } = isOrderingRequest(new URL(request.url).pathname)
+        ? await import("./ordering-app")
+        : await import("./app");
       const bootstrap = performance.now() - started;
       const response = await app.fetch(request, env, ctx);
       if (response.status === 101) return response;

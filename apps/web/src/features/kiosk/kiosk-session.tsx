@@ -2,11 +2,12 @@ import { Dialog as PaneDialog } from "@base-ui/react/dialog";
 import { Toast } from "@base-ui/react/toast";
 import {
   type CartLine,
+  type CoreState,
   type Locale,
   localeSchema,
   type Product,
   type Snapshot,
-  type TableState,
+  submittedCoreOrderSchema,
   type UiSection,
   type UiSectionInput,
   uiSectionInputSchema,
@@ -58,7 +59,6 @@ import { useI18n } from "../../i18n/locale";
 import { parseResponse, type TableEndpoint } from "../../lib/api";
 import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
-import { useRealtime } from "../../lib/use-realtime";
 import { pendingCartLines } from "./cart-change-model";
 import { type CartFlight, CartFlightImage } from "./cart-flight";
 import { useCartUpdates } from "./cart-updates-query";
@@ -70,11 +70,16 @@ import { KioskGames } from "./games";
 import { KioskVoicePanel } from "./kiosk-voice-panel";
 import { ProductPage } from "./product-dialog";
 import { latestTable } from "./table-cache";
-import { tableCatalogOptions, tableQueryKey } from "./table-query";
+import {
+  tableCatalogOptions,
+  tableOrdersKey,
+  tableQueryKey,
+  useTableResources,
+} from "./table-query";
 import { VoiceConnection } from "./voice-connection";
 import { useVoiceControls } from "./voice-subscription";
 type TableSessionProps = {
-  data: TableState;
+  data: CoreState;
   endpoint: TableEndpoint;
   refresh: () => void;
 };
@@ -113,6 +118,11 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   });
   const displayLocale = pendingLocales.at(-1) ?? data.locale;
   const client = useQueryClient();
+  const { history, orders, events, eventQuery, recordOrder } = useTableResources(
+    data,
+    endpoint,
+    refresh,
+  );
   const catalog = useQuery(tableCatalogOptions(data.storeId, data.configVersion, endpoint));
   const [voice] = useState(
     () => new VoiceConnection(() => {}, refresh, endpoint.client, currencyControls),
@@ -135,8 +145,8 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   const orderPane = useRef<HTMLElement>(null);
   const detailTrigger = useRef<HTMLElement | null>(null);
   const billingSummary = useRef<HTMLElement>(null);
-  const receive = (updated: TableState) =>
-    client.setQueryData<TableState>(tableKey, (current) => latestTable(current, updated));
+  const receive = (updated: CoreState) =>
+    client.setQueryData<CoreState>(tableKey, (current) => latestTable(current, updated));
   const updateCart = useCartUpdates({
     data,
     endpoint,
@@ -181,7 +191,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     mutationKey: screenKey,
     scope: { id: `tablecast-presentation-${endpoint.key}-${data.id}` },
     mutationFn: (input: UiSectionInput) =>
-      parseResponse(endpoint.client.ui.$patch({ json: input })),
+      parseResponse(endpoint.client.ui.$patch({ json: input, query: { view: "core" } })),
     onMutate: () => client.cancelQueries({ queryKey: tableKey, exact: true }),
     onSuccess: receive,
     onError: refresh,
@@ -254,12 +264,13 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   const speed = useMutation({
     scope: { id: `tablecast-speed-${data.id}` },
     mutationFn: (value: number) =>
-      parseResponse(endpoint.client.voice.speed.$patch({ json: { speed: value } })),
+      parseResponse(
+        endpoint.client.voice.speed.$patch({ json: { speed: value }, query: { view: "core" } }),
+      ),
     onSuccess: receive,
     onError: refresh,
   });
   const [submitKey, setSubmitKey] = useState("");
-  useRealtime("table", data.cursor, refresh, endpoint.client);
   const snapshot =
     !cartPending &&
     prepared &&
@@ -299,7 +310,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     );
   }, [data.voiceSessionId, data.voiceState, data.speechSpeed, data.locale, voice]);
   const customerContextCursor =
-    data.events.findLast((event) => event.kind === "customer.context-reset")?.cursor ?? 0;
+    events.findLast((event) => event.kind === "customer.context-reset")?.cursor ?? 0;
   const previousCustomerContext = useRef(0);
   useEffect(() => {
     if (customerContextCursor > previousCustomerContext.current) {
@@ -326,7 +337,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
         }),
       ),
     onSuccess: (confirmation) => {
-      client.setQueryData<TableState>(tableKey, (current) =>
+      client.setQueryData<CoreState>(tableKey, (current) =>
         current ? { ...current, snapshot: confirmation } : current,
       );
       setSection("cart");
@@ -339,11 +350,13 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     mutationFn: ({ confirmation }: { confirmation: Snapshot; pointer: boolean }) => {
       return parseResponse(
         endpoint.client.orders.$post({
+          query: { view: "core" },
           json: { snapshotId: confirmation.id, idempotencyKey: submitKey, approved: true },
         }),
       );
     },
-    onMutate: ({ pointer }) => {
+    onMutate: async ({ pointer }) => {
+      await client.cancelQueries({ queryKey: tableOrdersKey(endpoint, data.id) });
       const target = orderPane.current?.querySelector('[data-ui="orders-icon"]');
       if (!pointer || reducedMotion || !target) return [];
       const to = target.getBoundingClientRect();
@@ -365,39 +378,23 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           : [];
       });
     },
-    onSuccess: async (order, { confirmation }, images) => {
+    onSuccess: (result, _input, images) => {
+      const { order, state } = submittedCoreOrderSchema.parse(result);
       setFlights(images ?? []);
       setSnapshot(undefined);
       toasts.add({ title: t("kiosk_ordered") });
-      client.setQueryData<TableState>(tableKey, (current) =>
-        current
-          ? {
-              ...current,
-              orders: current.orders.some((item) => item.id === order.id)
-                ? current.orders
-                : [...current.orders, order],
-              ...(current.cart.version === confirmation.cartVersion
-                ? {
-                    cart: {
-                      version: current.cart.version + 1,
-                      lines: [],
-                      total: 0,
-                      complete: false,
-                    },
-                    snapshot: null,
-                    bill: { ...current.bill, cartTotal: 0 },
-                  }
-                : {}),
-            }
-          : current,
-      );
-      await client.invalidateQueries({ queryKey: tableKey, exact: true }, { cancelRefetch: false });
+      receive(state);
+      recordOrder(order);
     },
     onError: refresh,
   });
   const call = useMutation({
     mutationFn: (bill: boolean) =>
-      parseResponse(bill ? endpoint.client.bill.request.$post() : endpoint.client.call.$post()),
+      parseResponse(
+        bill
+          ? endpoint.client.bill.request.$post({ query: { view: "core" } })
+          : endpoint.client.call.$post({ query: { view: "core" } }),
+      ),
     onSuccess: (updated, bill) => {
       receive(updated);
       toasts.add({ title: t(bill ? "kiosk_bill_requested" : "kiosk_called_staff") });
@@ -407,7 +404,9 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     mutationKey: languageKey,
     scope: { id: `tablecast-language-${endpoint.key}-${data.id}` },
     mutationFn: async (next: Locale) => {
-      return parseResponse(endpoint.client.locale.$patch({ json: { locale: next } }));
+      return parseResponse(
+        endpoint.client.locale.$patch({ json: { locale: next }, query: { view: "core" } }),
+      );
     },
     onSuccess: (updated) => {
       receive(updated);
@@ -636,7 +635,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           key={data.id}
           endpoint={endpoint}
           sessionId={data.id}
-          cursor={data.events.at(-1)?.cursor ?? 0}
+          cursor={events.at(-1)?.cursor ?? 0}
         />
         <KioskGames
           endpoint={endpoint}
@@ -676,12 +675,15 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           pending={submit.isPending}
         />
         <h3 className="px-4 pt-4 text-base font-semibold">{t("kiosk_orders")}</h3>
-        {data.orders.length === 0 ? (
+        <ErrorNotice query={history} />
+        {history.isPending ? (
+          <LoadingState cards />
+        ) : orders.length === 0 && !history.isError ? (
           <div className="text-muted-foreground flex items-center flex-col text-center py-10 px-5 gap-2.5 [&_h3]:text-sm [&_h3]:font-medium [&_p]:text-xs [&_p]:leading-loose">
             {t("common_empty")}
           </div>
         ) : (
-          data.orders.map((order) => (
+          orders.map((order) => (
             <article
               data-ui="order-card"
               className="m-3 overflow-hidden rounded-2xl border border-border bg-card"
@@ -702,6 +704,19 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
               <CustomerOrderAttribution endpoint={endpoint} order={order} />
             </article>
           ))
+        )}
+        {history.hasNextPage && (
+          <div className="flex justify-center p-4">
+            <Button
+              variant="outline"
+              disabled={history.isFetchingNextPage}
+              onClick={() => {
+                void history.fetchNextPage();
+              }}
+            >
+              {t("kiosk_more_orders")}
+            </Button>
+          </div>
         )}
         {renderBilling()}
       </Tabs.Panel>
@@ -803,10 +818,11 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                 maxSize="70%"
                 className="h-full"
               >
+                <ErrorNotice query={eventQuery} />
                 <KioskVoicePanel
                   voice={voice}
-                  lines={conversationLines(data.events)}
-                  events={data.events}
+                  lines={conversationLines(events)}
+                  events={events}
                   catalog={catalog.data}
                   snapshot={data.snapshot}
                   onReview={
@@ -997,7 +1013,7 @@ function KioskMenuTabs({
   cartActions: ReactNode;
   cartLines: CartLine[];
   cartPending: boolean;
-  data: TableState;
+  data: CoreState;
   products?: Product[];
 }) {
   const hydrated = useHydrated();
@@ -1012,13 +1028,9 @@ function KioskMenuTabs({
     ].slice(0, 3);
   }
   const images = imagesFor(cartLines);
-  const orderedImages = imagesFor(
-    data.orders.toReversed().flatMap((order) => order.snapshot.lines),
-  );
+  const orderedImages = imagesFor(data.orderSummary.productIds.map((productId) => ({ productId })));
   const quantity = cartLines.reduce((sum, line) => sum + line.quantity, 0);
-  const orderedQuantity = data.orders
-    .flatMap((order) => order.snapshot.lines)
-    .reduce((sum, line) => sum + line.quantity, 0);
+  const orderedQuantity = data.orderSummary.quantity;
   const priceClass = "block whitespace-nowrap text-sm tabular-nums";
   const tabClass =
     "h-14 min-h-14 min-w-0 flex-col gap-0 px-1 py-0 text-sm leading-tight whitespace-nowrap text-center [&_svg]:size-4";

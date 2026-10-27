@@ -106,9 +106,12 @@ it("確認の期限が失効したら確定操作を閉じる", async () => {
     await expect.element(confirmation).toBeVisible();
     await vi.advanceTimersByTimeAsync(1);
     await expect.element(confirmation).not.toBeInTheDocument();
-    expect(requests.some((request) => new URL(request.url).pathname === "/api/table/orders")).toBe(
-      false,
-    );
+    expect(
+      requests.some(
+        (request) =>
+          request.method === "POST" && new URL(request.url).pathname === "/api/table/orders",
+      ),
+    ).toBe(false);
   } finally {
     vi.useRealTimers();
   }
@@ -128,9 +131,12 @@ it.each(["カート版", "公開版"] as const)("確認の%sが失効したら�
   }
   notify(reason === "公開版" ? "configuration.published" : "cart.updated");
   await expect.element(confirmation).not.toBeInTheDocument();
-  expect(requests.some((request) => new URL(request.url).pathname === "/api/table/orders")).toBe(
-    false,
-  );
+  expect(
+    requests.some(
+      (request) =>
+        request.method === "POST" && new URL(request.url).pathname === "/api/table/orders",
+    ),
+  ).toBe(false);
 });
 
 it("公開通知で開いた商品を閉じて新価格を取得し、同じ通知でもカート行を重複しない", async () => {
@@ -172,7 +178,12 @@ it("注文操作は確認から修正・明示確定へ一箇所で切り替わ�
   await expect
     .element(page.getByRole("button", { name: ja.kiosk_review, exact: true }))
     .not.toBeInTheDocument();
-  expect(requests.filter((request) => request.url.endsWith("/table/orders"))).toHaveLength(0);
+  expect(
+    requests.filter(
+      (request) =>
+        request.method === "POST" && new URL(request.url).pathname.endsWith("/table/orders"),
+    ),
+  ).toHaveLength(0);
   await page.getByRole("button", { name: ja.kiosk_edit, exact: true }).click();
   await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
   const confirm = page.getByRole("button", { name: ja.kiosk_confirm, exact: true });
@@ -180,7 +191,12 @@ it("注文操作は確認から修正・明示確定へ一箇所で切り替わ�
   confirm.element().focus();
   await userEvent.keyboard("{Enter}");
   await expect.element(page.getByText(ja.kiosk_ordered, { exact: true })).toBeVisible();
-  expect(requests.filter((request) => request.url.endsWith("/table/orders"))).toHaveLength(1);
+  expect(
+    requests.filter(
+      (request) =>
+        request.method === "POST" && new URL(request.url).pathname.endsWith("/table/orders"),
+    ),
+  ).toHaveLength(1);
   expect(fixture.current.cart.lines).toHaveLength(0);
   expect(orderWrites).toHaveLength(1);
   expect(orderWrites[0]?.snapshotId).toBe("tablecast-confirmation");
@@ -241,5 +257,10 @@ it("会計依頼後は操作を依頼済みの表示へ替え、画面を戻し�
   await expect
     .element(page.getByRole("status").filter({ hasText: ja.kiosk_bill_requested }))
     .toBeVisible();
-  expect(requests.filter((request) => request.url.endsWith("/table/bill/request"))).toHaveLength(1);
+  expect(
+    requests.filter(
+      (request) =>
+        request.method === "POST" && new URL(request.url).pathname.endsWith("/table/bill/request"),
+    ),
+  ).toHaveLength(1);
 });

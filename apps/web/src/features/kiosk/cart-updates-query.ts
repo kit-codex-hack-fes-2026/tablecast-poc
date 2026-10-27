@@ -1,4 +1,4 @@
-import type { TableState } from "@tablecast/api/schema";
+import type { CoreState } from "@tablecast/api/schema";
 import { useMutation, useMutationState, useQueryClient } from "@tanstack/react-query";
 import { DetailedError, parseResponse, type TableEndpoint } from "../../lib/api";
 import { applyCartChange, type CartSubmission, cartSubmissionSchema } from "./cart-change-model";
@@ -12,7 +12,7 @@ export function useCartUpdates({
   onStart,
   onSuccess,
 }: {
-  data: TableState;
+  data: CoreState;
   endpoint: TableEndpoint;
   onStart: (input: CartSubmission) => void;
   onSuccess: (input: CartSubmission) => void;
@@ -54,7 +54,7 @@ export function useCartUpdates({
       const current =
         state?.isInvalidated || state?.status === "error"
           ? await client.fetchQuery({ ...tableOptions(client, endpoint), staleTime: 0 })
-          : client.getQueryData<TableState>(queryKey);
+          : client.getQueryData<CoreState>(queryKey);
       if (!current || current.id !== data.id || current.configVersion !== input.configVersion)
         throw new DetailedError("CART_CONFLICT", { statusCode: 409 });
       const change = input.change;
@@ -63,6 +63,7 @@ export function useCartUpdates({
         throw new DetailedError("CART_CONFLICT", { statusCode: 409 });
       return parseResponse(
         endpoint.client.cart.$put({
+          query: { view: "core" },
           json: {
             expectedVersion: current.cart.version,
             lines: applyCartChange(current.cart.lines, input).map(
@@ -79,7 +80,7 @@ export function useCartUpdates({
       );
     },
     onSuccess: (updated, input) => {
-      client.setQueryData<TableState>(queryKey, (current) => latestTable(current, updated));
+      client.setQueryData<CoreState>(queryKey, (current) => latestTable(current, updated));
       onSuccess(input);
     },
     onError: async () => {

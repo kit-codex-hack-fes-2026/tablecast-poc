@@ -3,14 +3,21 @@ import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import type { Actor } from "../src/modules/auth/model";
-import app from "../src/app";
 import { confirmations, orders, stores, tableSessions } from "../src/db/table-schema";
 import { createDemo } from "../src/modules/demo/service";
 import { updateCart } from "../src/modules/orders/use-cases/cart";
 import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
 import { getTableState } from "../src/modules/tables/queries";
+import app from "../src/ordering-app";
 import { createApiServices } from "../src/platform/context";
-import { type CartLine, orderSchema, snapshotSchema, tableStateSchema } from "../src/schema";
+import {
+  type CartLine,
+  type CoreState,
+  coreStateSchema,
+  snapshotSchema,
+  submittedCoreOrderSchema,
+  tableStateSchema,
+} from "../src/schema";
 import { fixtureDb, insertFixture } from "./database-fixture";
 import { configuration, device, deviceToken, setupFixture, text } from "./fixture";
 import { measuredDatabase } from "./measured-database";
@@ -84,7 +91,7 @@ it.each([
       quantity: 1,
       selections: [],
     }));
-    let state = await updateCart(services, actor, { expectedVersion: 2, lines });
+    let state: CoreState = await updateCart(services, actor, { expectedVersion: 2, lines });
     let orderedTotal = count * 400;
     const measurements: { elapsedMs: number; operation: string; sample: number }[] = [];
     async function request(
@@ -98,7 +105,7 @@ it.each([
       const context = createExecutionContext();
       const started = performance.now();
       const response = await app.request(
-        `${base}${path}`,
+        `${base}${path}?view=core`,
         { method, headers, ...(input ? { body: JSON.stringify(input) } : {}) },
         { ...env, TABLECAST_DB: measured.database },
         context,
@@ -109,14 +116,9 @@ it.each([
       const responded = performance.now();
       await waitOnExecutionContext(context);
       expect(response.status).toBe(200);
-      const businessBudget =
-        operation === "order"
-          ? 4
-          : kind === "table" && ["cart", "confirmation"].includes(operation)
-            ? 2
-            : 3;
+      const businessBudget = operation === "order" ? 3 : 2;
       expect(measured.stats.roundtrips).toBeLessThanOrEqual(
-        businessBudget + (kind === "demo" ? (operation === "cart" ? 2 : 3) : 0),
+        businessBudget + (kind === "demo" ? 1 : 0),
       );
       expect(new TextEncoder().encode(body).byteLength).toBeLessThanOrEqual(
         count === 100 ? 1024 * 1024 : 64 * 1024,
@@ -143,7 +145,7 @@ it.each([
     }
     for (let sample = 0; sample < 31; sample++) {
       const quantity = (sample % 2) + 1;
-      state = tableStateSchema.parse(
+      state = coreStateSchema.parse(
         await request("cart", sample, "/cart", "PUT", {
           expectedVersion: state.cart.version,
           lines: lines.map((line) => ({ ...line, quantity })),
@@ -153,24 +155,24 @@ it.each([
       expect(state.cart.lines).toHaveLength(count);
       expect(state.cart.total).toBe(count * quantity * 400);
       expect(state.bill.orderedTotal).toBe(orderedTotal);
-      state = tableStateSchema.parse(
+      state = coreStateSchema.parse(
         await request("ui", sample, "/ui", "PATCH", {
           section: sample % 2 ? "menu" : "cart",
           productId: null,
         }),
       );
       expect(state.uiSection).toBe(sample % 2 ? "menu" : "cart");
-      state = tableStateSchema.parse(
+      state = coreStateSchema.parse(
         await request("locale", sample, "/locale", "PATCH", { locale: sample % 2 ? "ja" : "en" }),
       );
       expect(state.locale).toBe(sample % 2 ? "ja" : "en");
-      state = tableStateSchema.parse(
+      state = coreStateSchema.parse(
         await request("speed", sample, "/voice/speed", "PATCH", { speed: sample % 2 ? 1 : 1.2 }),
       );
       expect(state.speechSpeed).toBe(sample % 2 ? 1 : 1.2);
-      state = tableStateSchema.parse(await request("call", sample, "/call", "POST"));
+      state = coreStateSchema.parse(await request("call", sample, "/call", "POST"));
       expect(state.staffCalled).toBe(true);
-      state = tableStateSchema.parse(await request("bill", sample, "/bill/request", "POST"));
+      state = coreStateSchema.parse(await request("bill", sample, "/bill/request", "POST"));
       expect(state.billRequested).toBe(true);
       const prepared = snapshotSchema.parse(
         await request("confirmation", sample, "/confirm", "POST", {
@@ -179,13 +181,15 @@ it.each([
         }),
       );
       expect(prepared.total).toBe(state.cart.total);
-      const order = orderSchema.parse(
+      const submitted = submittedCoreOrderSchema.parse(
         await request("order", sample, "/orders", "POST", {
           snapshotId: prepared.id,
           idempotencyKey: `tablecast-performance-${sample}`,
           approved: true,
         }),
       );
+      const order = submitted.order;
+      state = submitted.state;
       expect(order.total).toBe(prepared.total);
       orderedTotal += order.total;
       const latest = await getTableState(services, actor);
@@ -195,12 +199,12 @@ it.each([
       state = await updateCart(services, actor, { expectedVersion: latest.cart.version, lines });
     }
     for (const operation of new Set(measurements.map((entry) => entry.operation))) {
-      const warm = measurements
-        .filter((entry) => entry.operation === operation && entry.sample > 0)
+      const all = measurements
+        .filter((entry) => entry.operation === operation)
         .map((entry) => entry.elapsedMs)
         .toSorted((left, right) => left - right);
-      expect(warm).toHaveLength(30);
-      expect(warm[Math.ceil(warm.length * 0.95) - 1]).toBeLessThan(1000);
+      expect(all).toHaveLength(31);
+      expect(all[Math.ceil(all.length * 0.95) - 1]).toBeLessThan(300);
     }
   },
 );

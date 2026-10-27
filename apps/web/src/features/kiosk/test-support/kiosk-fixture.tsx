@@ -1,6 +1,7 @@
 import {
   type CartUpdate,
   cartUpdateSchema,
+  coreStateSchema,
   submitSchema,
   type TableState,
   uiSectionInputSchema,
@@ -91,7 +92,12 @@ beforeEach(() => {
       const request = new Request(input, init);
       requests.push(request);
       await beforeRequest?.(request);
-      const path = new URL(request.url).pathname;
+      const url = new URL(request.url);
+      const path = url.pathname;
+      const stateResponse = () =>
+        Response.json(
+          url.searchParams.get("view") === "core" ? coreStateSchema.parse(current) : current,
+        );
       if (request.method === "GET" && path === "/api/table/participants")
         return Response.json({
           participants: participantNames.map((name, index) => ({
@@ -114,13 +120,19 @@ beforeEach(() => {
           expiresAt: Date.now() + 300000,
           url: `${window.location.origin}/member/join?code=${"a".repeat(64)}`,
         });
-      if (request.method === "GET" && path === "/api/table") return Response.json(current);
+      if (request.method === "GET" && path === "/api/table") return stateResponse();
       if (request.method === "GET" && path === "/api/table/exchange-rates")
         return Response.json({
           base: "JPY",
           source: "currency-api",
           date: "2026-10-22",
           rates: { USD: 0.0065, AUD: 0.00967 },
+        });
+      if (request.method === "GET" && path === "/api/table/orders")
+        return Response.json({
+          orders: current.orders.toReversed(),
+          nextCursor: null,
+          cursor: current.cursor,
         });
       if (request.method === "GET" && path === "/api/table/catalog") return catalogResponse.clone();
       if (request.method === "GET" && path.endsWith("/events")) {
@@ -145,11 +157,11 @@ beforeEach(() => {
               ? null
               : current.selectedProductId,
         };
-        return Response.json(current);
+        return stateResponse();
       }
       if (request.method === "POST" && path === "/api/table/call") {
         current = { ...current, staffCalled: true, cursor: current.cursor + 1 };
-        return Response.json(current);
+        return stateResponse();
       }
       if (request.method === "POST" && path === "/api/table/bill/request") {
         current = {
@@ -158,7 +170,7 @@ beforeEach(() => {
           billRequested: true,
           cursor: current.cursor + 1,
         };
-        return Response.json(current);
+        return stateResponse();
       }
       if (request.method === "POST" && path === "/api/table/confirm") {
         current.snapshot = {
@@ -202,7 +214,23 @@ beforeEach(() => {
           cart: { ...current.cart, lines: [], total: 0, version: current.cart.version + 1 },
           snapshot: null,
         };
-        return Response.json(current.orders.at(-1));
+        current.orderSummary = {
+          quantity: current.orders
+            .flatMap((order) => order.snapshot.lines)
+            .reduce((sum, line) => sum + line.quantity, 0),
+          productIds: [
+            ...new Set(
+              current.orders
+                .toReversed()
+                .flatMap((order) => order.snapshot.lines.map((line) => line.productId)),
+            ),
+          ].slice(0, 3),
+        };
+        return Response.json(
+          url.searchParams.get("view") === "core"
+            ? { order: current.orders.at(-1), state: coreStateSchema.parse(current) }
+            : current.orders.at(-1),
+        );
       }
       if (request.method === "PATCH" && path === "/api/table/ui") {
         const screenInput = uiSectionInputSchema.parse(await request.json());
@@ -212,7 +240,7 @@ beforeEach(() => {
           selectedProductId: screenInput.productId ?? null,
           cursor: current.cursor + 1,
         };
-        return Response.json(current);
+        return stateResponse();
       }
       if (request.method === "POST" && path === "/api/table/voice/stop")
         return Response.json({ ok: true });

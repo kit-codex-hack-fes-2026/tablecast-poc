@@ -13,7 +13,8 @@ async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
   // 価格判定が直後に続く経路だけで取得し、他のGUI操作へ設定JSONを重複転送しない。
   const includeCatalog =
     (c.req.method === "PUT" && c.req.path === "/api/table/cart") ||
-    (c.req.method === "POST" && c.req.path === "/api/table/confirm");
+    (c.req.method === "POST" && c.req.path === "/api/table/confirm") ||
+    (c.req.method === "PATCH" && c.req.path === "/api/table/ui");
   const row = await findDeviceSession(
     c.get("services"),
     await hashDeviceToken(token),
@@ -22,7 +23,11 @@ async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
   ensure(row, "DEVICE_NOT_ASSIGNED", 401);
   c.get("services").tableAccess.session = row.session;
   if (row.catalog && row.session.kind === "table")
-    c.get("services").tableAccess.pricing = { sessionId: row.session.id, store: row.catalog };
+    c.get("services").tableAccess.pricing = {
+      sessionId: row.session.id,
+      store: row.catalog,
+      planUsage: row.planUsage ?? null,
+    };
   return {
     kind: "device",
     storeId: row.session.store_id,
@@ -35,7 +40,9 @@ export async function staffIdentity<E extends ApiEnv>(c: Context<E>) {
   let pending: ApiEnv["Variables"]["session"] = c.get("session");
   if (!pending) {
     const services: ApiEnv["Variables"]["services"] = c.get("services");
-    pending = services.auth.api.getSession({ headers: c.req.raw.headers });
+    pending = services
+      .getIdentity()
+      .then((identity) => identity.api.getSession({ headers: c.req.raw.headers }));
     c.set("session", pending);
   }
   const session = await pending;

@@ -2,6 +2,24 @@
 
 [Issue #389](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/389) / [Draft PR #392](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/pull/392)
 
+## D1を維持した操作経路の再設計
+
+目標は日本の同一計測環境からHTTP本文受信完了までの全標本p95を300ms未満にすること。初回要求を除外して達成扱いにせず、DOMへの楽観的反映と通信完了を分ける。以降の過去計測の1000ms目標は当時の記録であり、今回の受入予算へ流用しない。
+
+Grafana Cloudへログインしたブラウザーから、既存配備`da1d9c1a9b882ba7210eb2fbc915a527a74edb61`のtraceを照合した。カゴのtrace `5dd4e256c24b20c11eeb6d434402c845`はWeb 1633ms、API 311ms、API開始まで約1030msで`faas.coldstart=true`。認可のD1 222ms、更新batch 89ms、更新SQL 0.67msだった。会計のtrace `30b3be1b9a9acab52c96ce4880d4350d`はWeb 1123ms、API 855ms、`faas.coldstart=false`。更新batch 713msに対して更新SQLは0.5698ms、更新後の別状態読取が29msだった。cold起動だけでなくwarmのbinding待ちも残る。重なるbatch子spanのwall timeを合算しない。入口のcoloは実行先配置や日本からの経路の証明に使わない。
+
+実装はSSR・全APIの初期化を注文用入口から分離し、Better Auth標準session検証とplaygroundの店舗member・所有者・卓・設定を集約する。通常の更新と応答用読取は同じDrizzle batchへ置き、通常端末2往復／playground3往復、注文送信は確認snapshot等の前提読取を含め3／4往復とする。プラン使用量も必要列をSQLで集計し、全snapshotをWorkerへ送らない。認可共有は一要求内に限り、価格版・店舗境界・条件付き更新・明示承認を保つ。
+
+GUIのCoreStateは履歴・イベントを含まず、注文送信は作成注文と最新CoreStateを返す。履歴は既定50件／上限100件の安定cursorで独立取得する。完全応答は既定のまま残す。core・履歴・イベントを別queryにし、確定mutationを直接反映する。自分の通知でcoreや履歴を重ねて再取得せず、他端末の変更と再接続の欠落はイベントcursorから回復する。タブ数量・画像stackは履歴の取得範囲に依存しない集計をAPIから返す。
+
+ローカルの実D1では小規模8商品・1行／履歴1件と、多数120商品・100行／履歴100件を比較する。8操作各31標本の初回を含むp95 300ms未満と往復予算、価格と原子性を検証する。別の固定カゴ検査で注文・イベントを100件増やしてもcore本文の増加を512byte未満に抑え、旧完全応答には全履歴が残ることを確認する。ローカルCPU profileは公式`cf workers check --prebuilt`で配備相当bundleを調べる。これはローカルの起動profileであり、Cloudの起動時間の予測値ではない。
+
+変更前の同一preview・in-app Chromiumを2026-10-28に再測定した。`981e136945d724cddac97b6410dcfc896b0a4d13`の8操作各31標本、全248標本を保存した。初回を含むカゴp95は1318ms、タブ621ms、言語673ms、話速765ms、呼出772ms、会計702ms、確認600ms、注文667ms。cf-rayは全てLAXで、日本からの固定経路を確認した値とは扱わない。
+
+実装後のローカル992標本は全32条件で初回を含むp95 300ms未満、最大66ms。本文の最大は小規模1549byte、多数件28085byteだった。標準の`bun run check`が成功し、APIは85file・602件。注文画面のBrowserは47件を検証し、独立イベント取得に合わせた初期接続待ちの2件を含むレイアウト6件も再確認した。
+
+previewの再配備後の実測・Cloud照合・CIは今回の対象SHAで追記する。300ms未満に達しない区間と、日本からの固定経路を確認できない場合はその制限も残し、Draftを維持する。
+
 ## 2026-10-28の追加診断と配置比較
 
 ローカルのGrafana LGTMで本番Web→API→D1→通知のtraceを比較した。Lokiは公式Grafana MCP、Tempoはtrace IDを指定した公式読取APIで取得した。a1b7b8e7では通常カゴを認可・価格読取・更新と状態読取の3往復、playgroundを所有者確認を含む5往復へ減らした。最終実装では、プランなし通常卓のカゴ・注文確認は認可と価格設定を同じjoinで取得する2往復へ減らした。他のGUI操作へ設定JSONを余分に取得せず、プラン利用中の注文履歴・価格設定のbatch取得は維持する。更新と状態読取は同じDrizzle batchに置き、価格・版条件・イベントの原子性を維持する。認可時のデモ設定はリクエスト内だけで共有し、プランなしの価格判定へ再利用する。

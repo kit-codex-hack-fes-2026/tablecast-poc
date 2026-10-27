@@ -1,3 +1,4 @@
+import type { TableEvent } from "@tablecast/api/schema";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { parseResponse, rpc, tableEndpoint } from "./api";
 import { apiError } from "./api-error";
@@ -5,7 +6,7 @@ import { apiError } from "./api-error";
 export function useRealtime(
   scope: "table" | undefined | { storeId: string },
   snapshotCursor: number,
-  onChange: () => void,
+  onChange: (update?: { cursor: number; events: TableEvent[] }) => void,
   tableClient = tableEndpoint.client,
 ) {
   const storeId = typeof scope === "object" ? scope.storeId : undefined;
@@ -50,7 +51,7 @@ export function useRealtime(
           lastSync = Date.now();
           queued ||= result.events.length === 500;
           cursor.current = Math.max(cursor.current, result.cursor);
-          if (result.events.length && result.cursor > getSnapshotCursor()) notify();
+          if (result.events.length && result.cursor > getSnapshotCursor()) notify(result);
         }
       } catch (error) {
         if (!disposed) {

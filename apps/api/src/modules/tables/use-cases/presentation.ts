@@ -6,11 +6,11 @@ import type { Actor } from "../../auth/model";
 import type { Catalog } from "../../configuration/model";
 import * as business from "../../../db/business-schema";
 import { ensure } from "../../../platform/errors";
-import { observeOperation } from "../../../platform/telemetry";
+import { observeOperation, recordD1Update } from "../../../platform/telemetry";
 import { getCatalog, sessionConfigVersion } from "../../catalog/queries";
 import { showProductsSchema } from "../../voice/model";
-import { updateVoiceLanguage } from "../../voice/runtime";
-import { type TableState, uiSectionInputSchema } from "../model";
+import { getCoreState } from "../core-queries";
+import { type CoreState, type StateView, type TableState, uiSectionInputSchema } from "../model";
 import {
   eventStatement,
   interruptVoiceTurns,
@@ -19,12 +19,32 @@ import {
   voiceCondition,
 } from "../mutations";
 import { getSession, getTableState } from "../queries";
+import { withStateRead } from "../state-read";
 
+export function setUiSection(
+  services: ApiServices,
+  actor: Actor,
+  input: z.infer<typeof uiSectionInputSchema>,
+  view: "core",
+): Promise<CoreState>;
+export function setUiSection(
+  services: ApiServices,
+  actor: Actor,
+  input: z.infer<typeof uiSectionInputSchema>,
+  view?: "full",
+): Promise<TableState>;
+export function setUiSection(
+  services: ApiServices,
+  actor: Actor,
+  input: z.infer<typeof uiSectionInputSchema>,
+  view: StateView,
+): Promise<CoreState | TableState>;
 export async function setUiSection(
   services: ApiServices,
   actor: Actor,
   input: z.infer<typeof uiSectionInputSchema>,
-): Promise<TableState> {
+  view: StateView = "full",
+): Promise<CoreState | TableState> {
   const db = services.db;
 
   const parsed = uiSectionInputSchema.safeParse(input);
@@ -40,28 +60,32 @@ export async function setUiSection(
   );
   const mutation = crypto.randomUUID();
   const gate = voiceCondition(actor);
-  const result = await db.batch([
-    db
-      .update(business.tableSessions)
-      .set({
-        ui_section: parsed.data.section,
-        selected_product_id: productId,
-        mutation_id: mutation,
-      })
-      .where(
-        sql`id=${session.id} AND store_id=${actor.storeId} AND status='open'${gate} AND (${productId} IS NULL OR ${sessionConfigVersion(actor.storeId, actor.tableSessionId)}=${catalog?.version ?? null})`,
-      ),
-    eventStatement(services, actor, mutation, "table.ui", {
-      section: parsed.data.section,
-      productId,
-    }),
-  ]);
-  ensure(result[0]?.meta.changes === 1, "TABLE_CONFLICT");
-  await notifyStore(services, actor.storeId, actor.tableSessionId, {
-    cursor: result[1].meta.last_row_id,
-    demoId: session.kind === "demo" ? session.id : undefined,
+  return withStateRead(services, actor, view, async (queries, decode) => {
+    const [updated, event, ...state] = await db.batch([
+      db
+        .update(business.tableSessions)
+        .set({
+          ui_section: parsed.data.section,
+          selected_product_id: productId,
+          mutation_id: mutation,
+        })
+        .where(
+          sql`id=${session.id} AND store_id=${actor.storeId} AND status='open'${gate} AND (${productId} IS NULL OR ${sessionConfigVersion(actor.storeId, actor.tableSessionId)}=${catalog?.version ?? null})`,
+        ),
+      eventStatement(services, actor, mutation, "table.ui", {
+        section: parsed.data.section,
+        productId,
+      }),
+      ...queries,
+    ] as const);
+    ensure(updated.meta.changes === 1, "TABLE_CONFLICT");
+    recordD1Update(updated.meta);
+    await notifyStore(services, actor.storeId, actor.tableSessionId, {
+      cursor: event.meta.last_row_id,
+      demoId: session.kind === "demo" ? session.id : undefined,
+    });
+    return decode(state);
   });
-  return getTableState(services, actor);
 }
 
 export async function showProducts(
@@ -101,6 +125,7 @@ async function requestStaffAssistance(
   services: ApiServices,
   actor: Actor,
   kind: "bill.requested" | "staff.called",
+  view: StateView,
 ) {
   return observeOperation(
     kind === "staff.called" ? "tablecast.staff.call" : "tablecast.bill.request",
@@ -110,75 +135,82 @@ async function requestStaffAssistance(
       const row = await getSession(services, actor);
       const mutation = crypto.randomUUID();
       const gate = voiceCondition(actor);
-      const result = await db.batch([
-        db
-          .update(business.tableSessions)
-          .set({ staff_called: 1, mutation_id: mutation })
-          .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
-        eventStatement(
-          services,
-          actor,
-          mutation,
-          kind,
-          kind === "staff.called" ? { source: actor.kind } : {},
-        ),
-      ]);
-      ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-      await notifyStore(services, actor.storeId, actor.tableSessionId, {
-        cursor: result[1].meta.last_row_id,
-        demoId: row.kind === "demo" ? row.id : undefined,
+      return withStateRead(services, actor, view, async (queries, decode) => {
+        const [updated, event, ...state] = await db.batch([
+          db
+            .update(business.tableSessions)
+            .set({ staff_called: 1, mutation_id: mutation })
+            .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
+          eventStatement(
+            services,
+            actor,
+            mutation,
+            kind,
+            kind === "staff.called" ? { source: actor.kind } : {},
+          ),
+          ...queries,
+        ] as const);
+        ensure(updated.meta.changes === 1, "SESSION_STALE");
+        recordD1Update(updated.meta);
+        await notifyStore(services, actor.storeId, actor.tableSessionId, {
+          cursor: event.meta.last_row_id,
+          demoId: row.kind === "demo" ? row.id : undefined,
+        });
+        return decode(state);
       });
-      return getTableState(services, actor);
     },
     { env: services.env, input: { actor } },
   );
 }
 
-export function callStaff(services: ApiServices, actor: Actor) {
-  return requestStaffAssistance(services, actor, "staff.called");
+export function callStaff(services: ApiServices, actor: Actor, view: "core"): Promise<CoreState>;
+export function callStaff(services: ApiServices, actor: Actor, view?: "full"): Promise<TableState>;
+export function callStaff(
+  services: ApiServices,
+  actor: Actor,
+  view: StateView,
+): Promise<CoreState | TableState>;
+export function callStaff(services: ApiServices, actor: Actor, view: StateView = "full") {
+  return requestStaffAssistance(services, actor, "staff.called", view);
 }
 
-export async function changeLocale(services: ApiServices, actor: Actor, locale: Locale) {
+export function changeLocale(
+  services: ApiServices,
+  actor: Actor,
+  locale: Locale,
+  view: "core",
+): Promise<CoreState>;
+export function changeLocale(
+  services: ApiServices,
+  actor: Actor,
+  locale: Locale,
+  view?: "full",
+): Promise<TableState>;
+export function changeLocale(
+  services: ApiServices,
+  actor: Actor,
+  locale: Locale,
+  view: StateView,
+): Promise<CoreState | TableState>;
+export async function changeLocale(
+  services: ApiServices,
+  actor: Actor,
+  locale: Locale,
+  view: StateView = "full",
+) {
   const db = services.db;
 
   const row = await getSession(services, actor);
   if (row.locale === locale) {
-    if (row.voice_session_id) await updateVoiceLanguage(services, actor, row.voice_session_id);
-    return getTableState(services, actor);
+    if (row.voice_session_id)
+      await (
+        await import("../../voice/runtime")
+      ).updateVoiceLanguage(services, actor, row.voice_session_id);
+    return view === "core" ? getCoreState(services, actor) : getTableState(services, actor);
   }
   const mutation = crypto.randomUUID();
   const gate = voiceCondition(actor);
-  const result = await db.batch([
-    db
-      .update(business.tableSessions)
-      .set({
-        locale: locale,
-        active_turn_id: null,
-        voice_version: sql`voice_version+1`,
-        mutation_id: mutation,
-      })
-      .where(
-        sql`id=${row.id} AND store_id=${actor.storeId} AND status='open' AND voice_version=${row.voice_version}${gate}`,
-      ),
-    invalidationStatement(services, actor, mutation),
-    ...interruptVoiceTurns(services, actor, mutation, true),
-    eventStatement(services, actor, mutation, "locale.changed", { locale }),
-    // 言語変更で旧turnを無効化するため、このツールの完了も同じbatchへ含める。
-    db.insert(business.tableEvents)
-      .select(sql`SELECT NULL,store_id,table_session_id,'voice.tool',json_set(data_json,'$.state','completed'),${Date.now()}
-       FROM table_events WHERE store_id=${actor.storeId} AND table_session_id=${row.id} AND kind='voice.tool'
-       AND json_extract(data_json,'$.turnId')=${actor.kind === "voice" ? (actor.turnId ?? null) : null} AND json_extract(data_json,'$.toolName')='setLanguage'
-       AND json_extract(data_json,'$.state')='running'
-       AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${row.id} AND mutation_id=${mutation})`),
-  ]);
-  ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-  await notifyStore(services, actor.storeId, actor.tableSessionId, {
-    cursor: Math.max(result[4].meta.last_row_id, result[5].meta.last_row_id),
-    demoId: row.kind === "demo" ? row.id : undefined,
-  });
-  if (row.voice_session_id) await updateVoiceLanguage(services, actor, row.voice_session_id);
-  // 言語変更前のturn資格を再利用せず、認可済みの同じ卓を読み直す。
-  return getTableState(services, {
+  const readActor: Actor = {
     ...actor,
     kind: actor.demoId ? "staff" : "device",
     userId: actor.userId,
@@ -186,11 +218,59 @@ export async function changeLocale(services: ApiServices, actor: Actor, locale: 
     turnId: undefined,
     storeId: actor.storeId,
     tableSessionId: row.id,
+  };
+  return withStateRead(services, readActor, view, async (queries, decode) => {
+    const [updated, , , , event, toolEvent, ...state] = await db.batch([
+      db
+        .update(business.tableSessions)
+        .set({
+          locale: locale,
+          active_turn_id: null,
+          voice_version: sql`voice_version+1`,
+          mutation_id: mutation,
+        })
+        .where(
+          sql`id=${row.id} AND store_id=${actor.storeId} AND status='open' AND voice_version=${row.voice_version}${gate}`,
+        ),
+      invalidationStatement(services, actor, mutation),
+      ...interruptVoiceTurns(services, actor, mutation, true),
+      eventStatement(services, actor, mutation, "locale.changed", { locale }),
+      // 言語変更で旧turnを無効化するため、このツールの完了も同じbatchへ含める。
+      db.insert(business.tableEvents)
+        .select(sql`SELECT NULL,store_id,table_session_id,'voice.tool',json_set(data_json,'$.state','completed'),${Date.now()}
+       FROM table_events WHERE store_id=${actor.storeId} AND table_session_id=${row.id} AND kind='voice.tool'
+       AND json_extract(data_json,'$.turnId')=${actor.kind === "voice" ? (actor.turnId ?? null) : null} AND json_extract(data_json,'$.toolName')='setLanguage'
+       AND json_extract(data_json,'$.state')='running'
+       AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${row.id} AND mutation_id=${mutation})`),
+      ...queries,
+    ] as const);
+    ensure(updated.meta.changes === 1, "SESSION_STALE");
+    recordD1Update(updated.meta);
+    await notifyStore(services, actor.storeId, actor.tableSessionId, {
+      cursor: Math.max(event.meta.last_row_id, toolEvent.meta.last_row_id),
+      demoId: row.kind === "demo" ? row.id : undefined,
+    });
+    if (row.voice_session_id)
+      await (
+        await import("../../voice/runtime")
+      ).updateVoiceLanguage(services, actor, row.voice_session_id);
+    return decode(state);
   });
 }
 
-export function requestBill(services: ApiServices, actor: Actor) {
-  return requestStaffAssistance(services, actor, "bill.requested");
+export function requestBill(services: ApiServices, actor: Actor, view: "core"): Promise<CoreState>;
+export function requestBill(
+  services: ApiServices,
+  actor: Actor,
+  view?: "full",
+): Promise<TableState>;
+export function requestBill(
+  services: ApiServices,
+  actor: Actor,
+  view: StateView,
+): Promise<CoreState | TableState>;
+export function requestBill(services: ApiServices, actor: Actor, view: StateView = "full") {
+  return requestStaffAssistance(services, actor, "bill.requested", view);
 }
 
 export async function resolveCall(services: ApiServices, actor: Actor) {

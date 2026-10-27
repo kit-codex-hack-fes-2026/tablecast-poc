@@ -139,6 +139,7 @@ export const table: TableState = {
     ],
   },
   orders: [],
+  orderSummary: { quantity: 0, productIds: [] },
   bill: {
     orderedTotal: 1500,
     adjustmentTotal: 0,

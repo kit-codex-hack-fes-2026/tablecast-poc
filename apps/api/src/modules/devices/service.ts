@@ -15,7 +15,9 @@ export async function redeemDevice(services: ApiServices, deviceCode: string) {
   const { db } = services;
   let result;
   try {
-    result = await services.auth.api.tablecastRedeemDevice({
+    result = await (
+      await services.getAuth()
+    ).api.tablecastRedeemDevice({
       body: { deviceCode: deviceCode },
     });
   } catch (error) {
@@ -58,7 +60,7 @@ export async function approveDevice(
   requireManager(actor);
   ensure(actor.userId, "LOGIN_REQUIRED", 401);
   const { db } = services;
-  const auth = services.auth;
+  const auth = await services.getAuth();
   const target = await db
     .select({ id: business.restaurantTables.id })
     .from(business.restaurantTables)

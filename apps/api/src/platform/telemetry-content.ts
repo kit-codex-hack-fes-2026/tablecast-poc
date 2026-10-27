@@ -34,6 +34,7 @@ export const allowed = new Set([
   "cloudflare.d1.response.rows_written",
   "cloudflare.d1.response.sql_duration_ms",
   "cloudflare.d1.response.served_by_region",
+  "cloudflare.d1.response.served_by_colo",
   "cloudflare.d1.response.served_by_primary",
   "cloudflare.d1.response.total_attempts",
   "db.operation",

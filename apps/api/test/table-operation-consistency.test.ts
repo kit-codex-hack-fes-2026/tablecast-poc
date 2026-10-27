@@ -7,72 +7,75 @@ import { member } from "../src/db/identity-schema";
 import { stores, tableEvents, tableSessions } from "../src/db/table-schema";
 import { createDemo } from "../src/modules/demo/service";
 import { createApiServices } from "../src/platform/context";
-import { tableStateSchema } from "../src/schema";
+import { coreStateSchema, tableStateSchema } from "../src/schema";
 import { fixtureDb } from "./database-fixture";
 import { configuration, deviceToken, setupFixture } from "./fixture";
 
-it("端末認可で取得した価格版の直後に公開が進んでも更新を拒否し、次要求で新価格を使う", async () => {
-  const { staff } = await setupFixture();
-  const context = createExecutionContext();
-  let published = false;
-  const database = new Proxy(env.TABLECAST_DB, {
-    get(target, key) {
-      if (key === "batch")
-        return async (statements: D1PreparedStatement[]) => {
-          // 価格判定後、確定batchへ入る直前に別の管理操作が公開する。
-          published = true;
-          await fixtureDb
-            .update(stores)
-            .set({
-              config_version: 2,
-              config_json: JSON.stringify({
-                ...configuration,
-                products: configuration.products.map((product) =>
-                  product.id === "tea" ? { ...product, price: 700 } : product,
-                ),
-              }),
-            })
-            .where(eq(stores.id, staff.storeId));
-          return target.batch(statements);
-        };
-      const value: unknown = Reflect.get(target, key);
-      return typeof value === "function"
-        ? (...args: unknown[]): unknown => Reflect.apply(value, target, args)
-        : value;
-    },
-  });
-  const input = {
-    method: "PUT",
-    headers: { Cookie: `tablecast.device=${deviceToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      expectedVersion: 0,
-      lines: [{ id: "tablecast-price-race", productId: "tea", quantity: 1, selections: [] }],
-    }),
-  };
-  try {
-    const conflict = await app.request(
-      "/api/table/cart",
-      input,
-      { ...env, TABLECAST_DB: database },
-      context,
-    );
-    expect(published).toBe(true);
-    expect(conflict.status).toBe(409);
-    expect(await fixtureDb.select().from(tableSessions).get()).toMatchObject({
-      cart_version: 0,
-      cart_json: "[]",
+it.each(["full", "core"])(
+  "%s応答で認可直後に価格公開が進んでも更新を拒否し、次要求で新価格を使う",
+  async (view) => {
+    const { staff } = await setupFixture();
+    const context = createExecutionContext();
+    let published = false;
+    const database = new Proxy(env.TABLECAST_DB, {
+      get(target, key) {
+        if (key === "batch")
+          return async (statements: D1PreparedStatement[]) => {
+            // 価格判定後、確定batchへ入る直前に別の管理操作が公開する。
+            published = true;
+            await fixtureDb
+              .update(stores)
+              .set({
+                config_version: 2,
+                config_json: JSON.stringify({
+                  ...configuration,
+                  products: configuration.products.map((product) =>
+                    product.id === "tea" ? { ...product, price: 700 } : product,
+                  ),
+                }),
+              })
+              .where(eq(stores.id, staff.storeId));
+            return target.batch(statements);
+          };
+        const value: unknown = Reflect.get(target, key);
+        return typeof value === "function"
+          ? (...args: unknown[]): unknown => Reflect.apply(value, target, args)
+          : value;
+      },
     });
-    expect(await fixtureDb.select().from(tableEvents)).toHaveLength(0);
-    const retried = await app.request("/api/table/cart", input, env, context);
-    expect(retried.status).toBe(200);
-    expect(tableStateSchema.parse(await retried.json()).cart).toMatchObject({
-      version: 1,
-      total: 700,
-    });
-  } finally {
-    await waitOnExecutionContext(context);
-  }
-});
+    const input = {
+      method: "PUT",
+      headers: { Cookie: `tablecast.device=${deviceToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        expectedVersion: 0,
+        lines: [{ id: "tablecast-price-race", productId: "tea", quantity: 1, selections: [] }],
+      }),
+    };
+    try {
+      const conflict = await app.request(
+        `/api/table/cart?view=${view}`,
+        input,
+        { ...env, TABLECAST_DB: database },
+        context,
+      );
+      expect(published).toBe(true);
+      expect(conflict.status).toBe(409);
+      expect(await fixtureDb.select().from(tableSessions).get()).toMatchObject({
+        cart_version: 0,
+        cart_json: "[]",
+      });
+      expect(await fixtureDb.select().from(tableEvents)).toHaveLength(0);
+      const retried = await app.request(`/api/table/cart?view=${view}`, input, env, context);
+      expect(retried.status).toBe(200);
+      expect(coreStateSchema.parse(await retried.json()).cart).toMatchObject({
+        version: 1,
+        total: 700,
+      });
+    } finally {
+      await waitOnExecutionContext(context);
+    }
+  },
+);
 
 it("通知を1.5秒保留してもカゴとイベントの確定後にHTTPが返り、後処理で配送する", async () => {
   await setupFixture();

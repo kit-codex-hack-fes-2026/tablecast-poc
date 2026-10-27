@@ -7,10 +7,18 @@ import {
   type Cart,
   type CartLine,
   cartLineSchema,
+  inactiveOrderStatuses,
   type Order,
+  type PlanUsage,
   snapshotSchema,
 } from "../orders/model";
-import { eventDataSchema, type TableEvent, tablePlanSchema, type TableState } from "./model";
+import {
+  type CoreState,
+  eventDataSchema,
+  type TableEvent,
+  tablePlanSchema,
+  type TableState,
+} from "./model";
 
 export function orderValue(row: OrderRecord): Order {
   return {
@@ -106,17 +114,54 @@ export function tableStateValue(
   confirmation: ConfirmationRecord | undefined,
   history: EventRecord[],
 ): TableState {
-  const plan = row.plan_json ? tablePlanSchema.parse(JSON.parse(row.plan_json)) : null;
   const orders = orderRows.map(orderValue);
+  const plan = row.plan_json ? tablePlanSchema.parse(JSON.parse(row.plan_json)) : null;
+  const usage = planContext(plan, row.guest_count, orders);
+  return {
+    ...coreStateValue(
+      row,
+      catalog,
+      table,
+      {
+        orderedTotal: orders
+          .filter((order) => !inactiveOrderStatuses.some((status) => status === order.status))
+          .reduce((sum, order) => sum + order.total, 0),
+        orderedQuantity: usage?.orderedQuantity ?? 0,
+        lastOrderAt: usage?.lastOrderAt ?? null,
+        summary: orderSummary(orders),
+      },
+      payments,
+      confirmation,
+      history.at(-1)?.cursor ?? 0,
+    ),
+    orders,
+    events: history.map(eventValue),
+  };
+}
+
+export function coreStateValue(
+  row: TableRecord,
+  catalog: Catalog,
+  table: TableSummary | undefined,
+  totals: OrderTotals,
+  payments: PaymentTotal[],
+  confirmation: ConfirmationRecord | undefined,
+  cursor: number,
+): CoreState {
+  const plan = row.plan_json ? tablePlanSchema.parse(JSON.parse(row.plan_json)) : null;
   const cart = previewCart(
     catalog,
     cartLineSchema.array().parse(JSON.parse(row.cart_json)),
     row.cart_version,
-    planContext(plan, row.guest_count, orders),
+    plan
+      ? {
+          ...plan,
+          guestCount: row.guest_count,
+          orderedQuantity: totals.orderedQuantity,
+          lastOrderAt: totals.lastOrderAt,
+        }
+      : null,
   );
-  const orderedTotal = orders
-    .filter((order) => !["cancelled", "rejected"].includes(order.status))
-    .reduce((sum, order) => sum + order.total, 0);
   const adjustmentTotal = payments.find((p) => p.kind === "adjustment")?.total ?? 0;
   const paidTotal = payments.find((p) => p.kind === "payment")?.total ?? 0;
   return {
@@ -141,11 +186,10 @@ export function tableStateValue(
     guestCount: row.guest_count,
     openedAt: row.opened_at,
     cart,
-    orders,
-    events: history.map(eventValue),
-    cursor: history.at(-1)?.cursor ?? 0,
+    orderSummary: totals.summary,
+    cursor,
     bill: billValue(
-      { orderedTotal, adjustmentTotal, paidTotal, cartTotal: cart.total },
+      { orderedTotal: totals.orderedTotal, adjustmentTotal, paidTotal, cartTotal: cart.total },
       plan,
       row.guest_count,
     ),
@@ -164,28 +208,16 @@ export function tableStateValue(
   };
 }
 
+export type OrderTotals = {
+  lastOrderAt: null | number;
+  orderedQuantity: number;
+  orderedTotal: number;
+  summary: CoreState["orderSummary"];
+};
+
 type PaymentTotal = { kind: string; table_session_id: string; total: null | number };
 
 type TableSummary = { bill_requested: number; id: string; name: null | string };
-
-export function planFromOrders(
-  row: TableRecord,
-  orders: readonly OrderRecord[],
-): null | PlanContext {
-  if (!row.plan_json) return null;
-  const plan = tablePlanSchema.parse(JSON.parse(row.plan_json));
-  return planContext(
-    plan,
-    row.guest_count,
-    orders
-      .filter((order) => order.status !== "cancelled" && order.status !== "rejected")
-      .map((order) => ({
-        status: order.status,
-        createdAt: order.created_at,
-        snapshot: snapshotSchema.parse(JSON.parse(order.snapshot_json)),
-      })),
-  );
-}
 
 function planContext(
   plan: TableState["plan"],
@@ -196,7 +228,7 @@ function planContext(
   let quantity = 0;
   let lastOrderAt: null | number = null;
   for (const order of orders) {
-    if (order.status === "cancelled" || order.status === "rejected") continue;
+    if (inactiveOrderStatuses.some((status) => status === order.status)) continue;
     const covered = order.snapshot.lines
       .filter((line) => line.planCovered)
       .reduce((sum, line) => sum + line.quantity, 0);
@@ -204,4 +236,35 @@ function planContext(
     if (covered) lastOrderAt = Math.max(lastOrderAt ?? 0, order.createdAt);
   }
   return { ...plan, guestCount, orderedQuantity: quantity, lastOrderAt };
+}
+
+export function planFromUsage(
+  row: TableRecord,
+  usage: null | PlanUsage | undefined,
+): null | PlanContext {
+  return row.plan_json
+    ? {
+        ...tablePlanSchema.parse(JSON.parse(row.plan_json)),
+        guestCount: row.guest_count,
+        orderedQuantity: usage?.quantity ?? 0,
+        lastOrderAt: usage?.lastOrderAt ?? null,
+      }
+    : null;
+}
+
+function orderSummary(orders: Order[]): CoreState["orderSummary"] {
+  const products = new Map<string, number>();
+  let quantity = 0;
+  for (const order of orders)
+    for (const line of order.snapshot.lines) {
+      quantity += line.quantity;
+      products.set(line.productId, Math.max(products.get(line.productId) ?? 0, order.createdAt));
+    }
+  return {
+    quantity,
+    productIds: [...products]
+      .toSorted(([a, at], [b, bt]) => bt - at || (a < b ? 1 : a > b ? -1 : 0))
+      .slice(0, 3)
+      .map(([id]) => id),
+  };
 }

@@ -16,7 +16,7 @@ it("ログイン済みの要求で認証と店舗認可を重ねてもsession照
     .use("*", async (c, next) => {
       const services = c.get("services");
       requests.push(services);
-      const read = vi.spyOn(services.auth.api, "getSession");
+      const read = vi.spyOn((await services.getIdentity()).api, "getSession");
       await next();
       sessionReads.push(read.mock.calls.length);
       read.mockRestore();
@@ -43,7 +43,7 @@ it("ログイン済みの要求で認証と店舗認可を重ねてもsession照
   expect(sessionReads).toEqual([1, 1]);
   expect(requests).toHaveLength(2);
   expect(requests[0]?.db).not.toBe(requests[1]?.db);
-  expect(requests[0]?.auth).not.toBe(requests[1]?.auth);
+  expect(await requests[0]?.getIdentity()).not.toBe(await requests[1]?.getIdentity());
 });
 
 it("認証設定のない環境でも公開経路はDBを利用でき、必要になるまでAuthを生成しない", async () => {

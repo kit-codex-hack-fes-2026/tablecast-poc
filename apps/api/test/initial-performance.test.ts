@@ -10,7 +10,7 @@ import { fixtureDb } from "./database-fixture";
 import { configuration, setupFixture } from "./fixture";
 import { measuredDatabase } from "./measured-database";
 
-it("商品が100件でも初期取得は認可済みの全商品と価格・版を4往復以内で返す", async () => {
+it("商品が100件でも初期取得は認可済みの全商品と価格・版を3往復以内で返す", async () => {
   const { cookie, staff } = await setupFixture();
   for (const count of [1, 100]) {
     const expanded = {
@@ -61,7 +61,7 @@ it("商品が100件でも初期取得は認可済みの全商品と価格・版�
         configuration: expanded,
       });
       expect(catalog.configuration.products).toHaveLength(count);
-      expect(after.stats.roundtrips).toBeLessThanOrEqual(4);
+      expect(after.stats.roundtrips).toBeLessThanOrEqual(3);
       expect(after.stats.roundtrips).toBeLessThan(before.stats.roundtrips);
       const bytes = new TextEncoder().encode(JSON.stringify(initial)).length;
       const catalogBytes = new TextEncoder().encode(JSON.stringify(catalog)).length;

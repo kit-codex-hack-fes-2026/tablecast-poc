@@ -2,12 +2,19 @@ import type { z } from "zod";
 import { and, eq, sql } from "drizzle-orm";
 import type { ApiServices } from "../../../platform/context";
 import type { Actor } from "../../auth/model";
+import type { CoreState, StateView } from "../../tables/model";
 import * as business from "../../../db/business-schema";
 import { DomainError, ensure } from "../../../platform/errors";
-import { measured, observeOperation } from "../../../platform/telemetry";
+import { measured, observeOperation, recordD1Update } from "../../../platform/telemetry";
 import { confirmationText, priceCart } from "../../catalog/pricing";
 import { catalogValue, sessionConfigVersion } from "../../catalog/queries";
 import { pointBillingCorrectionStatements } from "../../customer-points/mutations";
+import {
+  coreStateFromRows,
+  coreStateQueries,
+  coreStateRowsSchema,
+  getCoreState,
+} from "../../tables/core-queries";
 import {
   eventStatement,
   invalidationStatement,
@@ -15,7 +22,7 @@ import {
   voiceCondition,
 } from "../../tables/mutations";
 import { getPricingContext, getSession } from "../../tables/queries";
-import { orderValue, planFromOrders } from "../../tables/values";
+import { orderValue, planFromUsage } from "../../tables/values";
 import {
   cartLineSchema,
   type Order,
@@ -103,6 +110,7 @@ export async function prepareConfirmation(
         }),
       ]);
       ensure(result[0]?.meta.changes === 1, "CART_CONFLICT");
+      recordD1Update(result[0].meta);
       await notifyStore(services, actor.storeId, actor.tableSessionId, {
         cursor: result.at(-1)?.meta.last_row_id ?? 0,
         demoId: session.kind === "demo" ? session.id : undefined,
@@ -113,11 +121,30 @@ export async function prepareConfirmation(
   );
 }
 
+export function submitOrder(
+  services: ApiServices,
+  actor: Actor,
+  input: z.infer<typeof submitSchema>,
+  view: "core",
+): Promise<{ order: Order; state: CoreState }>;
+export function submitOrder(
+  services: ApiServices,
+  actor: Actor,
+  input: z.infer<typeof submitSchema>,
+  view?: "full",
+): Promise<Order>;
+export function submitOrder(
+  services: ApiServices,
+  actor: Actor,
+  input: z.infer<typeof submitSchema>,
+  view: StateView,
+): Promise<Order | { order: Order; state: CoreState }>;
 export async function submitOrder(
   services: ApiServices,
   actor: Actor,
   input: z.infer<typeof submitSchema>,
-): Promise<Order> {
+  view: StateView = "full",
+): Promise<Order | { order: Order; state: CoreState }> {
   return observeOperation(
     "tablecast.order.submit",
     async () => {
@@ -125,20 +152,30 @@ export async function submitOrder(
 
       ensure(input.approved, "APPROVAL_REQUIRED", 422);
       const session = await measured("tablecast.order.session", () => getSession(services, actor));
-      const [existingOrders, confirmations, coupons, catalogs, planOrders, turns] = await measured(
-        "tablecast.order.prerequisites",
-        () => orderPrerequisites(services, actor, session, input),
+      const [
+        existingOrders,
+        confirmations,
+        coupons,
+        catalogs,
+        planOrders,
+        turns,
+        pointVisits,
+        pointAllocations,
+      ] = await measured("tablecast.order.prerequisites", () =>
+        orderPrerequisites(services, actor, session, input),
       );
       const existing = existingOrders[0];
       if (existing) {
         ensure(existing.snapshot_id === input.snapshotId, "IDEMPOTENCY_CONFLICT");
-        return orderValue(existing);
+        return view === "core"
+          ? { order: orderValue(existing), state: await getCoreState(services, actor) }
+          : orderValue(existing);
       }
       ensure(!coupons[0], "COUPON_CANCEL_REQUIRED", 409);
       const confirmation = confirmations[0];
       ensure(confirmation, "CONFIRMATION_NOT_FOUND", 404);
       const catalog = catalogValue(catalogs[0], session.kind === "demo" ? session.id : undefined);
-      const plan = planFromOrders(session, planOrders);
+      const plan = planFromUsage(session, planOrders[0]);
       priceCart(
         catalog.configuration,
         cartLineSchema.array().parse(JSON.parse(session.cart_json)),
@@ -178,7 +215,9 @@ export async function submitOrder(
         snapshot.total,
         `order:${orderId}`,
         mutation,
+        [pointVisits, pointAllocations],
       );
+      const queries = view === "core" ? coreStateQueries(services, actor) : ([] as const);
       const result = await measured("tablecast.order.commit", () =>
         db.batch([
           db
@@ -202,13 +241,14 @@ export async function submitOrder(
             .where(
               sql`id=${confirmation.id} AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${actor.tableSessionId} AND mutation_id=${mutation})`,
             ),
-          ...pointCorrections,
           eventStatement(services, actor, mutation, "order.submitted", {
             orderId,
             total: snapshot.total,
             source: actor.kind,
           }),
-        ]),
+          ...pointCorrections,
+          ...queries,
+        ] as const),
       );
       if (result[0]?.meta.changes !== 1) {
         const retry = await db
@@ -222,16 +262,20 @@ export async function submitOrder(
             ),
           )
           .get();
-        if (retry) return orderValue(retry);
+        if (retry)
+          return view === "core"
+            ? { order: orderValue(retry), state: await getCoreState(services, actor) }
+            : orderValue(retry);
         throw new DomainError("CONFIRMATION_STALE", 409, "CONFIRMATION_STALE");
       }
+      recordD1Update(result[0].meta);
       await measured("tablecast.order.notify", () =>
         notifyStore(services, actor.storeId, actor.tableSessionId, {
-          cursor: result.at(-1)?.meta.last_row_id ?? 0,
+          cursor: result[3].meta.last_row_id ?? 0,
           demoId: session.kind === "demo" ? session.id : undefined,
         }),
       );
-      return {
+      const order: Order = {
         id: orderId,
         tableSessionId: session.id,
         snapshotId: snapshot.id,
@@ -241,6 +285,10 @@ export async function submitOrder(
         total: snapshot.total,
         createdAt: now,
       };
+      if (view === "full") return order;
+      // 可変数の会員訂正statementを除いた読取結果を、DB schemaで検証する。
+      const stateRows = coreStateRowsSchema.parse(result.slice(4 + pointCorrections.length));
+      return { order, state: await coreStateFromRows(services, actor, stateRows) };
     },
     { env: services.env, input: { actor, input } },
   );

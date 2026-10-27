@@ -83,7 +83,9 @@ export async function updateStoreIcon(
     .get();
   ensure(store, "STORE_NOT_FOUND", 404);
   const logo = await saveIdentityImage(services.env, image);
-  await services.auth.api.updateOrganization({
+  await (
+    await services.getAuth()
+  ).api.updateOrganization({
     headers,
     body: { organizationId: store.organization_id, data: { logo } },
   });

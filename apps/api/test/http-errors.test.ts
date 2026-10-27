@@ -245,7 +245,7 @@ it.each([
     .use("*", requestTelemetry)
     .use("*", requestServices)
     .use("*", async (c, next) => {
-      const auth = c.get("services").auth;
+      const auth = await c.get("services").getAuth();
       await auth.$context;
       vi.spyOn(auth.api, "tablecastMcpPrincipal").mockRejectedValueOnce(error);
       await next();

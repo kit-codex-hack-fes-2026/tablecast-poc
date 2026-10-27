@@ -3,9 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { voiceUsageSessions } from "../../db/billing-schema";
 import { createApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
-import { sessionCredential } from "./credentials";
 import { billingEventSchema } from "./model";
-import { recordVoiceUsage } from "./usage";
 
 export class TablecastVoiceUsage extends DurableObject<TablecastEnv> {
   private socket?: WebSocket;
@@ -37,7 +35,7 @@ export class TablecastVoiceUsage extends DurableObject<TablecastEnv> {
       return;
     }
     if (this.socket) return;
-    const key = await sessionCredential(services, row.credentialId);
+    const key = await (await import("./credentials")).sessionCredential(services, row.credentialId);
     const response = await fetch(
       `https://api.openai.com/v1/live/sessions/${encodeURIComponent(sessionId)}/attach`,
       {
@@ -73,7 +71,7 @@ export class TablecastVoiceUsage extends DurableObject<TablecastEnv> {
         return;
       this.tail = this.tail
         .then(async () => {
-          await recordVoiceUsage(services, sessionId, raw);
+          await (await import("./usage")).recordVoiceUsage(services, sessionId, raw);
           if (event.type === "session.closed") {
             await this.ctx.storage.deleteAll();
             socket.close(1000, "TableCast usage finalized");

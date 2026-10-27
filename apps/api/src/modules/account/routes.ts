@@ -19,9 +19,9 @@ export const accountRoutes = apiFactory
   )
   .get("/api/account/auth-state", async (c) => {
     c.header("Cache-Control", "private, no-store");
-    const { response: session, headers } = await c
-      .get("services")
-      .auth.api.getSession({ headers: c.req.raw.headers, returnHeaders: true });
+    const { response: session, headers } = await (
+      await c.get("services").getIdentity()
+    ).api.getSession({ headers: c.req.raw.headers, returnHeaders: true });
     for (const cookie of headers.getSetCookie()) c.header("set-cookie", cookie, { append: true });
     return c.json(session, 200);
   })

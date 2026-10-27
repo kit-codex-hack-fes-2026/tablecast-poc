@@ -11,9 +11,9 @@ export const mcpRoutes = apiFactory.createApp().all("/", async (c) => {
   let principal;
   c.set("errorPhase", "mcp.authentication");
   try {
-    principal = await c
-      .get("services")
-      .auth.api.tablecastMcpPrincipal({ headers: c.req.raw.headers });
+    principal = await (
+      await c.get("services").getAuth()
+    ).api.tablecastMcpPrincipal({ headers: c.req.raw.headers });
   } catch (error) {
     if (!isAPIError(error) || ![401, 403].includes(error.statusCode)) throw error;
     c.error = error;

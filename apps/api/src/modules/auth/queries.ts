@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import { member } from "../../db/identity-schema";
 import { devices, stores, tableSessions } from "../../db/table-schema";
+import { sessionPlanUsage } from "../orders/queries";
 export async function findDeviceSession(
   services: ApiServices,
   tokenHash: string,
@@ -14,6 +15,7 @@ export async function findDeviceSession(
         deviceId: devices.id,
         ...(includeCatalog
           ? {
+              planUsage: sessionPlanUsage(services.db),
               catalog: {
                 id: stores.id,
                 name: stores.name,
@@ -33,7 +35,7 @@ export async function findDeviceSession(
         ),
       )
       // プラン利用中は注文履歴と価格設定を後段でまとめて取得する。
-      .leftJoin(stores, and(eq(stores.id, tableSessions.store_id), isNull(tableSessions.plan_json)))
+      .leftJoin(stores, eq(stores.id, tableSessions.store_id))
       .where(and(eq(devices.token_hash, tokenHash), isNull(devices.revoked_at)))
       .get()
   );

@@ -89,11 +89,11 @@ GUIで商品をカートへ入れ、確認画面を経て明示承認する。`/
 
 通知はDBとイベント確定後に`waitUntil`へ渡し、配送そのものは`tablecast.notification.deliver`で別計測する。操作側の`notify`は登録までであり、配送完了時間ではない。通知失敗も既存の`tablecast.notification_failed`へ記録し、WebSocket再接続とイベントpollで回復する。HTTPはレスポンス本文の受信完了、UIは操作イベントから件数・商品行など目的の表示更新までを別々に測る。応答サイズはHTTP本文のUTF-8 byte数で記録する。
 
-`Server-Timing`の`api`はHono内の応答確定までを示す。認可済みの成功要求には同じ要求の`measured`で完了したspanの所要時間も最大32件付ける。SQL・入力値・資格・店舗識別子は含めず、別originへの読取許可は追加しない。親子の時間は重なるため合算しない。応答後の通知・OTLP送信、API入口前のWorker初期化・Service Binding・HTTP転送は含まない。ローカルLGTMのtraceと対応させ、ブラウザーのHTTP時間との差をすべてDB時間として扱わない。
+`Server-Timing`の`api`はHono内の応答確定までを示す。認可済みの成功要求には同じ要求の`measured`で完了したspanの所要時間も最大32件付ける。SQL・入力値・資格・店舗識別子は含めず、別originへの読取許可は追加しない。更新結果から取得できたD1のSQL時間・読取／書込行数・region／colo・primary・total_attemptsもspanへ残す。未提供のmetadataを0で補わない。親子の時間は重なるため合算しない。応答後の通知・OTLP送信、API入口前のWorker初期化・Service Binding・HTTP転送は含まない。ローカルLGTMのtraceと対応させ、ブラウザーのHTTP時間との差をすべてDB時間として扱わない。
 
 `api`のdescriptionにはCloudflareが返した有効なplacementを付け、カゴの`tablecast.d1.update.sql`はD1 metadataの更新SQL実行時間と、取得できたregion／coloを示す。これは状態読取を含むbatch全体のSQL時間ではない。Webの`web`はAPI Service Bindingの応答取得までで、ブラウザーへの転送・本文受信完了とは分ける。WebSocketの101応答はこの応答変換を通さない。 API入口の`bootstrap`はHonoの動的import待ち、`worker`はその待ちとHono処理・完了ログを含む。`bootstrap`の`first-fetch`はそのisolateでの最初のfetch、`reused`はそれ以降であり、実際のcold startはSDKの`faas.coldstart`と照合する。`web - worker`にはService Bindingの往復とSDK入口の処理が含まれ、純粋なネットワークRTTとは断定しない。
 
-`table-operation-performance.test.ts`は本番Hono入口・Cookie認証・実D1で、通常卓とデモの8/120商品、1/100行のカゴと履歴を比較する。操作ごとに初回1標本とwarm 30標本を分け、warm p95を1000ms未満とする。binding往復、statement数、batchのSQL時間、通知後処理、本文サイズと業務結果も残す。ローカルの初回要求をCloudflareのcold isolateと同一視しない。previewの比較では対象SHA・環境・標本数を付け、実際のcold startは`faas.coldstart`のtraceが取得できる場合に別集計する。
+`table-operation-performance.test.ts`は本番Hono入口・Cookie認証・実D1で、通常卓とデモの8/120商品、1/100行のカゴと履歴を比較する。GUIの`view=core`で操作ごとに初回1標本と再利用30標本を分け、初回を含む全31標本のp95を300ms未満とする。通常操作は通常端末2往復／playground3往復、注文送信は3／4往復を上限とする。binding往復、statement数、batchのSQL時間、通知後処理、本文サイズと業務結果も残す。ローカルの初回要求をCloudflareのcold isolateと同一視しない。previewの比較では対象SHA・環境・標本数を付け、実際のcold startは`faas.coldstart`のtraceが取得できる場合に別集計する。
 
 ローカルの一例は全体24ms、注文service17ms、通知5ms、商品設定取得4ms、DB確定3ms。単発のローカル測定であり、previewの性能値やp95を示さない。CPU処理だけの小さい区間はWorkersの時計の制約で0msになりうる。
 

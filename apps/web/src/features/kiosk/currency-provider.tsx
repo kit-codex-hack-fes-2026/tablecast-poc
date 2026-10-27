@@ -1,4 +1,4 @@
-import type { DisplayCurrencyCode, Locale, TableState } from "@tablecast/api/schema";
+import type { CoreState, DisplayCurrencyCode, Locale } from "@tablecast/api/schema";
 import { displayCurrencyCodeSchema } from "@tablecast/api/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useHydrated } from "@tanstack/react-router";
@@ -62,7 +62,7 @@ export function CurrencyProvider({
       getContext: () => {
         const selection = client.getQueryData<Preference>([storageKey, sessionId]) ?? automatic;
         const currentLocale =
-          client.getQueryData<TableState>(tableQueryKey(endpoint))?.locale ?? locale;
+          client.getQueryData<CoreState>(tableQueryKey(endpoint))?.locale ?? locale;
         return {
           currency:
             selection.currency === undefined ? defaultCurrency(currentLocale) : selection.currency,

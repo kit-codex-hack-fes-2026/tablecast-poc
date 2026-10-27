@@ -23,7 +23,7 @@ export const boundaryFiles = [
   ["test", "src/features/billing/billing-fixture.ts"],
   ["route", "src/routes/*.tsx"],
   ["router", "src/router.tsx"],
-  ["server", "src/{server,lib/api-fetch.server}.ts"],
+  ["server", "src/{server,ssr,lib/api-fetch.server}.ts"],
   ["lib", "src/sw.ts"],
   ["transport", "src/lib/{api,api-fetch,auth-client}.ts"],
   ["lib", "src/lib/*.{ts,tsx}"],

@@ -11,8 +11,9 @@ import { type PlanContext } from "../catalog/pricing";
 import { catalogQuery, catalogValue, getCatalog } from "../catalog/queries";
 import { configurationSchema } from "../configuration/model";
 import { getDemoRecord } from "../demo/queries";
+import { planUsageQuery } from "../orders/queries";
 import { type TableState } from "./model";
-import { planFromOrders, tableStateValue } from "./values";
+import { planFromUsage, tableStateValue } from "./values";
 
 export async function getTableState(services: ApiServices, actor: Actor): Promise<TableState> {
   return observeOperation(
@@ -200,18 +201,16 @@ export async function getPricingContext(
   row: TableRecord,
 ): Promise<{ catalog: Catalog; plan: null | PlanContext }> {
   const pricing = services.tableAccess.pricing;
-  if (
-    !row.plan_json &&
-    row.kind === "table" &&
-    pricing?.sessionId === row.id &&
-    pricing.store.id === row.store_id
-  )
-    return { catalog: catalogValue({ store: pricing.store, demo: null }), plan: null };
+  if (row.kind === "table" && pricing?.sessionId === row.id && pricing.store.id === row.store_id)
+    return {
+      catalog: catalogValue({ store: pricing.store, demo: null }),
+      plan: planFromUsage(row, pricing.planUsage),
+    };
   const demoId = row.kind === "demo" ? row.id : undefined;
   const access = services.tableAccess.demo;
   const authorised =
     access && access.id === demoId && access.storeId === row.store_id ? access : undefined;
-  if (!row.plan_json && authorised)
+  if (authorised)
     return {
       catalog: {
         storeId: row.store_id,
@@ -219,22 +218,14 @@ export async function getPricingContext(
         version: authorised.configuration.config_version,
         configuration: configurationSchema.parse(JSON.parse(authorised.configuration.config_json)),
       },
-      plan: null,
+      plan: planFromUsage(row, authorised.planUsage),
     };
   if (!row.plan_json)
     return { catalog: await getCatalog(services, row.store_id, demoId), plan: null };
   const db = services.db;
   const [catalogs, orders] = await db.batch([
     catalogQuery(db, row.store_id, demoId),
-    db
-      .select()
-      .from(business.orders)
-      .where(
-        and(
-          eq(business.orders.table_session_id, row.id),
-          eq(business.orders.store_id, row.store_id),
-        ),
-      ),
+    planUsageQuery(db, row.id, row.store_id),
   ]);
-  return { catalog: catalogValue(catalogs[0], demoId), plan: planFromOrders(row, orders) };
+  return { catalog: catalogValue(catalogs[0], demoId), plan: planFromUsage(row, orders[0]) };
 }

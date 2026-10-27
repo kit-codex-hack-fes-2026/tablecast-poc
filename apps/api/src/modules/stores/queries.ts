@@ -179,6 +179,7 @@ export async function getEvents(
   services: ApiServices,
   actor: Actor,
   after = 0,
+  tail = false,
 ): Promise<{ cursor: number; events: TableEvent[] }> {
   const db = services.db;
 
@@ -218,8 +219,9 @@ export async function getEvents(
         gt(business.tableEvents.cursor, after),
       ),
     )
-    .orderBy(business.tableEvents.cursor)
-    .limit(500);
+    .orderBy(tail ? desc(business.tableEvents.cursor) : business.tableEvents.cursor)
+    .limit(tail ? 100 : 500);
+  if (tail) rows.reverse();
   return {
     events: rows.map((row) => {
       const event = eventValue(row);
