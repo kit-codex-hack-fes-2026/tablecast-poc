@@ -129,14 +129,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function Root({ children }: { children: ReactNode }) {
   const matchRoute = useMatchRoute();
+  const help = matchRoute({ to: "/help/$lang/$" });
+  const helpLocale = help && (help.lang === "ja" || help.lang === "en") ? help.lang : undefined;
   const demo = matchRoute({ to: "/admin/stores/$storeId/demo/$demoId" });
   return (
-    <html lang={getLocale()}>
+    <html lang={helpLocale ?? getLocale()}>
       <head>
         <HeadContent />
       </head>
       <body>
-        <LocaleProvider key={demo ? `${demo.storeId}/${demo.demoId}` : "app"} persist={!demo}>
+        <LocaleProvider
+          key={helpLocale ? `help:${helpLocale}` : demo ? `${demo.storeId}/${demo.demoId}` : "app"}
+          initialLocale={helpLocale}
+          persist={!demo && !helpLocale}
+        >
           <DocumentHead />
           <MotionProvider>{children}</MotionProvider>
         </LocaleProvider>

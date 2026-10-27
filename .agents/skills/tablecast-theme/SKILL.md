@@ -90,3 +90,7 @@ upload_imageの返却値へ日英altを追加し、背景は`appearance.assets.p
 2. update_draftには`instructionFormatVersion: 1`と最新`expectedVersion`を渡し、`cast.instructions`の構造化文書もそのまま保持する。update_draft → validate_draft → get_draft_diffで保存と検証を確認する。競合時は最新の下書きを読み、登録済み画像キーを再利用して差分を合わせる。
 3. 店舗デザイン画面`/admin/stores/{storeId}/design?draftId={draftId}`から保存して注文画面で確認を使う。日英・縦横、ロゴ、チラシ、商品詳細、音声停止再開、言語切替・店員呼出しを確認する。生成素材だけでなく実UIのスクリーンショットを利用者へ見せる。ロゴの透明度、切れ・余白、背景に埋もれる文字、チラシの縮小時の可読性を見直す。生成モックアップは実装証拠にしない。クライアントでプレビューできない場合は未確認として案内する。
 4. 利用者に店舗、draftId・版、テーマ・ロゴ・画像・商品リンクの差分、検証結果と未確認項目を伝える。下書き依頼では保存で止め、公開依頼時だけrequest_publicationの管理画面を案内し、人が公開する。画像登録やreadyを公開完了と報告しない。
+
+## 使い方を確認する
+
+接続・権限・設定の説明が必要なら、接続先originの`/llms.txt`から必要なヘルプ章だけ取得する。人向けの公開入口は`/help`、日英のページ単位Markdownは索引から辿れる。plugin同梱の`tablecast-help` skillでも同じ本文を参照できる。

@@ -115,6 +115,8 @@
   --color-nav-store-solid: var(--teal-9);
   --color-nav-store-solid-hover: var(--teal-10);
   --color-nav-store-text: var(--teal-12);
+  --color-nav-help: var(--green-12);
+  --color-nav-help-soft: var(--green-3);
   --color-nav-workspace: var(--cyan-12);
   --color-nav-workspace-soft: var(--cyan-3);
   --color-nav-workspace-hover: var(--cyan-4);
@@ -360,4 +362,9 @@
   ::view-transition-new(*) {
     animation: none;
   }
+}
+
+::highlight(fd-search) {
+  background-color: var(--nav-color, var(--color-primary));
+  color: var(--color-background);
 }

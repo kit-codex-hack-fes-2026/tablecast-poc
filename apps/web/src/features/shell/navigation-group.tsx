@@ -2,28 +2,14 @@ import { Collapsible } from "@base-ui/react/collapsible";
 import { useHydrated } from "@tanstack/react-router";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import { type ReactNode, useLayoutEffect, useRef } from "react";
-import { cn, tv } from "tailwind-variants";
+import { cn } from "tailwind-variants";
 import { controlMotion, disclosureMotion } from "../../components/ui/motion-variants";
+import { navigationGroupStyle } from "./navigation-model";
 import { type NavigationGroupId, useSidebarPreferences } from "./sidebar-preferences";
 
 export const navigationItemClass =
   controlMotion +
-  " relative flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-base text-muted-foreground data-[collapsed=true]:justify-center data-[collapsed=true]:px-0 hover:bg-[var(--nav-surface,var(--color-control-hover))] hover:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:bg-[var(--nav-surface,var(--color-control-selected))] aria-[current=page]:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:font-semibold data-[status=active]:bg-[var(--nav-surface,var(--color-control-selected))] data-[status=active]:text-[var(--nav-color,var(--color-foreground))] data-[status=active]:font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:shrink-0 [&>svg]:size-5";
-const groupStyle = tv({
-  base: "min-w-0",
-  variants: {
-    tone: {
-      operations:
-        "[--nav-color:var(--color-nav-operations)] [--nav-surface:var(--color-nav-operations-soft)]",
-      menu: "[--nav-color:var(--color-nav-menu)] [--nav-surface:var(--color-nav-menu-soft)]",
-      rewards:
-        "[--nav-color:var(--color-nav-rewards)] [--nav-surface:var(--color-nav-rewards-soft)]",
-      store: "[--nav-color:var(--color-nav-store)] [--nav-surface:var(--color-nav-store-soft)]",
-      workspace:
-        "[--nav-color:var(--color-nav-workspace)] [--nav-surface:var(--color-nav-workspace-soft)]",
-    },
-  },
-});
+  " relative flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-base text-muted-foreground data-[collapsed=true]:justify-center data-[collapsed=true]:px-0 hover:bg-[var(--nav-surface,var(--color-control-hover))] hover:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:bg-[var(--nav-surface,var(--color-control-selected))] aria-[current=page]:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:font-semibold data-[status=active]:bg-[var(--nav-surface,var(--color-control-selected))] data-[status=active]:text-[var(--nav-color,var(--color-foreground))] data-[status=active]:font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:shrink-0 [&>svg]:size-5";
 export function NavigationGroup({
   id,
   label,
@@ -53,7 +39,7 @@ export function NavigationGroup({
   }, [collapsed, open]);
   return (
     <section
-      className={groupStyle({
+      className={navigationGroupStyle({
         tone: id,
         className: collapsed
           ? "border-t border-border pt-2 first:border-t-0 first:pt-0"

@@ -140,6 +140,7 @@ it("読み取りだけのOAuth委譲では、管理者でもMCPの書き込み�
   const { cookie } = await setupFixture();
   const { token } = await authorise(cookie, "tablecast:read");
   const client = await connect(token);
+  expect(client.getInstructions()).toContain(`${env.TABLECAST_PUBLIC_ORIGIN}/llms.txt`);
   expect(
     toolData(await client.callTool({ name: "get_configuration", arguments: {} }), catalogSchema)
       .storeId,

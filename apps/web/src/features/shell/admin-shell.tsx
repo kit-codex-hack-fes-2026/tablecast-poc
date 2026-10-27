@@ -1,11 +1,10 @@
 import { useHotkey } from "@tanstack/react-hotkeys";
-import { PanelLeft, X } from "lucide-react";
 import { type ReactNode, type SyntheticEvent, useRef, useState } from "react";
 import { usePanelRef } from "react-resizable-panels";
 import type { SidebarSelection } from "./sidebar-model";
-import { LanguageSwitch } from "../../components/language-switch";
-import { Button } from "../../components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
+import { AppHeader } from "../../components/app-header";
+import { NavigationDrawer, NavigationToggle } from "../../components/app-navigation";
+import { appFrame, pageContent, pageSurface } from "../../components/ui/page-layout";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -57,7 +56,10 @@ export function AdminShell({
     <>
       <ResizablePanelGroup
         orientation="horizontal"
-        className="h-dvh! bg-secondary/50 md:p-2 max-md:[&>#tablecast-admin-sidebar]:hidden motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:transition-[flex-grow] motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:duration-(--motion-state) motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:ease-(--motion-ease-out) motion-reduce:[&>[data-panel]]:transition-none"
+        className={appFrame({
+          className:
+            "h-dvh! max-md:[&>#tablecast-admin-sidebar]:hidden motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:transition-[flex-grow] motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:duration-(--motion-state) motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:ease-(--motion-ease-out) motion-reduce:[&>[data-panel]]:transition-none",
+        })}
         data-sidebar-transition={sidebarTransition}
         onPointerDownCapture={resizeDirectly}
         onKeyDownCapture={resizeDirectly}
@@ -107,46 +109,40 @@ export function AdminShell({
           <main
             id="tablecast-admin-main"
             data-scroll-restoration-id="tablecast-admin-main"
-            className="h-full min-w-0 overflow-y-auto bg-card md:rounded-2xl md:shadow-surface"
+            className={pageSurface()}
           >
-            <header className="sticky top-0 z-20 flex min-h-18 flex-wrap items-center gap-3 border-b border-border bg-glass px-4 py-3 backdrop-blur-xl @container md:rounded-t-2xl">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="hidden md:inline-flex"
-                aria-label={t("admin_navigation")}
-                aria-expanded={!collapsed}
-                title={`${t("admin_navigation")} (⌘/Ctrl+B)`}
-                aria-keyshortcuts="Control+B Meta+B"
-                onClick={toggleSidebar}
-              >
-                <PanelLeft />
-              </Button>
-              <MobileNavigation
-                key={desktop ? "desktop" : "mobile"}
-                {...sidebar}
-                selection={selection}
-              />
-              {storeName && (!desktop || collapsed) && (
-                <span
-                  className={`min-w-0 truncate text-sm font-medium ${header ? "max-w-40" : "flex-1"}`}
-                >
-                  {storeName}
-                </span>
-              )}
-              {header && (
-                <div className="order-last min-w-0 basis-full text-base font-medium @3xl:order-0 @3xl:flex-1 @3xl:basis-72">
-                  {header}
-                </div>
-              )}
-              <div className="ml-auto">
-                <LanguageSwitch onChange={setLocale} />
-              </div>
-            </header>
-            <div
-              data-page-motion
-              className="mx-auto w-full min-w-0 max-w-7xl space-y-6 @container p-4 sm:p-6 lg:p-8 [view-transition-name:tablecast-page]"
+            <AppHeader
+              onLocaleChange={setLocale}
+              navigation={
+                <>
+                  <NavigationToggle
+                    className="hidden md:inline-flex"
+                    expanded={!collapsed}
+                    controls="tablecast-admin-sidebar"
+                    shortcut
+                    onClick={toggleSidebar}
+                  />
+                  <MobileNavigation
+                    key={desktop ? "desktop" : "mobile"}
+                    {...sidebar}
+                    selection={selection}
+                  />
+                </>
+              }
+              context={
+                storeName &&
+                (!desktop || collapsed) && (
+                  <span
+                    className={`min-w-0 truncate text-sm font-medium ${header ? "max-w-40" : "flex-1"}`}
+                  >
+                    {storeName}
+                  </span>
+                )
+              }
             >
+              {header}
+            </AppHeader>
+            <div data-page-motion className={pageContent()}>
               {children}
             </div>
           </main>
@@ -157,35 +153,18 @@ export function AdminShell({
 }
 
 function MobileNavigation(sidebar: AdminSidebarProps & { selection: SidebarSelection }) {
-  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button
-        size="icon"
-        variant="ghost"
+      <NavigationToggle
         className="md:hidden"
-        aria-label={t("admin_navigation")}
-        aria-expanded={open}
+        expanded={open}
+        controls="tablecast-admin-mobile-sidebar"
         onClick={() => setOpen(true)}
-      >
-        <PanelLeft />
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent side="left" className="relative max-w-72 p-3">
-          <DialogTitle className="sr-only">{t("admin_navigation")}</DialogTitle>
-          <Button
-            className="absolute right-2 top-3"
-            size="icon"
-            variant="ghost"
-            aria-label={t("common_close")}
-            onClick={() => setOpen(false)}
-          >
-            <X />
-          </Button>
-          <AdminSidebar {...sidebar} onNavigate={() => setOpen(false)} />
-        </DialogContent>
-      </Dialog>
+      />
+      <NavigationDrawer id="tablecast-admin-mobile-sidebar" open={open} onOpenChange={setOpen}>
+        <AdminSidebar {...sidebar} onNavigate={() => setOpen(false)} />
+      </NavigationDrawer>
     </>
   );
 }

@@ -1444,5 +1444,22 @@
   "currency_loading": "Loading rates",
   "currency_unavailable": "Reference rate unavailable",
   "auth_passkey_title": "Sign in more easily with a passkey",
-  "auth_passkey_later": "Maybe later"
+  "auth_passkey_later": "Maybe later",
+  "help_title": "Documentation",
+  "help_open_app": "Open TableCast app",
+  "help_overview": "User guide",
+  "help_mcp": "MCP & agent guide",
+  "help_troubleshooting": "Troubleshooting",
+  "head_help_description": "Reference documentation for setting up TableCast, configuring menus and service, connecting MCP agents and running your store.",
+  "navigation_search": "Search",
+  "navigation_search_placeholder": "Search",
+  "navigation_search_clear": "Clear search",
+  "navigation_search_results": "Search results",
+  "navigation_search_pages": "App pages",
+  "navigation_search_hint": "Enter a page name or something you want to find in the documentation.",
+  "navigation_search_loading": "Searching documentation…",
+  "navigation_search_error": "Documentation search is unavailable. You can retry without losing your search.",
+  "navigation_search_retry": "Retry",
+  "navigation_search_no_pages": "No matching pages.",
+  "navigation_search_no_help": "No matching documentation. Try different words."
 }

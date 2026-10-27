@@ -1444,5 +1444,22 @@
   "currency_loading": "レートを取得中",
   "currency_unavailable": "参考レートを取得できません",
   "auth_passkey_title": "パスキーでかんたんログイン",
-  "auth_passkey_later": "あとで設定"
+  "auth_passkey_later": "あとで設定",
+  "help_title": "ドキュメント",
+  "help_open_app": "TableCast アプリを開く",
+  "help_overview": "使い方ガイド",
+  "help_mcp": "MCP・agentガイド",
+  "help_troubleshooting": "困ったとき",
+  "head_help_description": "TableCastの店舗準備、メニュー・接客の設定、MCP接続と運用の参照資料。",
+  "navigation_search": "検索",
+  "navigation_search_placeholder": "検索",
+  "navigation_search_clear": "検索をクリア",
+  "navigation_search_results": "検索結果",
+  "navigation_search_pages": "アプリのページ",
+  "navigation_search_hint": "ページ名や、ドキュメントで調べたいことを入力してください。",
+  "navigation_search_loading": "ドキュメントを検索中…",
+  "navigation_search_error": "ドキュメントを検索できませんでした。入力を保ったまま再試行できます。",
+  "navigation_search_retry": "再試行",
+  "navigation_search_no_pages": "一致するページはありません。",
+  "navigation_search_no_help": "一致するドキュメントはありません。別の言葉で検索してください。"
 }

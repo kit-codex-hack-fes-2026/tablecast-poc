@@ -144,7 +144,7 @@ runtime再起動はlisten markerだけで完了とせず、入口の実API・Mai
 | ssrの無予算の4標本反復・Worker restart                        | 各featureの取得/操作はBrowserへ。計測回数自体は保証にしない                                                                                                                                  | 代表URLを各1回のSSR/hydration、JS無効・匿名隔離・session/PWA redirect                                                                     |
 | image-performance・runtime-isolation                          | 既存予算とruntime fixtureの実物を維持                                                                                                                                                        | 下記の画像予算とケース間の配信資産隔離を引き続き実E2Eで検証                                                                               |
 
-画像性能は[`tablecast-image-performance.spec.ts`](../apps/web/e2e/tablecast-image-performance.spec.ts)の24/120商品で、取得済みURLの再訪転送0、cold画像転送合計500,000byte以下、計測可能なCLS 0.1未満、実画像の縦横比・カート画像64pxを保つ。WebKitでbyte値が取得できない場合は制限を記録し、Chromiumの予算検証で補う。件数の多いfixtureや上限を緩和して高速化済みにはしない。
+画像性能は[`tablecast-image-performance.spec.ts`](../apps/web/e2e/tablecast-image-performance.spec.ts)の24/120商品で、取得済みURLの再訪転送0、cold画像転送合計500,000byte以下、計測可能なCLS 0.1未満、実画像の縦横比・カート画像64pxを保つ。WebKitでbyte値が取得できない場合は制限を記録し、Chromiumの予算検証で補う。件数の多いfixtureや上限を緩和して高速化済みにはしない。Resource Timingの収集枠は1,000件を確保し、満杯になった標本は転送量が欠けるため失敗とする。記録の収集枠と画像転送の予算を区別する。
 
 [`tablecast-runtime-isolation.spec.ts`](../apps/web/e2e/tablecast-runtime-isolation.spec.ts)は、同じworkerでケース内の再起動がassets変更を保持し、次のケースで変更・追加ファイルを復元する保証を維持する。稼働中stateのcopyやfixture共有で業務テストを速くしない。
 
@@ -411,3 +411,9 @@ cf設定・IaCの試験はmode解決、秘密値の宣言、Build Outputの別�
 Webの`billing-page.browser.test.tsx`と隣接Storyは、日本語でrole・無料GUIと有料AIの区別・申込み/解約の入口・解約予約・失敗再試行・組織切替の遅い応答・縦横・狭幅・長文・keyboard/focusを確認する。通常時のAI準備完了通知と無料プランの管理者向けAI設定通知がなく、準備中・準備失敗では音声利用不可とGUI継続を説明することも確認する。日英の翻訳・日時・通貨の保証と英語Storyの扱いは、前述の共通戦略に従う。
 
 `billing-usage-chart.browser.test.tsx`は日別のキーボード操作・数値表・料金の権限・ゼロと負数調整を確認する。`billing-overview.test.ts`は実D1/HTTPで現在の契約期間とUTC暦月集計の分離・期間境界・完全なUTC日別系列・memberの金融情報非漏出を確認する。`tablecast-billing.spec.ts`は実Web/API/D1、Google emulatorのmemberログイン、JSなしSSRと匿名分離を確認する。実Service Account発行とStripe SandboxのCheckout/Meters/請求書/Portalは [課金の接続確認](billing.md#外部接続の確認) として別に行う。
+
+### 公開ヘルプの確認
+
+`tablecast-help.spec.ts`は実Web/APIへ接続し、未認証のHTML・日英切替・相対リンク・Markdown・LLM索引と、管理画面・MCP・業務APIの認証境界を確認する。本文の配信とリンクの解決はビルド後の成果物で確認し、原稿の文言を固定するunitテストは追加しない。サイドバーのグループ開閉は既存のBrowser統合、画面の証拠はこの代表E2Eで扱う。
+
+ヘルプ検索は日英別の実ZBSearchで全半角・英字大小文字・日本語の空白なし・英語の語形変化を確認する。Browser統合は番号付きショートカット、IME確定、遅い旧応答、MarkdownのDOMと語形変化後のハイライト、共通ヘッダーを所有する。実WebのE2Eは公開検索API・言語別SSR・同章の言語URLへの遷移とモバイルの目次へ限定する。
