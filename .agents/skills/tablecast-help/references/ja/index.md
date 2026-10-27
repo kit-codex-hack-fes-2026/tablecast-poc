@@ -1,5 +1,5 @@
 ---
-title: TableCast ヘルプ
+title: TableCast Docs
 description: 店舗の準備、メニュー・接客の設定、MCP agentとの連携を案内します。
 ---
 

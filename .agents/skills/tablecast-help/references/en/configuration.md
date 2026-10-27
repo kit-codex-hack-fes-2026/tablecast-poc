@@ -26,4 +26,4 @@ After publication, fetch the current configuration to confirm the result. Saving
 
 Upload real files with `upload_image`, then save the returned image key and source in the draft. Label generated images as illustrations. Uploading an image alone does not change the live menu. Mark an unavailable product as sold out rather than deleting it.
 
-Related: [MCP connections](./mcp.md), [Troubleshooting](./troubleshooting.md), [Help index](./index.md).
+Related: [MCP connections](./mcp.md), [Troubleshooting](./troubleshooting.md), [Docs index](./index.md).

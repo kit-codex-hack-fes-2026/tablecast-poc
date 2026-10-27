@@ -4,7 +4,7 @@ import { test } from "./support/test";
 
 test.use({ serviceWorkers: "block" });
 
-test("未認証で日英のヘルプとMarkdownを辿れ、管理画面と業務APIは認証を要求する", async ({
+test("未認証で日英のDocsとMarkdownを辿れ、管理画面と業務APIは認証を要求する", async ({
   request,
 }) => {
   const index = await request.get("/llms.txt");
@@ -64,7 +64,7 @@ test("未認証で日英のヘルプとMarkdownを辿れ、管理画面と業務
   expect((await request.post("/mcp", { data: {} })).status()).toBe(401);
 });
 
-test("ヘルプをSSRで読み、関連章・言語・モバイル目次へ移動できる", async ({
+test("DocsをSSRで読み、関連章・言語・モバイル目次へ移動できる", async ({
   page,
   browser,
   baseURL,
@@ -88,22 +88,22 @@ test("ヘルプをSSRで読み、関連章・言語・モバイル目次へ移�
   }
   await page.setViewportSize({ width: 1512, height: 982 });
   await page.goto("/help");
-  await expect(page.getByRole("heading", { name: "TableCast ヘルプ", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "TableCast Docs", exact: true })).toBeVisible();
   await expect(page.locator('[data-ui="app-header"]')).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   await expect(page.getByRole("button", { name: "日本語", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
-  const helpGroup = page.getByRole("region", { name: "ヘルプ", exact: true });
-  const groupTrigger = helpGroup.getByRole("button", { name: "ヘルプ", exact: true });
+  const helpGroup = page.getByRole("region", { name: "Docs", exact: true });
+  const groupTrigger = helpGroup.getByRole("button", { name: "Docs", exact: true });
   await expect(groupTrigger).toHaveAttribute("aria-expanded", "true");
   await expect(helpGroup.getByRole("link")).toHaveCount(6);
   await groupTrigger.click();
   await expect(helpGroup.getByRole("link", { name: "はじめに", exact: true })).toBeHidden();
   await groupTrigger.press("Enter");
   await expect(helpGroup.getByRole("link", { name: "はじめに", exact: true })).toBeVisible();
-  const searchInput = page.getByRole("searchbox", { name: "ページとヘルプを検索" });
+  const searchInput = page.getByRole("searchbox", { name: "ページとDocsを検索" });
   await searchInput.fill("expectedVersion");
   const searchResults = page.getByRole("dialog", { name: "検索結果" });
   await expect(searchResults.getByRole("link", { name: /設定と公開/ }).first()).toBeVisible();
@@ -154,12 +154,12 @@ test("ヘルプをSSRで読み、関連章・言語・モバイル目次へ移�
     page.getByRole("heading", { name: "MCP connections and agents", exact: true }),
   ).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page).toHaveTitle(/MCP connections and agents.*Help/);
+  await expect(page).toHaveTitle(/MCP connections and agents.*Docs/);
   await expect(page.getByRole("button", { name: "English", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
-  await page.getByRole("searchbox", { name: "Search pages and help" }).fill("configurations");
+  await page.getByRole("searchbox", { name: "Search pages and docs" }).fill("configurations");
   const englishResults = page.getByRole("dialog", { name: "Search results" });
   await expect(
     englishResults.getByRole("link", { name: /Configuration and publishing/ }).first(),
@@ -169,7 +169,7 @@ test("ヘルプをSSRで読み、関連章・言語・モバイル目次へ移�
     fullPage: false,
     animations: "disabled",
   });
-  await page.getByRole("searchbox", { name: "Search pages and help" }).press("Escape");
+  await page.getByRole("searchbox", { name: "Search pages and docs" }).press("Escape");
   await page.setViewportSize({ width: 402, height: 874 });
   await expect(page.locator('[data-ui="app-header"]')).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
@@ -198,15 +198,15 @@ test("ヘルプをSSRで読み、関連章・言語・モバイル目次へ移�
   await page.getByRole("button", { name: "ナビゲーション", exact: true }).click();
   await expect(
     page
-      .getByRole("region", { name: "ヘルプ", exact: true })
-      .getByRole("button", { name: "ヘルプ", exact: true }),
+      .getByRole("region", { name: "Docs", exact: true })
+      .getByRole("button", { name: "Docs", exact: true }),
   ).toHaveAttribute("aria-expanded", "true");
   await page.screenshot({
     path: testInfo.outputPath("tablecast-help-mobile-sidebar.png"),
     fullPage: false,
     animations: "disabled",
   });
-  await page.getByRole("searchbox", { name: "ページとヘルプを検索" }).fill("困ったとき");
+  await page.getByRole("searchbox", { name: "ページとDocsを検索" }).fill("困ったとき");
   const mobileResults = page.getByRole("dialog", { name: "検索結果" });
   await expect(mobileResults.getByRole("link", { name: /困ったとき/ }).first()).toBeVisible();
   await page.screenshot({
@@ -233,14 +233,19 @@ test("店舗サイドバーの検索から公開ガイドへ進める", async ({
   await page.goto("/admin/go/products");
   await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/menu\/products$/);
   await page.goto("/admin/live");
-  await expect(page.getByRole("region", { name: "ヘルプ", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Docs", exact: true })).toHaveCount(0);
+  const docsLink = page
+    .locator('[data-ui="sidebar-footer"]')
+    .getByRole("link", { name: "Docs", exact: true });
+  await expect(docsLink).toHaveAttribute("href", "/help/ja");
+  await expect(docsLink).toHaveAttribute("target", "_blank");
   await page.getByRole("button", { name: "連携・店舗一覧", exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({
     path: testInfo.outputPath("tablecast-admin-sidebar.png"),
     fullPage: false,
     animations: "disabled",
   });
-  await page.getByRole("searchbox", { name: "ページとヘルプを検索" }).fill("商品");
+  await page.getByRole("searchbox", { name: "ページとDocsを検索" }).fill("商品");
   const results = page.getByRole("dialog", { name: "検索結果" });
   await expect(results.getByRole("link", { name: "商品 メニュー・接客" })).toBeVisible();
   await expect(results.getByRole("status")).toHaveCount(0);
@@ -258,6 +263,19 @@ test("店舗サイドバーの検索から公開ガイドへ進める", async ({
     "aria-pressed",
     "true",
   );
+  await expect(docsLink).toHaveAttribute("href", "/help/en");
+  const popupOpened = page.waitForEvent("popup");
+  await docsLink.click();
+  const docsPage = await popupOpened;
+  try {
+    await expect(docsPage).toHaveURL(/\/help\/en\/?$/);
+    await expect(
+      docsPage.getByRole("heading", { name: "TableCast Docs", exact: true }),
+    ).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/menu\/products$/);
+  } finally {
+    await docsPage.close();
+  }
   await page.setViewportSize({ width: 402, height: 874 });
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   await expect
@@ -270,7 +288,7 @@ test("店舗サイドバーの検索から公開ガイドへ進める", async ({
   });
   await page.getByRole("button", { name: "日本語", exact: true }).click();
   await page.setViewportSize({ width: 1512, height: 982 });
-  await page.getByRole("searchbox", { name: "ページとヘルプを検索" }).fill("MCP");
+  await page.getByRole("searchbox", { name: "ページとDocsを検索" }).fill("MCP");
   const guide = results.getByRole("link", { name: /MCP接続とagentの使い方/ }).first();
   await expect(guide).toBeVisible();
   await guide.click();

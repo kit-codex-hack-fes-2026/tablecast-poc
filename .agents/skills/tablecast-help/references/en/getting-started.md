@@ -21,4 +21,4 @@ Register the device from the store’s device page and confirm its store and tab
 
 Use the floor view to check visits and orders. Confirming an order requires a review of its prices and choices. Stopping voice preserves the basket and checkout state; voice stays disconnected until explicitly resumed.
 
-Next: [Configuration and publishing](./configuration.md). [Help index](./index.md).
+Next: [Configuration and publishing](./configuration.md). [Docs index](./index.md).

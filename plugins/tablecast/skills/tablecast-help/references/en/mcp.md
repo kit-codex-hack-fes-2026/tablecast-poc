@@ -13,7 +13,7 @@ Production and staging are separate environments. On staging, use the displayed 
 
 Reading requires `tablecast:read`; draft changes require `tablecast:write`. Re-authorise with the required scopes if necessary. For multiple stores, select one with the connection URL’s `storeId` parameter. If omitted, the first permitted store in the organisation is selected. Confirm the name and ID returned by `get_configuration`; never invent an ID.
 
-[OAuth connections](/account/mcp-sessions) shows permissions and expiry dates and lets you revoke unwanted connections. Public help access does not authorise store operations.
+[OAuth connections](/account/mcp-sessions) shows permissions and expiry dates and lets you revoke unwanted connections. Access to the docs does not authorise store operations.
 
 ## Choose a starting point
 
@@ -29,4 +29,4 @@ Reading requires `tablecast:read`; draft changes require `tablecast:write`. Re-a
 
 Discover the actual tools and read the connected server’s current schemas before assuming it is disconnected. Explanations and proposals are read-only. A request to apply a change authorises preparation of a draft. Publication requires [explicit human approval](./configuration.md). Do not invent prices or safety information missing from the source material.
 
-Next: [Troubleshooting](./troubleshooting.md). [Help index](./index.md).
+Next: [Troubleshooting](./troubleshooting.md). [Docs index](./index.md).

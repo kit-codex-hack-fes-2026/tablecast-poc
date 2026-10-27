@@ -59,7 +59,6 @@ const translations = defineI18nUI(helpI18n, {
 });
 
 export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
-  const english = page.locale === "en";
   const Body = page.data.body;
   const tree = helpSource.getPageTree(page.locale);
   const { Icon } = helpNavigationItem(page.url);
@@ -74,9 +73,7 @@ export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
           slots={helpLayoutSlots}
           tree={{
             ...tree,
-            children: [
-              { type: "folder", name: english ? "Help" : "ヘルプ", children: tree.children },
-            ],
+            children: [{ type: "folder", name: "Docs", children: tree.children }],
           }}
           sidebar={{
             className: "border-e-0 bg-transparent",
@@ -88,7 +85,7 @@ export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
             title: (
               <>
                 <Brand variant="symbol" />
-                <span>TableCast {english ? "Help" : "ヘルプ"}</span>
+                <span>TableCast Docs</span>
               </>
             ),
             url: `/help/${page.locale}`,

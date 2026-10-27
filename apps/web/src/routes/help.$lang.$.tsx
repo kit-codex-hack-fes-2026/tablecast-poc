@@ -16,7 +16,7 @@ export const Route = createFileRoute("/help/$lang/$")({
   head: ({ params: { lang, _splat: splat } }) => ({
     links: [
       { rel: "stylesheet", href: stylesheet },
-      { rel: "alternate", type: "text/plain", href: "/llms.txt", title: "TableCast help index" },
+      { rel: "alternate", type: "text/plain", href: "/llms.txt", title: "TableCast docs index" },
       {
         rel: "alternate",
         type: "text/markdown",

@@ -13,7 +13,6 @@ import {
   KeyRound,
   LayoutDashboard,
   LayoutList,
-  LifeBuoy,
   Mic,
   MonitorSmartphone,
   Palette,
@@ -34,7 +33,7 @@ export const navigationGroups = {
   rewards: { label: "nav_rewards", Icon: Gift },
   store: { label: "nav_store_management", Icon: Store },
   workspace: { label: "nav_workspace", Icon: Plug },
-  help: { label: "help_title", Icon: LifeBuoy },
+  help: { label: "help_title", Icon: BookOpen },
 } as const;
 
 export const navigationGroupStyle = tv({

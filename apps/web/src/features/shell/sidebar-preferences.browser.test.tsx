@@ -127,7 +127,11 @@ it("MCPとSkillsへ移っても選択店舗とグループの展開を保ち、�
   await expect.element(picker()).toMatchTextContent("本店");
   await expect.element(group("メニュー・接客")).toHaveAttribute("aria-expanded", "true");
   await expect.element(group("会員施策")).toHaveAttribute("aria-expanded", "false");
-  await expect.element(group("ヘルプ")).not.toBeInTheDocument();
+  await expect.element(group("Docs")).not.toBeInTheDocument();
+  const docs = page.getByRole("link", { name: "Docs", exact: true });
+  await expect.element(docs).toHaveAttribute("href", "/help/ja");
+  await expect.element(docs).toHaveAttribute("target", "_blank");
+  await expect.element(docs).toHaveAttribute("rel", "noopener");
   await page.getByRole("link", { name: "プラグイン導入", exact: true }).click();
   await expect.element(page.getByRole("heading", { name: "Marketplace · Codex" })).toBeVisible();
   await expect
@@ -139,6 +143,8 @@ it("MCPとSkillsへ移っても選択店舗とグループの展開を保ち、�
   expect(mutations).toEqual([]);
   await group("ナビゲーション").click();
   await expect.element(group("ナビゲーション")).toHaveAttribute("aria-expanded", "false");
+  await expect.element(docs).toBeVisible();
+  await expect.element(docs).toHaveAttribute("data-collapsed", "true");
   await view.unmount();
   client.clear();
   await show("/account/integrations/plugins");

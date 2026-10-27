@@ -1,12 +1,13 @@
 import { Tooltip } from "@base-ui/react/tooltip";
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, AudioLines, Tablet } from "lucide-react";
+import { ArrowUpRight, AudioLines, BookOpen, Tablet } from "lucide-react";
 import { type ReactNode } from "react";
 import type { SidebarSelection } from "./sidebar-model";
 import { Brand } from "../../components/brand";
 import { useI18n } from "../../i18n/locale";
 import { navigationItemClass as sidebarItemClass } from "./navigation-group";
 import { NavigationLink } from "./navigation-link";
+import { navigationGroupStyle } from "./navigation-model";
 import { SidebarFooter } from "./sidebar-footer";
 import { SidebarNavigation } from "./sidebar-navigation";
 import { SidebarSearch } from "./sidebar-search";
@@ -40,7 +41,7 @@ export function AdminSidebar({
   onNavigate?: () => void;
   selection: SidebarSelection;
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const {
     user,
     pending,
@@ -93,6 +94,21 @@ export function AdminSidebar({
         menuNavigation={renderMenuNavigation?.({ collapsed, onNavigate })}
       />
       <SidebarFooter>
+        <NavigationLink
+          collapsed={collapsed}
+          className={navigationGroupStyle({ tone: "help", className: sidebarItemClass })}
+          to="/help/$lang/$"
+          params={{ lang: locale, _splat: "" }}
+          target="_blank"
+          rel="noopener"
+          title={t("help_title")}
+          aria-label={t("help_title")}
+          onClick={onNavigate}
+        >
+          <BookOpen className="size-5 shrink-0 text-nav-help" />
+          {!collapsed && <span className="min-w-0">{t("help_title")}</span>}
+          {!collapsed && <ArrowUpRight className="ml-auto size-4" aria-hidden="true" />}
+        </NavigationLink>
         {selectedStore && manager && (
           <DemoLink
             storeId={selectedStore}
