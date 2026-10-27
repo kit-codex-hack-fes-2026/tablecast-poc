@@ -199,6 +199,14 @@ export async function getPricingContext(
   services: ApiServices,
   row: TableRecord,
 ): Promise<{ catalog: Catalog; plan: null | PlanContext }> {
+  const pricing = services.tableAccess.pricing;
+  if (
+    !row.plan_json &&
+    row.kind === "table" &&
+    pricing?.sessionId === row.id &&
+    pricing.store.id === row.store_id
+  )
+    return { catalog: catalogValue({ store: pricing.store, demo: null }), plan: null };
   const demoId = row.kind === "demo" ? row.id : undefined;
   const access = services.tableAccess.demo;
   const authorised =

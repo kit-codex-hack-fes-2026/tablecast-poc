@@ -109,7 +109,12 @@ it.each([
       const responded = performance.now();
       await waitOnExecutionContext(context);
       expect(response.status).toBe(200);
-      const businessBudget = operation === "order" ? 4 : 3;
+      const businessBudget =
+        operation === "order"
+          ? 4
+          : kind === "table" && ["cart", "confirmation"].includes(operation)
+            ? 2
+            : 3;
       expect(measured.stats.roundtrips).toBeLessThanOrEqual(
         businessBudget + (kind === "demo" ? (operation === "cart" ? 2 : 3) : 0),
       );

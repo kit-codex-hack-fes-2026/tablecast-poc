@@ -105,7 +105,7 @@ Drizzle ORM・Kitは`1.0.0-rc.5`を使い、認証のRelations v2とBetter Auth�
 | `modules/*/model.ts`                                                                    | 業務別の入出力schema・型。共通のID・言語は`platform/model.ts`              |
 | `db`、`migrations`                                                                      | D1 schema・制約・移行。汎用repositoryや別DBのadapterは設けない             |
 
-卓・フロア・下書きの表示読取は、既存のquery builderをD1の`db.batch()`へまとめる。卓・フロアの回復cursorは同じbatchの状態読取より先に取得し、取得後の更新をイベント経路で回収する。カゴ更新は更新・確認失効・イベント保存の後へ同じ状態読取queryを置き、一つのbatchで確定値を返す。更新成立の判定と通知はordersのuse-caseが所有し、queryは読取statementと型付き結果変換だけを公開する。デモの作成者と現在の店舗権限はjoinで確認してから結果を返す。認可時に読んだデモの商品設定は同じデモ・店舗のプランなし価格判定へ再利用し、更新時の設定版検査と更新後の再読取は維持する。カタログのqueryと結果変換は単独取得・batchで共有し、D1が列名で返すbatch結果ではjoin先の重複列に別名を付ける。
+卓・フロア・下書きの表示読取は、既存のquery builderをD1の`db.batch()`へまとめる。卓・フロアの回復cursorは同じbatchの状態読取より先に取得し、取得後の更新をイベント経路で回収する。カゴ更新は更新・確認失効・イベント保存の後へ同じ状態読取queryを置き、一つのbatchで確定値を返す。更新成立の判定と通知はordersのuse-caseが所有し、queryは読取statementと型付き結果変換だけを公開する。デモの作成者と現在の店舗権限はjoinで確認してから結果を返す。通常端末のカゴ・確認では認可と同じjoinで商品設定を取得し、同じ卓・店舗のプランなし価格判定へ再利用する。デモの商品設定も認可時の値を同じデモ・店舗だけで共有する。他のGUI操作は認可時に設定JSONを余分に取得せず、プラン利用中は従来どおり注文履歴と価格設定をまとめて読む。いずれもリクエスト内に限り、更新時の設定版検査と更新後の再読取は維持する。カタログのqueryと結果変換は単独取得・batchで共有し、D1が列名で返すbatch結果ではjoin先の重複列に別名を付ける。
 
 GUI・音声・MCPは同じ所有moduleのuse-caseを利用する。注文確定のsnapshot、版の比較、mutation_id、`changes()`を用いた条件付きbatchは元の原子性を保つ。serviceからrouteを呼び戻さず、音声接続の制御は`voice/runtime.ts`へ依存する。
 

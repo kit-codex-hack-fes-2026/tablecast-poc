@@ -10,9 +10,19 @@ import { hashDeviceToken } from "./token";
 async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
   const token = getCookie(c, "tablecast.device");
   ensure(token, "DEVICE_REQUIRED", 401);
-  const row = await findDeviceSession(c.get("services"), await hashDeviceToken(token));
+  // 価格判定が直後に続く経路だけで取得し、他のGUI操作へ設定JSONを重複転送しない。
+  const includeCatalog =
+    (c.req.method === "PUT" && c.req.path === "/api/table/cart") ||
+    (c.req.method === "POST" && c.req.path === "/api/table/confirm");
+  const row = await findDeviceSession(
+    c.get("services"),
+    await hashDeviceToken(token),
+    includeCatalog,
+  );
   ensure(row, "DEVICE_NOT_ASSIGNED", 401);
   c.get("services").tableAccess.session = row.session;
+  if (row.catalog && row.session.kind === "table")
+    c.get("services").tableAccess.pricing = { sessionId: row.session.id, store: row.catalog };
   return {
     kind: "device",
     storeId: row.session.store_id,

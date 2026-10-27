@@ -189,7 +189,7 @@ WorkerのrollbackはD1/R2/DOを戻さない。DB復元が必要なら営業書�
 
 D1作成時は `primary_location_hint: apac` を指定する。これはアジア太平洋への希望で、Tokyo固定や配置保証ではない。既存DBの再配備では作成場所を変更しない。previewも専用の通常D1を使用し、previewという環境名自体を遅延原因としない。[D1のデータ配置](https://developers.cloudflare.com/d1/configuration/data-location/)
 
-API Workerは `placement.region: aws:ap-northeast-1` でTokyoに近い拠点を指定し、Webは受信側でSSRと静的配信を行う。Tokyo指定はAPIの実行先の希望で、D1の移転ではない。2026-10-28のPR #392ではD1 metadataがAPAC/SINだったため、先にSingapore指定 `aws:ap-southeast-1` を測定した。通常カゴのwarm p50は623msへ下がったがp95は2295msで未達だった。Tokyoは同条件で比較し、結果を[性能記録](guest-order-performance.md)へ残す。Web→APIのService Bindingの `fetch` は維持する。D1が別拠点になった場合はmetadataとHTTPを再測定して指定を見直す。[Workers Placement](https://developers.cloudflare.com/workers/configuration/placement/)
+API Workerは `placement.region: aws:ap-southeast-1` でSingaporeに近い拠点を指定し、Webは受信側でSSRと静的配信を行う。2026-10-28のPR #392ではD1 metadataがAPAC/SINだった。通常カゴの31標本でSingaporeのp50 / p95は623 / 2295ms、Tokyo指定 `aws:ap-northeast-1` は1029 / 1909msだった。両方とも目標未達で、観測したCloudflare拠点も異なるため配置だけの効果とは断定しない。既存DBに近く通常時のDB待ちが少ないSingaporeを採用し、[性能記録](guest-order-performance.md)へ条件を残す。Tokyo指定も利用できるがD1を移転する指定ではない。Web→APIのService Bindingの `fetch` は維持する。D1が別拠点になった場合はmetadataとHTTPを再測定して指定を見直す。[Workers Placement](https://developers.cloudflare.com/workers/configuration/placement/)
 
 配備後はCloudflareのWorker設定でplacement状態を確認し、Grafanaで同一経路のwarm要求を比較する。APIの `cloudflare.placement` はCloudflareの `cf-placement` ヘッダー（例: `remote-SIN`）、SDKの `cloudflare.colo` は要求の `request.cf.colo` を表す。後者だけを移動先の証拠にしない。配置設定は生成・ビルド済みconfigを通じて配備し、効果がない場合はこの設定を戻せる。既存DB・Cookie・認証secretは維持する。
 

@@ -1,6 +1,6 @@
 import type { BetterAuthOptions } from "better-auth";
 import { createMiddleware } from "hono/factory";
-import type { DemoRecord, TableRecord } from "../db/records";
+import type { DemoRecord, StoreRecord, TableRecord } from "../db/records";
 import type { Actor } from "../modules/auth/model";
 import { createDatabase } from "../db/client";
 import { createAuth } from "../modules/auth/service";
@@ -20,6 +20,10 @@ export function createApiServices(
       storeId: string;
       userId?: string;
       voiceSessionId?: string;
+    };
+    pricing?: {
+      sessionId: string;
+      store: Pick<StoreRecord, "config_json" | "config_version" | "id" | "name">;
     };
     session?: TableRecord;
   } = {};
