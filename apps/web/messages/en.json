@@ -1490,5 +1490,6 @@
   "kiosk_sources": "Sources",
   "kiosk_reference_qr": "Reference page QR code",
   "kiosk_tool_show_reference": "Showing a reference and QR code",
-  "kiosk_reference_expand": "Tap to enlarge the QR code"
+  "kiosk_reference_expand": "Tap to enlarge the QR code",
+  "kiosk_cart_syncing": "Updating prices"
 }

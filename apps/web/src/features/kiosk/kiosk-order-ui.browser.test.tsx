@@ -112,6 +112,11 @@ it.each(["ja", "en"] as const)(
     await choose.click();
     await dialog.getByRole("radio", { name: "90 mL", exact: true }).click();
     await dialog.getByRole("button", { name: labels.kiosk_add, exact: true }).click();
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expect
+      .element(page.getByRole("tab", { name: labels.kiosk_menu, exact: true }))
+      .toHaveAttribute("aria-selected", "true");
+    await cart.click();
     await expect.element(cart).toHaveAttribute("aria-selected", "true");
     await expect
       .element(

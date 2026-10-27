@@ -86,6 +86,15 @@ test("英語の客が端末認可後に日本語へ切り替え、スタッフ�
       reducedMotion: browserName === "webkit" ? "reduce" : "no-preference",
     });
     await guest.goto("/");
+    // 応答だけを1.5秒遅延し、実APIへの連続追加と即時表示を収録する。
+    let delayCart = true;
+    await guest.route("**/api/table/cart", async (route) => {
+      if (delayCart && route.request().method() === "PUT") {
+        delayCart = false;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      await route.continue();
+    });
     await guest.evaluate(() => {
       document.documentElement.dataset.tablecastCartFlights = "0";
       document.documentElement.dataset.tablecastOrderFlights = "0";
@@ -200,12 +209,14 @@ test("英語の客が端末認可後に日本語へ切り替え、スタッフ�
         const quantity = 1;
         await productPage.getByRole("button", { name: ja.kiosk_add, exact: true }).click();
         await expect(productPage).not.toBeVisible();
-        await expect(
-          guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }),
-        ).toHaveAttribute("aria-selected", "true");
+        await expect(guest.getByRole("tab", { name: ja.kiosk_menu, exact: true })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
         chosen.push({ productId: product.id, quantity, selections });
       });
     }
+    await guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
     await expect(guest.getByText(ja.kiosk_cart_added, { exact: true }).first()).toBeVisible();
     await expect(guest.getByText(ja.kiosk_cart_empty, { exact: true })).not.toBeVisible();
     await guest.screenshot({ path: testInfo.outputPath("tablecast-basket-toast.png") });

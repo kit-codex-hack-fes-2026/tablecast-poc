@@ -89,6 +89,10 @@ DB queryが十分短ければ操作関数内に置いてよい。複雑なquery�
 
 `app.ts`はHonoの共通middlewareとmoduleを組み立てる。`platform/context.ts`の`requestServices`がHTTPリクエストごとにDrizzleを一度生成し、同じ`ApiServices`をroute・service・Agentツールへ渡す。`db/client.ts`のDB factoryが認証schemaの関連queryを有効にする。schemaとfactoryはHonoや認証runtimeへ依存せず、D1 handleの寿命はWorkerまたは運用CLIが所有する。Better Authは最初の利用時に同じDBで生成し、スタッフsessionの取得PromiseはHono Contextで共有する。次のリクエストへDB・Auth・sessionを持ち越さず、healthや画像はAuth設定に依存しない。
 
+同じ要求で認可済みの卓行とデモ所有者の確認結果は`ApiServices.tableAccess`で共有する。`context.ts`から`db/records.ts`への型参照をこの境界に限り許可し、schemaのruntimeをplatformへ持ち込まない。卓行は最初の業務読取で消費し、更新後の状態は最新のD1 batchから構成する。デモの認可結果はデモID・店舗・利用者・音声sessionの一致を確認し、別要求へ保持しない。DB更新とイベント保存の確定後、通知は同じ要求の`backgroundTasks`からWorkerの`waitUntil`へ渡す。HTTPの成功を通知配送に依存させず、失敗ログとイベント再取得を維持する。
+
+HTTP認可のmiddlewareとrouteは共通のtelemetryへ依存し、認可と業務操作の時間を別々に測る。認可層からDB更新や業務処理への依存は増やさない。
+
 Drizzle ORM・Kitは`1.0.0-rc.5`を使い、認証のRelations v2とBetter Authの対応adapterを同時に扱う。DB列と同義の入力は`drizzle-orm/zod`から必要なfieldだけを選び、業務の制約を重ねる。JSON列内の設定・snapshot等は業務Zod schemaを正本にし、DBの文字列列から生成しない。行型はDrizzle、公開HTTPの入出力型はZodとHono Clientから推論する。WebへDB schemaのruntime依存を渡さない。
 
 | 所有者                                                                                  | 責務                                                                       |

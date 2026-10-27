@@ -4,7 +4,7 @@ import { member } from "../../db/identity-schema";
 import { devices, stores, tableSessions } from "../../db/table-schema";
 export async function findDeviceSession(services: ApiServices, tokenHash: string) {
   return services.db
-    .select({ store_id: devices.store_id, id: tableSessions.id, deviceId: devices.id })
+    .select({ session: tableSessions, deviceId: devices.id })
     .from(devices)
     .innerJoin(
       tableSessions,

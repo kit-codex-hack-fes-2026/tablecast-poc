@@ -25,7 +25,7 @@ export function Kiosk({
   const [wasConnected, setWasConnected] = useState(Boolean(table.data));
   if (table.data && !wasConnected) setWasConnected(true);
   const refresh = useCallback(() => {
-    void client.invalidateQueries({ queryKey: tableKey });
+    void client.invalidateQueries({ queryKey: tableKey }, { cancelRefetch: false });
   }, [client, tableKey]);
   if ((table.data === null && wasConnected) || table.data?.status === "closed")
     return (

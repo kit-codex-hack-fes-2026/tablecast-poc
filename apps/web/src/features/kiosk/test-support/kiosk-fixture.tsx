@@ -50,6 +50,8 @@ let selectedParticipant: null | string;
 
 let participantNames: string[];
 
+let beforeRequest: ((request: Request) => Promise<void>) | undefined;
+
 export const cartWrites: CartUpdate[] = [];
 
 export const targetWrites: unknown[] = [];
@@ -80,6 +82,7 @@ beforeEach(() => {
   confirmationDuration = 60_000;
   selectedParticipant = null;
   participantNames = [];
+  beforeRequest = undefined;
   savedCart = structuredClone(table.cart);
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   vi.stubGlobal(
@@ -87,6 +90,7 @@ beforeEach(() => {
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = new Request(input, init);
       requests.push(request);
+      await beforeRequest?.(request);
       const path = new URL(request.url).pathname;
       if (request.method === "GET" && path === "/api/table/participants")
         return Response.json({
@@ -127,10 +131,20 @@ beforeEach(() => {
         });
       }
       if (request.method === "PUT" && path === "/api/table/cart") {
-        cartWrites.push(cartUpdateSchema.parse(await request.json()));
+        const cartInput = cartUpdateSchema.parse(await request.json());
+        cartWrites.push(cartInput);
         if (cartFailure)
           return Response.json({ error: { code: "CART_CONFLICT" } }, { status: cartFailure });
-        current = { ...current, cursor: current.cursor + 1, cart: savedCart, snapshot: null };
+        current = {
+          ...current,
+          cursor: current.cursor + 1,
+          cart: savedCart,
+          snapshot: null,
+          selectedProductId:
+            cartInput.dismissProductId === current.selectedProductId
+              ? null
+              : current.selectedProductId,
+        };
         return Response.json(current);
       }
       if (request.method === "POST" && path === "/api/table/call") {
@@ -188,7 +202,7 @@ beforeEach(() => {
           cart: { ...current.cart, lines: [], total: 0, version: current.cart.version + 1 },
           snapshot: null,
         };
-        return Response.json({ orderId: "tablecast-confirmed-order" });
+        return Response.json(current.orders.at(-1));
       }
       if (request.method === "PATCH" && path === "/api/table/ui") {
         const screenInput = uiSectionInputSchema.parse(await request.json());
@@ -267,6 +281,9 @@ export function Subscription({ storeId, onChange }: { onChange: () => void; stor
 }
 
 export const fixture = {
+  set beforeRequest(value: typeof beforeRequest) {
+    beforeRequest = value;
+  },
   get catalogResponse() {
     return catalogResponse;
   },

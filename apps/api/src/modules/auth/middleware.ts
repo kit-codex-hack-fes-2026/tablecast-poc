@@ -4,6 +4,7 @@ import type { ApiEnv } from "../../platform/context";
 import type { Actor } from "./model";
 import { ensure } from "../../platform/errors";
 import { apiFactory } from "../../platform/http";
+import { measured } from "../../platform/telemetry";
 import { findDeviceSession, findStoreMembership } from "./queries";
 import { hashDeviceToken } from "./token";
 async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
@@ -11,7 +12,13 @@ async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
   ensure(token, "DEVICE_REQUIRED", 401);
   const row = await findDeviceSession(c.get("services"), await hashDeviceToken(token));
   ensure(row, "DEVICE_NOT_ASSIGNED", 401);
-  return { kind: "device", storeId: row.store_id, tableSessionId: row.id, deviceId: row.deviceId };
+  c.get("services").tableAccess.session = row.session;
+  return {
+    kind: "device",
+    storeId: row.session.store_id,
+    tableSessionId: row.session.id,
+    deviceId: row.deviceId,
+  };
 }
 
 export async function staffIdentity<E extends ApiEnv>(c: Context<E>) {
@@ -40,7 +47,10 @@ export async function staffActor(
 
 const actorGuard = (resolve: (c: Context<ApiEnv>) => Actor | Promise<Actor>) =>
   apiFactory.createMiddleware(async (c, next) => {
-    c.set("actor", await resolve(c));
+    c.set(
+      "actor",
+      await measured("tablecast.authentication.authorise", () => Promise.resolve(resolve(c))),
+    );
     await next();
   });
 

@@ -24,6 +24,7 @@ export const cartUpdateSchema = z
   .object({
     expectedVersion: z.number().int().nonnegative(),
     lines: z.array(cartLineSchema).max(100),
+    dismissProductId: id.optional(),
   })
   .strict();
 

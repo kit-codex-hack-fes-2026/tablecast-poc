@@ -12,7 +12,7 @@ export type CartFlight = {
   to: DOMRect;
 };
 
-/** API成功後だけ画像を運ぶ。viewport座標はbodyのportalで描き、paneのcontainmentに切られない。 */
+/** カゴへの操作開始・注文の受理を画像で示す。viewport座標はbodyのportalで描く。 */
 export function CartFlightImage({
   flight,
   onComplete,

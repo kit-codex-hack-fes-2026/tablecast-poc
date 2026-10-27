@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { apiFactory } from "../../platform/http";
+import { measured } from "../../platform/telemetry";
 import { validate } from "../../platform/validation";
 import { requireStore } from "../auth/middleware";
 import { requireManager } from "../auth/policy";
 import { instructionResponse } from "../configuration/instruction-response";
 import { tableOperations } from "../tables/operations-routes";
-import { getSession } from "../tables/queries";
 import { demoUpdateSchema } from "./model";
-import { getDemo } from "./queries";
+import { getDemo, getDemoRecord } from "./queries";
 import { createDemo, resetDemo, updateDemo } from "./service";
 
 const demoSessionRoutes = apiFactory
@@ -15,7 +15,10 @@ const demoSessionRoutes = apiFactory
   .use("*", async (c, next) => {
     const demoId = c.req.param("demoId");
     c.set("actor", { ...c.get("actor"), demoId, tableSessionId: demoId });
-    await getSession(c.get("services"), c.get("actor"));
+    const record = await measured("tablecast.authentication.demo", () =>
+      getDemoRecord(c.get("services"), c.get("actor")),
+    );
+    c.get("services").tableAccess.session = record.session;
     await next();
   })
   .get("/", async (c) =>

@@ -62,6 +62,9 @@ it("未充足行の修正は競合後も選択を保持し、再送でも同じ�
   await detail.getByRole("button", { name: ja.common_update, exact: true }).click();
   await expect.element(detail.getByRole("alert")).toBeVisible();
   await expect.element(choice).toBeChecked();
+  expect(cartWrites[0]?.lines[0]?.selections).toEqual(
+    fixtureValue(fixture.savedCart.lines[0]).selections,
+  );
   expect(fixture.current.cart.complete).toBe(false);
   fixture.cartFailure = 0;
   await detail.getByRole("button", { name: ja.common_update, exact: true }).click();
@@ -69,6 +72,7 @@ it("未充足行の修正は競合後も選択を保持し、再送でも同じ�
   expect(cartWrites).toEqual(
     [1, 2].map(() => ({
       expectedVersion: table.cart.version,
+      dismissProductId: product.id,
       lines: [
         {
           id: line.id,

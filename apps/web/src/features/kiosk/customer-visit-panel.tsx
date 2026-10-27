@@ -2,7 +2,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { QrCode } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import {
@@ -28,25 +28,27 @@ export function CustomerVisitPanel({
 }) {
   const { t } = useI18n();
   const client = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const participantsKey = ["tablecast-participants", sessionId, endpoint.key];
   const code = useMutation({
     mutationFn: () => parseResponse(endpoint.client["customer-code"].$post()),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["tablecast-participants", sessionId] }),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: participantsKey }, { cancelRefetch: false }),
   });
   const { mutate: createCode } = code;
   useEffect(() => {
-    createCode();
-  }, [createCode]);
-  useEffect(() => {
-    if (!code.data) return undefined;
+    if (!open || !code.data) return undefined;
     const timer = setTimeout(
       () => createCode(),
       Math.max(0, code.data.expiresAt - Date.now() - 30_000),
     );
     return () => clearTimeout(timer);
-  }, [code.data, createCode]);
+  }, [open, code.data, createCode]);
   const participants = useQuery({
-    queryKey: ["tablecast-participants", sessionId, cursor],
-    gcTime: 0,
+    queryKey: [...participantsKey, open ? cursor : 0],
+    enabled: open,
+    staleTime: 30_000,
+    gcTime: 30_000,
     queryFn: ({ signal }) =>
       parseResponse(endpoint.client.participants.$get({}, { init: { signal } })),
     refetchInterval: 10_000,
@@ -67,7 +69,13 @@ export function CustomerVisitPanel({
     (participant) => participant.id === target,
   );
   return (
-    <Dialog>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next && (!code.data || code.data.expiresAt <= Date.now())) createCode();
+      }}
+    >
       <DialogPrimitive.Trigger
         render={
           <Button

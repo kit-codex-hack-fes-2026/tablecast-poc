@@ -130,6 +130,10 @@ export async function getSession(services: ApiServices, actor: Actor): Promise<T
   const db = services.db;
 
   ensure(actor.tableSessionId, "TABLE_REQUIRED", 403);
+  const authorised = services.tableAccess.session;
+  services.tableAccess.session = undefined;
+  if (authorised?.id === actor.tableSessionId && authorised.store_id === actor.storeId)
+    return validateSession(services, actor, authorised);
   const row = await db
     .select()
     .from(business.tableSessions)
@@ -150,7 +154,16 @@ export async function validateSession(
 ): Promise<TableRecord> {
   ensure(row, "TABLE_NOT_FOUND", 404);
   if (row.kind === "demo") {
-    await getDemoRecord(services, actor);
+    const access = services.tableAccess.demo;
+    if (
+      !access ||
+      access.id !== actor.demoId ||
+      access.id !== row.id ||
+      access.storeId !== actor.storeId ||
+      access.userId !== actor.userId ||
+      access.voiceSessionId !== actor.voiceSessionId
+    )
+      await getDemoRecord(services, actor);
   } else ensure(!actor.demoId, "DEMO_NOT_FOUND", 404);
   if (actor.kind === "device") ensure(row.status === "open", "SESSION_CLOSED", 403);
   if (actor.kind === "voice")

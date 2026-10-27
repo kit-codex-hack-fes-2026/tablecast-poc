@@ -20,12 +20,14 @@ import { optionRow } from "./product-option-model";
 export function ProductPage({
   product,
   initial,
+  editing = Boolean(initial),
   busy,
   error,
   onClose,
   onSave,
 }: {
   busy: boolean;
+  editing?: boolean;
   error?: unknown;
   initial?: CartLine;
   onClose: () => void;
@@ -339,7 +341,7 @@ export function ProductPage({
             )
           }
         >
-          {initial ? t("common_update") : t("kiosk_add")}
+          {editing ? t("common_update") : t("kiosk_add")}
           <Plus size={19} aria-hidden="true" />
         </Button>
       </div>

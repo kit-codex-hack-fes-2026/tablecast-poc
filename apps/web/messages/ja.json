@@ -1490,5 +1490,6 @@
   "kiosk_sources": "参考情報の出典",
   "kiosk_reference_qr": "参考ページのQRコード",
   "kiosk_tool_show_reference": "参考情報とQRを表示",
-  "kiosk_reference_expand": "タップしてQRを拡大"
+  "kiosk_reference_expand": "タップしてQRを拡大",
+  "kiosk_cart_syncing": "金額を確認中"
 }

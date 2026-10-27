@@ -123,7 +123,7 @@ export function tableStateValue(
     id: row.id,
     tableId: row.table_id,
     kind: row.kind,
-    tableName: table?.name ?? "",
+    tableName: table?.name ?? (row.kind === "demo" ? "T1" : ""),
     storeId: row.store_id,
     storeName: catalog.storeName,
     configVersion: catalog.version,

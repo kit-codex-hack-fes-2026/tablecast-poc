@@ -16,6 +16,7 @@ import { devices, orders, restaurantTables, stores, tableSessions } from "../../
 import { ensure } from "../../platform/errors";
 import { requireCustomer } from "../customers/queries";
 import { snapshotSchema } from "../orders/model";
+import { getSession } from "../tables/queries";
 
 export function validVisitCode(services: ApiServices, tokenHash: string) {
   return services.db
@@ -93,6 +94,10 @@ function listVisitParticipants(
 }
 
 export async function getDeviceParticipants(services: ApiServices, actor: Actor) {
+  if (actor.demoId) {
+    const session = await getSession(services, actor);
+    return { sessionId: session.id, participants: [], context: null };
+  }
   ensure(
     actor.kind === "device" && actor.deviceId && actor.tableSessionId && !actor.demoId,
     "DEVICE_REQUIRED",

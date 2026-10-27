@@ -83,7 +83,11 @@ Cloud datasource UIDは`grafanacloud-logs`・`grafanacloud-traces`。MCPはTempo
 
 GUIで商品をカートへ入れ、確認画面を経て明示承認する。`/api/table/orders`のログから`trace_id`を取り、`tempo_get-trace`でウォーターフォールを取得する。認可・確認版・冪等性の判定を迂回する測定用endpointは作らない。
 
-注文serviceには`tablecast.order.submit`の下に`session`・`catalog`・`plan`・`commit`・`notify`のspanがある。Web→service binding→API→注文serviceの親子関係とstart/endを確認する。`commit`配下のD1 batch子spanは時間が重なるため、子spanのdurationを足した値を応答時間としない。通知は注文確定後にawaitするので応答のクリティカルパスへ含まれる。
+認可は`tablecast.authentication.authorise`とデモの`tablecast.authentication.demo`、カゴは`tablecast.cart.update`配下の`session`・`pricing`・`commit`と`tablecast.table.read`を確認する。注文serviceは`tablecast.order.submit`配下の`session`・`prerequisites`・`commit`・`notify`を使う。Web→service binding→API→業務serviceの親子関係とstart/endを確認する。`commit`配下のD1 batch子spanは時間が重なるため、子spanのdurationを足した値を応答時間としない。SQL時間はD1の`cloudflare.d1.response.sql_duration_ms`、binding往復は親のD1 spanのwall timeで分ける。
+
+通知はDBとイベント確定後に`waitUntil`へ渡し、配送そのものは`tablecast.notification.deliver`で別計測する。操作側の`notify`は登録までであり、配送完了時間ではない。通知失敗も既存の`tablecast.notification_failed`へ記録し、WebSocket再接続とイベントpollで回復する。HTTPはレスポンス本文の受信完了、UIは操作イベントから件数・商品行など目的の表示更新までを別々に測る。応答サイズはHTTP本文のUTF-8 byte数で記録する。
+
+`table-operation-performance.test.ts`は本番Hono入口・Cookie認証・実D1で、通常卓とデモの8/120商品、1/100行のカゴと履歴を比較する。操作ごとに初回1標本とwarm 30標本を分け、warm p95を1000ms未満とする。binding往復、statement数、batchのSQL時間、通知後処理、本文サイズと業務結果も残す。ローカルの初回要求をCloudflareのcold isolateと同一視しない。previewの比較では対象SHA・環境・標本数を付け、実際のcold startは`faas.coldstart`のtraceが取得できる場合に別集計する。
 
 ローカルの一例は全体24ms、注文service17ms、通知5ms、商品設定取得4ms、DB確定3ms。単発のローカル測定であり、previewの性能値やp95を示さない。CPU処理だけの小さい区間はWorkersの時計の制約で0msになりうる。
 

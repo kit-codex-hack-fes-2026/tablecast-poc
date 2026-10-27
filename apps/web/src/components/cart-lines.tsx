@@ -14,9 +14,12 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { quantityControl } from "./ui/quantity-control-variants";
 
+export type CartDisplayLine = Omit<PricedLine, "planCovered" | "total" | "unitPrice"> &
+  Partial<Pick<PricedLine, "planCovered" | "total" | "unitPrice">>;
+
 /**
  * 注文かごの行。
- * API計算済みlinesを必須とし、productsで写真・条件名を補う。
+ * 確定金額はAPIのlines、未確定行は金額を持たない表示値を使う。
  * onEdit/onRemove/onQuantityを渡す時だけ対応操作が出る。
  * disabledで更新中の操作を防ぐ。
  * 表示側で価格や必須条件を再計算せず、明示注文確定はfeatureの確認フローへ残す。
@@ -31,10 +34,10 @@ export function CartLines({
   variant = "cards",
 }: {
   disabled?: boolean;
-  lines: PricedLine[];
-  onEdit?: (line: PricedLine) => void;
-  onQuantity?: (line: PricedLine, quantity: number) => void;
-  onRemove?: (line: PricedLine) => void;
+  lines: CartDisplayLine[];
+  onEdit?: (line: CartDisplayLine) => void;
+  onQuantity?: (line: CartDisplayLine, quantity: number) => void;
+  onRemove?: (line: CartDisplayLine) => void;
   products?: Product[];
   variant?: "cards" | "receipt";
 }) {
@@ -100,7 +103,13 @@ export function CartLines({
                       {line.name[locale]}
                     </h3>
                     <span className="ml-auto whitespace-nowrap font-semibold">
-                      <Money taxIncluded value={line.total} />
+                      {line.total === undefined ? (
+                        <span role="status" className="text-sm font-normal text-muted-foreground">
+                          {t("kiosk_cart_syncing")}
+                        </span>
+                      ) : (
+                        <Money taxIncluded value={line.total} />
+                      )}
                     </span>
                   </div>
                   <div
@@ -271,8 +280,8 @@ function LineQuantity({
   onQuantity,
 }: {
   disabled: boolean;
-  line: PricedLine;
-  onQuantity: (line: PricedLine, quantity: number) => void;
+  line: CartDisplayLine;
+  onQuantity: (line: CartDisplayLine, quantity: number) => void;
 }) {
   const { locale, t } = useI18n();
   const id = useId();

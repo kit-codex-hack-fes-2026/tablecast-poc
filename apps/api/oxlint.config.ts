@@ -166,7 +166,7 @@ export default defineConfig({
             disallow: { to: { module: { source: "drizzle-orm", internalPath: "d1" } } },
           },
           {
-            from: { file: { categories: "pure" } },
+            from: { file: { categories: ["context", "pure"] } },
             allow: { to: { file: { path: "src/db/records.ts" } }, dependency: { kind: "type" } },
           },
           ...modulePolicies,

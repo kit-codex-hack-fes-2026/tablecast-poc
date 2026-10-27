@@ -3,55 +3,62 @@ import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import * as business from "../../db/business-schema";
 import { tableSessions } from "../../db/table-schema";
-import { failureLog } from "../../platform/telemetry";
+import { failureLog, measured } from "../../platform/telemetry";
 export function voiceCondition(actor: Actor) {
   return actor.kind === "voice"
     ? sql` AND voice_state='active' AND voice_session_id=${actor.voiceSessionId ?? null} AND active_turn_id=${actor.turnId ?? null}`
     : sql``;
 }
 
-export async function notifyStore(
+export function notifyStore(
   services: ApiServices,
   storeId: string,
   sessionId?: string,
   insertedEvent?: { cursor: number; demoId?: string },
 ) {
-  const db = services.db;
+  const task = measured("tablecast.notification.deliver", async () => {
+    const db = services.db;
 
-  try {
-    // INSERTの確定cursorと認可済みscopeがあれば、通知用に同じ情報を再照会しない。
-    if (insertedEvent) {
+    try {
+      // INSERTの確定cursorと認可済みscopeがあれば、通知用に同じ情報を再照会しない。
+      if (insertedEvent) {
+        await services.env.TABLECAST_EVENTS.get(
+          services.env.TABLECAST_EVENTS.idFromName(
+            insertedEvent.demoId ? `tablecast-demo-${insertedEvent.demoId}` : storeId,
+          ),
+        ).notify(insertedEvent.cursor);
+        return;
+      }
+      const demo = sessionId
+        ? await db
+            .select({ id: business.tableSessions.id })
+            .from(business.tableSessions)
+            .where(
+              and(
+                eq(business.tableSessions.id, sessionId),
+                eq(business.tableSessions.store_id, storeId),
+                eq(business.tableSessions.kind, "demo"),
+              ),
+            )
+            .get()
+        : undefined;
+      const row = await db.get<{ cursor: null | number }>(
+        sql`SELECT MAX(cursor) AS cursor FROM table_events WHERE store_id=${storeId} AND ${demo ? sql`table_session_id=${demo.id}` : sql`(table_session_id IS NULL OR table_session_id IN (SELECT id FROM table_sessions WHERE kind='table'))`}`,
+      );
       await services.env.TABLECAST_EVENTS.get(
-        services.env.TABLECAST_EVENTS.idFromName(
-          insertedEvent.demoId ? `tablecast-demo-${insertedEvent.demoId}` : storeId,
-        ),
-      ).notify(insertedEvent.cursor);
-      return;
+        services.env.TABLECAST_EVENTS.idFromName(demo ? `tablecast-demo-${demo.id}` : storeId),
+      ).notify(row?.cursor ?? 0);
+    } catch (error) {
+      failureLog("tablecast.notification_failed", error, services.env, {
+        "tablecast.request.id": services.requestId,
+      });
     }
-    const demo = sessionId
-      ? await db
-          .select({ id: business.tableSessions.id })
-          .from(business.tableSessions)
-          .where(
-            and(
-              eq(business.tableSessions.id, sessionId),
-              eq(business.tableSessions.store_id, storeId),
-              eq(business.tableSessions.kind, "demo"),
-            ),
-          )
-          .get()
-      : undefined;
-    const row = await db.get<{ cursor: null | number }>(
-      sql`SELECT MAX(cursor) AS cursor FROM table_events WHERE store_id=${storeId} AND ${demo ? sql`table_session_id=${demo.id}` : sql`(table_session_id IS NULL OR table_session_id IN (SELECT id FROM table_sessions WHERE kind='table'))`}`,
-    );
-    await services.env.TABLECAST_EVENTS.get(
-      services.env.TABLECAST_EVENTS.idFromName(demo ? `tablecast-demo-${demo.id}` : storeId),
-    ).notify(row?.cursor ?? 0);
-  } catch (error) {
-    failureLog("tablecast.notification_failed", error, services.env, {
-      "tablecast.request.id": services.requestId,
-    });
+  });
+  if (services.backgroundTasks) {
+    services.backgroundTasks.handler(task);
+    return Promise.resolve();
   }
+  return task;
 }
 
 export function eventStatement(

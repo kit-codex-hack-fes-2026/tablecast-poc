@@ -36,6 +36,12 @@ export async function getDemoRecord(services: ApiServices, actor: Actor) {
   ensure(result, "DEMO_NOT_FOUND", 404);
   ensure(actor.kind === "voice" || actor.userId === result.demo.created_by, "DEMO_NOT_FOUND", 404);
   ensure(result.role && ["owner", "admin"].includes(result.role), "ADMIN_REQUIRED", 403);
+  services.tableAccess.demo = {
+    id: actor.demoId,
+    storeId: actor.storeId,
+    userId: actor.userId,
+    voiceSessionId: actor.voiceSessionId,
+  };
   return result;
 }
 export async function getDemo(services: ApiServices, actor: Actor): Promise<Demo> {
