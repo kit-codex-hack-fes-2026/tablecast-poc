@@ -131,15 +131,15 @@ export function LocalCameraOverlay({ camera }: { camera: ReturnType<typeof useLo
   const reduced = useReducedMotion();
   return (
     <>
-      {camera.stream && camera.captureCount > 0 && !reduced && (
+      {camera.stream && camera.captureCount > 0 && (
         <m.div
           key={camera.captureCount}
           data-ui="camera-shutter"
           data-capture-count={camera.captureCount}
-          className="pointer-events-none absolute inset-0 z-10 bg-on-inverse"
-          initial={{ opacity: 0.85 }}
+          className="pointer-events-none absolute inset-0 z-10 bg-on-inverse motion-reduce:hidden"
+          initial={reduced ? false : { opacity: 0.85 }}
           animate={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+          transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
           aria-hidden="true"
         />
       )}

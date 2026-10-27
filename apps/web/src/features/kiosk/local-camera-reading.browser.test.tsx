@@ -105,15 +105,17 @@ it("ON中の1枚をJPEGで取得し、読取状態を示して完了・OFFで解
     .poll(() =>
       document.querySelector('[data-ui="camera-shutter"]')?.getAttribute("data-capture-count"),
     )
-    .toBe(reduced ? undefined : "1");
+    .toBe("1");
   const firstShutter = document.querySelector('[data-ui="camera-shutter"]');
+  if (!(firstShutter instanceof HTMLElement)) throw new Error("取得成功時の表現がありません");
+  expect(getComputedStyle(firstShutter).display === "none").toBe(reduced);
   await screen.getByRole("button", { name: "画像を読み取る" }).click();
   await expect
     .poll(() =>
       document.querySelector('[data-ui="camera-shutter"]')?.getAttribute("data-capture-count"),
     )
-    .toBe(reduced ? undefined : "2");
-  expect(document.querySelector('[data-ui="camera-shutter"]') === firstShutter).toBe(reduced);
+    .toBe("2");
+  expect(document.querySelector('[data-ui="camera-shutter"]')).not.toBe(firstShutter);
   const image = new Image();
   image.src = imageUrl ?? "";
   await image.decode();
@@ -123,6 +125,18 @@ it("ON中の1枚をJPEGで取得し、読取状態を示して完了・OFFで解
   await screen.getByRole("button", { name: ja.kiosk_camera_stop }).click();
   expect(capture).toHaveBeenCalledOnce();
   expect(streams[0]?.getTracks()[0]?.readyState).toBe("ended");
+  await screen.getByRole("button", { name: ja.kiosk_camera_start }).click();
+  await expect
+    .poll(() => document.querySelector("video")?.readyState ?? 0)
+    .toBeGreaterThanOrEqual(2);
+  expect(document.querySelector('[data-ui="camera-shutter"]')).toBeNull();
+  await screen.getByRole("button", { name: "画像を読み取る" }).click();
+  await expect
+    .poll(() =>
+      document.querySelector('[data-ui="camera-shutter"]')?.getAttribute("data-capture-count"),
+    )
+    .toBe("1");
+  expect(capture).toHaveBeenCalledTimes(2);
 });
 
 it("外側へ切り替えると旧映像を解放し、外側のプレビューを鏡像にしない", async () => {

@@ -55,6 +55,7 @@ export function useLocalCamera() {
     setStream(undefined);
     setPending(false);
     setPhase("idle");
+    setCaptureCount(0);
   }, []);
   const playbackFailed = useCallback(
     (failedStream: MediaStream) => {
