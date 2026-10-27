@@ -75,7 +75,7 @@ export function ProductPage({
             {product.text[locale].displayName}
           </h2>
           <div className="mt-2 text-lg font-semibold">
-            <Money value={product.price} />
+            <Money taxIncluded value={product.price} />
           </div>
         </div>
         <Button

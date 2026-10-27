@@ -495,52 +495,57 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     return (
       <header
         data-theme-part="header"
-        className="grid h-16 shrink-0 grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2 border-b border-border bg-card px-4 max-[80rem]:h-28 max-[80rem]:grid-cols-[minmax(0,1fr)_auto] max-[80rem]:grid-rows-2 max-[80rem]:gap-y-0 max-[80rem]:px-3 max-sm:h-48 max-sm:grid-cols-[minmax(0,1fr)_auto] max-sm:grid-rows-4"
+        className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-card px-3"
       >
-        <div
-          data-ui="header-branding"
-          className="flex min-w-0 items-center gap-3 max-[80rem]:col-start-1 max-[80rem]:row-start-1 max-sm:col-span-2 max-sm:row-start-3 max-sm:gap-2"
-        >
-          <a className="inline-flex shrink-0 items-center" href={data.kind === "demo" ? "#" : "/"}>
-            <Brand className="w-28 max-sm:w-18" />
-          </a>
-          <span
-            aria-hidden
-            data-ui="header-divider"
-            className="h-8 shrink-0 border-l border-border"
-          />
-          <div data-ui="store-logo-banner" className="flex min-w-0 flex-nowrap items-center gap-2">
-            {banner && (
-              <img
-                src={`/media/${banner.imageKey}?width=480`}
-                alt={banner.alt[locale]}
-                className="h-10 w-auto max-w-40 shrink-0 object-contain object-left max-xl:h-8 max-xl:max-w-28 max-sm:h-6 max-sm:max-w-14"
-              />
-            )}
-            <div className="flex min-w-0 max-w-full items-center gap-2 whitespace-nowrap text-sm max-xl:text-xs">
-              <span className="min-w-0 truncate font-medium">{storeName ?? data.storeName}</span>
-              <strong className="shrink-0 text-muted-foreground">
-                {data.kind === "demo" ? t("demo_title") : data.tableName}
-              </strong>
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1 scrollbar-thin">
+          <div
+            data-ui="header-branding"
+            className="flex shrink-0 items-center gap-3 max-[70rem]:gap-1.5"
+          >
+            <a
+              className="inline-flex shrink-0 items-center"
+              href={data.kind === "demo" ? "#" : "/"}
+            >
+              <Brand className="w-28 max-[70rem]:w-16" />
+            </a>
+            <span
+              aria-hidden
+              data-ui="header-divider"
+              className="h-8 shrink-0 border-l border-border"
+            />
+            <div
+              data-ui="store-logo-banner"
+              className="flex shrink-0 flex-nowrap items-center gap-2 max-[70rem]:gap-1"
+            >
+              {banner && (
+                <img
+                  src={`/media/${banner.imageKey}?width=480`}
+                  alt={banner.alt[locale]}
+                  className="h-10 w-auto max-w-40 shrink-0 object-contain object-left max-xl:h-8 max-xl:max-w-28 max-[70rem]:h-6 max-[70rem]:max-w-12"
+                />
+              )}
+              <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm max-xl:text-xs">
+                <span className="font-medium">{storeName ?? data.storeName}</span>
+                <strong className="text-muted-foreground">
+                  {data.kind === "demo" ? t("demo_title") : data.tableName}
+                </strong>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center justify-end gap-2 max-[80rem]:col-start-1 max-[80rem]:row-start-2 max-[80rem]:justify-start max-sm:col-span-1 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-start max-sm:pt-1 max-sm:justify-start">
-          {renderVisitTools()}
-        </div>
-        <div className="flex w-full min-w-0 items-center justify-end gap-2 max-[80rem]:col-start-2 max-[80rem]:row-start-2 max-sm:col-start-1 max-sm:col-span-2 max-sm:row-start-4">
-          <LanguageSwitch
-            withIcon
-            onChange={(next) => language.mutate(next)}
-            disabled={language.isPending}
-          />
-          <CurrencySelector compact />
+          <div className="flex shrink-0 items-center gap-1">{renderVisitTools()}</div>
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            <LanguageSwitch
+              onChange={(next) => language.mutate(next)}
+              disabled={language.isPending}
+            />
+            <CurrencySelector compact />
+          </div>
         </div>
         <Button
           variant="outline"
-          size="lg"
+          size="sm"
           data-ui="call-staff"
-          className="h-11 min-h-11 shrink-0 whitespace-nowrap px-3 py-2 text-sm max-[80rem]:col-start-2 max-[80rem]:row-start-1 max-[80rem]:justify-self-end"
+          className="h-13.5 min-h-13.5 shrink-0 whitespace-nowrap px-2"
           onClick={() => call.mutate(false)}
           disabled={call.isPending || data.staffCalled}
         >
@@ -552,7 +557,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   }
   function renderVisitTools() {
     return (
-      <div className="flex min-w-0 items-center gap-1 max-sm:flex-wrap">
+      <div className="flex shrink-0 items-center gap-1">
         {data.kind === "table" && (
           <CustomerVisitPanel
             key={data.id}
@@ -613,7 +618,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                 <time>{time(order.createdAt, locale)}</time>
                 <Badge variant="outline">{t(`order_${order.status}`)}</Badge>
                 <span className="ml-auto font-semibold">
-                  {t("common_total")}: <Money value={order.total} />
+                  {t("common_total")}: <Money taxIncluded value={order.total} />
                 </span>
               </div>
               <CartLines
@@ -647,36 +652,36 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             <div>
               <dt className="text-muted-foreground">{t("admin_ordered")}</dt>
               <dd>
-                <Money value={data.bill.orderedTotal} />
+                <Money taxIncluded value={data.bill.orderedTotal} />
               </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{t("kiosk_plan_charge")}</dt>
               <dd>
-                <Money value={data.bill.planTotal} />
+                <Money taxIncluded value={data.bill.planTotal} />
               </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{t("kiosk_adjustment")}</dt>
               <dd>
-                <Money value={data.bill.adjustmentTotal} />
+                <Money taxIncluded value={data.bill.adjustmentTotal} />
               </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{t("kiosk_paid")}</dt>
               <dd>
-                <Money value={data.bill.paidTotal} />
+                <Money taxIncluded value={data.bill.paidTotal} />
               </dd>
             </div>
             <div data-ui="bill-total" className="">
               <dt className="text-muted-foreground">{t("kiosk_due")}</dt>
               <dd>
-                <Money value={data.bill.due} />
+                <Money taxIncluded value={data.bill.due} />
               </dd>
             </div>
           </dl>
           <p className="text-muted-foreground text-xs mt-2.5">
-            {t("kiosk_not_sent")}: <Money value={data.bill.cartTotal} />
+            {t("kiosk_not_sent")}: <Money taxIncluded value={data.bill.cartTotal} />
           </p>
           {data.billRequested ? (
             <div
@@ -801,7 +806,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                     <PaneDialog.Portal container={orderPane}>
                       <PaneDialog.Backdrop
                         data-ui="product-overlay"
-                        className="absolute inset-0 z-20 bg-overlay"
+                        className="absolute inset-0 z-20 bg-overlay/30"
                       />
                       <PaneDialog.Popup
                         aria-label={selection?.product.text[locale].displayName}
@@ -814,7 +819,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                               ) ?? false)
                         }
                         data-theme-part="dialog"
-                        className="absolute inset-2 z-30 flex min-h-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-xl sm:inset-3"
+                        className="absolute inset-4 z-30 flex min-h-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-xl sm:inset-6"
                       >
                         {selection && (
                           <ProductPage
@@ -918,7 +923,7 @@ function KioskMenuTabs({
   const orderedQuantity = data.orders
     .flatMap((order) => order.snapshot.lines)
     .reduce((sum, line) => sum + line.quantity, 0);
-  const priceClass = "block whitespace-nowrap text-sm tabular-nums [&_[aria-label]]:text-inherit";
+  const priceClass = "block whitespace-nowrap text-sm tabular-nums";
   const tabClass =
     "h-14 min-h-14 min-w-0 flex-col gap-0 px-1 py-0 text-sm leading-tight whitespace-nowrap text-center [&_svg]:size-4";
   return (
@@ -960,7 +965,7 @@ function KioskMenuTabs({
             <TabProductImages images={images} kind="cart" />
           </span>
           <span data-ui="tab-price" className={priceClass}>
-            <Money value={data.cart.total} />
+            <Money taxIncluded value={data.cart.total} />
           </span>
         </Tabs.Tab>
         <Tabs.Tab
@@ -982,7 +987,7 @@ function KioskMenuTabs({
             <TabProductImages images={orderedImages} kind="orders" />
           </span>
           <span data-ui="tab-price" className={priceClass}>
-            <Money value={data.bill.orderedTotal} />
+            <Money taxIncluded value={data.bill.orderedTotal} />
           </span>
         </Tabs.Tab>
       </Tabs.List>
@@ -1047,7 +1052,7 @@ function KioskPaneHeader({
         <div className="ml-auto text-right">
           <span className="block text-sm text-muted-foreground">{label}</span>
           <strong className="block text-base">
-            <Money value={amount} />
+            <Money taxIncluded value={amount} />
           </strong>
         </div>
       </div>

@@ -17,11 +17,9 @@ const languages = ["ja", "en"] as const;
 export function LanguageSwitch({
   onChange,
   disabled = false,
-  withIcon = false,
 }: {
   disabled?: boolean;
   onChange: (locale: Locale) => void;
-  withIcon?: boolean;
 }) {
   const { locale, t } = useI18n();
   const tabLanguages = [...new Set<Locale>([...languages, locale])];
@@ -29,16 +27,15 @@ export function LanguageSwitch({
   return (
     <fieldset
       data-ui="language-switch"
-      className={`flex shrink-0 items-center border border-border bg-muted p-1 ${withIcon ? "h-11 gap-1 rounded-xl border-0 bg-transparent p-0 [&_[data-slot=button]]:h-11 [&_[data-slot=button]]:min-h-11 [&_[data-slot=button]]:rounded-xl [&_[data-slot=button]]:py-0" : "rounded-lg"}`}
+      className="flex shrink-0 rounded-lg border border-border bg-muted p-1"
       aria-label={t("common_language")}
     >
-      {withIcon && <Languages aria-hidden className="mx-1 size-4 shrink-0" />}
       {tabLanguages.map((language) => (
         <Button
           key={language}
           className="whitespace-nowrap font-medium aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-sm max-xl:px-2 max-sm:px-1.5"
           size="sm"
-          variant={withIcon ? "outline" : "ghost"}
+          variant="ghost"
           type="button"
           lang={language}
           aria-pressed={locale === language}

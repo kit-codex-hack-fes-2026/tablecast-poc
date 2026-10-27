@@ -97,7 +97,7 @@ export function KioskGames({
       <div className="flex min-w-0 items-center gap-2">
         <ErrorNotice error={enter.error || end.error} />
         <Button
-          className="h-auto min-h-11 whitespace-normal px-3 py-2"
+          className="h-13.5 min-h-13.5 whitespace-nowrap px-2 text-sm"
           variant="outline"
           disabled={enter.isPending}
           onClick={() => enter.mutate()}

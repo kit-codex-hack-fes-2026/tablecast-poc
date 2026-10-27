@@ -4,7 +4,15 @@ import { money } from "../i18n/format";
 import { useI18n } from "../i18n/locale";
 
 /** 円は常に主表示。外貨は選択中で取得済みレートがあるときだけ添える。 */
-export function Money({ value, signed = false }: { signed?: boolean; value: number }) {
+export function Money({
+  value,
+  signed = false,
+  taxIncluded = false,
+}: {
+  signed?: boolean;
+  taxIncluded?: boolean;
+  value: number;
+}) {
   const { locale, t } = useI18n();
   const { currency, rates } = useContext(CurrencyContext);
   const rate = currency ? rates?.rates[currency] : undefined;
@@ -16,11 +24,16 @@ export function Money({ value, signed = false }: { signed?: boolean; value: numb
         {sign}
         {money(value, locale)}
       </span>
+      {taxIncluded && (
+        <span className="ml-1 text-sm font-normal text-muted-foreground">
+          {t("price_tax_included")}
+        </span>
+      )}
       {estimate && (
         <>
           {" "}
           <span
-            className="text-muted-foreground"
+            className="text-muted-foreground opacity-75"
             aria-label={`${t("currency_approximate")}: ${estimate}`}
           >
             ≈ {estimate}
@@ -35,9 +48,9 @@ export function Money({ value, signed = false }: { signed?: boolean; value: numb
 export function PriceChange({ value }: { value: number }) {
   return (
     <span
-      className={`${value > 0 ? "text-destructive" : "text-success"} [&_[aria-label]]:text-inherit`}
+      className={`inline-flex rounded-md px-1.5 py-0.5 ${value > 0 ? "bg-destructive-soft text-destructive" : "bg-success-soft text-success"}`}
     >
-      <Money value={value} signed />
+      <Money value={value} signed taxIncluded />
     </span>
   );
 }

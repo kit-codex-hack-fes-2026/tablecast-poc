@@ -100,7 +100,7 @@ export function CartLines({
                       {line.name[locale]}
                     </h3>
                     <span className="ml-auto whitespace-nowrap font-semibold">
-                      <Money value={line.total} />
+                      <Money taxIncluded value={line.total} />
                     </span>
                   </div>
                   <div className="flex flex-wrap items-start justify-between gap-2">

@@ -145,7 +145,7 @@ export const ProductMenu = memo(function ProductMenu({
                 {product.text[locale].displayName}
               </strong>
               <span className="mt-3 flex items-center justify-between gap-2 text-base font-semibold tabular-nums">
-                <Money value={product.price} />
+                <Money taxIncluded value={product.price} />
                 <span
                   className="flex items-center justify-center rounded-full bg-muted size-7"
                   aria-hidden="true"

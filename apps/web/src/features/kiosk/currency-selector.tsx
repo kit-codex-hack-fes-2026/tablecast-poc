@@ -24,7 +24,7 @@ export function CurrencySelector({ compact = false }: { compact?: boolean }) {
         aria-label={t("currency_select")}
         className={
           compact
-            ? "h-11 min-h-11 w-auto shrink-0 gap-2 rounded-xl text-sm"
+            ? "h-13.5 min-h-13.5 w-auto shrink-0 gap-1.5 rounded-xl px-2 text-sm"
             : "min-h-14 w-auto shrink-0 gap-2 rounded-xl text-sm"
         }
       >

@@ -51,7 +51,7 @@ it.each(["ja", "en"] as const)(
       0,
     );
     const header = document.querySelector("header");
-    expect(header?.getBoundingClientRect().height).toBe(112);
+    expect(header?.getBoundingClientRect().height).toBe(64);
     expect(header?.querySelectorAll('img[aria-hidden="true"]')).toHaveLength(3);
     const staffLabel = page
       .getByRole("button", { name: labels.kiosk_call_staff, exact: true })
