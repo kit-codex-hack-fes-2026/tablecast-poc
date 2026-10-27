@@ -13,7 +13,7 @@ description: 公開MCPへのOAuth接続、店舗・scopeの確認、作業別の
 
 読取りには`tablecast:read`、下書きの変更には`tablecast:write`が必要です。権限が不足するときは必要なscopeで再認可します。複数店舗では接続URLの`storeId`で対象を選び、省略時は許可された組織内の最初の店舗が対象です。IDを推測せず、`get_configuration`の店舗名・IDで確かめてください。
 
-[OAuth接続一覧](/account/mcp-sessions)では接続先・権限・期限を確認し、不要な接続を解除できます。Docsが読めることは、業務操作の認可を意味しません。
+[OAuth接続一覧](/account/mcp-sessions)では接続先・権限・期限を確認し、不要な接続を解除できます。ドキュメントが読めることは、業務操作の認可を意味しません。
 
 ## 作業に合う入口を選ぶ
 

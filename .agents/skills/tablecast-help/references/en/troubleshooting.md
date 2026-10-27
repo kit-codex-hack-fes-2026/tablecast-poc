@@ -5,7 +5,7 @@ description: Check the environment, permissions, draft version and microphone st
 
 ## Sign-in or store selection fails
 
-Check the invited account and organisation, then choose the store again. Reading the docs does not grant store access. Ask an organisation administrator to check membership rather than trying guessed organisation or store IDs.
+Check the invited account and organisation, then choose the store again. Reading the documentation does not grant store access. Ask an organisation administrator to check membership rather than trying guessed organisation or store IDs.
 
 ## MCP tools are missing or authorisation fails
 
@@ -23,4 +23,4 @@ Check the iPad’s microphone permission, volume, network and table registration
 
 Record the environment, time, page URL, reproduction steps, displayed error, draft ID and version. Exclude API keys, OAuth tokens, personal data and raw audio. Do not report an unverified connection, save or publication as successful.
 
-[Docs index](./index.md).
+[Documentation index](./index.md).

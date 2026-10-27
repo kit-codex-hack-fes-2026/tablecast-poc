@@ -15,4 +15,4 @@ Ask for a comparison of the last 28 days with the preceding 28 days, including s
 
 Propose concrete service wording, product descriptions or timing changes, together with a way to evaluate them. Reading statistics or requesting advice does not authorise menu or price changes. If asked to apply an idea, read the current settings and save only the selected changes as a draft. Follow [Configuration and publishing](./configuration.md) for validation and approval.
 
-Related: [MCP connections](./mcp.md), [Docs index](./index.md).
+Related: [MCP connections](./mcp.md), [Documentation index](./index.md).

@@ -130,7 +130,7 @@ stagingの管理画面に表示される固定URLを`tablecast-staging`名で直
 
 ## 公開ヘルプ
 
-主目的は、agent pluginに同梱する参照資料を`.agents/skills/tablecast-help/references`へ整備することである。agentは目的に合う章を相対リンクで読み、Webは同じ原稿を読むための表示面とする。画面と参照資料の表示名はDocsとし、既存のURLとskill識別子は維持する。配信形式や索引の説明を利用者向けの本文へ追加しない。
+主目的は、agent pluginに同梱する参照資料を`.agents/skills/tablecast-help/references`へ整備することである。agentは目的に合う章を相対リンクで読み、Webは同じ原稿を読むための表示面とする。画面と参照資料の表示名は日本語でドキュメント、英語でDocumentationとし、既存のURLとskill識別子は維持する。配信形式や索引の説明を利用者向けの本文へ追加しない。
 
 `/help`は利用者の表示言語から`/help/ja`または`/help/en`へ移動する公開入口である。日英の6章をFumadocsで表示し、ログイン・組織選択を要求しない。管理画面・導入画面・業務API・MCPの認証は従来どおり必要である。
 

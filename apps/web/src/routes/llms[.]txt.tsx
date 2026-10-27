@@ -7,7 +7,7 @@ export const Route = createFileRoute("/llms.txt")({
       GET: () =>
         new Response(
           [
-            "# TableCast Docs",
+            "# TableCast Documentation",
             "> Product reference documentation. Store data and MCP operations require OAuth. Read only the pages needed for your task.",
             ...helpSource
               .getLanguages()

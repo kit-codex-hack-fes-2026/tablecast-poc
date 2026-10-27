@@ -127,8 +127,8 @@ it("MCPとSkillsへ移っても選択店舗とグループの展開を保ち、�
   await expect.element(picker()).toMatchTextContent("本店");
   await expect.element(group("メニュー・接客")).toHaveAttribute("aria-expanded", "true");
   await expect.element(group("会員施策")).toHaveAttribute("aria-expanded", "false");
-  await expect.element(group("Docs")).not.toBeInTheDocument();
-  const docs = page.getByRole("link", { name: "Docs", exact: true });
+  await expect.element(group("ドキュメント")).not.toBeInTheDocument();
+  const docs = page.getByRole("link", { name: "ドキュメント", exact: true });
   await expect.element(docs).toHaveAttribute("href", "/help/ja");
   await expect.element(docs).toHaveAttribute("target", "_blank");
   await expect.element(docs).toHaveAttribute("rel", "noopener");

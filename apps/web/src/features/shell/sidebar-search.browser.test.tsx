@@ -64,7 +64,7 @@ async function show(
   );
   return router;
 }
-const input = () => page.getByRole("searchbox", { name: "ページとDocsを検索" });
+const input = () => page.getByRole("searchbox", { name: "ページとドキュメントを検索" });
 it("入力を保って失敗を再試行でき、アプリ候補・0件・本文候補を区別する", async () => {
   let failed = true;
   await show(async (query) => {
@@ -93,7 +93,7 @@ it("入力を保って失敗を再試行でき、アプリ候補・0件・本文
     .element(
       page
         .getByRole("alert")
-        .getByText("Docsを検索できませんでした。入力を保ったまま再試行できます。", {
+        .getByText("ドキュメントを検索できませんでした。入力を保ったまま再試行できます。", {
           exact: true,
         }),
     )
@@ -108,7 +108,7 @@ it("入力を保って失敗を再試行でき、アプリ候補・0件・本文
     .toBeVisible();
   await input().fill("tablecast-no-matches");
   await expect
-    .element(page.getByText("一致するDocsはありません。別の言葉で検索してください。"))
+    .element(page.getByText("一致するドキュメントはありません。別の言葉で検索してください。"))
     .toBeVisible();
   await expect
     .element(page.getByRole("link", { name: "設定と公開 商品の価格と説明を確認する" }))
@@ -129,7 +129,7 @@ it("折りたたんだサイドバーから検索を開き、入力と数字キ�
     async (query) => Response.json(query === "商品" ? candidates() : []),
     true,
   );
-  await page.getByRole("button", { name: "ページとDocsを検索", exact: true }).click();
+  await page.getByRole("button", { name: "ページとドキュメントを検索", exact: true }).click();
   await expect.element(input()).toHaveFocus();
   await input().fill("statistics");
   await expect.element(page.getByText("一致するページはありません。")).toBeVisible();
@@ -250,7 +250,7 @@ it("Markdownのcode・強調を描画し、英語の語形変化で一致した�
     false,
     "en",
   );
-  await page.getByRole("searchbox", { name: "Search pages and docs" }).fill("customers");
+  await page.getByRole("searchbox", { name: "Search pages and documentation" }).fill("customers");
   const result = page.getByRole("link", {
     name: "Membership A customer reads get_configuration and checks a guide.",
   });
@@ -294,7 +294,7 @@ it("遅い旧検索と0件の候補をEnterや数字で開かない", async () =
     expect(router.state.location.pathname).toBe("/");
     pending.resolve(Response.json(candidates()));
     await expect
-      .element(page.getByText("一致するDocsはありません。別の言葉で検索してください。"))
+      .element(page.getByText("一致するドキュメントはありません。別の言葉で検索してください。"))
       .toBeVisible();
     await expect
       .element(page.getByRole("link", { name: "商品ガイド1 商品の案内1" }))

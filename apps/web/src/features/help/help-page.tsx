@@ -9,6 +9,7 @@ import { RootProvider } from "fumadocs-ui/provider/tanstack";
 import { createContext, useContext } from "react";
 import { Brand } from "../../components/brand";
 import { PageHeader } from "../../components/page-header";
+import { useI18n } from "../../i18n/locale";
 import { helpI18n, helpSource, resolveHelpLink } from "../../lib/help-source";
 import { helpNavigationItem } from "../shell/navigation-model";
 import { HelpLayoutContainer, HelpPageContainer, HelpTableOfContents } from "./help-layout";
@@ -59,6 +60,7 @@ const translations = defineI18nUI(helpI18n, {
 });
 
 export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
+  const { t } = useI18n();
   const Body = page.data.body;
   const tree = helpSource.getPageTree(page.locale);
   const { Icon } = helpNavigationItem(page.url);
@@ -73,7 +75,7 @@ export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
           slots={helpLayoutSlots}
           tree={{
             ...tree,
-            children: [{ type: "folder", name: "Docs", children: tree.children }],
+            children: [{ type: "folder", name: t("help_title"), children: tree.children }],
           }}
           sidebar={{
             className: "border-e-0 bg-transparent",
@@ -85,7 +87,7 @@ export function HelpPage({ page }: { page: InferPageType<typeof helpSource> }) {
             title: (
               <>
                 <Brand variant="symbol" />
-                <span>TableCast Docs</span>
+                <span>TableCast {t("help_title")}</span>
               </>
             ),
             url: `/help/${page.locale}`,

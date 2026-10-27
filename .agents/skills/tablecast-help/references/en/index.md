@@ -1,5 +1,5 @@
 ---
-title: TableCast Docs
+title: TableCast Documentation
 description: Prepare your store, configure menus and service, and work with an MCP agent.
 ---
 

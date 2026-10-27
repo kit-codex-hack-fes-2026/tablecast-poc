@@ -27,7 +27,7 @@ export const mcpRoutes = apiFactory.createApp().all("/", async (c) => {
   const server = new McpServer(
     { name: "tablecast-settings", version: "0.1.0" },
     {
-      instructions: `TableCast Docs: ${c.env.TABLECAST_PUBLIC_ORIGIN}/help 。日英の索引とページ単位Markdown: ${c.env.TABLECAST_PUBLIC_ORIGIN}/llms.txt 。必要な章だけ読み、実際の入力schemaと取得した店舗・権限・版を使って操作する。Docsの閲覧は認証不要だが、業務操作にはOAuth認可が必要。下書きの保存・検証と、人による公開承認を区別する。`,
+      instructions: `TableCastのドキュメント: ${c.env.TABLECAST_PUBLIC_ORIGIN}/help 。日英の索引とページ単位Markdown: ${c.env.TABLECAST_PUBLIC_ORIGIN}/llms.txt 。必要な章だけ読み、実際の入力schemaと取得した店舗・権限・版を使って操作する。ドキュメントの閲覧は認証不要だが、業務操作にはOAuth認可が必要。下書きの保存・検証と、人による公開承認を区別する。`,
     },
   );
   registerRewardsTools(server, c.get("services"), actor);
