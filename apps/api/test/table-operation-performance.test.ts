@@ -204,7 +204,10 @@ it.each([
         .map((entry) => entry.elapsedMs)
         .toSorted((left, right) => left - right);
       expect(all).toHaveLength(31);
-      expect(all[Math.ceil(all.length * 0.95) - 1]).toBeLessThan(300);
+      expect(
+        all[Math.ceil(all.length * 0.95) - 1],
+        `${kind}/${count}/${operation}の全31標本p95`,
+      ).toBeLessThan(300);
     }
   },
 );

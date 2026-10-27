@@ -8,7 +8,10 @@ const unitTests = [
   "test/instructions.test.ts",
   "test/container-metrics.test.ts",
 ];
-const bindings = {
+const performanceTests = ["test/table-operation-performance.test.ts"];
+const tablecastMigrations = await readD1Migrations("./migrations");
+// HTTP性能の標本へ他fileのworkerd起動待ちを混ぜず、同じ300ms予算で後段に測る。
+const bindings = (performance = false) => ({
   plugins: [
     cloudflareTest({
       experimental: { newConfig: { configPath: "./cloudflare.config.ts" } },
@@ -45,10 +48,11 @@ const bindings = {
     setupFiles: ["./test/setup.ts"],
     // Vitest 5のwarm module一括転送はworkerdのWebSocket上限を超える。上流: workers-sdk#16331。
     fsModuleCache: false,
-    maxWorkers: 4,
-    name: "bindings",
-    include: ["test/**/*.test.ts"],
-    exclude: unitTests,
+    maxWorkers: performance ? 1 : 4,
+    name: performance ? "performance" : "bindings",
+    include: performance ? performanceTests : ["test/**/*.test.ts"],
+    exclude: performance ? unitTests : [...unitTests, ...performanceTests],
+    sequence: { groupOrder: performance ? 1 : 0 },
     deps: {
       optimizer: {
         ssr: {
@@ -68,12 +72,12 @@ const bindings = {
         },
       },
     },
-    fileParallelism: true,
+    fileParallelism: !performance,
     testTimeout: 30000,
     hookTimeout: 30000,
-    provide: { tablecastMigrations: await readD1Migrations("./migrations") },
+    provide: { tablecastMigrations },
   },
-};
+});
 export default defineConfig({
   test: {
     maxWorkers: 4,
@@ -86,7 +90,8 @@ export default defineConfig({
           environment: "node",
         },
       },
-      bindings,
+      bindings(),
+      bindings(true),
     ],
   },
 });
