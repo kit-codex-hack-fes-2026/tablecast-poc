@@ -20,7 +20,7 @@ const allergenLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18
 export function ProductAllergens({ product }: { product: Product }) {
   const { locale, t } = useI18n();
   return (
-    <div className="bg-surface-subtle rounded-xl p-3 mt-3">
+    <div className="bg-surface-subtle rounded-2xl p-4 mt-6">
       <h3 className="text-xs mb-2">{t("kiosk_allergens")}</h3>
       <p className="mb-2 text-sm font-semibold">
         {product.allergens.contains

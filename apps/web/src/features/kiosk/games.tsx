@@ -97,13 +97,15 @@ export function KioskGames({
       <div className="flex min-w-0 items-center gap-2">
         <ErrorNotice error={enter.error || end.error} />
         <Button
-          className="h-13.5 min-h-13.5 whitespace-nowrap px-2 text-sm"
-          variant="outline"
+          className="size-13.5"
+          size="icon-sm"
+          variant="ghost"
+          aria-label={t("games_title")}
+          title={t("games_title")}
           disabled={enter.isPending}
           onClick={() => enter.mutate()}
         >
-          <Gamepad2 />
-          <span>{t("games_title")}</span>
+          <Gamepad2 aria-hidden />
         </Button>
       </div>
       <Dialog.Root

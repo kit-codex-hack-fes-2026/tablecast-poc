@@ -506,7 +506,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
               className="inline-flex shrink-0 items-center"
               href={data.kind === "demo" ? "#" : "/"}
             >
-              <Brand className="w-28 max-[70rem]:w-16" />
+              <Brand className="w-28" />
             </a>
             <span
               aria-hidden
@@ -521,7 +521,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                 <img
                   src={`/media/${banner.imageKey}?width=480`}
                   alt={banner.alt[locale]}
-                  className="h-10 w-auto max-w-40 shrink-0 object-contain object-left max-xl:h-8 max-xl:max-w-28 max-[70rem]:h-6 max-[70rem]:max-w-12"
+                  className="h-10 w-auto shrink-0 object-contain object-left"
                 />
               )}
               <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm max-xl:text-xs">
@@ -819,7 +819,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                               ) ?? false)
                         }
                         data-theme-part="dialog"
-                        className="absolute inset-4 z-30 flex min-h-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-xl sm:inset-6"
+                        className="absolute inset-4 z-30 flex min-h-0 flex-col overflow-hidden rounded-3xl bg-card shadow-xl sm:inset-6"
                       >
                         {selection && (
                           <ProductPage

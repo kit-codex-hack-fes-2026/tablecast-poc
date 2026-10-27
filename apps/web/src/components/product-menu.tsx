@@ -11,9 +11,9 @@ import { StoreLogo } from "./store-logo";
 import { Button } from "./ui/button";
 
 const productGrid = tv({
-  base: "grid grid-cols-1 @xs/tablecast-menu:grid-cols-2 @2xl/tablecast-menu:grid-cols-3",
+  base: "grid grid-cols-1 @lg/tablecast-menu:grid-cols-2 @3xl/tablecast-menu:grid-cols-3",
   variants: {
-    recommended: { true: "gap-3", false: "gap-4 px-4 pb-4" },
+    recommended: { true: "gap-3", false: "gap-6 px-4 pb-4" },
   },
 });
 
@@ -65,10 +65,13 @@ export const ProductMenu = memo(function ProductMenu({
       )}
       {!productIds && <MenuBanners catalog={catalog} onChoose={onChoose} />}
       {!productIds && (
-        <fieldset className="flex gap-2 overflow-x-auto p-4" aria-label={t("kiosk_menu")}>
+        <fieldset
+          className="flex gap-2 overflow-x-auto px-4 pt-4 pb-6"
+          aria-label={t("kiosk_menu")}
+        >
           <Button
-            className="max-w-full shrink-0 border-border px-4 aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
-            variant="outline"
+            className="shrink-0 whitespace-nowrap"
+            variant={category === "all" ? "secondary" : "outline"}
             size="lg"
             type="button"
             data-theme-part="category-button"
@@ -79,8 +82,8 @@ export const ProductMenu = memo(function ProductMenu({
           </Button>
           {catalog.configuration.categories.map((item) => (
             <Button
-              className="max-w-full shrink-0 border-border px-4 aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
-              variant="outline"
+              className="shrink-0 whitespace-nowrap"
+              variant={category === item.id ? "secondary" : "outline"}
               size="lg"
               type="button"
               key={item.id}
@@ -107,13 +110,13 @@ export const ProductMenu = memo(function ProductMenu({
           <Button
             variant="outline"
             type="button"
-            className="h-full min-w-0 flex-col items-stretch justify-start gap-0 rounded-2xl border-border bg-card bg-none p-2 text-left shadow-none disabled:opacity-70"
+            className="h-full min-w-0 flex-col items-stretch justify-start gap-0 rounded-3xl border-border bg-card bg-none p-3 text-left shadow-none disabled:opacity-70"
             data-theme-part="product-card"
             key={product.id}
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <span className="relative flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-lg bg-muted">
+            <span className="relative flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-xl bg-muted">
               {product.imageKey ? (
                 <ProductImage
                   className="size-full object-contain"
@@ -130,8 +133,14 @@ export const ProductMenu = memo(function ProductMenu({
                 </span>
               )}
               {product.imageKey && product.imageKind === "illustration" && <IllustrationNotice />}
+              <span
+                className="absolute right-2 bottom-2 flex size-7 items-center justify-center rounded-full bg-card/90"
+                aria-hidden="true"
+              >
+                <Plus size={16} />
+              </span>
             </span>
-            <span className="flex flex-1 flex-col pt-3">
+            <span className="flex flex-1 flex-col px-1 pt-4 pb-1">
               {!product.available && (
                 <span className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
                   {!product.available && (
@@ -141,17 +150,11 @@ export const ProductMenu = memo(function ProductMenu({
                   )}
                 </span>
               )}
-              <strong className="block min-h-12 flex-1 text-base leading-snug font-semibold wrap-anywhere">
+              <strong className="block min-h-12 flex-1 text-base leading-6 font-semibold wrap-anywhere">
                 {product.text[locale].displayName}
               </strong>
               <span className="mt-3 flex items-center justify-between gap-2 text-base font-semibold tabular-nums">
                 <Money taxIncluded value={product.price} />
-                <span
-                  className="flex items-center justify-center rounded-full bg-muted size-7"
-                  aria-hidden="true"
-                >
-                  <Plus size={16} />
-                </span>
               </span>
             </span>
           </Button>

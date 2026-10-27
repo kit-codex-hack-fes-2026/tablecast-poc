@@ -47,7 +47,7 @@ export function CartLines({
       className={
         variant === "receipt"
           ? "relative divide-y divide-border"
-          : "relative flex flex-col gap-3 p-3"
+          : "relative flex flex-col gap-6 p-4"
       }
     >
       <AnimatePresence initial={false} mode="popLayout">
@@ -94,7 +94,7 @@ export function CartLines({
                     {product.imageKind === "illustration" && <IllustrationNotice />}
                   </div>
                 )}
-                <div className="min-w-0 space-y-3 pl-2">
+                <div className="min-w-0 space-y-4 pl-4">
                   <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 text-base">
                     <h3 className="min-w-0 flex-1 basis-40 wrap-anywhere font-semibold">
                       {line.name[locale]}
@@ -132,7 +132,7 @@ export function CartLines({
                               return (
                                 <span
                                   key={option.id}
-                                  className="inline-flex min-h-12.5 max-w-full flex-wrap items-center gap-2 rounded-2xl border border-border bg-background p-2 text-sm"
+                                  className="inline-flex min-h-12.5 max-w-full flex-wrap items-center gap-2 rounded-2xl bg-muted p-2 text-sm"
                                 >
                                   <span className="font-medium">
                                     {context?.group.text[locale].displayName ??
@@ -256,7 +256,7 @@ const CartLineSurface = forwardRef<HTMLLIElement, { children: ReactNode; framed?
         animate={{ opacity: 1, x: 0, y: 0 }}
         exit={{ opacity: 0, x: reduced ? 0 : -8 }}
         transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
-        className={`@container/cart-line relative overflow-hidden bg-card p-2 ${framed ? "rounded-2xl border border-border" : ""}`}
+        className={`@container/cart-line relative overflow-hidden bg-card p-4 ${framed ? "rounded-3xl border border-border" : ""}`}
       >
         {children}
       </m.li>

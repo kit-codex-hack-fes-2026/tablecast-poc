@@ -55,7 +55,7 @@ export function ProductPage({
     >
       <div
         data-ui="product-detail-header"
-        className={`grid shrink-0 items-start gap-3 border-b border-border bg-card p-3 ${product.imageKey ? "grid-cols-[8rem_minmax(0,1fr)] @min-[36rem]/product-dialog:grid-cols-[10rem_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}
+        className={`grid shrink-0 items-start gap-5 bg-card p-4 ${product.imageKey ? "grid-cols-[8rem_minmax(0,1fr)] @min-[36rem]/product-dialog:grid-cols-[10rem_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}
       >
         {product.imageKey && (
           <ProductImage
@@ -63,25 +63,25 @@ export function ProductPage({
             width={160}
             height={160}
             sizes="(min-width: 640px) 160px, 128px"
-            className="col-start-1 row-span-2 row-start-1 size-32 rounded-xl object-top-left @min-[36rem]/product-dialog:row-span-1 @min-[36rem]/product-dialog:size-40"
+            className="col-start-1 row-span-2 row-start-1 size-32 rounded-lg object-top-left @min-[36rem]/product-dialog:row-span-1 @min-[36rem]/product-dialog:size-40"
             src={`/media/${product.imageKey}`}
             alt={product.text[locale].displayName}
           />
         )}
         <div
-          className={`min-w-0 ${product.imageKey ? "col-start-2 row-start-2 @min-[36rem]/product-dialog:row-start-1" : "col-start-1 row-start-1"}`}
+          className={`min-w-0 py-2 ${product.imageKey ? "col-start-2 row-start-2 @min-[36rem]/product-dialog:row-start-1" : "col-start-1 row-start-1"}`}
         >
           <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold outline-none">
             {product.text[locale].displayName}
           </h2>
-          <div className="mt-2 text-lg font-semibold">
+          <div className="mt-3 text-lg font-semibold">
             <Money taxIncluded value={product.price} />
           </div>
         </div>
         <Button
           variant="outline"
           size="sm"
-          className={`row-start-1 justify-self-end rounded-xl ${product.imageKey ? "col-start-2 @min-[36rem]/product-dialog:col-start-3" : "col-start-2"}`}
+          className={`row-start-1 justify-self-end ${product.imageKey ? "col-start-2 @min-[36rem]/product-dialog:col-start-3" : "col-start-2"}`}
           onClick={onClose}
           disabled={busy}
         >
@@ -89,17 +89,17 @@ export function ProductPage({
           {t("common_close")}
         </Button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 scrollbar-thin">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 scrollbar-thin">
         <p className="mb-2 text-sm leading-relaxed">{product.text[locale].description}</p>
         {product.modifiers.length > 0 && (
-          <p className="mb-2 text-sm text-muted-foreground">{t("kiosk_option_price_note")}</p>
+          <p className="mb-6 text-sm text-muted-foreground">{t("kiosk_option_price_note")}</p>
         )}
         <div
           data-ui="customisation-groups"
-          className="grid items-start gap-3 @min-[36rem]/product-dialog:grid-cols-2"
+          className="grid items-start gap-6 @min-[36rem]/product-dialog:grid-cols-2"
         >
           {product.modifiers.map((group, groupIndex) => (
-            <fieldset className="min-w-0 space-y-1" key={group.id}>
+            <fieldset className="min-w-0 space-y-2" key={group.id}>
               <legend className="flex items-center justify-between gap-3 w-full pb-1 text-sm font-semibold">
                 {group.text[locale].displayName}
                 <Badge
@@ -286,7 +286,7 @@ export function ProductPage({
       </div>
       <div
         data-theme-part="checkout"
-        className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-card p-3"
+        className="flex shrink-0 items-center justify-between gap-3 bg-card p-3"
       >
         <div data-ui="quantity-control" className={quantityControl().group()}>
           <Button

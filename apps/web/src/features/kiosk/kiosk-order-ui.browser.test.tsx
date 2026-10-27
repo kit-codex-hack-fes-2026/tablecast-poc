@@ -92,14 +92,14 @@ it.each(["ja", "en"] as const)(
     expect(bounds.right).toBeLessThan(pane.getBoundingClientRect().right);
     const image = dialog.element().querySelector("img");
     expect(image?.getBoundingClientRect().width).toBe(160);
-    expect(image?.getBoundingClientRect().left).toBeCloseTo(bounds.left + 13, 0);
-    expect(image?.getBoundingClientRect().top).toBeCloseTo(bounds.top + 13, 0);
+    expect(image?.getBoundingClientRect().left).toBeCloseTo(bounds.left + 16, 0);
+    expect(image?.getBoundingClientRect().top).toBeCloseTo(bounds.top + 16, 0);
     const close = dialog
       .getByRole("button", { name: labels.common_close, exact: true })
       .element()
       .getBoundingClientRect();
-    expect(close.right).toBeCloseTo(bounds.right - 13, 0);
-    expect(close.top).toBeCloseTo(bounds.top + 13, 0);
+    expect(close.right).toBeCloseTo(bounds.right - 16, 0);
+    expect(close.top).toBeCloseTo(bounds.top + 16, 0);
     const overlay = pane.querySelector('[data-ui="product-overlay"]');
     expect(overlay?.getBoundingClientRect().width).toBe(pane.getBoundingClientRect().width);
     expect(dialog.element().querySelector('[data-ui="illustration-label"]')).toBeNull();
