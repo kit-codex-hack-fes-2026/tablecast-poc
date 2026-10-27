@@ -186,11 +186,16 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       });
       await interactive.goto("/");
       await expect(
-        interactive.getByRole("button", { name: "音声を再開", exact: true }),
+        interactive.getByRole("button", { name: ja.kiosk_voice_resume, exact: true }),
       ).toBeEnabled();
       await expect(
-        interactive.locator('[data-ui="voice-status"]').filter({ hasText: ja.kiosk_voice_paused }),
+        interactive
+          .getByRole("region", { name: ja.kiosk_conversation, exact: true })
+          .getByRole("button", { name: ja.kiosk_voice_resume, exact: true }),
       ).toBeVisible();
+      await expect(
+        interactive.getByRole("button", { name: ja.kiosk_voice_stop, exact: true }),
+      ).toHaveCount(0);
       await interactive.evaluate(async () => {
         await document.fonts.ready;
         const viewport = document.getElementById("tablecast-order")?.getBoundingClientRect();

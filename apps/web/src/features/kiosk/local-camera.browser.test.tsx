@@ -105,10 +105,33 @@ it("常設枠はオフでも同寸法を保ち、明示操作だけで撮影す�
   const frame = document.querySelector('[data-ui="camera-frame"]');
   if (!frame) throw new Error("常設カメラ枠がありません");
   const before = frame.getBoundingClientRect();
+  const toggleBefore = page
+    .getByRole("button", { name: ja.kiosk_camera_start })
+    .element()
+    .getBoundingClientRect();
   expect(capture).not.toHaveBeenCalled();
   expect(document.querySelector('[role="dialog"]')).toBeNull();
   await page.getByRole("button", { name: ja.kiosk_camera_start }).click();
   await expect.poll(() => document.querySelector("video")?.srcObject).toBe(stream);
+  await Promise.allSettled(
+    page
+      .getByRole("button", { name: ja.kiosk_camera_stop })
+      .element()
+      .getAnimations()
+      .map((animation) => animation.finished),
+  );
+  const toggleAfter = page
+    .getByRole("button", { name: ja.kiosk_camera_stop })
+    .element()
+    .getBoundingClientRect();
+  expect(toggleAfter.left).toBe(toggleBefore.left);
+  expect(toggleAfter.top).toBe(toggleBefore.top);
+  const colour = getComputedStyle(
+    page.getByRole("button", { name: ja.kiosk_camera_stop }).element(),
+  ).backgroundColor;
+  const alpha = Number(colour.match(/(?:\/|,)\s*([\d.]+)\s*\)$/)?.[1] ?? 1);
+  expect(alpha).toBeGreaterThan(0);
+  expect(alpha).toBeLessThan(1);
   expect(frame.getBoundingClientRect().height).toBe(before.height);
   await page.getByRole("button", { name: ja.kiosk_camera_stop }).click();
   expect(frame.getBoundingClientRect().height).toBe(before.height);
@@ -124,7 +147,7 @@ it("明示開始だけで映像を取得し、表示切替では保持し音声�
   await expect.poll(() => document.querySelector("video")?.srcObject).toBe(stream);
   expect(capture).toHaveBeenCalledWith({
     audio: false,
-    video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+    video: { facingMode: { ideal: "user" }, width: { ideal: 640 }, height: { ideal: 480 } },
   });
   await screen.getByRole("button", { name: "表示切替" }).click();
   expect(capture).toHaveBeenCalledTimes(1);
@@ -171,9 +194,9 @@ it("権限拒否を表示し、自動再試行せず明示操作で再開でき�
   await screen.getByRole("button", { name: ja.kiosk_camera_start }).click();
   await expect.element(screen.getByRole("alert")).toHaveTextContent(ja.kiosk_camera_permission);
   expect(screen.getByRole("alert").element().closest("[data-ui=camera-frame]")).not.toBeNull();
-  expect(screen.getByRole("alert").element().getBoundingClientRect().bottom).toBeLessThanOrEqual(
+  expect(screen.getByRole("alert").element().getBoundingClientRect().left).toBeGreaterThanOrEqual(
     screen.getByRole("button", { name: ja.kiosk_camera_start }).element().getBoundingClientRect()
-      .top,
+      .right,
   );
   await page.screenshot({ path: "../../../test-results/tablecast-camera-permission.png" });
   expect(capture).toHaveBeenCalledTimes(1);
@@ -223,7 +246,7 @@ it("カメラ切替の取得待ちも選択入口とfocusを保ち、旧トラ�
     .getBoundingClientRect();
   expect(selectBounds.width).toBeGreaterThanOrEqual(44);
   expect(toggleBounds.height).toBeGreaterThanOrEqual(44);
-  expect(selectBounds.right).toBeLessThanOrEqual(toggleBounds.left);
+  expect(toggleBounds.right).toBeLessThanOrEqual(selectBounds.left);
   await page.screenshot({ path: "../../../test-results/tablecast-camera-devices.png" });
   const trigger = cameraSelect.element();
   try {

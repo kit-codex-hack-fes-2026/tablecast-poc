@@ -68,6 +68,33 @@ export function CastEditor({
                 }
               />
             </ConfigurationSection>
+            <ConfigurationSection
+              title={t("editor_cast_opening")}
+              icon={MessageSquare}
+              headingId={`${id}-${itemLanguage}-opening`}
+            >
+              <p className="text-sm text-muted-foreground">{t("editor_cast_opening_hint")}</p>
+              <textarea
+                id={`${id}-opening-${itemLanguage}`}
+                lang={itemLanguage}
+                aria-labelledby={`${languageLabelId} ${id}-${itemLanguage}-opening`}
+                className="min-h-28 w-full rounded-xl border border-input bg-card p-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                maxLength={2000}
+                disabled={disabled}
+                value={value.openingInstructions?.[itemLanguage] ?? ""}
+                onChange={(event) =>
+                  onChange({
+                    ...value,
+                    openingInstructions: {
+                      ja: "",
+                      en: "",
+                      ...value.openingInstructions,
+                      [itemLanguage]: event.target.value,
+                    },
+                  })
+                }
+              />
+            </ConfigurationSection>
             <ConfigurationSection title={t("editor_cast_voice_group")} icon={AudioLines}>
               <StandardVoiceSelect
                 storeId={storeId}

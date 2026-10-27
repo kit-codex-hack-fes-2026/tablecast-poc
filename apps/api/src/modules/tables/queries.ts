@@ -1,4 +1,4 @@
-import { and, desc, eq, exists, gt, inArray, sum as sumAmount } from "drizzle-orm";
+import { and, desc, eq, exists, gt, inArray, ne, sum as sumAmount } from "drizzle-orm";
 import type { TableRecord } from "../../db/records";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
@@ -28,6 +28,7 @@ export async function getTableState(services: ApiServices, actor: Actor): Promis
             .where(
               and(
                 eq(business.tableEvents.table_session_id, sessionId),
+                ne(business.tableEvents.kind, "voice.suggestions"),
                 eq(business.tableEvents.store_id, actor.storeId),
               ),
             )

@@ -208,9 +208,9 @@ describe("逐次字幕と標準Responsesへの委任", () => {
     });
     const { value, changes } = connection();
     await value.start("ja");
-    await vi.advanceTimersByTimeAsync(179000);
+    await vi.advanceTimersByTimeAsync(29000);
     caption("user", "こんにちは", 100, 500);
-    await vi.advanceTimersByTimeAsync(179000);
+    await vi.advanceTimersByTimeAsync(29000);
     expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toEqual([]);
     await vi.advanceTimersByTimeAsync(1000);
     expect(requests.find(({ path }) => path.endsWith("/delegations"))?.body).toMatchObject({

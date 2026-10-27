@@ -89,7 +89,7 @@ it.each(["設定無効", "カートあり", "スタッフ対応中", "確認待�
     expect(provider).not.toHaveBeenCalled();
   },
 );
-it("同時要求を一度だけ受け入れ、読取専用toolと180秒の間隔を維持する", async () => {
+it("同時要求を一度だけ受け入れ、読取専用toolと30秒の間隔を維持する", async () => {
   await setup();
 
   const attempts = await Promise.all([

@@ -10,10 +10,12 @@ import {
   voiceConversationSchema,
   voiceDelegationSchema,
   voiceStartSchema,
+  voiceSuggestionsSchema,
 } from "./model";
 import { invokeVoiceTool } from "./realtime";
 import { startVoiceDelegation, startVoiceSession, stopVoiceSession } from "./session";
 import { finishVoiceTurn } from "./turns";
+import { createVoiceSuggestions } from "./use-cases/guidance";
 
 // 卓端末とデモの認証済み経路からだけ組み込む。音声用の共有bearer資格は不要。
 export const voiceRoutes = apiFactory
@@ -41,6 +43,17 @@ export const voiceRoutes = apiFactory
       );
       return c.json(result.state, result.completed ? 200 : 202);
     },
+  )
+  .post("/suggestions", validate(voiceSuggestionsSchema), async (c) =>
+    c.json(
+      await createVoiceSuggestions(
+        c.get("services"),
+        c.get("actor"),
+        c.req.valid("json"),
+        c.req.raw.signal,
+      ),
+      200,
+    ),
   )
   .post("/conversation", validate(voiceConversationSchema), async (c) =>
     c.json(
