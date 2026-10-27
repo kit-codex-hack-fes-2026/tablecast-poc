@@ -41,7 +41,7 @@ function WelcomeContent({ onStart, disabled }: { disabled?: boolean; onStart: ()
   return (
     <div
       data-ui="voice-welcome"
-      className="flex flex-1 flex-col items-center justify-center gap-4 py-3 text-center [@container_history_(max-height:360px)]:gap-2 [@container_history_(max-height:280px)]:py-0"
+      className="flex flex-1 flex-col items-center justify-center gap-3 py-2 text-center [@container_history_(max-height:360px)]:gap-2 [@container_history_(max-height:280px)]:py-0"
     >
       <VoiceWelcomeGraphic />
       <div className="space-y-2">
