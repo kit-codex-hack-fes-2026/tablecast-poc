@@ -713,6 +713,7 @@ export class VoiceConnection {
         if (!this.current(attempt) || this.activeDelegation !== id || controller.signal.aborted)
           return;
         let output: unknown;
+        let sessionAuthorized = false;
         try {
           if (controlAction || this.ending || pending.locale !== this.locale)
             throw new Error("Previous language or conversation has ended");
@@ -738,7 +739,14 @@ export class VoiceConnection {
           );
           if (!this.current(attempt) || this.activeDelegation !== id || controller.signal.aborted)
             return;
+          sessionAuthorized = true;
           output = result.result;
+          if (tool.toolName === "getCameraState") {
+            output = {
+              sessionAuthorized: true,
+              camera: this.camera?.getState?.() ?? { status: "unavailable" },
+            };
+          }
           if (result.cameraAction === "capture") {
             this.emit({
               progress: { stage: "reading", summary: this.view.progress?.summary ?? "" },
@@ -751,7 +759,7 @@ export class VoiceConnection {
             const captured = (await this.camera?.capture(
               AbortSignal.any([controller.signal, cameraRequest.signal]),
               Math.max(0, maxBytes - 2048),
-            )) ?? { error: "CAMERA_OFF" };
+            )) ?? { error: "CAMERA_UNAVAILABLE" };
             if (
               !this.current(attempt) ||
               this.activeDelegation !== id ||
@@ -784,6 +792,11 @@ export class VoiceConnection {
               }
             }
             if (this.cameraRequest === cameraRequest) this.cameraRequest = undefined;
+            output = {
+              ...z.record(z.string(), z.unknown()).parse(output),
+              sessionAuthorized: true,
+              camera: this.camera?.getState?.() ?? { status: "unavailable" },
+            };
           }
           if (result.conversationAction === "language" && result.locale) {
             this.updateLocale(result.locale);
@@ -807,7 +820,15 @@ export class VoiceConnection {
             this.cameraRequest = undefined;
             this.camera?.complete();
           }
-          output = { error: apiError(error)?.code ?? "VOICE_TOOL_FAILED" };
+          output = {
+            error: apiError(error)?.code ?? "VOICE_TOOL_FAILED",
+            ...(["captureCamera", "getCameraState"].includes(call.name)
+              ? {
+                  sessionAuthorized,
+                  camera: this.camera?.getState?.() ?? { status: "unavailable" },
+                }
+              : {}),
+          };
         }
         if (this.current(attempt) && this.activeDelegation === id && !controller.signal.aborted)
           this.channel?.send(
@@ -856,8 +877,8 @@ export class VoiceConnection {
         delegation_id: null,
         content:
           this.locale === "ja"
-            ? "今回の処理は完了できませんでした。注文の状態は画面で確認できます。"
-            : "That request could not be completed. The order status is available on the screen.",
+            ? "処理の結果を確認できませんでした。スタッフをお呼びしましょうか。"
+            : "I could not confirm the result. Would you like me to call a member of staff?",
       }),
     );
     this.emit({ status: "listening" });

@@ -1487,6 +1487,7 @@
   "kiosk_camera_use_back": "外側のカメラに切り替え",
   "kiosk_camera_use_front": "内側のカメラに切り替え",
   "kiosk_tool_capture_camera": "カメラの画像を確認",
+  "kiosk_tool_camera_state": "カメラの状態を確認",
   "kiosk_searching": "Webで調べています",
   "kiosk_reasoning_summary": "考え方の要約",
   "kiosk_sources": "参考情報の出典",

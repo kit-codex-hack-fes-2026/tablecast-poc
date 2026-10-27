@@ -1,7 +1,7 @@
 import type { Catalog, Product } from "@tablecast/api/schema";
 import { ImageOff, Plus } from "lucide-react";
 import { memo, useState } from "react";
-import { tv } from "tailwind-variants";
+import { cn, tv } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
 import { IllustrationNotice } from "./illustration-notice";
 import { MenuBanners } from "./menu-banners";
@@ -14,6 +14,9 @@ const productGrid = tv({
   base: "grid grid-cols-1 @lg/tablecast-menu:grid-cols-2 @3xl/tablecast-menu:grid-cols-3",
   variants: {
     recommended: { true: "gap-3", false: "gap-6 px-4 pb-4" },
+    compact: {
+      true: "flex items-start overflow-x-auto overscroll-x-contain snap-x snap-proximity pb-2",
+    },
   },
 });
 
@@ -28,20 +31,25 @@ export const ProductMenu = memo(function ProductMenu({
   catalog,
   onChoose,
   productIds,
+  compact = false,
 }: {
   catalog: Catalog;
+  compact?: boolean;
   onChoose: (product: Product) => void;
   productIds?: string[];
 }) {
   const { locale, t } = useI18n();
   const [category, setCategory] = useState("all");
-  const selectedIds = new Set(productIds);
   const masthead = catalog.configuration.appearance?.composition?.masthead;
-  const products = catalog.configuration.products.filter((product) =>
-    productIds
-      ? selectedIds.has(product.id)
-      : category === "all" || product.categoryId === category,
-  );
+  const byId = new Map(catalog.configuration.products.map((product) => [product.id, product]));
+  const products = productIds
+    ? [...new Set(productIds)].flatMap((id) => {
+        const product = byId.get(id);
+        return product ? [product] : [];
+      })
+    : catalog.configuration.products.filter(
+        (product) => category === "all" || product.categoryId === category,
+      );
   return (
     <div className="@container/tablecast-menu min-w-0">
       {!productIds && masthead?.visible && (
@@ -105,18 +113,30 @@ export const ProductMenu = memo(function ProductMenu({
           )}
         </p>
       )}
-      <div className={productGrid({ recommended: Boolean(productIds) })}>
+      <div
+        data-ui={compact ? "conversation-products" : undefined}
+        className={productGrid({ recommended: Boolean(productIds), compact })}
+      >
         {products.map((product) => (
           <Button
             variant="outline"
             type="button"
-            className="h-full min-w-0 flex-col items-stretch justify-start gap-0 rounded-3xl border-border bg-card bg-none p-3 text-left shadow-none disabled:opacity-70"
+            className={cn(
+              "h-full min-w-0 flex-col items-stretch justify-start gap-0 rounded-3xl border-border bg-card bg-none p-3 text-left shadow-none disabled:opacity-70",
+              compact &&
+                "h-auto w-44 max-w-full shrink-0 snap-start whitespace-normal rounded-xl p-2",
+            )}
             data-theme-part="product-card"
             key={product.id}
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <span className="relative flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-xl bg-muted">
+            <span
+              className={cn(
+                "relative flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-xl bg-muted",
+                compact && "h-24 aspect-auto",
+              )}
+            >
               {product.imageKey ? (
                 <ProductImage
                   className="size-full object-contain"
@@ -140,7 +160,7 @@ export const ProductMenu = memo(function ProductMenu({
                 <Plus size={16} />
               </span>
             </span>
-            <span className="flex flex-1 flex-col px-1 pt-4 pb-1">
+            <span className={cn("flex flex-1 flex-col px-1 pt-4 pb-1", compact && "pt-2")}>
               {!product.available && (
                 <span className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
                   {!product.available && (
@@ -150,10 +170,21 @@ export const ProductMenu = memo(function ProductMenu({
                   )}
                 </span>
               )}
-              <strong className="block min-h-12 flex-1 text-base leading-6 font-semibold wrap-anywhere">
+              <strong
+                title={product.text[locale].displayName}
+                className={cn(
+                  "block min-h-12 flex-1 text-base leading-6 font-semibold wrap-anywhere",
+                  compact && "line-clamp-2 min-h-10 text-sm leading-5",
+                )}
+              >
                 {product.text[locale].displayName}
               </strong>
-              <span className="mt-3 flex items-center justify-between gap-2 text-base font-semibold tabular-nums">
+              <span
+                className={cn(
+                  "mt-3 flex items-center justify-between gap-2 text-base font-semibold tabular-nums",
+                  compact && "mt-2 text-sm",
+                )}
+              >
                 <Money taxIncluded value={product.price} />
               </span>
             </span>

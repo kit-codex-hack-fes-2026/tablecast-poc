@@ -9,6 +9,7 @@ export const speechSpeedInputSchema = z.object({ speed: speechSpeedSchema }).str
 export const voiceToolNameSchema = z.enum([
   "showReference",
   "captureCamera",
+  "getCameraState",
   "endConversation",
   "getCatalog",
   "getCustomerContext",

@@ -32,6 +32,7 @@ import { VoiceWelcome } from "./voice-welcome";
 const toolLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]>> = {
   showReference: "kiosk_tool_show_reference",
   captureCamera: "kiosk_tool_capture_camera",
+  getCameraState: "kiosk_tool_camera_state",
   getCatalog: "kiosk_tool_get_catalog",
   getTableState: "kiosk_tool_get_table_state",
   updateCart: "kiosk_tool_update_cart",
@@ -209,9 +210,14 @@ export function VoicePanelContent({
     return events.flatMap((event) =>
       event.kind === "voice.products" && event.data.turnId === turnId
         ? [
-            <div className="mt-3" key={event.cursor}>
+            <div
+              data-ui="voice-products-entry"
+              className="mt-3 min-w-0 max-w-full motion-safe:animate-tablecast-state"
+              key={event.cursor}
+            >
               <ProductMenu
                 catalog={catalog}
+                compact
                 productIds={
                   Array.isArray(event.data.productIds)
                     ? event.data.productIds.filter((id): id is string => typeof id === "string")
@@ -264,7 +270,11 @@ export function VoicePanelContent({
                 {timeline.map((entry) => {
                   const line = entry.line;
                   return line ? (
-                    <ConversationEntry className="space-y-2" key={line.id}>
+                    <ConversationEntry
+                      className="min-w-0 max-w-full space-y-2"
+                      key={line.id}
+                      pinned={line.id === merged.at(-1)?.id}
+                    >
                       <ConversationMessage
                         line={line}
                         status={
@@ -279,7 +289,7 @@ export function VoicePanelContent({
                       />
                     </ConversationEntry>
                   ) : (
-                    <ConversationEntry key={entry.id} className="w-full space-y-2">
+                    <ConversationEntry key={entry.id} className="min-w-0 max-w-full space-y-2">
                       {toolCards(entry.turnId)}
                       {products(entry.turnId)}
                       {events
@@ -325,7 +335,12 @@ export function VoicePanelContent({
                 view={view}
               />
               {active && Boolean(view.suggestions?.length) && (
-                <div className="flex flex-wrap gap-2" aria-label={t("kiosk_suggestions")}>
+                <div
+                  data-ui="voice-suggestions-entry"
+                  key={view.suggestions?.join("\u0000")}
+                  className="flex flex-wrap gap-2 motion-safe:animate-tablecast-state"
+                  aria-label={t("kiosk_suggestions")}
+                >
                   {view.suggestions?.map((text) => (
                     <Button
                       key={text}

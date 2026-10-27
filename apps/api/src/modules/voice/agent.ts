@@ -4,7 +4,7 @@ import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { DisplayCurrencyContext } from "../currency/model";
 import { ensure } from "../../platform/errors";
-import { localeSchema } from "../../platform/model";
+import { localeSchema, id as productIdSchema } from "../../platform/model";
 import { getCatalog } from "../catalog/queries";
 import { createMenuSearch } from "../catalog/search";
 import { maxConfigurationProducts } from "../configuration/model";
@@ -80,6 +80,12 @@ export function createCastTools(
       inputSchema: z
         .object({
           query: z.string().max(100).optional(),
+          productIds: z
+            .array(productIdSchema)
+            .min(1)
+            .max(8)
+            .optional()
+            .describe("検索済みの商品ID。必須選択肢・追加料金を含む詳細を必ず返す"),
           offset: z.number().int().min(0).max(maxConfigurationProducts).optional(),
           limit: z.number().int().min(1).max(8).optional(),
           show: z.boolean().optional(),
@@ -94,6 +100,7 @@ export function createCastTools(
         .strict(),
       execute: async ({
         query,
+        productIds,
         offset = 0,
         limit = 8,
         show = false,
@@ -105,7 +112,11 @@ export function createCastTools(
         const catalog = await getCatalog(services, actor.storeId, actor.demoId);
         const locale = session.locale;
         const currency = quoteCurrency ?? selectedCurrency;
-        const { ids, detail } = createMenuSearch(catalog.configuration)(query);
+        const search = productIds
+          ? { ids: productIds, detail: true }
+          : createMenuSearch(catalog.configuration)(query);
+        const ids = productIds ? [...new Set(productIds)] : search.ids;
+        const detail = Boolean(productIds) || search.detail;
         const byId = new Map(
           catalog.configuration.products.map((product) => [product.id, product]),
         );
@@ -113,7 +124,8 @@ export function createCastTools(
           const product = byId.get(id);
           return product ? [product] : [];
         });
-        const products = matches.slice(offset, offset + limit);
+        ensure(!productIds || matches.length === ids.length, "PRODUCT_NOT_FOUND", 422);
+        const products = productIds ? matches : matches.slice(offset, offset + limit);
         if (show) {
           ensure(trigger === "user", "VOICE_TOOL_FORBIDDEN", 403);
           if (products.length)
@@ -127,7 +139,7 @@ export function createCastTools(
         return {
           displayCurrency: currencyMetadata(currency, rates),
           total: matches.length,
-          more: offset + products.length < matches.length,
+          more: !productIds && offset + products.length < matches.length,
           ...(show
             ? { displayedProductIds: products.slice(0, 4).map((product) => product.id) }
             : {}),
@@ -156,6 +168,15 @@ export function createCastTools(
             displayName: product.text[locale].displayName,
             speechName: product.text[locale].speechName,
             description: product.text[locale].description,
+            requiredSelections:
+              product.modifiers
+                ?.filter((modifier) => modifier.min > 0)
+                .map((modifier) => ({
+                  id: modifier.id,
+                  displayName: modifier.text[locale].displayName,
+                  min: modifier.min,
+                  max: modifier.max,
+                })) ?? [],
             ...(detail
               ? {
                   allergens: product.allergens,
@@ -219,7 +240,7 @@ export function createCastTools(
             inputSchema: z.object({ question: z.string().min(1).max(300) }).strict(),
             execute: async ({ question }) => {
               guard();
-              return { question };
+              return { question, sessionAuthorized: true };
             },
           }),
           endConversation: castTool({
@@ -230,6 +251,16 @@ export function createCastTools(
               guard();
               await getSession(services, actor);
               return { ending: true };
+            },
+          }),
+          getCameraState: castTool({
+            id: "getCameraState",
+            description: voiceToolDescriptions.getCameraState,
+            inputSchema: z.object({}).strict(),
+            execute: async () => {
+              guard();
+              // 端末の権限・映像状態は認可完了後にWebが付加する。
+              return { sessionAuthorized: true };
             },
           }),
           setLanguage: castTool({

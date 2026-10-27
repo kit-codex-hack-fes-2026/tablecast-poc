@@ -1487,6 +1487,7 @@
   "kiosk_camera_use_back": "Switch to rear camera",
   "kiosk_camera_use_front": "Switch to front camera",
   "kiosk_tool_capture_camera": "Reading the camera image",
+  "kiosk_tool_camera_state": "Checking the camera state",
   "kiosk_searching": "Searching the web",
   "kiosk_reasoning_summary": "Reasoning summary",
   "kiosk_sources": "Sources",

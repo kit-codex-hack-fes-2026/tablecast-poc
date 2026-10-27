@@ -56,6 +56,7 @@ function Surface() {
         >
           画像を読み取る
         </button>
+        <button onClick={() => setResult(JSON.stringify(camera.getState()))}>状態を確認</button>
         <button onClick={camera.complete}>読取を完了</button>
         <p>{result}</p>
       </MotionProvider>
@@ -202,4 +203,21 @@ it("外側へ切り替えると旧映像を解放し、外側のプレビュー�
       return video ? getComputedStyle(video).scale : "";
     })
     .toBe("none");
+});
+
+it("端末のOFFと撮影許可の拒否を状態照会で区別し、照会だけでは撮影を始めない", async () => {
+  const media = vi
+    .spyOn(navigator.mediaDevices, "getUserMedia")
+    .mockRejectedValue(new DOMException("Permission denied", "NotAllowedError"));
+  const screen = await render(<Surface />);
+  await screen.getByRole("button", { name: "状態を確認", exact: true }).click();
+  await expect.element(screen.getByText('{"status":"off"}', { exact: true })).toBeVisible();
+  expect(media).not.toHaveBeenCalled();
+  await screen.getByRole("button", { name: ja.kiosk_camera_start, exact: true }).click();
+  await expect.element(screen.getByRole("alert")).toHaveTextContent(ja.kiosk_camera_permission);
+  await screen.getByRole("button", { name: "状態を確認", exact: true }).click();
+  await expect
+    .element(screen.getByText('{"status":"permission-denied"}', { exact: true }))
+    .toBeVisible();
+  expect(media).toHaveBeenCalledOnce();
 });

@@ -1,6 +1,6 @@
 import { MoveDiagonal2 } from "lucide-react";
-import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
-import type { VoiceCamera } from "./voice-model";
+import { type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { VoiceCamera, VoiceCameraState } from "./voice-model";
 import { useI18n } from "../../i18n/locale";
 import { LocalCameraControls, LocalCameraOverlay } from "./local-camera-controls";
 import { captureCameraFrame } from "./local-camera-dom";
@@ -15,6 +15,15 @@ export function useLocalCamera() {
   const streamRef = useRef<MediaStream | undefined>(undefined);
   const video = useRef<HTMLVideoElement>(null);
   const generation = useRef(0);
+  const state = useRef<VoiceCameraState>({ status: "off" });
+  const getState = useCallback((): VoiceCameraState => {
+    if (document.hidden) return { status: "unavailable" };
+    if (!streamRef.current && ["ready", "capturing", "reading"].includes(state.current.status))
+      return { status: "off" };
+    if (streamRef.current && (!video.current || video.current.readyState < 2))
+      return { status: "starting" };
+    return state.current;
+  }, []);
   const attachVideo = useCallback((element: HTMLVideoElement | null) => {
     video.current = element;
   }, []);
@@ -23,18 +32,34 @@ export function useLocalCamera() {
   const [facing, setFacing] = useState<"environment" | "user">("user");
   const [phase, setPhase] = useState<"capturing" | "idle" | "reading">("idle");
   const [captureCount, setCaptureCount] = useState(0);
-  const complete = useCallback(() => setPhase("idle"), []);
+  const complete = useCallback(() => {
+    if (streamRef.current) state.current = { ...state.current, status: "ready" };
+    setPhase("idle");
+  }, []);
   const capture = useCallback<VoiceCamera["capture"]>(async (signal, maxBytes) => {
     const source = streamRef.current;
     const element = video.current;
     const request = generation.current;
-    if (!source) return { error: "CAMERA_OFF" };
+    if (!source)
+      return {
+        error:
+          state.current.status === "permission-denied"
+            ? "CAMERA_PERMISSION_DENIED"
+            : state.current.status === "starting"
+              ? "CAMERA_STARTING"
+              : state.current.status === "unavailable"
+                ? "CAMERA_UNAVAILABLE"
+                : "CAMERA_OFF",
+      };
     if (!element || document.hidden) return { error: "CAMERA_UNAVAILABLE" };
+    if (element.readyState < 2) return { error: "CAMERA_STARTING" };
+    state.current = { ...state.current, status: "capturing" };
     setPhase("capturing");
     try {
       const imageUrl = await captureCameraFrame(element, signal, maxBytes);
       if (generation.current !== request || source !== streamRef.current || document.hidden)
         return { error: "CAMERA_UNAVAILABLE" };
+      state.current = { ...state.current, status: "reading" };
       setPhase("reading");
       setCaptureCount((count) => count + 1);
       return { imageUrl };
@@ -52,6 +77,7 @@ export function useLocalCamera() {
     generation.current += 1;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = undefined;
+    state.current = { status: "off" };
     setStream(undefined);
     setPending(false);
     setPhase("idle");
@@ -70,6 +96,7 @@ export function useLocalCamera() {
       stop();
       const request = generation.current;
       const preferredFacing = requestedFacing ?? facingRef.current;
+      state.current = { status: "starting" };
       setError(undefined);
       setPending(true);
       setDeviceId(requestedDeviceId ?? "");
@@ -98,6 +125,7 @@ export function useLocalCamera() {
             ? actualFacing
             : preferredFacing;
         setFacing(facingRef.current);
+        state.current = { status: "ready", facing: facingRef.current };
         setDeviceId(next.getVideoTracks()[0]?.getSettings().deviceId ?? requestedDeviceId ?? "");
         setPending(false);
         next
@@ -109,6 +137,13 @@ export function useLocalCamera() {
       } catch (cause) {
         if (generation.current !== request) return;
         setPending(false);
+        state.current = {
+          status:
+            cause instanceof DOMException &&
+            ["NotAllowedError", "SecurityError"].includes(cause.name)
+              ? "permission-denied"
+              : "unavailable",
+        };
         setError(
           cause instanceof DOMException && ["NotAllowedError", "SecurityError"].includes(cause.name)
             ? "permission"
@@ -139,6 +174,22 @@ export function useLocalCamera() {
     hasFacing &&
     devices.length > 1 &&
     Boolean(navigator.mediaDevices?.getSupportedConstraints?.().facingMode);
+  useLayoutEffect(() => {
+    state.current = {
+      status: pending
+        ? "starting"
+        : error === "permission"
+          ? "permission-denied"
+          : error
+            ? "unavailable"
+            : stream
+              ? phase === "idle"
+                ? "ready"
+                : phase
+              : "off",
+      ...(stream ? { facing } : {}),
+    };
+  }, [pending, error, stream, phase, facing]);
   return {
     stream,
     pending,
@@ -157,6 +208,7 @@ export function useLocalCamera() {
     captureCount,
     capture,
     complete,
+    getState,
   };
 }
 

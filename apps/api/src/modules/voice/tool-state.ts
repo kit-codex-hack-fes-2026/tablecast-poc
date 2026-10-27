@@ -1,6 +1,7 @@
 import type { DisplayCurrencyCode, ExchangeRates } from "../currency/model";
 import type { TableState } from "../tables/model";
 import { approximateAmounts, currencyMetadata } from "../currency/display";
+import { showProductsSchema } from "./model";
 
 // GUIのイベント履歴・二言語snapshotを毎回モデルへ複製しない。
 export function voiceTableState(
@@ -8,12 +9,16 @@ export function voiceTableState(
   currency: DisplayCurrencyCode | null = null,
   rates?: ExchangeRates,
 ) {
+  const displayed = showProductsSchema.shape.productIds.safeParse(
+    state.events.findLast((event) => event.kind === "voice.products")?.data.productIds,
+  );
   return {
     displayCurrency: currencyMetadata(currency, rates),
     locale: state.locale,
     speechSpeed: state.speechSpeed,
     uiSection: state.uiSection,
     selectedProductId: state.selectedProductId,
+    displayedProductIds: displayed.success ? displayed.data : [],
     staffCalled: state.staffCalled,
     cart: {
       ...state.cart,

@@ -23,7 +23,7 @@ Liveのresponse.event内のresponse.createdでresponse IDを記録し、response
 
 ブラウザーはHonoの認証済みtool経路へ転送する。価格計算、認可、注文・カート操作をブラウザーへ複製しない。業務の失敗はtool結果へ返し、音声接続を維持する。古い委任の遅着結果で次の委任を継続しない。
 
-商品検索は最大8件とtotal/moreを返し、offsetで続きへ進む。商品紹介はgetCatalog(show=true)で検索と最大4枚のカード表示をまとめる。注文する商品を特定したら必要な詳細を取得する。ツール結果からGUIのイベント履歴・二言語の注文snapshotの重複を除き、価格・版・必須選択・認可の検査は維持する。
+商品検索は最大8件とtotal/moreを返し、offsetで続きへ進む。商品紹介はgetCatalog(show=true)で検索と最大4枚のカード表示をまとめる。概要にもrequiredSelectionsを返し、注文する商品を特定したらgetCatalogのproductIdsへ最大8件まとめて指定して必須・任意の選択肢、追加料金、条件を含む詳細を取得する。検索語の一致度によらず詳細を取得でき、画面での選択を依頼しない。getTableStateは最後に会話へ表示したdisplayedProductIdsも画面と同じ順で返す。setUiSectionはメニューペインの一覧・商品詳細・カート・履歴・会計への遷移を担当する。代表発話と失敗時の契約は[接客シナリオ](scenarios.md)を参照する。ツール結果からGUIのイベント履歴・二言語の注文snapshotの重複を除き、価格・版・必須選択・認可の検査は維持する。
 
 ### 外貨参考額と端末の表示設定
 
@@ -61,7 +61,7 @@ Webの固定イベント試験は全tool結果の返却・一回の継続・エ�
 
 ## カメラ画像
 
-カメラは利用客のON操作で有効になる。captureCameraはAPIで卓・session・turnを認可してから現在映像を1枚だけ取得する。圧縮JPEGはWebRTCの転送上限内で標準Responsesのinput_imageへ送り、DB・R2・ログへ保存しない。OFF・取消・取得失敗はtool結果として返し、音声を維持する。
+カメラは利用客のON操作で有効になる。captureCameraはAPIで卓・session・turnを認可してから現在映像を1枚だけ取得する。圧縮JPEGはWebRTCの転送上限内で標準Responsesのinput_imageへ送り、DB・R2・ログへ保存しない。getCameraStateは同じAPI認可を通し、画像取得や許可要求をせず、端末のoff・starting・ready・capturing・reading・permission-denied・unavailableを返す。APIがsessionAuthorizedを返し、Webがデバイス識別情報を含まない現在のcamera状態を付加する。端末の自己申告をAPI認可の根拠にはせず、認可やON/OFFを客に調べさせない。OFF・取消・取得失敗は状態付きのtool結果として返し、音声を維持する。
 
 内側・外側の切替はカメラだけを更新し、旧トラックを解放する。内側プレビューだけ鏡像とし、取得画像はソースの向きを保つ。非表示・停止・言語変更後の未送信画像は破棄する。取得中はカメラ枠、読取中はspinnerと日英の状態文で示す。Browserのlocal-camera-reading試験はChromium/WebKitの実MediaStreamとJPEG decodeを使う。
 

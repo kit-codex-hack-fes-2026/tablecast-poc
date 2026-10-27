@@ -286,7 +286,7 @@ export async function mountKiosk() {
   );
 }
 
-export function notify(kind: "cart.updated" | "configuration.published") {
+export function notify(kind: "cart.updated" | "configuration.published" | "table.ui") {
   current.cursor += 1;
   current.events.push({
     cursor: current.cursor,
