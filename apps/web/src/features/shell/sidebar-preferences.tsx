@@ -4,7 +4,7 @@ import { usePanelCookies } from "../../lib/panel-layout";
 
 const cookieName = "tablecast-navigation";
 const eventName = "tablecast-navigation-change";
-const group = z.enum(["operations", "menu", "rewards", "store", "workspace"]);
+const group = z.enum(["operations", "menu", "rewards", "store", "workspace", "help"]);
 export type NavigationGroupId = z.infer<typeof group>;
 const schema = z.object({
   userId: z.string(),

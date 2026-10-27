@@ -43,8 +43,9 @@ export async function recordConversationItems(
     const kind = item.role === "user" ? "voice.user" : "voice.assistant";
     const data = JSON.stringify({
       turnId: item.itemId,
+      voiceSessionId: input.voiceSessionId,
       role: item.role,
-      locale: session.locale,
+      locale: item.locale ?? session.locale,
       text: item.text,
       interrupted: item.interrupted,
     });

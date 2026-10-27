@@ -315,7 +315,9 @@ it("組織切替で期間・検索・ページを初期化し、旧組織の遅�
       }),
     )
     .toBe(true);
-  await expect.element(page.getByRole("searchbox")).toHaveValue("");
+  await expect
+    .element(page.getByRole("searchbox", { name: "卓名で絞り込み", exact: true }))
+    .toHaveValue("");
   await expect
     .poll(() =>
       fetch.mock.calls.some(

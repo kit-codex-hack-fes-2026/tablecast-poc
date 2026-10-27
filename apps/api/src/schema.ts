@@ -182,6 +182,8 @@ export {
   voiceListQuerySchema,
   voicePageSchema,
   voiceProductsEventSchema,
+  voiceReferenceEventSchema,
+  voiceReferenceSchema,
   voiceSummarySchema,
   voiceToolEventSchema,
   voiceToolNameSchema,
@@ -189,7 +191,13 @@ export {
   voiceTurnSchema,
 } from "./modules/voice/model";
 
-export type { VoiceListQuery, VoicePage, VoiceSummary, VoiceTrigger } from "./modules/voice/model";
+export type {
+  VoiceListQuery,
+  VoicePage,
+  VoiceReference,
+  VoiceSummary,
+  VoiceTrigger,
+} from "./modules/voice/model";
 export { showProductsSchema } from "./modules/voice/model";
 
 export { apiErrorSchema, localeSchema, validationIssuesSchema } from "./platform/model";

@@ -36,6 +36,13 @@ export const configurationSchema = z
           ja: z.string().min(1).max(100).nullable(),
           en: z.string().min(1).max(100).nullable(),
         }),
+        openingInstructions: z
+          .object({
+            ja: z.string().max(2000),
+            en: z.string().max(2000),
+          })
+          .strict()
+          .optional(),
         proactive: z.boolean(),
       })
       .strict(),

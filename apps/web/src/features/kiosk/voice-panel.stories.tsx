@@ -58,6 +58,28 @@ export const Paused: Story = {
     ],
   },
 };
+export const CompactPaused: Story = {
+  ...Paused,
+  name: "iPadの既定240px幅で中央から再開",
+  render: (args) => (
+    <div className="h-173 w-60">
+      <VoicePanel {...args} />
+    </div>
+  ),
+};
+export const CompactPausedEnglish: Story = {
+  ...CompactPaused,
+  name: "iPadの既定240px幅で中央から再開・英語",
+  globals: { locale: "en" },
+  args: {
+    ...Paused.args,
+    lines: Paused.args?.lines?.slice(1).map((line) => ({
+      ...line,
+      locale: "en",
+      text: "Would you prefer ninety or one hundred and eighty millilitres?",
+    })),
+  },
+};
 export const LongEnglish: Story = {
   name: "長い英語と中断履歴",
   tags: ["!test"],
@@ -337,12 +359,8 @@ export const PausedWithStaleTool: Story = {
   args: { ...ToolAndCards.args, view: { status: "paused" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const visual = canvasElement.querySelector("figure[data-voice-state]");
-    if (!(visual instanceof HTMLElement)) throw new Error("音声の状態表示がありません");
-    await expect(visual).toBeVisible();
-    await expect(visual).toHaveAttribute("data-voice-state", "paused");
-    await expect(visual).toHaveAttribute("data-motion", "still");
-    await expect(within(visual).queryByText("商品を表示", { exact: true })).not.toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "音声を再開" })).toBeVisible();
+    await expect(canvas.queryByText("実行中", { exact: true })).not.toBeInTheDocument();
     await expect(canvas.getByText("中断", { exact: true })).toBeVisible();
   },
 };

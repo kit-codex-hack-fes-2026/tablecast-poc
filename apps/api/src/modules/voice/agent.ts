@@ -4,7 +4,7 @@ import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { DisplayCurrencyContext } from "../currency/model";
 import { ensure } from "../../platform/errors";
-import { type Locale, localeSchema } from "../../platform/model";
+import { localeSchema } from "../../platform/model";
 import { getCatalog } from "../catalog/queries";
 import { createMenuSearch } from "../catalog/search";
 import { maxConfigurationProducts } from "../configuration/model";
@@ -25,14 +25,10 @@ import {
   showProducts,
 } from "../tables/use-cases/presentation";
 import { showProductsSchema, type VoiceTrigger } from "./model";
-import { castInstructions } from "./prompt";
 import { setSpeechSpeed } from "./service";
 import { castTool } from "./tool";
 import { voiceTableState } from "./tool-state";
-
-export function castSessionInstructions(locale: Locale, trigger: VoiceTrigger = "user") {
-  return `${castInstructions}\n個人履歴やいつもの注文を依頼されたらgetCustomerContextで対象と許可を確認する。本人の明確な好み・希望を聞いた時はgetCustomerContextとsaveCustomerMemoryで保存する。声から本人を識別せず、対象が曖昧なら保存しない。応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalogで最新情報を確認する。カートや注文の操作前にgetTableStateで現在の版を取得する。同じ委任で取得した情報を再取得しない。操作結果の新しい版を次の操作に使う。独立した照会はまとめて呼ぶ。商品をカートに入れる依頼ではgetCatalogとgetTableStateを同じresponseで並列に呼び、両結果からupdateCartする。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介はgetCatalog(show=true)で検索とカード表示を一回で行う。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替える。prepareConfirmationの結果に含まれる商品・数量・選択肢・合計を短く伝えて承認を求める。同じ客発話でprepareConfirmationとsubmitOrderを呼ばない。"}`;
-}
+import { showReference } from "./use-cases/references";
 
 export function createCastTools(
   services: ApiServices,
@@ -210,10 +206,43 @@ export function createCastTools(
     }),
     ...(trigger === "user"
       ? {
+          showReference: castTool({
+            id: "showReference",
+            description:
+              "Web検索で確認した参考ページをQR・タイトル・favicon・OGP画像付きで会話欄へ表示する。質問の補足をスマホで読むと役立つとき、最も関連するページを一つ選ぶ。urlは公開HTTPS、URLはUTF-8で1000byteまで。一応答の表示は最大3件。店舗の価格・在庫・注文の根拠にはしない。",
+            inputSchema: z
+              .object({ url: z.url().max(2048), title: z.string().max(200).optional() })
+              .strict(),
+            execute: async (input) => {
+              guard();
+              return showReference(services, actor, input, signal);
+            },
+          }),
+          captureCamera: castTool({
+            id: "captureCamera",
+            description:
+              "客がONにしたカメラから現在の画像を必要時に1枚読み取る。questionに確認したい内容を指定する。OFFならON操作を案内し、連続撮影・本人識別・画像からの価格やアレルギー安全性の断定はしない。画像が届くまで見えたと答えない。",
+            inputSchema: z.object({ question: z.string().min(1).max(300) }).strict(),
+            execute: async ({ question }) => {
+              guard();
+              return { question };
+            },
+          }),
+          endConversation: castTool({
+            id: "endConversation",
+            description:
+              "もう大丈夫です・今は結構です・That is all, thank youなど、接客が不要という明確な意思で音声を終了する。注文確認へのそれで大丈夫ですは承認であり終了ではない。曖昧なら意図を確認する。終了後の注文操作は行わない。",
+            inputSchema: z.object({}).strict(),
+            execute: async () => {
+              guard();
+              await getSession(services, actor);
+              return { ending: true };
+            },
+          }),
           setLanguage: castTool({
             id: "setLanguage",
             description:
-              "客の明示依頼で表示と音声の言語をja（日本語）/en（British English）へ切り替える。音声は停止し、画面の再開ボタンで新言語を開始する。同じ言語なら変更不要。切替後に追加のツールや本文を生成しない。",
+              "客の明示依頼で表示と音声の言語をja（日本語）/en（British English）へ切り替える。同じ音声接続と声を維持し、次の応答から新言語を使う。切替後は古い確認や追加の業務操作を続けない。",
             inputSchema: z.object({ locale: localeSchema }).strict(),
             execute: async (input) => {
               guard();

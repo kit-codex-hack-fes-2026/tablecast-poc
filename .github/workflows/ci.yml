@@ -202,7 +202,9 @@ jobs:
         if: failure()
         with:
           name: tablecast-components-${{ github.event.pull_request.head.sha || github.sha }}
-          path: apps/web/test-results/browser/**/*.png
+          path: |
+            apps/web/test-results/browser/**/*.png
+            apps/web/test-results/attachments/failure-screenshots/**/*.png
           retention-days: 1
 
   e2e:

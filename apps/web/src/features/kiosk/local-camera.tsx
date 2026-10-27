@@ -1,17 +1,46 @@
 import { MoveDiagonal2 } from "lucide-react";
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
+import type { VoiceCamera } from "./voice-model";
 import { useI18n } from "../../i18n/locale";
-import { CameraDeviceSetting, LocalCameraStatus, LocalCameraToggle } from "./local-camera-controls";
+import { LocalCameraOverlay } from "./local-camera-controls";
+import { captureCameraFrame } from "./local-camera-dom";
 
 export function LocalCameraFrame() {
   const camera = useLocalCamera();
   return <LocalCamera camera={camera} />;
 }
 
-// 鏡専用。VoiceConnectionへ渡さず、映像の送信・保存・フレーム取得を行わない。
+// 映像の寿命と1枚の取得を所有し、注文・認可・音声接続を扱わない。
 export function useLocalCamera() {
   const streamRef = useRef<MediaStream | undefined>(undefined);
+  const video = useRef<HTMLVideoElement>(null);
   const generation = useRef(0);
+  const attachVideo = useCallback((element: HTMLVideoElement | null) => {
+    video.current = element;
+  }, []);
+  const facingRef = useRef<"environment" | "user">("user");
+  const [hasFacing, setHasFacing] = useState(false);
+  const [facing, setFacing] = useState<"environment" | "user">("user");
+  const [phase, setPhase] = useState<"capturing" | "idle" | "reading">("idle");
+  const complete = useCallback(() => setPhase("idle"), []);
+  const capture = useCallback<VoiceCamera["capture"]>(async (signal, maxBytes) => {
+    const source = streamRef.current;
+    const element = video.current;
+    const request = generation.current;
+    if (!source) return { error: "CAMERA_OFF" };
+    if (!element || document.hidden) return { error: "CAMERA_UNAVAILABLE" };
+    setPhase("capturing");
+    try {
+      const imageUrl = await captureCameraFrame(element, signal, maxBytes);
+      if (generation.current !== request || source !== streamRef.current || document.hidden)
+        return { error: "CAMERA_UNAVAILABLE" };
+      setPhase("reading");
+      return { imageUrl };
+    } catch {
+      if (generation.current === request) setPhase("idle");
+      return { error: "CAMERA_UNAVAILABLE" };
+    }
+  }, []);
   const [stream, setStream] = useState<MediaStream>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<"permission" | "unavailable">();
@@ -23,6 +52,7 @@ export function useLocalCamera() {
     streamRef.current = undefined;
     setStream(undefined);
     setPending(false);
+    setPhase("idle");
   }, []);
   const playbackFailed = useCallback(
     (failedStream: MediaStream) => {
@@ -33,9 +63,10 @@ export function useLocalCamera() {
     [stop],
   );
   const start = useCallback(
-    async (requestedDeviceId?: string) => {
+    async (requestedDeviceId?: string, requestedFacing?: "environment" | "user") => {
       stop();
       const request = generation.current;
+      const preferredFacing = requestedFacing ?? facingRef.current;
       setError(undefined);
       setPending(true);
       setDeviceId(requestedDeviceId ?? "");
@@ -46,7 +77,7 @@ export function useLocalCamera() {
           video: {
             ...(requestedDeviceId
               ? { deviceId: { exact: requestedDeviceId } }
-              : { facingMode: "user" }),
+              : { facingMode: { ideal: preferredFacing } }),
             width: { ideal: 640 },
             height: { ideal: 480 },
           },
@@ -57,6 +88,13 @@ export function useLocalCamera() {
         }
         streamRef.current = next;
         setStream(next);
+        const actualFacing = next.getVideoTracks()[0]?.getSettings().facingMode;
+        setHasFacing(actualFacing === "environment" || actualFacing === "user");
+        facingRef.current =
+          actualFacing === "environment" || actualFacing === "user"
+            ? actualFacing
+            : preferredFacing;
+        setFacing(facingRef.current);
         setDeviceId(next.getVideoTracks()[0]?.getSettings().deviceId ?? requestedDeviceId ?? "");
         setPending(false);
         next
@@ -89,7 +127,33 @@ export function useLocalCamera() {
       stop();
     };
   }, [stop]);
-  return { stream, pending, error, devices, deviceId, start, stop, playbackFailed };
+  const flip = useCallback(
+    () => start(undefined, facingRef.current === "user" ? "environment" : "user"),
+    [start],
+  );
+  const canFlip =
+    typeof navigator !== "undefined" &&
+    hasFacing &&
+    devices.length > 1 &&
+    Boolean(navigator.mediaDevices?.getSupportedConstraints?.().facingMode);
+  return {
+    stream,
+    pending,
+    error,
+    devices,
+    deviceId,
+    start,
+    stop,
+    playbackFailed,
+    attachVideo,
+    facing,
+    mirrored: hasFacing && facing === "user",
+    flip,
+    canFlip,
+    phase,
+    capture,
+    complete,
+  };
 }
 
 export function LocalCamera({
@@ -109,12 +173,9 @@ export function LocalCamera({
   const maxWidth = Math.min(320, bounds.width, bounds.height * aspectRatio);
   const minWidth = Math.min(
     maxWidth,
-    Math.max(100, 48 * aspectRatio, Math.min(140, 96 * aspectRatio)),
+    Math.max(100, (camera.canFlip ? 96 : 48) * aspectRatio, Math.min(140, 96 * aspectRatio)),
   );
   const width = Math.min(maxWidth, Math.max(minWidth, preferredWidth));
-  const narrow = width < 100;
-  const controlsAtTop = narrow || (camera.devices.length > 1 && width < 140);
-  const compactStatus = width / aspectRatio < 80 || controlsAtTop;
   const resize = (value: number) =>
     setPreferredWidth(Math.min(maxWidth, Math.max(minWidth, value)));
   const readAspectRatio = () => {
@@ -146,51 +207,48 @@ export function LocalCamera({
     update();
     return () => observer.disconnect();
   }, [boundsRef]);
-  const { playbackFailed } = camera;
+  const { playbackFailed, attachVideo } = camera;
   useEffect(() => {
     const element = video.current;
     if (!element) return undefined;
     const stream = camera.stream;
     element.srcObject = stream ?? null;
     if (!stream) return undefined;
+    attachVideo(element);
     let cancelled = false;
     void element.play().catch(() => {
       if (!cancelled) playbackFailed(stream);
     });
     return () => {
       cancelled = true;
+      attachVideo(null);
       if (element.srcObject === stream) {
         element.pause();
         element.srcObject = null;
       }
     };
-  }, [camera.stream, playbackFailed]);
+  }, [camera.stream, playbackFailed, attachVideo]);
   return (
     <figure
       ref={frame}
-      className="relative min-w-0 shrink-0 self-start overflow-hidden rounded-2xl bg-control shadow-surface"
+      className="pointer-events-auto relative min-w-0 shrink-0 self-start overflow-hidden rounded-2xl bg-control shadow-surface"
       style={{ width, aspectRatio }}
       data-ui="camera-frame"
       data-camera-state={camera.pending ? "pending" : camera.stream ? "on" : "off"}
+      data-capture-state={camera.phase}
     >
       <video
         ref={video}
         autoPlay
         muted
         playsInline
-        className="absolute inset-0 size-full -scale-x-100 object-contain"
+        className={`absolute inset-0 size-full object-contain ${camera.mirrored ? "-scale-x-100" : ""}`}
         aria-label={t("kiosk_camera_mirror")}
         hidden={!camera.stream}
         onLoadedMetadata={readAspectRatio}
         onResize={readAspectRatio}
       />
-      {!camera.stream && !compactStatus && <LocalCameraStatus camera={camera} narrow={narrow} />}
-      <div
-        className={`absolute left-1 flex gap-1 ${controlsAtTop ? "top-1" : "bottom-1"} ${narrow ? "flex-col" : ""}`}
-      >
-        <CameraDeviceSetting camera={camera} />
-        <LocalCameraToggle camera={camera} compactStatus={compactStatus} />
-      </div>
+      <LocalCameraOverlay camera={camera} width={width} aspectRatio={aspectRatio} />
       <div
         role="separator"
         tabIndex={0}

@@ -2,6 +2,7 @@ import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import type { LiveMessage } from "./voice-model";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
+import { StoreTheme } from "../../components/store-theme";
 import "../../styles.css";
 import { type ConversationLine, conversationLines } from "./conversation-model";
 import {
@@ -267,20 +268,23 @@ it("商品カードだけの業務イベントも字幕と独立して時系列�
   };
   const screen = await render(
     <Surface>
-      <VoicePanel
-        view={{ status: "paused" }}
-        lines={[line, later]}
-        events={[
-          event(2, "voice.products", { turnId: "tablecast-business", productIds: [product.id] }),
-        ]}
-        catalog={catalog}
-        onChoose={choose}
-        onStart={vi.fn<() => void>()}
-      />
+      <StoreTheme appearance={{ parts: { "product-card": { font: "serif" } } }}>
+        <VoicePanel
+          view={{ status: "paused" }}
+          lines={[line, later]}
+          events={[
+            event(2, "voice.products", { turnId: "tablecast-business", productIds: [product.id] }),
+          ]}
+          catalog={catalog}
+          onChoose={choose}
+          onStart={vi.fn<() => void>()}
+        />
+      </StoreTheme>
     </Surface>,
   );
   const card = screen.getByRole("button", { name: /月凪/ });
   await expect.element(card).toBeVisible();
+  expect(getComputedStyle(card.element()).fontFamily).toContain("sans-serif");
   const before = screen.getByText(line.text).element();
   const after = screen.getByText(later.text).element();
   expect(

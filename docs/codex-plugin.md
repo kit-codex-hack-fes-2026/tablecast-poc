@@ -8,7 +8,7 @@
 
 店舗の利用者は、公開MCP `https://tablecast.kit-codex.workers.dev/mcp` へOAuthで接続する。リポジトリのclone、開発サーバー、pluginの生成は不要である。
 
-`/account/integrations/plugins` はGitHub Marketplaceからの導入とリモートMCPへのOAuth接続を案内する。`/account/integrations/manual` は任意のMCPクライアント向けの接続URL・Streamable HTTP・OAuth 2.1/PKCE/DCR設定と、用途別の3つのSKILL.mdの任意ダウンロードを提供する。staging以外の画面の接続URLは公開pluginの`plugins/tablecast/.mcp.json`を直接参照し、ローカル画面でも本番を案内する。スキルの追加だけでは接続や権限を付与しない。
+`/account/integrations/plugins` はGitHub Marketplaceからの導入とリモートMCPへのOAuth接続を案内する。`/account/integrations/manual` は任意のMCPクライアント向けの接続URL・Streamable HTTP・OAuth 2.1/PKCE/DCR設定と、用途別の4つのSKILL.mdの任意ダウンロードを提供する。staging以外の画面の接続URLは公開pluginの`plugins/tablecast/.mcp.json`を直接参照し、ローカル画面でも本番を案内する。スキルの追加だけでは接続や権限を付与しない。
 
 `/account/mcp-sessions` ではOAuth接続の日時・scope・有効期限を確認し、不要な接続を解除する。認可コードとPKCE、組織選択、明示同意を経て発行したアクセストークンだけを受け付ける。クライアントの初回接続には動的クライアント登録を使用する。登録だけでは店舗へのアクセス権を持たない。認可・scopeの契約は[MCP仕様](mcp.md)を参照する。
 
@@ -21,7 +21,7 @@ codex plugin marketplace add kit-codex-hack-fes-2026/tablecast-poc
 codex plugin add tablecast@tablecast
 ```
 
-`.agents/plugins/marketplace.json`が`plugins/tablecast`のMCP接続と設定・ゲーム制作、提案、分析の3つのskillを配布する。配布元の`source: local`は同じリポジトリ内のplugin配置を示し、接続するMCPはCloudflare本番のHTTPS URLである。
+`.agents/plugins/marketplace.json`が`plugins/tablecast`のMCP接続と設定・ゲーム制作、提案、分析、テーマ制作、ヘルプの5つのskillを配布する。配布元の`source: local`は同じリポジトリ内のplugin配置を示し、接続するMCPはCloudflare本番のHTTPS URLである。
 
 インストール時のOAuth画面でTableCastへログインし、対象の組織とscopeを確認して同意する。認証情報の保管はクライアントに任せる。新しいチャットを開始し、`get_configuration`が対象店舗のIDと名前を返すことを確認する。インストール成功だけで接続済みと判定しない。[公式のplugin導入ガイド](https://learn.chatgpt.com/docs/plugins)を参照する。
 
@@ -56,7 +56,7 @@ pluginを導入済みなら同じMCPを手動で重複登録しない。ChatGPT 
 
 統計は[閉卓基準の指標](statistics.md)と取得条件を示す。MCPがまだ未配備の環境では未実装toolを装わず、提供された表・CSVで進められる部分を案内する。合成履歴から実店舗の人気や施策効果を断定しない。
 
-配布の確認では各SKILL.md単体のmetadataと参照先、実際のダウンロード内容、plugin生成物の3つのskillを確認する。接続・認可、実クライアントの資料読解と会話品質、実公開の検証はそれぞれ分けて記録する。
+配布の確認では各SKILL.md単体のmetadataと参照先、実際のダウンロード内容、plugin生成物の5つのskillを確認する。接続・認可、実クライアントの資料読解と会話品質、実公開の検証はそれぞれ分けて記録する。
 
 ## ローカル接続
 
@@ -127,3 +127,15 @@ stagingの管理画面に表示される固定URLを`tablecast-staging`名で直
 接続先を書き換えずに同梱skillを同期する場合は`bun --no-env-file scripts/tablecast-plugin.ts --skills-only`を使う。ローカル・公開plugin生成時にも同じ正本をコピーする。手動MCP導入画面から各skillを個別にダウンロードできる。テーマskillは自己完結し、リポジトリ内の開発資料へのアクセスを要求しない。
 
 `tablecast-theme`は画像中心の制作例、素材ごとの生成プロンプト、登録画像とレイアウト設定の対応を同梱する。`get_theme_spec`から稼働中サーバーの現行schemaを取得し、クライアントの画像生成機能を使って背景・透過ロゴ案・チラシを独立して作る。MCPサーバーに画像生成モデルやAPIキー設定を追加しない。提供済み公式ロゴを優先し、実UIの確認結果と未生成の素材を区別する。
+
+## 公開ヘルプ
+
+主目的は、agent pluginに同梱する参照資料を`.agents/skills/tablecast-help/references`へ整備することである。agentは目的に合う章を相対リンクで読み、Webは同じ原稿を読むための表示面とする。画面と参照資料の表示名は日本語でドキュメント、英語でDocumentationとし、既存のURLとskill識別子は維持する。配信形式や索引の説明を利用者向けの本文へ追加しない。
+
+`/help`は利用者の表示言語から`/help/ja`または`/help/en`へ移動する公開入口である。日英の6章をFumadocsで表示し、ログイン・組織選択を要求しない。管理画面・導入画面・業務API・MCPの認証は従来どおり必要である。
+
+製品plugin 0.5.0の`tablecast-help` skillに`references/ja`と`references/en`を同梱する。正本は`.agents/skills/tablecast-help`に置き、Webが直接コンパイルする。既存の`scripts/tablecast-plugin.ts --skills-only`がテーマskillと同様に配布コピーを作る。配布コピーを手編集せず、Web用に別の原稿は管理しない。既存の4つの操作skillは必要時に接続先originの`/llms.txt`から説明を探せる。設定・接続操作の前に全文を読むことは要求しない。手動導入の既存SKILL.mdは従来どおり単体で利用でき、ヘルプ全文はWebまたはpluginから参照する。
+
+agent向けに`/llms.txt`で日英の索引とページ単位のMarkdown URL、`/llms-full.txt`で全章、`/help/content/:lang/:slug.md`で必要な章だけを返す。すべて公開説明だけを含み、実店舗情報・認証情報・業務操作は含めない。MCPの初期化結果も現在環境のヘルプと索引を案内する。
+
+章は通常のMarkdownとfrontmatterの`title`・`description`で記述し、同じ言語の章へは`./configuration.md`のような相対リンクを使う。WebとMarkdown配信はFumadocsの`getPageByHref`で言語内の仮想ディレクトリから同じ章を解決し、各形式の公開URLへ変換する。これによりskill同梱版でも公開版でも関連章へ到達できる。表示順は各言語の`meta.json`で管理する。追加時は両言語、目次、関連章へのリンクを揃え、Web buildと代表ヘルプE2Eを確認する。

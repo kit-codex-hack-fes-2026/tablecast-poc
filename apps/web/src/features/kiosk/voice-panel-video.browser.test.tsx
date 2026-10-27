@@ -62,13 +62,19 @@ it.each(["ja", "en"] as const)(
       expect(frame.getBoundingClientRect().width).toBeLessThanOrEqual(128);
       expect(frame.getBoundingClientRect().left).toBe(panel.getBoundingClientRect().left + 12);
       const before = controls.getBoundingClientRect();
-      await screen.getByRole("button", { name: labels.kiosk_following }).click();
+      await expect
+        .element(screen.getByRole("button", { name: labels.kiosk_latest }))
+        .not.toBeInTheDocument();
+      scroller.dispatchEvent(new WheelEvent("wheel", { deltaY: -200, bubbles: true }));
       scroller.scrollTop = 0;
       await expect.poll(() => scroller.scrollTop).toBe(0);
       expect(controls.getBoundingClientRect().top).toBe(before.top);
       expect(controls.getBoundingClientRect().bottom).toBe(before.bottom);
       expect(history.scrollWidth).toBeLessThanOrEqual(history.clientWidth);
       await screen.getByRole("button", { name: labels.kiosk_latest }).click();
+      await expect
+        .element(screen.getByRole("button", { name: labels.kiosk_latest }))
+        .not.toBeInTheDocument();
       await expect
         .element(screen.getByText(labels.kiosk_tool_running, { exact: true }))
         .toBeVisible();
@@ -91,6 +97,53 @@ it.each(["ja", "en"] as const)(
       await screen.unmount();
     }
     capture.mockRestore();
+  },
+);
+
+it.each(["ja", "en"] as const)(
+  "%sの狭い会話欄で候補と推論要約を開いても履歴と停止操作の領域を保つ",
+  async (locale) => {
+    await page.viewport(402, 874);
+    const labels = locale === "ja" ? ja : en;
+    const suggestions =
+      locale === "ja"
+        ? ["おすすめを教えてください", "お茶の違いを教えてください", "もう大丈夫です"]
+        : ["What would you recommend?", "How do these teas differ?", "That is all, thank you."];
+    const screen = await render(
+      <Surface locale={locale}>
+        <div style={{ width: 402, height: 360 }}>
+          <VoicePanel
+            view={{
+              status: "listening",
+              suggestions,
+              progress: { stage: "thinking", summary: "参考資料を確認しました。".repeat(30) },
+              citations: [
+                { title: "Reference guide".repeat(10), url: "https://example.com/guide" },
+              ],
+            }}
+            lines={[line]}
+            onStart={() => {}}
+            onSuggestion={() => {}}
+          />
+        </div>
+      </Surface>,
+    );
+    await screen.getByText(labels.kiosk_reasoning_summary).click();
+    const panel = screen.getByRole("region", { name: labels.kiosk_conversation }).element();
+    const history = panel.querySelector('[data-ui="conversation-history"]');
+    const controls = panel.querySelector('[data-theme-part="voice-controls"]');
+    if (!history || !controls) throw new Error("会話と停止操作の領域がありません");
+    expect(history.getBoundingClientRect().height).toBeGreaterThanOrEqual(48);
+    expect(controls.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      history.getBoundingClientRect().bottom,
+    );
+    expect(controls.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+      panel.getBoundingClientRect().bottom,
+    );
+    await expect
+      .element(screen.getByRole("button", { name: labels.kiosk_voice_stop }))
+      .toBeVisible();
+    await screen.unmount();
   },
 );
 

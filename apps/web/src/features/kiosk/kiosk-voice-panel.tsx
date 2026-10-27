@@ -1,6 +1,8 @@
-import type { ComponentProps } from "react";
+import { type ComponentProps, useEffect } from "react";
 import type { VoiceConnection } from "./voice-connection";
-import { VoicePanel } from "./voice-panel";
+import type { VoicePanel } from "./voice-panel";
+import { useLocalCamera } from "./local-camera";
+import { VoicePanelContent } from "./voice-panel";
 import { useVoiceView } from "./voice-subscription";
 
 export function KioskVoicePanel({
@@ -8,10 +10,17 @@ export function KioskVoicePanel({
   ...props
 }: Omit<ComponentProps<typeof VoicePanel>, "view"> & { voice: VoiceConnection }) {
   const view = useVoiceView(voice);
+  const camera = useLocalCamera();
+  const { capture, complete } = camera;
+  useEffect(() => voice.connectCamera({ capture, complete }), [voice, capture, complete]);
   return (
-    <VoicePanel
+    <VoicePanelContent
       {...props}
       view={view}
+      camera={camera}
+      onSuggestion={(text, source) => {
+        void voice.sendSuggestion(text, source);
+      }}
       controlDisabled={props.controlDisabled || view.status === "stopping"}
     />
   );

@@ -1,7 +1,5 @@
 import { Tooltip } from "@base-ui/react/tooltip";
 import { createLink, type LinkComponent } from "@tanstack/react-router";
-import { useReducedMotion } from "motion/react";
-import * as m from "motion/react-m";
 import { type ComponentProps, forwardRef, type ReactElement } from "react";
 import { cn } from "tailwind-variants";
 import { surfaceMotion } from "../../components/ui/motion-variants";
@@ -43,7 +41,6 @@ const NavigationAnchor = forwardRef<
   { collapsed = false, title, className = navigationItemClass, children, ...props },
   ref,
 ) {
-  const reduced = useReducedMotion();
   return (
     <SidebarTooltip label={title ?? ""} collapsed={collapsed}>
       <a
@@ -55,13 +52,10 @@ const NavigationAnchor = forwardRef<
       >
         {children}
         {props["aria-current"] === "page" && (
-          <m.span
+          <span
             aria-hidden
             data-slot="navigation-selection"
-            layoutId="navigation-selection"
-            initial={false}
-            transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
-            className="pointer-events-none absolute left-0 top-1/4 h-1/2 w-0.5 rounded-full bg-(--nav-color,var(--color-foreground))"
+            className="pointer-events-none absolute inset-y-2 left-0 w-0.5 rounded-full bg-(--nav-color,var(--color-foreground))"
           />
         )}
       </a>

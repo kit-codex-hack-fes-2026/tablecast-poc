@@ -7,6 +7,9 @@ export const speechSpeedSchema = z.number().min(0.5).max(1.5).multipleOf(0.1);
 export const speechSpeedInputSchema = z.object({ speed: speechSpeedSchema }).strict();
 
 export const voiceToolNameSchema = z.enum([
+  "showReference",
+  "captureCamera",
+  "endConversation",
   "getCatalog",
   "getCustomerContext",
   "getCustomerSuggestions",
@@ -65,7 +68,7 @@ export type VoicePage = z.infer<typeof voicePageSchema>;
 
 export type VoiceListQuery = z.infer<typeof voiceListQuerySchema>;
 
-export const voiceTriggerSchema = z.enum(["user", "proactive"]);
+export const voiceTriggerSchema = z.enum(["user", "proactive", "opening"]);
 
 export type VoiceTrigger = z.infer<typeof voiceTriggerSchema>;
 
@@ -100,6 +103,7 @@ export const toolSchema = z
 const conversationItemSchema = z
   .object({
     itemId: id,
+    locale: localeSchema.optional(),
     role: z.enum(["user", "assistant"]),
     text: z.string().min(1).max(10000),
     interrupted: z.boolean().default(false),
@@ -124,3 +128,31 @@ export const voiceConversationSchema = z
     items: z.array(conversationItemSchema).min(1).max(20),
   })
   .strict();
+
+export const voiceSuggestionsSchema = z
+  .object({
+    voiceSessionId: id,
+    locale: localeSchema,
+    itemId: id,
+    text: z.string().min(1).max(10000),
+  })
+  .strict();
+export const voiceSuggestionsResultSchema = z
+  .object({
+    suggestions: z.array(z.string().trim().min(1).max(500)).max(3),
+  })
+  .strict();
+
+export const voiceReferenceSchema = z
+  .object({
+    url: z.url().max(2048),
+    title: z.string().min(1).max(200),
+    description: z.string().max(300).optional(),
+    imageUrl: z.url().max(2048).optional(),
+    faviconUrl: z.url().max(2048).optional(),
+  })
+  .strict();
+export const voiceReferenceEventSchema = z
+  .object({ turnId: id, reference: voiceReferenceSchema })
+  .strict();
+export type VoiceReference = z.infer<typeof voiceReferenceSchema>;

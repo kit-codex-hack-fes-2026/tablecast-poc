@@ -140,7 +140,7 @@ export async function startVoiceTurn(
     eq(business.tableSessions.locale, input.locale),
   );
   const eligibility = proactive
-    ? sql`1=1 ${proactiveReservationCondition(startedAt, startedAt - 180_000)}`
+    ? sql`1=1 ${proactiveReservationCondition(startedAt, startedAt - 30_000)}`
     : undefined;
   if (
     proactive &&
@@ -154,7 +154,7 @@ export async function startVoiceTurn(
     return { kind: "skipped" } as const;
   }
   ensure(services.env.TABLECAST_MODEL, "VOICE_NOT_CONFIGURED", 503);
-  const conversationEvent = { turnId: input.turnId, trigger: "proactive", locale: input.locale };
+  const conversationEvent = { turnId: input.turnId, trigger: input.trigger, locale: input.locale };
   const result = await db.batch([
     db
       .update(business.tableSessions)
@@ -196,7 +196,9 @@ export async function startVoiceTurn(
           cursor: sql<number>`NULL`.as("cursor"),
           store_id: business.tableSessions.store_id,
           table_session_id: business.tableSessions.id,
-          kind: sql<string>`'voice.proactive'`.as("kind"),
+          kind: sql<string>`${input.trigger === "opening" ? "voice.opening" : "voice.proactive"}`.as(
+            "kind",
+          ),
           data_json: sql<string>`${JSON.stringify(conversationEvent)}`.as("data_json"),
           created_at: sql<number>`${startedAt}`.as("created_at"),
         })
@@ -205,7 +207,7 @@ export async function startVoiceTurn(
           and(
             active,
             eq(business.tableSessions.active_turn_id, input.turnId),
-            sql`changes()=1 AND ${proactive}`,
+            sql`changes()=1 AND ${input.trigger !== "user"}`,
           ),
         ),
     ),
@@ -247,7 +249,7 @@ export async function startVoiceTurn(
     return { kind: "skipped" } as const;
   }
   ensure(result[0]?.meta.changes === 1, "VOICE_SESSION_STALE", 409);
-  if (!proactive) {
+  if (input.trigger === "user") {
     const last = input.messages.findLast((message) => message.role === "user");
     if (last)
       await recordCustomerMemorySource(services, { ...actor, turnId: input.turnId }, last.content);

@@ -41,7 +41,7 @@ session.input_transcript.delta / session.output_transcript.deltaを受信時に�
 
 停止はcapture・再生を即時終了し、APIで音声sessionを失効させ、Liveへsession.closeを送る。API側でも標準sideband接続でsession.closedを確認する。明示再開まで自動再接続しない。確定したカート・注文は停止で戻さない。
 
-自発接客は180秒の無言と店舗設定、空カート、確認・スタッフ呼出・進行中turnの有無をAPIで検査する。参照専用turnで商品を取得し、一商品の事実をLiveへ渡す。客の発話や承認として保存しない。
+自発接客は30秒の無言と店舗設定、空カート、確認・スタッフ呼出・進行中turnの有無をAPIで検査する。参照専用turnで商品を取得し、一商品の事実をLiveへ渡す。客の発話や承認として保存しない。
 
 ## 観測と検証
 
@@ -52,3 +52,21 @@ HonoのHTTP、tablecast.voice.tool、D1と通知をGrafanaで追う。tool span�
 実D1テストは認可・価格・版・同時実行・停止・別卓拒否を検証する。voice-performance.test.tsは商品数を増やし、実D1のSQL実行と保存されたカード表示を確認しながらbinding往復と出力サイズの予算を検証する。上限超過時は原因を調べ、閾値の緩和で成功扱いにしない。
 
 Webの固定イベント試験は全tool結果の返却・一回の継続・エラー・新委任による取消・字幕・停止を検証する。実GPT-LiveとLunaは有料試験で、Inworld生成音声を使いlocalと同一SHAのPR previewで確認する。通常CIの固定イベントだけで実API・音声・1秒達成を証明した扱いにしない。
+
+## 言語変更と接客終了
+
+言語変更は現在のsession IDを保持し、APIの標準sidebandでResponsesの接客指示とLiveの言語指示を更新してACKを確認する。古いturnと確認は失効する。更新の失敗で音声接続を閉じず、同じ言語の操作も再試行できる。声の種類は次の接続から変更する。
+
+接客不要の意思はendConversationへ委任する。注文確認へのそれで大丈夫ですと終了意思を区別し、不明なら確認する。終了toolは後続の業務操作を拒否し、一言の挨拶後の出力無音または最大5秒で既存の明示停止経路へ進む。生音声は保存せず、明示再開まで再接続しない。
+
+## カメラ画像
+
+カメラは利用客のON操作で有効になる。captureCameraはAPIで卓・session・turnを認可してから現在映像を1枚だけ取得する。圧縮JPEGはWebRTCの転送上限内で標準Responsesのinput_imageへ送り、DB・R2・ログへ保存しない。OFF・取消・取得失敗はtool結果として返し、音声を維持する。
+
+内側・外側の切替はカメラだけを更新し、旧トラックを解放する。内側プレビューだけ鏡像とし、取得画像はソースの向きを保つ。非表示・停止・言語変更後の未送信画像は破棄する。取得中はカメラ枠、読取中はspinnerと日英の状態文で示す。Browserのlocal-camera-reading試験はChromium/WebKitの実MediaStreamとJPEG decodeを使う。
+
+## Web検索と参考情報
+
+Responses delegationは標準の`web_search`と`reasoning: { effort: "medium", summary: "auto" }`を使う。Webは検索イベント・公開された推論要約・URL出典だけを表示し、要約が返らない場合も応答待ちをspinnerで示す。言語変更・発話・停止後の古い表示は破棄する。検索は一般知識や参考案内に使い、価格・在庫・原材料・アレルギー・注文判断は既存業務APIを根拠とする。
+
+`showReference`は現在の卓・音声session・turnを認可して会話へ参考カードを追加する。URL、タイトル、説明、OGP画像、中央favicon付きのQRを表示し、画像取得に失敗してもURLとQRを残す。ページHTMLは描画しない。メタデータ取得は公開HTTPSだけとし、DNSのprivate address、認証情報、非標準portを拒否する。転送先も再検査し、全体3秒、HTML 256 KiB、redirect 3回で打ち切る。一つのturnの参考カードは3件まで、QRへ渡すURLはUTF-8で1000 byteまでとする。画像検索専用の非公開パラメーターは使わず、検索した参照ページのOGPを画像の表示経路とする。

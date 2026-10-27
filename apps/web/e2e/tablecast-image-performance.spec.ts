@@ -7,7 +7,7 @@ import { test } from "./support/test";
 
 declare global {
   interface Window {
-    tablecastImageMetrics: { cls: null | number; lcp: null | number };
+    tablecastImageMetrics: { cls: null | number; lcp: null | number; resourceBufferFull: boolean };
   }
 }
 
@@ -90,8 +90,14 @@ for (const count of [24, 120]) {
 
     await page.unroute("**/media/**");
     await page.addInitScript(() => {
+      // リソース記録の既定250件の枠で、画像の転送量を欠落させない。
+      performance.setResourceTimingBufferSize(1000);
+      performance.addEventListener("resourcetimingbufferfull", () => {
+        window.tablecastImageMetrics.resourceBufferFull = true;
+      });
       const supported = PerformanceObserver.supportedEntryTypes;
       window.tablecastImageMetrics = {
+        resourceBufferFull: false,
         lcp: supported.includes("largest-contentful-paint") ? 0 : null,
         cls: supported.includes("layout-shift") ? 0 : null,
       };
@@ -195,6 +201,7 @@ for (const count of [24, 120]) {
         body: JSON.stringify(measured, null, 2),
         contentType: "application/json",
       });
+      expect(measured.resourceBufferFull).toBe(false);
       expect(measured.cls === null || measured.cls < 0.1).toBe(true);
       const transferred = measured.resources.some((resource) => resource.body > 0)
         ? measured.resources.reduce((total, resource) => total + resource.transfer, 0)
