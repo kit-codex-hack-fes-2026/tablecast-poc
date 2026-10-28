@@ -9,15 +9,31 @@ import { configurationSchema } from "../configuration/model";
 import { sessionPlanUsage } from "../orders/queries";
 import { tablePlanSchema } from "../tables/model";
 
-export async function getDemoRecord(services: ApiServices, actor: Actor, authoriseStore = false) {
+function authoriseDemo<
+  T extends {
+    demo: null | { created_by: string };
+    role: null | string;
+    session: null | { id: string };
+  },
+>(result: T | undefined, actor: Actor, authoriseStore: boolean) {
+  if (authoriseStore && actor.kind !== "voice") {
+    ensure(result?.role, "STORE_FORBIDDEN", 403);
+    ensure(["owner", "admin"].includes(result.role), "ADMIN_REQUIRED", 403);
+  }
+  ensure(result?.demo && result.session, "DEMO_NOT_FOUND", 404);
+  ensure(actor.kind === "voice" || actor.userId === result.demo.created_by, "DEMO_NOT_FOUND", 404);
+  ensure(result.role && ["owner", "admin"].includes(result.role), "ADMIN_REQUIRED", 403);
+  return { ...result, demo: result.demo, session: result.session };
+}
+
+/** 画像では所有者・管理権限だけを確認し、設定・カート・利用集計を読まない。 */
+export async function getDemoImageAccess(services: ApiServices, actor: Actor) {
   ensure(actor.demoId && actor.demoId === actor.tableSessionId, "DEMO_NOT_FOUND", 404);
   const result = await services.db
     .select({
-      demo: business.demoSessions,
-      planUsage: sessionPlanUsage(services.db),
-      session: business.tableSessions,
+      demo: { created_by: business.demoSessions.created_by },
+      session: { id: business.tableSessions.id },
       role: member.role,
-      storeName: business.stores.name,
     })
     .from(business.stores)
     .leftJoin(
@@ -36,21 +52,53 @@ export async function getDemoRecord(services: ApiServices, actor: Actor, authori
       member,
       and(
         eq(member.organizationId, business.stores.organization_id),
-        eq(
-          member.userId,
-          actor.kind === "voice" ? business.demoSessions.created_by : (actor.userId ?? ""),
-        ),
+        eq(member.userId, actor.userId ?? ""),
       ),
     )
     .where(eq(business.stores.id, actor.storeId))
     .get();
-  if (authoriseStore && actor.kind !== "voice") {
-    ensure(result?.role, "STORE_FORBIDDEN", 403);
-    ensure(["owner", "admin"].includes(result.role), "ADMIN_REQUIRED", 403);
-  }
-  ensure(result?.demo && result.session, "DEMO_NOT_FOUND", 404);
-  ensure(actor.kind === "voice" || actor.userId === result.demo.created_by, "DEMO_NOT_FOUND", 404);
-  ensure(result.role && ["owner", "admin"].includes(result.role), "ADMIN_REQUIRED", 403);
+  return authoriseDemo(result, actor, true);
+}
+
+export async function getDemoRecord(services: ApiServices, actor: Actor, authoriseStore = false) {
+  ensure(actor.demoId && actor.demoId === actor.tableSessionId, "DEMO_NOT_FOUND", 404);
+  const result = authoriseDemo(
+    await services.db
+      .select({
+        demo: business.demoSessions,
+        planUsage: sessionPlanUsage(services.db),
+        session: business.tableSessions,
+        role: member.role,
+        storeName: business.stores.name,
+      })
+      .from(business.stores)
+      .leftJoin(
+        business.tableSessions,
+        and(
+          eq(business.tableSessions.store_id, business.stores.id),
+          eq(business.tableSessions.id, actor.demoId),
+          eq(business.tableSessions.kind, "demo"),
+        ),
+      )
+      .leftJoin(
+        business.demoSessions,
+        eq(business.demoSessions.session_id, business.tableSessions.id),
+      )
+      .leftJoin(
+        member,
+        and(
+          eq(member.organizationId, business.stores.organization_id),
+          eq(
+            member.userId,
+            actor.kind === "voice" ? business.demoSessions.created_by : (actor.userId ?? ""),
+          ),
+        ),
+      )
+      .where(eq(business.stores.id, actor.storeId))
+      .get(),
+    actor,
+    authoriseStore,
+  );
   services.tableAccess.demo = {
     planUsage: result.planUsage,
     id: actor.demoId,

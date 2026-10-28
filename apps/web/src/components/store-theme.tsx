@@ -1,10 +1,12 @@
 import {
   type Appearance,
   appearanceSchema,
+  imageDeliveryVersion,
   themeCssRules,
   themeFonts,
 } from "@tablecast/api/schema";
 import { type ReactNode, useId, useMemo } from "react";
+import { useMediaBasePath } from "./image-provider";
 import { StyleScopeBoundary, StyleScopeProvider } from "./ui/style-scope";
 function contrastingInk(hex: string) {
   const channels = [1, 3, 5].map((offset) => {
@@ -14,7 +16,7 @@ function contrastingInk(hex: string) {
   const [red = 0, green = 0, blue = 0] = channels;
   return red * 0.2126 + green * 0.7152 + blue * 0.0722 > 0.179 ? "#000000" : "#ffffff";
 }
-function themeStyles(value: Appearance, id: string) {
+function themeStyles(value: Appearance, id: string, basePath: string) {
   const scope = `[data-tablecast-theme="${id}"]`;
   const rule = (part: string, css: string, suffix = "") =>
     `${scope} [data-theme-part="${part}"]${suffix}{${css}}`;
@@ -25,7 +27,8 @@ function themeStyles(value: Appearance, id: string) {
       : "",
     `--tablecast-font-heading:${themeFonts[value.fonts?.heading ?? "sans"]};--tablecast-font-body:${themeFonts[value.fonts?.body ?? "sans"]}`,
     ...Object.entries(value.assets ?? {}).map(
-      ([name, image]) => `--tablecast-image-${name}:url("/media/${image.imageKey}?width=1600")`,
+      ([name, image]) =>
+        `--tablecast-image-${name}:url("${basePath}/images/${image.imageKey}?width=1600&v=${imageDeliveryVersion}")`,
     ),
   ].join(";");
   const parts = Object.entries(value.parts ?? {}).map(([part, style]) => {
@@ -73,12 +76,13 @@ export function StoreTheme({
   children: ReactNode;
 }) {
   const rawId = useId();
+  const basePath = useMediaBasePath();
   const id = rawId.replace(/[^a-zA-Z0-9-]/g, "");
   const theme = useMemo(() => {
     if (!appearance) return null;
     const parsed = appearanceSchema.safeParse(appearance);
-    return parsed.success ? { id, css: themeStyles(parsed.data, id) } : null;
-  }, [appearance, id]);
+    return parsed.success ? { id, css: themeStyles(parsed.data, id, basePath) } : null;
+  }, [appearance, id, basePath]);
   return (
     <StyleScopeProvider value={theme}>
       <StyleScopeBoundary>{children}</StyleScopeBoundary>

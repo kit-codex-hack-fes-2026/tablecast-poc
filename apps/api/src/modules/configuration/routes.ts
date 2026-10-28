@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { apiFactory } from "../../platform/http";
 import { validate, validateQuery } from "../../platform/validation";
+import { withImageAssets } from "../media/queries";
 import { previewConditions } from "./conditions";
 import { instructionResponse } from "./instruction-response";
 import {
@@ -44,14 +45,17 @@ export const configurationAdminRoutes = apiFactory
     validate(configurationRestoreSchema),
     async (c) =>
       c.json(
-        instructionResponse(
-          await restoreConfigurationRelease(
-            c.var.services,
-            c.var.actor,
-            Number(c.req.param("version")),
-            c.req.valid("json"),
+        await withImageAssets(
+          c.var.services,
+          instructionResponse(
+            await restoreConfigurationRelease(
+              c.var.services,
+              c.var.actor,
+              Number(c.req.param("version")),
+              c.req.valid("json"),
+            ),
+            c.req.header("X-Tablecast-Instructions"),
           ),
-          c.req.header("X-Tablecast-Instructions"),
         ),
         200,
       ),
@@ -72,9 +76,12 @@ export const configurationAdminRoutes = apiFactory
   })
   .post("/drafts", async (c) =>
     c.json(
-      instructionResponse(
-        await createDraft(c.get("services"), c.get("actor")),
-        c.req.header("X-Tablecast-Instructions"),
+      await withImageAssets(
+        c.var.services,
+        instructionResponse(
+          await createDraft(c.get("services"), c.get("actor")),
+          c.req.header("X-Tablecast-Instructions"),
+        ),
       ),
       200,
     ),
@@ -84,65 +91,80 @@ export const configurationAdminRoutes = apiFactory
   )
   .get("/drafts/:id", async (c) =>
     c.json(
-      instructionResponse(
-        await getDraft(c.get("services"), c.get("actor"), c.req.param("id")),
-        c.req.header("X-Tablecast-Instructions"),
+      await withImageAssets(
+        c.var.services,
+        instructionResponse(
+          await getDraft(c.get("services"), c.get("actor"), c.req.param("id")),
+          c.req.header("X-Tablecast-Instructions"),
+        ),
       ),
       200,
     ),
   )
   .put("/drafts/:id", validate(draftUpdateSchema), async (c) =>
     c.json(
-      instructionResponse(
-        await updateDraft(
-          c.get("services"),
-          c.get("actor"),
-          c.req.param("id"),
-          c.req.valid("json"),
+      await withImageAssets(
+        c.var.services,
+        instructionResponse(
+          await updateDraft(
+            c.get("services"),
+            c.get("actor"),
+            c.req.param("id"),
+            c.req.valid("json"),
+          ),
+          c.req.header("X-Tablecast-Instructions"),
         ),
-        c.req.header("X-Tablecast-Instructions"),
       ),
       200,
     ),
   )
   .post("/drafts/:id/validate", validate(versionSchema), async (c) =>
     c.json(
-      instructionResponse(
-        await validateDraft(
-          c.get("services"),
-          c.get("actor"),
-          c.req.param("id"),
-          c.req.valid("json").expectedVersion,
+      await withImageAssets(
+        c.var.services,
+        instructionResponse(
+          await validateDraft(
+            c.get("services"),
+            c.get("actor"),
+            c.req.param("id"),
+            c.req.valid("json").expectedVersion,
+          ),
+          c.req.header("X-Tablecast-Instructions"),
         ),
-        c.req.header("X-Tablecast-Instructions"),
       ),
       200,
     ),
   )
   .post("/drafts/:id/discard", validate(versionSchema), async (c) =>
     c.json(
-      instructionResponse(
-        await discardDraft(
-          c.get("services"),
-          c.get("actor"),
-          c.req.param("id"),
-          c.req.valid("json").expectedVersion,
+      await withImageAssets(
+        c.var.services,
+        instructionResponse(
+          await discardDraft(
+            c.get("services"),
+            c.get("actor"),
+            c.req.param("id"),
+            c.req.valid("json").expectedVersion,
+          ),
+          c.req.header("X-Tablecast-Instructions"),
         ),
-        c.req.header("X-Tablecast-Instructions"),
       ),
       200,
     ),
   )
   .post("/drafts/:id/publish", validate(draftPublishSchema), async (c) =>
     c.json(
-      instructionResponse(
-        await publishDraft(
-          c.get("services"),
-          c.get("actor"),
-          c.req.param("id"),
-          c.req.valid("json"),
+      await withImageAssets(
+        c.var.services,
+        instructionResponse(
+          await publishDraft(
+            c.get("services"),
+            c.get("actor"),
+            c.req.param("id"),
+            c.req.valid("json"),
+          ),
+          c.req.header("X-Tablecast-Instructions"),
         ),
-        c.req.header("X-Tablecast-Instructions"),
       ),
       200,
     ),

@@ -5,21 +5,28 @@ import type { Actor } from "./model";
 import { ensure } from "../../platform/errors";
 import { apiFactory } from "../../platform/http";
 import { measured } from "../../platform/telemetry";
-import { findDeviceSession, findStoreMembership } from "./queries";
+import { findDeviceImageSession, findDeviceSession, findStoreMembership } from "./queries";
 import { hashDeviceToken } from "./token";
 async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
   const token = getCookie(c, "tablecast.device");
   ensure(token, "DEVICE_REQUIRED", 401);
+  const tokenHash = await hashDeviceToken(token);
+  if (c.req.method === "GET" && c.req.path.startsWith("/api/table/images/")) {
+    const row = await findDeviceImageSession(c.var.services, tokenHash);
+    ensure(row, "DEVICE_NOT_ASSIGNED", 401);
+    return {
+      kind: "device",
+      storeId: row.storeId,
+      tableSessionId: row.sessionId,
+      deviceId: row.deviceId,
+    };
+  }
   // 価格判定が直後に続く経路だけで取得し、他のGUI操作へ設定JSONを重複転送しない。
   const includeCatalog =
     (c.req.method === "PUT" && c.req.path === "/api/table/cart") ||
     (c.req.method === "POST" && c.req.path === "/api/table/confirm") ||
     (c.req.method === "PATCH" && c.req.path === "/api/table/ui");
-  const row = await findDeviceSession(
-    c.get("services"),
-    await hashDeviceToken(token),
-    includeCatalog,
-  );
+  const row = await findDeviceSession(c.get("services"), tokenHash, includeCatalog);
   ensure(row, "DEVICE_NOT_ASSIGNED", 401);
   c.get("services").tableAccess.session = row.session;
   if (row.catalog && row.session.kind === "table")

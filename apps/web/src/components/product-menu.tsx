@@ -37,10 +37,12 @@ export const ProductMenu = memo(function ProductMenu({
   onSearch,
   searchButtonRef,
   searchResults = false,
+  imageSizes,
 }: {
   catalog: Catalog;
   category?: string;
   compact?: boolean;
+  imageSizes?: string;
   onCategoryChange?: (category: string) => void;
   onChoose: (product: Product) => void;
   onSearch?: () => void;
@@ -128,10 +130,15 @@ export const ProductMenu = memo(function ProductMenu({
             >
               {product.imageKey ? (
                 <ProductImage
+                  responsive
                   className="size-full object-contain"
                   width={384}
                   height={384}
-                  sizes="(min-width: 1536px) 17vw, (min-width: 640px) 25vw, 50vw"
+                  sizes={
+                    compact
+                      ? "156px"
+                      : (imageSizes ?? "(min-width: 48rem) 384px, calc(100vw - 56px)")
+                  }
                   src={`/media/${product.imageKey}`}
                   alt=""
                 />

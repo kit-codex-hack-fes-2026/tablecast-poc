@@ -2,10 +2,13 @@ import { z } from "zod";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { Configuration } from "../configuration/model";
+import type { ImageAsset } from "./model";
+import { mediaAssets } from "../../db/media-schema";
 import { DomainError, ensure } from "../../platform/errors";
 import { byteStream } from "../../platform/streams";
 import { requireManager } from "../auth/policy";
 import { imageMetadataSchema, maxImageBytes, uploadImageSchema } from "./model";
+import { generateImageAsset } from "./placeholder";
 
 export async function uploadImage(
   services: ApiServices,
@@ -131,6 +134,7 @@ export async function saveMenuImage(
   );
   await validatedImageBytes(image, maxImageBytes);
   let bytes: ArrayBuffer;
+  let asset: ImageAsset;
   try {
     const info = await services.env.TABLECAST_IMAGES.info(byteStream(image.stream()));
     ensure(
@@ -147,6 +151,7 @@ export async function saveMenuImage(
       .transform({ width: 1600, height: 1600, fit: "scale-down" })
       .output({ format: "image/webp", quality: 85, anim: false });
     bytes = await output.response().arrayBuffer();
+    asset = await generateImageAsset(services.env.TABLECAST_IMAGES, bytes);
   } catch (error) {
     if (error instanceof DomainError) throw error;
     const code = z.object({ code: z.number() }).safeParse(error);
@@ -169,10 +174,18 @@ export async function saveMenuImage(
     customMetadata: { storeId: actor.storeId, metadata: JSON.stringify(metadata) },
     onlyIf: { etagDoesNotMatch: "*" },
   });
+  await services.db
+    .insert(mediaAssets)
+    .values({
+      store_id: actor.storeId,
+      image_key: imageKey,
+      ...asset,
+    })
+    .onConflictDoNothing();
   return {
     imageKey,
     ...metadata,
-    url: `${services.env.TABLECAST_PUBLIC_ORIGIN}/media/${imageKey}`,
+    url: `${services.env.TABLECAST_PUBLIC_ORIGIN}/api/admin/stores/${encodeURIComponent(actor.storeId)}/images/${imageKey}`,
   };
 }
 

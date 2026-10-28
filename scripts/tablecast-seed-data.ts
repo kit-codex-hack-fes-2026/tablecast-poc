@@ -5,6 +5,7 @@ import {
   tablecastGoogleMockIssuer,
 } from "@tablecast/api/bootstrap";
 import { business, createDatabase, type Database, identity } from "@tablecast/api/db";
+import { migrateImageAssets } from "@tablecast/api/media-migration";
 import { configurationSchema } from "@tablecast/api/schema";
 import { and, count, desc, eq, inArray, isNull, like, sql } from "drizzle-orm";
 import { type BatchItem } from "drizzle-orm/batch";
@@ -41,6 +42,7 @@ export type SeedEnv = Pick<
   | "TABLECAST_AUTH_SECRET"
   | "TABLECAST_DB"
   | "TABLECAST_ENV"
+  | "TABLECAST_IMAGES"
   | "TABLECAST_MEDIA"
   | "TABLECAST_PUBLIC_ORIGIN"
 >;
@@ -401,7 +403,9 @@ async function populateSeedTemplate(
 
 export async function seedDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
   if (env.TABLECAST_ENV !== "development") throw new Error("seedは開発環境に限定されています。");
-  return populateDemoDatabase(env, normaliseDemoCredentials(credentials));
+  const counts = await populateDemoDatabase(env, normaliseDemoCredentials(credentials));
+  await migrateImageAssets(env);
+  return counts;
 }
 
 export async function seedPreviewDatabase(
@@ -419,7 +423,10 @@ export async function seedPreviewDatabase(
   )
     throw new Error("PR初期投入の所有情報が一致しません。");
   if (owner.seeded === 1) {
-    if (env.TABLECAST_ENV === "staging") return false;
+    if (env.TABLECAST_ENV === "staging") {
+      await migrateImageAssets(env);
+      return false;
+    }
     // 再配備で追加された内容アドレス付き画像も補い、既存の営業データは再投入しない。
     await seedMenuImages(
       env.TABLECAST_MEDIA,
@@ -428,6 +435,7 @@ export async function seedPreviewDatabase(
     );
     await migrateDemoIdentityEmails(env);
     await refreshDemoIdentityIcons(env, credentials);
+    await migrateImageAssets(env);
     return false;
   }
   // 2はDB投入済み・画像待ち。営業データを再投入せず画像だけを再開する。
@@ -435,6 +443,7 @@ export async function seedPreviewDatabase(
     await seedMenuImages(env.TABLECAST_MEDIA, true);
     await migrateDemoIdentityEmails(env);
     await refreshDemoIdentityIcons(env, credentials);
+    await migrateImageAssets(env);
     return true;
   }
   if (owner.seeded !== 0 && owner.seeded !== 3) throw new Error("PR初期投入の進捗が不正です。");
@@ -459,5 +468,6 @@ export async function seedPreviewDatabase(
   if (template && owner.seeded === 0) await populateSeedTemplate(env, credentials, template);
   else await populateDemoDatabase(env, credentials);
   await db.update(business.deploymentOwner).set({ seeded: 2 });
+  await migrateImageAssets(env);
   return true;
 }

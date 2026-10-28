@@ -1,7 +1,7 @@
 import { apiFactory } from "../../platform/http";
 import { measured } from "../../platform/telemetry";
 import { staffIdentity } from "../auth/middleware";
-import { getDemoRecord } from "./queries";
+import { getDemoImageAccess, getDemoRecord } from "./queries";
 
 export const requireDemo = apiFactory.createMiddleware(async (c, next) => {
   const demoId = c.req.param("demoId");
@@ -15,6 +15,14 @@ export const requireDemo = apiFactory.createMiddleware(async (c, next) => {
     demoId,
     tableSessionId: demoId,
   });
+  if (c.req.method === "GET" && c.req.path.includes("/table/images/")) {
+    const record = await measured("tablecast.authentication.demo", () =>
+      getDemoImageAccess(c.var.services, c.var.actor),
+    );
+    c.set("actor", { ...c.var.actor, role: record.role ?? undefined });
+    await next();
+    return;
+  }
   const record = await measured("tablecast.authentication.demo", () =>
     getDemoRecord(c.get("services"), c.get("actor"), true),
   );

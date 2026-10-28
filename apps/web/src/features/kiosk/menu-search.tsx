@@ -9,6 +9,7 @@ import { useI18n } from "../../i18n/locale";
 
 export function KioskMenu({
   catalog,
+  imageSizes,
   category,
   onCategoryChange,
   onChoose,
@@ -23,6 +24,7 @@ export function KioskMenu({
   catalog: Catalog;
   category: string;
   error: unknown;
+  imageSizes?: string;
   onCategoryChange: (category: string) => void;
   onChange: (input: UiSectionInput) => void;
   onChoose: (product: Product) => void;
@@ -169,6 +171,7 @@ export function KioskMenu({
       )}
       <ProductMenu
         catalog={catalog}
+        imageSizes={imageSizes}
         category={category}
         onCategoryChange={onCategoryChange}
         onChoose={onChoose}

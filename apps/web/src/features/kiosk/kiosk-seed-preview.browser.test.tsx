@@ -98,7 +98,7 @@ it.each(["ja", "en"] as const)(
       const visible = [...document.images].filter((image) => {
         const bounds = image.getBoundingClientRect();
         return (
-          image.src.includes("/media/") &&
+          image.src.includes("/images/tablecast/") &&
           bounds.width > 0 &&
           bounds.height > 0 &&
           bounds.top < height &&

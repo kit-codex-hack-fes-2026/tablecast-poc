@@ -240,7 +240,11 @@ it("MCPのテーマ制作を商品を保持した検証済み下書きへ保存�
     }),
   );
   expect(response.status).toBe(200);
-  expect(configDraftSchema.parse(await response.json())).toEqual(draft);
+  const { imageAssets, ...httpDraft } = configDraftSchema.parse(await response.json());
+  expect(httpDraft).toEqual(draft);
+  expect(draft).not.toHaveProperty("imageAssets");
+  expect(imageAssets?.[image.imageKey]).toMatchObject({ width: 1, height: 1 });
+  expect(imageAssets?.[image.imageKey]?.blurhash).toHaveLength(52);
   expect(
     toolData(
       await client.callTool({ name: "get_draft_diff", arguments: { draftId: draft.id } }),

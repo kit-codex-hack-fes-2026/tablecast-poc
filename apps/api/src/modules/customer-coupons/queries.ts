@@ -97,6 +97,44 @@ export async function listCustomerCoupons(
   });
   return { coupons, nextCursor: rows.length > query.limit ? (coupons.at(-1)?.id ?? null) : null };
 }
+
+/** 一覧と同じ会員権限で、自分の配布済み券または現在交換できる券の画像だけ許可する。 */
+export async function requireCouponImage(
+  services: ApiServices,
+  actor: CustomerActor,
+  imageKey: string,
+) {
+  const membership = await requireCustomer(services, actor);
+  const now = Date.now();
+  const row = await services.db
+    .select({ id: customerCoupons.id })
+    .from(customerCoupons)
+    .where(
+      and(
+        eq(customerCoupons.storeId, actor.storeId),
+        eq(customerCoupons.membershipId, membership.id),
+        eq(sql`json_extract(${customerCoupons.snapshotJson}, '$.imageKey')`, imageKey),
+      ),
+    )
+    .unionAll(
+      services.db
+        .select({ id: customerCouponRules.id })
+        .from(customerCouponRules)
+        .where(
+          and(
+            eq(customerCouponRules.storeId, actor.storeId),
+            eq(customerCouponRules.active, true),
+            eq(sql`json_extract(${customerCouponRules.rulesJson}, '$.imageKey')`, imageKey),
+            sql`json_extract(${customerCouponRules.rulesJson}, '$.trigger') = 'exchange'`,
+            sql`json_extract(${customerCouponRules.rulesJson}, '$.startsAt') <= ${now}`,
+            gt(sql`json_extract(${customerCouponRules.rulesJson}, '$.endsAt')`, now),
+          ),
+        ),
+    )
+    .limit(1)
+    .get();
+  ensure(row, "MEDIA_NOT_FOUND", 404);
+}
 export async function listCouponExchanges(
   services: ApiServices,
   actor: CustomerActor,

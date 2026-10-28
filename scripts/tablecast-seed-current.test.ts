@@ -29,6 +29,7 @@ it("再投入で別IDの営業中卓と閉じた初期卓と未会計を保ち�
         TABLECAST_PUBLIC_ORIGIN: "http://localhost:3999",
         TABLECAST_AUTH_SECRET: "tablecast-current-seed-test-secret-not-used-in-deployment",
       },
+      images: { binding: "TABLECAST_IMAGES" },
       r2_buckets: [
         { binding: "TABLECAST_MEDIA", bucket_name: "tablecast-current-seed-test-media" },
       ],

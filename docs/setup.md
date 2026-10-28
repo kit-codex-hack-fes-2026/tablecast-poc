@@ -399,3 +399,7 @@ CIの全検査はActionsの`CI`で作業branchを選択し、`catalog_pr`を空�
 ### 客向けメニュー検索の移行
 
 `0031_tablecast_menu_search.sql`は`table_sessions.menu_search_json`をnullableで追加する。新APIの配備前に既存のmigration経路で適用する。既存セッションのNULLは通常メニューとして扱う。検索語・offset・検索時のカタログ版だけを保存し、結果IDと件数は現在の同じカタログから計算する。旧APIへの復帰時も追加列は残してよく、注文・カート・既存設定の変換は不要。
+
+## 画像の生成依存
+
+画像取込・既存画像の索引移行は既存`TABLECAST_IMAGES` bindingを使い、`@unpic/pixels` 1.3.0と`blurhash` 2.0.5で6×4のBlurHashを生成する。WebのSSR表示は`@unpic/placeholder` 0.1.2を使う。新しいsecret・外部画像サービスは不要で、依存の正本はrootの`bun.lock`である。seed用の生成configにもImages bindingを含める。D1 migrationと再実行可能な索引化の順序は[画像の移行](deployment.md#画像の表示情報の移行)に従う。

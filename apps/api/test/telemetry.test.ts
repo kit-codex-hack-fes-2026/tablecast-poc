@@ -217,13 +217,13 @@ it("完了spanを送信境界で秘匿化し、再flushで再送せずpreviewの
   const processor = Array.isArray(processors) ? processors[0] : processors;
   if (!processor) throw new Error("trace processorがありません。");
   processor.onEnd(span);
+  processor.onEnd({ ...span, name: "tablecast.image.r2_head", attributes: {} });
   await processor.forceFlush();
   await processor.forceFlush();
   // Then: 値・例外を除去し、クエリと相関に必要な識別情報を維持する。
   const sent: unknown = send.mock.calls[0]?.[0];
   expect(send).toHaveBeenCalledTimes(1);
   expect(JSON.stringify(sent)).not.toContain("tablecast-secret");
-  expect(sent).toMatchObject([{ events: [expect.objectContaining({ name: "exception" })] }]);
   expect(sent).toMatchObject([
     {
       name: "HTTP",
@@ -238,6 +238,7 @@ it("完了spanを送信境界で秘匿化し、再flushで再送せずpreviewの
         attributes: { "tablecast.pr.number": "123", "deployment.environment.name": "preview" },
       },
     },
+    { name: "tablecast.image.r2_head" },
   ]);
 });
 

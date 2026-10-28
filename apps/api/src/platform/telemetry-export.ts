@@ -119,7 +119,7 @@ export function telemetryConfig(env: TelemetryEnv, service: string): WorkerOtelC
           ...span,
           // spanContextはprototype上のメソッドなので明示的に引き継ぐ。
           spanContext: () => span.spanContext(),
-          name: /^tablecast\.[a-z_.]+$/.test(span.name)
+          name: /^tablecast\.[a-z0-9_.]+$/.test(span.name)
             ? span.name
             : span.attributes["http.request.method"] || span.attributes["http.method"]
               ? "HTTP"

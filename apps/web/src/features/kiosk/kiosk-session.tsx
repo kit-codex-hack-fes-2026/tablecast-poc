@@ -37,6 +37,7 @@ import { ActionToasts } from "../../components/action-toasts";
 import { Brand } from "../../components/brand";
 import { CartLines } from "../../components/cart-lines";
 import { ErrorNotice } from "../../components/error-notice";
+import { ImageProvider } from "../../components/image-provider";
 import { LanguageSwitch } from "../../components/language-switch";
 import { LoadingState } from "../../components/loading-state";
 import { Money } from "../../components/money";
@@ -83,6 +84,13 @@ type TableSessionProps = {
   endpoint: TableEndpoint;
   refresh: () => void;
 };
+
+function menuImageSizes(width?: number) {
+  const menuColumns = width && width >= 768 ? 3 : width && width >= 512 ? 2 : 1;
+  return width
+    ? `${Math.floor((width - 32 - (menuColumns - 1) * 24) / menuColumns - 26)}px`
+    : undefined;
+}
 
 export function TableSession(props: TableSessionProps) {
   return (
@@ -137,6 +145,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     line?: CartLine;
     product: Product;
   }>();
+  const [orderWidth, setOrderWidth] = useState<number>();
   const [prepared, setSnapshot] = useState<Snapshot>();
   const [menuCategory, setMenuCategory] = useState("all");
   const confirmationHeading = useRef<HTMLHeadingElement>(null);
@@ -453,6 +462,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       <Tabs.Panel value="menu">
         {catalog.data ? (
           <KioskMenu
+            imageSizes={menuImageSizes(orderWidth)}
             catalog={catalog.data}
             category={menuCategory}
             onCategoryChange={setMenuCategory}
@@ -767,210 +777,226 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   }
   function renderSession() {
     return (
-      <StoreTheme appearance={catalog.data?.configuration.appearance}>
-        <div
-          data-theme-part="screen"
-          data-ui="kiosk-shell"
-          className="h-dvh flex flex-col overflow-hidden"
-        >
-          {renderHeader()}
-          <div data-ui="kiosk-content" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            <ResizablePanelGroup
-              orientation={horizontal ? "horizontal" : "vertical"}
-              className="min-h-128 flex-1 max-sm:flex-col!"
-              defaultLayout={defaultLayout}
-              onLayoutChanged={onLayoutChanged}
-            >
-              <ResizablePanel
-                id="tablecast-conversation"
-                panelRef={conversationPanel}
-                groupResizeBehavior="preserve-pixel-size"
-                defaultSize={horizontal ? "240px" : "360px"}
-                minSize={horizontal ? "224px" : "344px"}
-                maxSize="70%"
-                className="h-full"
+      <ImageProvider
+        basePath={endpoint.imageBasePath ?? "/api/table"}
+        assets={catalog.data?.imageAssets}
+      >
+        <StoreTheme appearance={catalog.data?.configuration.appearance}>
+          <div
+            data-theme-part="screen"
+            data-ui="kiosk-shell"
+            className="h-dvh flex flex-col overflow-hidden"
+          >
+            {renderHeader()}
+            <div data-ui="kiosk-content" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              <ResizablePanelGroup
+                orientation={horizontal ? "horizontal" : "vertical"}
+                className="min-h-128 flex-1 max-sm:flex-col!"
+                defaultLayout={defaultLayout}
+                onLayoutChanged={onLayoutChanged}
               >
-                <ErrorNotice query={eventQuery} />
-                <KioskVoicePanel
-                  voice={voice}
-                  lines={conversationLines(events)}
-                  events={events}
-                  catalog={catalog.data}
-                  snapshot={data.snapshot}
-                  onReview={
-                    data.snapshot?.channel === "gui" || (snapshot && section === "cart")
-                      ? undefined
-                      : () => (snapshot ? setSection("cart") : prepare.mutate())
-                  }
-                  reviewPending={prepare.isPending}
-                  onChoose={choose}
-                  onStart={toggleVoice}
-                  controlDisabled={view.status === "stopping" || language.isPending}
-                  speechSpeed={speed.isPending ? speed.variables : data.speechSpeed}
-                  onSpeedChange={(value) => speed.mutate(value)}
-                  onMicrophoneChange={(deviceId) => {
-                    void voice.selectMicrophone(deviceId);
-                  }}
-                  onMicrophoneRefresh={() => {
-                    void voice.refreshMicrophones();
-                  }}
-                />
-              </ResizablePanel>
-              <ResizableHandle aria-label={t("kiosk_resize_panes")} />
-              <ResizablePanel id="tablecast-order" minSize="30%" className="h-full">
-                <aside
-                  ref={orderPane}
-                  data-theme-part="menu"
-                  className="@container/tablecast-order relative isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
+                <ResizablePanel
+                  id="tablecast-conversation"
+                  panelRef={conversationPanel}
+                  groupResizeBehavior="preserve-pixel-size"
+                  defaultSize={horizontal ? "240px" : "360px"}
+                  minSize={horizontal ? "224px" : "344px"}
+                  maxSize="70%"
+                  className="h-full"
                 >
-                  {renderPlanSummary()}
-                  <ErrorNotice error={screen.variables?.search ? null : screen.error} />
-                  <Tabs.Root
-                    className="flex flex-col min-h-0 flex-1"
-                    value={section === "bill" ? "orders" : section}
-                    onValueChange={(value: unknown) => {
-                      if (
-                        value === "menu" ||
-                        value === "cart" ||
-                        value === "orders" ||
-                        value === "bill"
-                      )
-                        setSection(value);
+                  <ErrorNotice query={eventQuery} />
+                  <KioskVoicePanel
+                    voice={voice}
+                    lines={conversationLines(events)}
+                    events={events}
+                    catalog={catalog.data}
+                    snapshot={data.snapshot}
+                    onReview={
+                      data.snapshot?.channel === "gui" || (snapshot && section === "cart")
+                        ? undefined
+                        : () => (snapshot ? setSection("cart") : prepare.mutate())
+                    }
+                    reviewPending={prepare.isPending}
+                    onChoose={choose}
+                    onStart={toggleVoice}
+                    controlDisabled={view.status === "stopping" || language.isPending}
+                    speechSpeed={speed.isPending ? speed.variables : data.speechSpeed}
+                    onSpeedChange={(value) => speed.mutate(value)}
+                    onMicrophoneChange={(deviceId) => {
+                      void voice.selectMicrophone(deviceId);
                     }}
-                  >
-                    <div
-                      inert={Boolean(selection)}
-                      className="flex-1 min-h-0 overflow-y-auto scrollbar-thin"
-                    >
-                      {renderMenu()}
-                      {renderCart()}
-                      {renderOrders()}
-                    </div>
-                    <div inert={Boolean(selection)} className="sticky bottom-0 shrink-0 bg-card">
-                      <KioskMenuTabs
-                        data={data}
-                        cartLines={cartLines}
-                        cartPending={cartPending}
-                        products={catalog.data?.configuration.products}
-                        cartActions={renderCheckout()}
-                      />
-                    </div>
-                  </Tabs.Root>
-                  <PaneDialog.Root
-                    open={Boolean(selection)}
-                    modal={false}
-                    disablePointerDismissal
-                    onOpenChange={(open) => {
-                      if (!open) setSection("menu");
+                    onMicrophoneRefresh={() => {
+                      void voice.refreshMicrophones();
                     }}
-                  >
-                    <PaneDialog.Portal container={orderPane}>
-                      <PaneDialog.Backdrop
-                        data-ui="product-overlay"
-                        className="absolute inset-0 z-20 bg-overlay/30"
-                      />
-                      <PaneDialog.Popup
-                        aria-label={selection?.product.text[locale].displayName}
-                        initialFocus={false}
-                        finalFocus={() =>
-                          detailTrigger.current?.isConnected
-                            ? detailTrigger.current
-                            : (orderPane.current?.querySelector<HTMLElement>(
-                                '[data-ui="cart-tab"]',
-                              ) ?? false)
-                        }
-                        data-theme-part="dialog"
-                        className="absolute inset-4 z-30 flex min-h-0 flex-col overflow-hidden rounded-3xl bg-card shadow-xl sm:inset-6"
-                      >
-                        {selection && (
-                          <ProductPage
-                            key={selection.line?.id ?? selection.product.id}
-                            product={selection.product}
-                            initial={selection.line}
-                            editing={selection.editing}
-                            busy={false}
-                            error={selection.error}
-                            onClose={() => setSection("menu")}
-                            onSave={(line, pointer, origin) => {
-                              if (selection.failureId !== undefined)
-                                updateCart.clearFailure(selection.failureId);
-                              const image = orderPane.current?.querySelector(
-                                '[data-ui="product-detail"] img',
-                              );
-                              const imageBounds = image?.getBoundingClientRect();
-                              const paneBounds = orderPane.current?.getBoundingClientRect();
-                              // 詳細をスクロールして写真が見えないときは、押した追加ボタンから運ぶ。
-                              const from =
-                                imageBounds &&
-                                paneBounds &&
-                                imageBounds.top >= paneBounds.top &&
-                                imageBounds.bottom <= paneBounds.bottom
-                                  ? imageBounds
-                                  : origin;
-                              updateCart.mutate({
-                                change: {
-                                  type:
-                                    (selection.editing ?? Boolean(selection.line)) ? "edit" : "add",
-                                  line,
-                                },
-                                configVersion: selection.configVersion,
-                                dismissProductId: selection.product.id,
-                                addition:
-                                  pointer &&
-                                  !(selection.editing ?? Boolean(selection.line)) &&
-                                  selection.product.imageKey
-                                    ? {
-                                        imageKey: selection.product.imageKey,
-                                        from,
-                                      }
-                                    : undefined,
-                              });
-                            }}
-                          />
-                        )}
-                      </PaneDialog.Popup>
-                    </PaneDialog.Portal>
-                  </PaneDialog.Root>
-                  {flights.map((flight) => (
-                    <CartFlightImage
-                      key={flight.id}
-                      flight={flight}
-                      onComplete={() =>
-                        setFlights((current) => current.filter((item) => item.id !== flight.id))
-                      }
-                    />
-                  ))}
-                  <ActionToasts />
-                  {updateCart.failures.map((failure) => (
-                    <div key={failure.mutationId} className="space-y-2 p-3">
-                      <ErrorNotice error={failure.error} />
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateCart.clearFailure(failure.mutationId)}
-                        >
-                          {t("common_cancel")}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateCart.retry(failure)}
-                        >
-                          {t("common_retry")}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  <ErrorNotice
-                    error={prepare.error || call.error || language.error || speed.error}
                   />
-                </aside>
-              </ResizablePanel>
-            </ResizablePanelGroup>
+                </ResizablePanel>
+                <ResizableHandle aria-label={t("kiosk_resize_panes")} />
+                <ResizablePanel
+                  id="tablecast-order"
+                  minSize="30%"
+                  className="h-full"
+                  onResize={(size) => {
+                    if (horizontal) setOrderWidth(size.inPixels);
+                    else setOrderWidth(orderPane.current?.clientWidth);
+                  }}
+                >
+                  <aside
+                    ref={orderPane}
+                    data-theme-part="menu"
+                    className="@container/tablecast-order relative isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
+                  >
+                    {renderPlanSummary()}
+                    <ErrorNotice error={screen.variables?.search ? null : screen.error} />
+                    <Tabs.Root
+                      className="flex flex-col min-h-0 flex-1"
+                      value={section === "bill" ? "orders" : section}
+                      onValueChange={(value: unknown) => {
+                        if (
+                          value === "menu" ||
+                          value === "cart" ||
+                          value === "orders" ||
+                          value === "bill"
+                        )
+                          setSection(value);
+                      }}
+                    >
+                      <div
+                        inert={Boolean(selection)}
+                        className="flex-1 min-h-0 overflow-y-auto scrollbar-thin"
+                      >
+                        {renderMenu()}
+                        {renderCart()}
+                        {renderOrders()}
+                      </div>
+                      <div inert={Boolean(selection)} className="sticky bottom-0 shrink-0 bg-card">
+                        <KioskMenuTabs
+                          data={data}
+                          cartLines={cartLines}
+                          cartPending={cartPending}
+                          products={catalog.data?.configuration.products}
+                          cartActions={renderCheckout()}
+                        />
+                      </div>
+                    </Tabs.Root>
+                    <PaneDialog.Root
+                      open={Boolean(selection)}
+                      modal={false}
+                      disablePointerDismissal
+                      onOpenChange={(open) => {
+                        if (!open) setSection("menu");
+                      }}
+                    >
+                      <PaneDialog.Portal container={orderPane}>
+                        <PaneDialog.Backdrop
+                          data-ui="product-overlay"
+                          className="absolute inset-0 z-20 bg-overlay/30"
+                        />
+                        <PaneDialog.Popup
+                          aria-label={selection?.product.text[locale].displayName}
+                          initialFocus={false}
+                          finalFocus={() =>
+                            detailTrigger.current?.isConnected
+                              ? detailTrigger.current
+                              : (orderPane.current?.querySelector<HTMLElement>(
+                                  '[data-ui="cart-tab"]',
+                                ) ?? false)
+                          }
+                          data-theme-part="dialog"
+                          className="absolute inset-4 z-30 flex min-h-0 flex-col overflow-hidden rounded-3xl bg-card shadow-xl sm:inset-6"
+                        >
+                          {selection && (
+                            <ProductPage
+                              imageSize={orderWidth && orderWidth < 576 ? 128 : 160}
+                              key={selection.line?.id ?? selection.product.id}
+                              product={selection.product}
+                              initial={selection.line}
+                              editing={selection.editing}
+                              busy={false}
+                              error={selection.error}
+                              onClose={() => setSection("menu")}
+                              onSave={(line, pointer, origin) => {
+                                if (selection.failureId !== undefined)
+                                  updateCart.clearFailure(selection.failureId);
+                                const image = orderPane.current?.querySelector(
+                                  '[data-ui="product-detail"] img',
+                                );
+                                const imageBounds = image?.getBoundingClientRect();
+                                const paneBounds = orderPane.current?.getBoundingClientRect();
+                                // 詳細をスクロールして写真が見えないときは、押した追加ボタンから運ぶ。
+                                const from =
+                                  imageBounds &&
+                                  paneBounds &&
+                                  imageBounds.top >= paneBounds.top &&
+                                  imageBounds.bottom <= paneBounds.bottom
+                                    ? imageBounds
+                                    : origin;
+                                updateCart.mutate({
+                                  change: {
+                                    type:
+                                      (selection.editing ?? Boolean(selection.line))
+                                        ? "edit"
+                                        : "add",
+                                    line,
+                                  },
+                                  configVersion: selection.configVersion,
+                                  dismissProductId: selection.product.id,
+                                  addition:
+                                    pointer &&
+                                    !(selection.editing ?? Boolean(selection.line)) &&
+                                    selection.product.imageKey
+                                      ? {
+                                          imageKey: selection.product.imageKey,
+                                          from,
+                                        }
+                                      : undefined,
+                                });
+                              }}
+                            />
+                          )}
+                        </PaneDialog.Popup>
+                      </PaneDialog.Portal>
+                    </PaneDialog.Root>
+                    {flights.map((flight) => (
+                      <CartFlightImage
+                        key={flight.id}
+                        flight={flight}
+                        onComplete={() =>
+                          setFlights((current) => current.filter((item) => item.id !== flight.id))
+                        }
+                      />
+                    ))}
+                    <ActionToasts />
+                    {updateCart.failures.map((failure) => (
+                      <div key={failure.mutationId} className="space-y-2 p-3">
+                        <ErrorNotice error={failure.error} />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateCart.clearFailure(failure.mutationId)}
+                          >
+                            {t("common_cancel")}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateCart.retry(failure)}
+                          >
+                            {t("common_retry")}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    <ErrorNotice
+                      error={prepare.error || call.error || language.error || speed.error}
+                    />
+                  </aside>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </div>
           </div>
-        </div>
-      </StoreTheme>
+        </StoreTheme>
+      </ImageProvider>
     );
   }
   return renderSession();

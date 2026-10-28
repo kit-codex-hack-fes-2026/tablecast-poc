@@ -221,11 +221,13 @@ Motionは共通`MotionProvider`から`LazyMotion`の機能を遅延ロードす�
 
 `apps/web/src/sw.ts`がSerwistのprecache・画像キャッシュ・更新調整を所有する。Viteの複数環境ビルドが完了した後、`@serwist/vite`の公開生成APIを呼び、`dist/client`のJS・CSS・フォント・アイコン・国旗・オフラインHTMLだけをprecacheする。通常のdevではService Workerを登録しない。SSR HTMLと認証・業務APIは`no-store`を維持する。
 
-`/media/tablecast/images/<SHA-256>.<png|webp>?width=<幅>`は不変の画像として、HTTPで1年間、Service Workerで最大256件・最終利用から30日保持する。画像のエラー応答は保存しない。固定キーの旧画像はHTTPの`no-cache`とETagで再検証する。幅はキーの一部であり、異なる変換を共有しない。キャッシュはOSから削除され得るため、容量不足・保存不可でもネットワーク取得を継続する。
+画像はスタッフの`/api/admin/stores/:storeId/images/*`、登録済み卓端末の`/api/table/images/*`、デモ所有者の`/api/admin/stores/:storeId/demo/:demoId/table/images/*`から取得する。旧`/media/*`のネットワーク配信は閉じる。認証・店舗認可と`media_assets`の店舗別所有関係を、内部キャッシュと304より先に検査する。クーポンは`/api/customer/stores/:storeId/coupons/images/*`で、現在の会員が持つ券または交換できる券の画像に限定する。
+
+内容ハッシュ付き画像は`private, max-age=31536000, immutable`、固定キーは`private, no-cache`で返す。Worker内部の変換キャッシュは店舗・R2 ETag・幅・WebP形式で分離し、hit時のR2本体取得と再変換を避ける。Service Workerは認可済みAPIのハッシュ付き画像の200だけを最大256件・最終利用から30日保持する。取得済みURLは通信なしで再利用し、権限失効後も端末の既存画像を即時消去しない。エラー応答は保存しない。容量不足・保存不可でもネットワーク取得を継続する。
 
 画像投入の所有者は`scripts/tablecast-seed-media.ts`。内容のSHA-256からキーを決め、既存の条件付きPUT・MD5照合・一時障害の再試行を共用する。画像投入完了後に既存の`Product.imageKey`を公開する。公開通知でcatalogを再取得し、変更のない画像のURLを維持する。新しいアップロードUIやDB migrationは追加しない。
 
-店舗からの商品画像取込は`modules/media/service.ts`が所有し、MCPの`upload_image`と`modules/media/admin-routes.ts`のmultipart APIで共有する。`stores/routes.ts`はmediaの管理routeも組み立てる。ChatGPTのfileParamsで受け取る期限付きファイルは許可したHTTPS配信先だけから取得する。取込後のWebP・店舗ID・申告された出所からSHA-256キー`tablecast/uploads/<hash>.webp`を決め、R2の条件付きPUTで再送を収束させる。画像と出所の店舗境界はConfiguration serviceの下書き保存・公開時にも照合する。追加のDBテーブルや認可系統は持たず、配信は既存`/media/*`の長期キャッシュを使う。詳細は[MCPの画像取込](mcp.md#商品画像の取り込み)を参照する。
+店舗からの商品画像取込は`modules/media/service.ts`が所有し、MCPの`upload_image`と`modules/media/admin-routes.ts`のmultipart APIで共有する。`stores/routes.ts`はmediaの管理routeも組み立てる。ChatGPTのfileParamsで受け取る期限付きファイルは許可したHTTPS配信先だけから取得する。取込後のWebP・店舗ID・申告された出所からSHA-256キー`tablecast/uploads/<hash>.webp`を決め、R2の条件付きPUTで再送を収束させる。画像と出所の店舗境界はConfiguration serviceの下書き保存・公開時にも照合する。画像本体はR2、実寸と6×4のBlurHash・店舗との所有関係はD1の`media_assets`へ保存する。設定JSONは`imageKey`だけを持ち、画面用HTTP応答へ必要な画像の`imageAssets`を一括付与する。注文計算・MCPのカタログ取得には表示情報の検索を加えない。詳細は[MCPの画像取込](mcp.md#商品画像の取り込み)を参照する。
 
 ### 開発者用メールカタログ
 

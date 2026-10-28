@@ -23,7 +23,7 @@ UIそのものの翻訳はWebのメッセージファイル、商品・プラン
 原資料から不明な原材料・アレルゲン・価格・対象プランは未確認とし、ChatGPTの推測で確定させない。
 生成画像は明示的な商品イメージとして扱い、実際の商品写真と偽らない。PoCで独自画像生成APIを必須実装しない。
 
-商品とカスタマイズ選択肢は同じ `imageKey`（既存 `/media/` のキー、未設定は `null`）と `imageKind`（`photograph` / `illustration`、省略時は `illustration`）を持つ。選択肢の説明は既存 `text.ja.description` / `text.en.description` を使う。画像フィールドのない旧設定は読み込み時に既定値を補い、DB migration は不要。既存 `get_configuration` / `update_draft` の設定 JSON で扱い、保存・検証だけでは公開せず、人間の公開承認後に客画面へ反映する。画像の送信・生成用 MCP tool は追加しない。
+商品とカスタマイズ選択肢は同じ `imageKey`（R2のキー、未設定は `null`）と `imageKind`（`photograph` / `illustration`、省略時は `illustration`）を持つ。選択肢の説明は既存 `text.ja.description` / `text.en.description` を使う。既存 `get_configuration` / `update_draft` の設定 JSON で扱い、保存・検証だけでは公開せず、人間の公開承認後に客画面へ反映する。画像の送信・生成用 MCP tool は追加しない。
 
 ## ツールのまとまり
 
@@ -55,7 +55,7 @@ Base64を扱うクライアントはfileの代わりに画像ファイルのBase
 
 `imageKind`は`photograph`または`illustration`、`imageSource`は`{ generated: boolean, description: string }`を必須とする。生成画像は`generated: true`かつ`illustration`にし、実写真と偽らない。descriptionには店舗が提供した写真・資料名、生成した商品イメージなどの出所を500文字以内で記録する。秘密情報、署名付きURL、個人情報を入れない。これは利用者が申告した出所であり、生成モデルの証明や権利確認の代わりにはならない。
 
-取込には現在のowner/admin権限と`tablecast:write` scopeが必要である。既存のCloudflare Images bindingで実形式と寸法を確認し、縦横1600px以内の静止WebPへ変換してR2へ保存する。画像バイトや元ファイルのメタデータをログ・tool応答へ返さない。取込済み画像はURLを知る人へ公開配信されるため、非公開資料そのものを渡さない。
+取込には現在のowner/admin権限と`tablecast:write` scopeが必要である。既存のCloudflare Images bindingで実形式と寸法を確認し、縦横1600px以内の静止WebPへ変換してR2へ保存する。画像バイトや元ファイルのメタデータをログ・tool応答へ返さない。取込時に実寸とBlurHashをD1へ保存し、画像URLのネットワーク取得には店舗の認可を要求する。設定JSONへBlurHashを保存せず、MCPの設定取得にも画面用の`imageAssets`を付けない。取得済み画像は端末キャッシュで再利用するため、権限失効後の即時消去は保証しない。
 
 1. `get_configuration`と`create_draft`で対象店舗と現在の設定を確認する。
 2. `upload_image`へfile参照または実画像のBase64と出所を渡す。画像生成・OCRはクライアント側で行う。

@@ -243,13 +243,15 @@ JSが必要なボタンと入力はTanStackの`useHydrated`で操作可能にな
 
 商品一覧は画像の有無にかかわらず正方形の画像領域を予約する。未登録、取得待ち、取得失敗、再取得によって商品名・価格や次の行の位置を動かさない。画像未登録だけを文字と小さなアイコンへ縮めない。
 
-`ProductImage`は`blurDataURL`で事前生成した小さなinline画像を明示指定できる。生成・保存元は呼出し側の静的素材とし、URLエンコード済みSVGまたはbase64画像のdata URLを渡す。目安は1KB以下、写真を縮小する場合は長辺24px程度とする。SSR中の画像解析、商品ごとの追加DB取得、低解像度画像の追加HTTP取得はしない。既存カタログの画像には自動生成・自動適用せず、未指定なら背景なしで従来の画像を表示する。保存schema、取込API、依存・envの追加は不要である。
+`ProductImage`は取込時に生成したBlurHashを`@unpic/placeholder`で長辺16px・元画像と同じ縦横比のdata URLへ復元し、SSRのplaceholder層へ埋め込む。復元は同じhashと寸法でmemo化し、追加のplaceholder HTTP通信は行わない。実寸・BlurHashの正本はD1とし、設定JSONへ複製しない。カタログと個別下書きのHTTP応答に`imageAssets`をまとめて返し、店舗・卓・デモごとの`ImageProvider`が配信URLと表示情報を既存部品へ接続する。SSR時に画像本体を解析せず、画像ごとの追加DB取得もしない。
 
-Unpic 1.0.2の`unstyled`は`background`の生成も無効にするため、既存のTailwindレイアウトを保ったまま背景のCSS変数をTailwind utilityへ渡す。背景は読込成功・失敗時に消し、透過部分に残さない。hydration前に読込が終わった場合も反映する。読込前のWebKitを完了・失敗と誤認しないよう、`complete`と併せて`currentSrc`の選択済みを確認する。`layout="fixed"`でHTMLの幅・高さを残し、CSSの縦横比と各呼出し側の枠で読込待ち・失敗時の寸法を維持する。画像なしの表示は各呼出し側が所有する。
+取込は既存Images bindingで長辺32px以内のPNGへ縮小し、`@unpic/pixels`と`blurhash.encode(..., 6, 4)`を使う。独自decoder・チャンネル変換・成分数の自動調整は持たない。商品・選択肢・ロゴ・バナーを既存の`ProductImage`へ揃え、バナーは保存実寸から縦横比を予約する。
 
-遅延読込では`sizes="auto, …"`で可変ペイン内の実幅を使い、未対応ブラウザーには既定50%ペインと2列・3列に応じたvw値をfallbackにする。カートの商品画像は80〜112pxの角丸枠でカード内の左上に揃え、選択肢は96px。詳細画像だけを優先読込し、横並びペインの最大80%をsizesの上限見積りに使う。幅候補は64〜1600pxであり、DPRとブラウザーの選択結果も実画面で確認する。
+Unpic 1.0.2の`unstyled`は`background`の生成も無効にするため、共通の画像枠とplaceholder層へCSS変数を渡す。placeholderだけにCSS blur 4pxをかけ、本画像のdecode後に既存motion tokenの200ms・ease-outでopacityを消す。本画像の取得と描画は演出の完了待ちにしない。キャッシュ済み・hydration前の完了・失敗・reduced motionでは即時に背景を消し、透過部分に残さない。読込前のWebKitを完了・失敗と誤認しないよう、`complete`と併せて`currentSrc`の選択済みを確認する。`layout="fixed"`でHTMLの幅・高さを残し、CSSの縦横比と各呼出し側の枠で読込待ち・失敗時の寸法を維持する。画像なしの表示は各呼出し側が所有する。
 
-変換結果はCloudflare Cache APIの`tablecast-images-v1`へ保存する。キャッシュキーは配信origin・元画像キー・R2のETag・幅・WebP形式を含み、未知のqueryは含めない。変換設定を変える場合はキャッシュ名の版も上げる。固定キーでもR2で現在のETagを確認してから再利用するため、差替え・削除に追従する。ブラウザーにはハッシュキーのみimmutable、固定キーにはno-cacheを返す。`X-Tablecast-Image-Cache`のHIT/MISSで変換の省略を観測でき、304はその前に判定する。Cache APIの保存はデータセンター単位であり、localテストの成功を実配信のhit率の保証にしない。 実測値と再現条件は[画像の検証記録](image-performance.md)を参照する。
+遅延読込では`sizes="auto, …"`で可変ペイン内の実幅を使う。客画面のfallbackはPanelの実幅とコンテナに応じた1〜3列から求め、固定の50%ペインには依存しない。カートは112px、通常の選択肢は96px、縮小表示は32px、商品詳細は枠に合わせて128/160pxとする。幅候補は元画像幅と1600pxを超えず、固定枠ではDPR 1〜3の候補へ絞る。DPRとブラウザーの取得幅は既存性能試験で確認する。
+
+変換結果はCloudflare Cache APIの`tablecast-images-v1`へ保存する。配信はWebP品質85を明示し、URLへ`v=2`を付ける。キャッシュキーとETagは元画像の版・幅・形式・品質・変換版を含み、未知のqueryは含めない。変換設定を変える場合は配信URLと内部キーの変換版を更新し、保存済みの別版を一括削除しない。固定キーでもR2で現在のETagを確認してから再利用するため、差替え・削除に追従する。ブラウザーにはハッシュキーのみimmutable、固定キーにはno-cacheを返す。`X-Tablecast-Image-Cache`のHIT/MISSで変換の省略を観測でき、304はその前に判定する。Cache APIの保存はデータセンター単位であり、localテストの成功を実配信のhit率の保証にしない。 実測値と再現条件は[画像の検証記録](image-performance.md)を参照する。
 
 ### 設定フォームの配置
 

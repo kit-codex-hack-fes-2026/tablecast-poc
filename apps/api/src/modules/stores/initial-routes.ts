@@ -4,6 +4,7 @@ import { apiFactory } from "../../platform/http";
 import { validateQuery } from "../../platform/validation";
 import { getCatalog } from "../catalog/queries";
 import { instructionResponse } from "../configuration/instruction-response";
+import { withImageAssets } from "../media/queries";
 import { getHomeSummary } from "./home";
 import { getAdminState, listMemberStores } from "./queries";
 
@@ -65,7 +66,7 @@ export const initialRoutes = apiFactory.createApp().get(
     const catalog =
       membership && view === "catalog"
         ? instructionResponse(
-            await getCatalog(services, membership.id),
+            await withImageAssets(services, await getCatalog(services, membership.id)),
             c.req.header("X-Tablecast-Instructions"),
           )
         : null;

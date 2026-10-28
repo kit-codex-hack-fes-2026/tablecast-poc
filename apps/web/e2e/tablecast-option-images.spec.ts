@@ -73,7 +73,7 @@ test("画面で取り込んだ商品画像を保存し、開き直した下書�
   const image = field.getByRole("img", { name: ja.editor_image_current });
   await expect(image).toBeVisible();
   expect(new URL((await image.getAttribute("src")) ?? "", baseURL).pathname).toBe(
-    `/media/${uploaded.imageKey}`,
+    `/api/admin/stores/tablecast-komorebi/images/${uploaded.imageKey}`,
   );
   await expect
     .poll(() =>

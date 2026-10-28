@@ -19,6 +19,7 @@ import { optionRow } from "./product-option-model";
 
 export function ProductPage({
   product,
+  imageSize = 160,
   initial,
   editing = Boolean(initial),
   busy,
@@ -29,6 +30,7 @@ export function ProductPage({
   busy: boolean;
   editing?: boolean;
   error?: unknown;
+  imageSize?: number;
   initial?: CartLine;
   onClose: () => void;
   onSave: (line: CartLine, pointer: boolean, origin: DOMRect) => void;
@@ -64,7 +66,7 @@ export function ProductPage({
             priority
             width={160}
             height={160}
-            sizes="(min-width: 640px) 160px, 128px"
+            sizes={`${imageSize}px`}
             className="col-start-1 row-span-2 row-start-1 size-32 rounded-lg object-top-left @min-[36rem]/product-dialog:row-span-1 @min-[36rem]/product-dialog:size-40"
             src={`/media/${product.imageKey}`}
             alt={product.text[locale].displayName}

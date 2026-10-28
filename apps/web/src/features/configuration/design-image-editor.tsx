@@ -1,5 +1,6 @@
 import { type Banner, type Configuration, type ThemeImage } from "@tablecast/api/schema";
 import { useRef } from "react";
+import { ProductImage } from "../../components/product-image";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { NativeSelect } from "../../components/ui/native-select";
@@ -100,8 +101,13 @@ export function HotspotEditor({
       <p>{t("theme_draw_hint")}</p>
       {banner.image.imageKey && (
         <div className="relative">
-          <img
-            src={`/media/${banner.image.imageKey}?width=1600`}
+          <ProductImage
+            responsive
+            natural
+            width={1600}
+            height={600}
+            sizes="100vw"
+            src={`/media/${banner.image.imageKey}`}
             alt={banner.image.alt[locale]}
             className="block h-auto w-full"
           />

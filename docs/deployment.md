@@ -258,3 +258,9 @@ mainへの通常マージには同一repoの最新staging、stagingの最新push
 ## 開発用Langfuse
 
 preview/stagingでLangfuse Cloud日本リージョンを使う場合は、同じ開発用projectの`TABLECAST_LANGFUSE_PUBLIC_KEY`・`TABLECAST_LANGFUSE_SECRET_KEY`をActions secretへ設定する。送信先は`https://jp.cloud.langfuse.com`で、配備時にAPI Workerへだけ注入する。既存のGrafana送信は継続し、LangfuseはLLM関連Observationだけを受け取る。資格未設定ではLangfuse送信を無効にし、API・音声・Grafanaを継続する。productionへは追加しない。本文は既存の`TABLECAST_OTEL_CAPTURE_CONTENT`で制御する。SDK/OTLPはv4対応を使い、詳細とCodexからの調査は[観測手順](observability.md#langfuseとcodexの改善ループ)を参照する。
+
+## 画像の表示情報の移行
+
+`0030_tablecast_media_assets.sql`を適用してから、既存の配備準備・seedの`migrateImageAssets`を実行する。公開設定・下書き・過去release・デモ・クーポンの参照と既存索引を集め、R2に保存済みの画像から実寸とBlurHashを生成する。店舗とキーの複合主キーで所有関係を分離し、設定JSONと共有されているR2本体は書き換えない。R2のアップロード所有者と異なる店舗への索引化は拒否する。旧4×3の28文字の行は6×4の52文字へ再生成して更新し、更新済みの行は再利用する。同じ物理キーの解析は一実行中に一度だけ行う。失敗後は同じ処理を再実行する。
+
+索引移行の`tablecast.media_migration`ログに追加・更新件数とR2に存在しない参照を記録する。欠損画像は配信404のままとし、架空の寸法・BlurHashで埋めない。配備前に欠損が既知の削除済み下書きなのか公開中の画像なのか確認する。productionでもseedの初期投入とは独立して索引移行を実施する。画像配信を切り替える前に索引生成を完了させる。旧`/media/*`は再開せず、rollback時も匿名公開へ戻さない。既存の端末キャッシュは一括削除しない。

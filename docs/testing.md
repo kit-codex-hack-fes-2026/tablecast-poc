@@ -443,3 +443,9 @@ HTMLがvisibleでもCSS適用済みとは限らない。JSを保留したSSRの�
 実R2の4枠試験は最初の4書込みが到達するまでgateで保留し、その後に最初の1枚以外を解放して進行を確認する。ファイルの読込速度から最大並列数を推定しない。finallyで全gateを解放して実R2の終了を待つ。
 
 Browserの色判定へ渡すCSSプロパティは`background-color`等の標準CSS名を使う。camelCaseをCSSStyleDeclarationへ渡した際のengine差に依存させず、色の期待値は維持する。
+
+## 画像配信の変更の検証
+
+既存`media`・`image-upload`・`customer-rewards-http`の実Workers/D1/R2/Images統合で、取込・保存・再送・索引移行・同一店舗認可を確認する。匿名・別店舗・端末失効は内部cache hitと条件付き要求でも拒否し、共有業務カタログには表示情報を追加しない。`ProductImage` BrowserでSSRのinline背景、hydration、成功・失敗・透過・差替え、実寸の予約と元画像幅の制限を確認する。
+
+新しいE2Eを作らず、既存`image-performance`の24/120商品・cold 500,000byte以下・取得済みURLのwarm転送0・CLS 0.1未満を維持する。HTML・カタログJSON・追加JS容量、SSR時間とLCPを対象SHA・同じfixtureで比較する。既存`pwa`で認可済み画像の通信なし再利用と401/404の非保存を確認し、権限失効後の即時消去は要求しない。ローカル・CIと実Cloudflareの性能は区別する。

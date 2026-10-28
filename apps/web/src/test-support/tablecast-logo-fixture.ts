@@ -5,7 +5,7 @@ export const tablecastLogoFixture: BrowserCommand<[enabled: boolean], void> = as
   { context },
   enabled,
 ) => {
-  const path = `**/media/tablecast/uploads/${"a".repeat(64)}.webp*`;
+  const path = `**/images/tablecast/uploads/${"a".repeat(64)}.webp*`;
   await context.unroute(path);
   if (enabled)
     await context.route(path, (route) =>

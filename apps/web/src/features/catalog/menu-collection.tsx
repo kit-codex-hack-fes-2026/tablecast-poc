@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { CollectionSort } from "../../components/collection-sort";
 import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
+import { ImageProvider } from "../../components/image-provider";
 import { PageHeader } from "../../components/page-header";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -203,7 +204,10 @@ function MenuListCollection({
     );
   }
   return (
-    <>
+    <ImageProvider
+      basePath={`/api/admin/stores/${storeId}`}
+      assets={draftId ? draft.data?.imageAssets : catalog.data?.imageAssets}
+    >
       <PageHeader
         title={t(menuLabels[section])}
         actions={
@@ -246,6 +250,6 @@ function MenuListCollection({
         onRetry={() => void (draftId ? draft.refetch() : catalog.refetch())}
       />
       {(configuration || !error) && renderResults()}
-    </>
+    </ImageProvider>
   );
 }

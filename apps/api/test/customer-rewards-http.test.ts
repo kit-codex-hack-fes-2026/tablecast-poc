@@ -1,11 +1,13 @@
 import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
 import { z } from "zod";
+import { saveMenuImage } from "../src/modules/media/service";
+import { createApiServices } from "../src/platform/context";
 import { tableStateSchema } from "../src/schema";
 import { deviceToken, setupFixture } from "./fixture";
 
 it("会員・店舗の実HTTPから付与・交換・申請・会計適用・取消を実D1へ接続する", async () => {
-  const { cookie } = await setupFixture();
+  const { cookie, staff } = await setupFixture();
   const origin = "http://localhost:3000";
   const admin = "/api/admin/stores/tablecast-store";
   const member = "/api/customer/stores/tablecast-store";
@@ -37,14 +39,22 @@ it("会員・店舗の実HTTPから付与・交換・申請・会計適用・取
       })
     ).json(),
   );
-  const imageKey = `tablecast/uploads/${"a".repeat(64)}.webp`;
   const imageSource = { generated: false, description: "店舗の券面" };
-  await env.TABLECAST_MEDIA.put(imageKey, new Uint8Array([1]), {
-    customMetadata: {
-      storeId: "tablecast-store",
-      metadata: JSON.stringify({ imageKind: "illustration", imageSource }),
-    },
-  });
+  const image = await saveMenuImage(
+    createApiServices(env),
+    staff,
+    new File(
+      [
+        Uint8Array.fromBase64(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+        ),
+      ],
+      "coupon.png",
+      { type: "image/png" },
+    ),
+    { imageKind: "illustration", imageSource },
+  );
+  const imageKey = image.imageKey;
   const ruleId = crypto.randomUUID();
   await request(`${admin}/coupons/rules`, {
     id: ruleId,
@@ -66,7 +76,16 @@ it("会員・店舗の実HTTPから付与・交換・申請・会計適用・取
       threshold: 3,
     },
   });
+  const imagePath = `${member}/coupons/images/${imageKey}?width=128`;
+  const denied = await exports.default.fetch(
+    new Request(origin + imagePath, { headers: { Cookie: cookie } }),
+  );
+  expect(denied.status).toBe(403);
   await request(`${member}/enrol`, { consentVersion: 1 });
+  const rendered = await request(imagePath);
+  expect(rendered.headers.get("Cache-Control")).toBe("private, max-age=31536000, immutable");
+  expect(rendered.headers.get("Content-Type")).toBe("image/webp");
+  await rendered.arrayBuffer();
   const code = z
     .object({ code: z.string() })
     .parse(

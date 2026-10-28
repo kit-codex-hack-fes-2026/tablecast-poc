@@ -35,6 +35,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         TABLECAST_PUBLIC_ORIGIN: "http://localhost:3999",
         TABLECAST_AUTH_SECRET: "tablecast-seed-test-secret-not-used-in-deployment",
       },
+      images: { binding: "TABLECAST_IMAGES" },
       r2_buckets: [{ binding: "TABLECAST_MEDIA", bucket_name: "tablecast-seed-test-media" }],
       d1_databases: [
         {

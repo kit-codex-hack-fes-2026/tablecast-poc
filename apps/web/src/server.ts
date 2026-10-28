@@ -38,7 +38,9 @@ export default instrument(
         const { default: start } = await import("./ssr");
         const response = await start.fetch(request);
         status = response.status;
-        return response;
+        const outgoing = new Response(response.body, response);
+        outgoing.headers.append("Server-Timing", `ssr;dur=${performance.now() - started}`);
+        return outgoing;
       } finally {
         requestLog(
           {

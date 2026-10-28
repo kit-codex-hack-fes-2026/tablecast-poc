@@ -145,7 +145,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       const productImage = card.locator("img");
       await expect(productImage).toHaveAttribute(
         "src",
-        new RegExp(`/media/${product.imageKey?.replace(".", "\\.")}`),
+        new RegExp(`/api/table/images/${product.imageKey?.replace(".", "\\.")}`),
       );
       await expect(productImage).toHaveAttribute("srcset", /width=\d+/);
       const interactive = await guest.newPage();

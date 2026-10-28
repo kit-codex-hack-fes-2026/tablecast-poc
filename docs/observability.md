@@ -88,6 +88,8 @@ Cloud datasource UIDは`grafanacloud-logs`・`grafanacloud-traces`。Grafana MCP
 
 ## 商品注文のクリティカルパス
 
+画像取得は`tablecast.image.deliver`配下の`metadata`・`r2_head`・`cache`・`r2_get`・`transform`で確認する。画像の幅・形式・品質・変換版とHIT/MISS/NOT_MODIFIEDを属性へ残し、認可spanと分ける。`transform`はImages bindingのoutput取得までで、本文の全転送・ブラウザーdecode・描画完了ではない。Server-TimingとResource Timing、画像のdecode後の描画frameを照合する。端末cacheでは保存時のServer-Timingも再利用されうるため、それを今回の待ち時間として集計しない。画像のキー・Cookie・認証情報を新しい計測属性へ含めない。
+
 GUIで商品をカートへ入れ、確認画面を経て明示承認する。`/api/table/orders`のログから`trace_id`を取り、`get_tempo_trace`でウォーターフォールを取得する。認可・確認版・冪等性の判定を迂回する測定用endpointは作らない。
 
 認可は`tablecast.authentication.authorise`とデモの`tablecast.authentication.demo`、カゴは`tablecast.cart.update`配下の`session`・`pricing`・`commit`と`tablecast.table.read`を確認する。注文serviceは`tablecast.order.submit`配下の`session`・`prerequisites`・`commit`・`notify`を使う。Web→service binding→API→業務serviceの親子関係とstart/endを確認する。`commit`配下のD1 batch子spanは時間が重なるため、子spanのdurationを足した値を応答時間としない。SQL時間はD1の`cloudflare.d1.response.sql_duration_ms`、binding往復は親のD1 spanのwall timeで分ける。

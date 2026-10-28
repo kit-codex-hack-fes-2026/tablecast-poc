@@ -1,5 +1,6 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { ErrorNotice } from "../../components/error-notice";
+import { ImageProvider } from "../../components/image-provider";
 import { LoadingState } from "../../components/loading-state";
 import {
   emptyMenuListSearch,
@@ -31,7 +32,10 @@ export function MenuItem({
   });
   const configuration = draftId ? draft.data?.configuration : catalog.data?.configuration;
   return (
-    <>
+    <ImageProvider
+      basePath={`/api/admin/stores/${store.id}`}
+      assets={draftId ? draft.data?.imageAssets : catalog.data?.imageAssets}
+    >
       <ErrorNotice error={catalog.error || draft.error} />
       {configuration ? (
         draftId && draft.data ? (
@@ -54,6 +58,6 @@ export function MenuItem({
       ) : (
         !(catalog.error || draft.error) && <LoadingState />
       )}
-    </>
+    </ImageProvider>
   );
 }

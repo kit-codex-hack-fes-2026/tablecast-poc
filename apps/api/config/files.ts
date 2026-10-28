@@ -35,6 +35,8 @@ export const files = [
   ],
   ["service", "src/modules/voice/runtime.ts"],
   ["service", "src/modules/tables/state-read.ts"],
+  ["service", "src/modules/media/placeholder.ts"],
+  ["service", "src/modules/media/migration.ts"],
   ["provider", "src/modules/voice/catalog.ts"],
   ["integration", "src/integrations/*.ts"],
   ["mcp-tools", "src/modules/mcp/*-tools.ts"],
