@@ -77,3 +77,27 @@ export const money = (
 export const time = (value: number, locale: Locale) => timeFormat[locale].format(value);
 export const dateTime = (value: Date | number, locale: Locale) =>
   `${calendarDate(value, locale)}${locale === "en" ? "," : ""} ${timeFormat[locale].format(value)}`;
+
+const relativeFormat = {
+  ja: new Intl.RelativeTimeFormat("ja-JP", { numeric: "auto" }),
+  en: new Intl.RelativeTimeFormat("en-GB", { numeric: "auto" }),
+};
+/** 呼出からの経過時間を、分・時間・日の境界で過大に丸めず表示する。 */
+export function relativeTime(value: number, now: number, locale: Locale) {
+  const seconds = Math.max(0, (now - value) / 1000);
+  const [unit, size]: [Intl.RelativeTimeFormatUnit, number] =
+    seconds < 60
+      ? ["second", 1]
+      : seconds < 3600
+        ? ["minute", 60]
+        : seconds < 86400
+          ? ["hour", 3600]
+          : seconds < 604800
+            ? ["day", 86400]
+            : seconds < 2592000
+              ? ["week", 604800]
+              : seconds < 31536000
+                ? ["month", 2592000]
+                : ["year", 31536000];
+  return relativeFormat[locale].format(-Math.floor(seconds / size), unit);
+}

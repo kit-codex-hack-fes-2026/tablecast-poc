@@ -14,10 +14,10 @@ import {
 import { useRef } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { Money } from "../../components/money";
+import { RelativeTime } from "../../components/relative-time";
 import { StaffCallDetails } from "../../components/staff-call-details";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { dateTime } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { guideTemplates } from "../configuration/guide-model";
 import { type AssistanceProps, useStaffAssistance } from "./staff-assistance-state";
@@ -333,7 +333,7 @@ function RecentCall({ model }: { model: ReturnType<typeof useStaffAssistance> })
 }
 
 function CallPreview({ call, onClick }: { call: StaffCall; onClick: () => void }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   return (
     <Button
       variant="outline"
@@ -341,12 +341,9 @@ function CallPreview({ call, onClick }: { call: StaffCall; onClick: () => void }
       onClick={onClick}
     >
       <span className="flex items-center justify-between gap-2">
-        <time
-          className="text-xs text-muted-foreground"
-          dateTime={new Date(call.createdAt).toISOString()}
-        >
-          {dateTime(call.createdAt, locale)}
-        </time>
+        <span className="text-xs text-muted-foreground">
+          <RelativeTime value={call.createdAt} />
+        </span>
         <Badge variant={call.status === "pending" ? "warning" : "success"}>
           {t(call.status === "pending" ? "assistance_pending" : "assistance_resolved")}
         </Badge>

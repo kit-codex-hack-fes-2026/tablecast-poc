@@ -13,6 +13,7 @@ import { FloorControls } from "./floor-controls";
 import { type FloorSearch, storeDate } from "./floor-model";
 import { floorOptions } from "./floor-query";
 import { FloorTimeline } from "./floor-timeline";
+import { PendingStaffCall } from "./pending-staff-call";
 import { TableMetrics } from "./table-metrics";
 import { TableTimeline } from "./table-timeline";
 
@@ -73,6 +74,11 @@ export function Floor({
       }),
     [navigate, store.id],
   );
+  const pendingCalls = state.data.tables
+    .filter((table) => table.status === "open" && table.staffCalled)
+    .toSorted(
+      (a, b) => (a.staffCall?.createdAt ?? Infinity) - (b.staffCall?.createdAt ?? Infinity),
+    );
   return (
     <>
       <PageHeader
@@ -87,6 +93,24 @@ export function Floor({
       />
       <ErrorNotice query={state} />
 
+      {pendingCalls.length > 0 && (
+        <section aria-label={t("staff_call_queue")} className="space-y-3">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            {t("staff_call_queue")}
+            <span className="rounded-full bg-warning-selected px-2.5 py-0.5 text-sm text-warning">
+              {pendingCalls.length}
+            </span>
+          </h2>
+          {pendingCalls.map((table) => (
+            <PendingStaffCall
+              key={table.id}
+              table={table}
+              initialNow={state.dataUpdatedAt}
+              onSelect={selectVisit}
+            />
+          ))}
+        </section>
+      )}
       <section aria-label={t("floor_current")}>
         <h2 className="mb-3 text-sm font-medium text-muted-foreground">{t("floor_current")}</h2>
         <TableMetrics

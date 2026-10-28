@@ -1535,5 +1535,8 @@
   "assistance_no_original": "原文の記録なし",
   "assistance_recent": "直近の呼び出し",
   "assistance_fallback": "ボタンで用件を選ぶ",
-  "assistance_speak": "ご用件をお話しください"
+  "assistance_speak": "ご用件をお話しください",
+  "staff_call_queue": "呼び出し中",
+  "staff_call_open_table": "卓の詳細を開く",
+  "staff_call_unconfirmed": "用件は未確認です。引き継ぎメモの記録がありません。"
 }

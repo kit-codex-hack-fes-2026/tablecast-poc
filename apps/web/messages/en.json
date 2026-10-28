@@ -1535,5 +1535,8 @@
   "assistance_no_original": "No original request recorded",
   "assistance_recent": "Latest call",
   "assistance_fallback": "Choose a request instead",
-  "assistance_speak": "Tell us what you need"
+  "assistance_speak": "Tell us what you need",
+  "staff_call_queue": "Staff calls awaiting attention",
+  "staff_call_open_table": "Open table details",
+  "staff_call_unconfirmed": "The request has not been confirmed. No handover note was recorded."
 }

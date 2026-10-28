@@ -6,7 +6,7 @@ import {
   staffCallPageSchema,
   tableStateSchema,
 } from "@tablecast/api/schema";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import en from "../messages/en.json" with { type: "json" };
 import ja from "../messages/ja.json" with { type: "json" };
@@ -160,7 +160,57 @@ test("呼び出しメモと対応済み状態が客と店員で共有され、�
     const staffPage = await staffContext.newPage();
     await staffPage.goto(`/admin/stores/${storeId}/floor`);
     await staffPage.getByRole("button", { name: "日本語", exact: true }).click();
-    await staffPage.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();
+    await expect(
+      staffPage.getByRole("heading", { name: ja.admin_live, exact: true }),
+    ).toBeVisible();
+    await expect
+      .poll(() =>
+        staffPage.evaluate(
+          () =>
+            document
+              .getAnimations()
+              .filter(
+                (animation) =>
+                  animation.playState === "running" &&
+                  animation.effect?.getComputedTiming().endTime !== Infinity,
+              ).length,
+        ),
+      )
+      .toBe(0);
+    const calls = staffPage.getByRole("region", { name: ja.staff_call_queue, exact: true });
+    const pending = calls.getByRole("article", {
+      name: `${vacant.name} · ${ja.assistance_pending}`,
+      exact: true,
+    });
+    await expect(pending.getByText(call.handoff.summaryJa, { exact: true })).toBeVisible();
+    await expect(pending.getByText(call.handoff.originalText, { exact: true })).toBeVisible();
+    for (const attempted of call.handoff.attempted)
+      await expect(pending.getByText(attempted, { exact: true })).toBeVisible();
+    expect(await pending.locator("details,summary,[data-slot=accordion]").count()).toBe(0);
+    const relative = pending.locator("time");
+    await expect(relative).toHaveText(/今|前/);
+    expect((await calls.boundingBox())?.y).toBeLessThan(
+      (await staffPage.getByRole("region", { name: ja.floor_current }).boundingBox())?.y ?? 0,
+    );
+    await staffPage.screenshot({ path: resolve(evidence, "tablecast-staff-floor-after.png") });
+    await writeFile(
+      resolve(evidence, "tablecast-staff-floor-bounds.json"),
+      JSON.stringify(
+        {
+          viewport: staffPage.viewportSize(),
+          panel: await pending.boundingBox(),
+          header: await pending.locator("header").boundingBox(),
+          memo: await pending.getByText(call.handoff.summaryJa, { exact: true }).boundingBox(),
+          relative: await relative.boundingBox(),
+        },
+        null,
+        2,
+      ),
+    );
+    await pending.getByRole("button", { name: ja.staff_call_open_table, exact: true }).click();
+    await expect(
+      staffPage.getByRole("heading", { name: vacant.name, level: 1, exact: true }),
+    ).toBeVisible();
     await expect(staffPage.getByText(call.handoff.summaryJa, { exact: true }).last()).toBeVisible();
     await expect(
       staffPage.getByText(call.handoff.originalText, { exact: true }).last(),
@@ -183,7 +233,15 @@ test("呼び出しメモと対応済み状態が客と店員で共有され、�
       )
       .toBe(0);
     await staffPage.screenshot({ path: resolve(evidence, "tablecast-assistance-staff.png") });
-    await staffPage.getByRole("button", { name: ja.admin_acknowledge, exact: true }).click();
+    await staffPage.getByRole("tab", { name: ja.admin_logs, exact: true }).click();
+    await expect(
+      staffPage
+        .getByRole("article", { name: `${vacant.name} · ${ja.assistance_pending}`, exact: true })
+        .getByText(call.handoff.originalText, { exact: true }),
+    ).toBeVisible();
+    await staffPage.getByRole("link", { name: ja.admin_live, exact: true }).last().click();
+    await pending.getByRole("button", { name: ja.admin_acknowledge, exact: true }).click();
+    await expect(pending).toBeHidden();
     await expect(popup.getByText(en.assistance_resolved, { exact: true })).toBeVisible();
     await page.reload();
     await page.getByRole("button", { name: en.kiosk_call_staff, exact: true }).click();
