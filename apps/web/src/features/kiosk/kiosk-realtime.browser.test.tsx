@@ -395,3 +395,50 @@ it("卓snapshotと通知接続の間に検索が変わっても、初回同期�
     .element(page.getByRole("button", { name: new RegExp(product.text.ja.displayName) }))
     .toBeVisible();
 });
+
+it("画面操作のcursorが先へ進んでも、受信途中の会話履歴を捨てない", async () => {
+  fixture.current.uiSection = "menu";
+  const original = fetch;
+  const reached = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let pause = true;
+  const cursor = fixture.current.cursor + 1;
+  vi.stubGlobal("fetch", async (value: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(value, init);
+    const url = new URL(request.url);
+    if (pause && url.pathname === "/api/table/events" && !url.searchParams.has("tail")) {
+      pause = false;
+      reached.resolve();
+      await release.promise;
+      return Response.json({
+        cursor,
+        events: [
+          {
+            cursor,
+            storeId: fixture.current.storeId,
+            tableSessionId: fixture.current.id,
+            kind: "voice.assistant",
+            createdAt: Date.now(),
+            data: { role: "assistant", locale: "ja", text: "接続待ちの会話" },
+          },
+        ],
+      });
+    }
+    return original(value, init);
+  });
+  await mountKiosk();
+  await expect.poll(() => TablecastSocket.instances.length).toBeGreaterThan(0);
+  TablecastSocket.instances.at(-1)?.dispatchEvent(new Event("open"));
+  try {
+    await reached.promise;
+    fixture.current.cursor = cursor;
+    await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
+    await expect
+      .poll(() => fixture.client.getQueryData<{ cursor: number }>(["tablecast-table"])?.cursor)
+      .toBe(cursor + 1);
+    release.resolve();
+    await expect.element(page.getByText("接続待ちの会話", { exact: true })).toBeVisible();
+  } finally {
+    release.resolve();
+  }
+});
