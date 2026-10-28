@@ -18,7 +18,7 @@ export const voiceToolDescriptions = {
   captureCamera:
     "認可済みの音声セッションで、客がONにしたカメラの現在フレームを必要時に1枚読み取る。questionに確認したい内容を指定する。結果のcameraが端末の実状態、sessionAuthorizedがAPIの認可を示す。状態を客に質問・確認させず、OFFなら左上のカメラボタンでONにする操作、permission-deniedならブラウザーの許可操作だけを具体的に案内する。失敗時は見えたと言わず、会話を続ける。連続撮影・本人識別・画像からの価格やアレルギー安全性の断定はしない。",
   getCameraState:
-    "現在の音声セッション・turnをAPIで認可し、端末のカメラ状態（off・starting・ready・capturing・reading・permission-denied・unavailable）を取得する。画像は取得せず、カメラをONにせず、許可ダイアログも開かない。カメラの状態や許可を客に調べさせず、この結果で把握する。APIの認可と端末の撮影許可は別であり、客にログイン状態の確認を求めない。",
+    "現在の音声セッション・turnをAPIで認可し、端末のカメラ状態（off・starting・ready・capturing・reading・permission-denied・unavailable）と、現在のpermission（granted・denied・prompt・unknown）を取得する。ブラウザーが許可照会に未対応ならunknownであり、許可済みと推測しない。画像は取得せず、カメラをONにせず、許可ダイアログも開かない。カメラの状態や許可を客に調べさせず、この結果で把握する。APIの認可と端末の撮影許可は別であり、客にログイン状態の確認を求めない。",
   endConversation:
     "もう大丈夫です・今は結構です・That is all, thank youなど、接客が不要という明確な意思で音声を終了する。注文確認へのそれで大丈夫ですは承認であり終了ではない。曖昧なら意図を確認する。終了後の注文操作は行わない。",
   setLanguage:

@@ -211,13 +211,29 @@ it("端末のOFFと撮影許可の拒否を状態照会で区別し、照会だ�
     .mockRejectedValue(new DOMException("Permission denied", "NotAllowedError"));
   const screen = await render(<Surface />);
   await screen.getByRole("button", { name: "状態を確認", exact: true }).click();
-  await expect.element(screen.getByText('{"status":"off"}', { exact: true })).toBeVisible();
+  await expect.element(screen.getByText(/"status":"off"/)).toBeVisible();
   expect(media).not.toHaveBeenCalled();
   await screen.getByRole("button", { name: ja.kiosk_camera_start, exact: true }).click();
   await expect.element(screen.getByRole("alert")).toHaveTextContent(ja.kiosk_camera_permission);
   await screen.getByRole("button", { name: "状態を確認", exact: true }).click();
-  await expect
-    .element(screen.getByText('{"status":"permission-denied"}', { exact: true }))
-    .toBeVisible();
+  await expect.element(screen.getByText(/"status":"permission-denied"/)).toBeVisible();
   expect(media).toHaveBeenCalledOnce();
+});
+
+it("撮影せず現在のカメラ許可を照会し、ブラウザーの許可変更を追従する", async () => {
+  const native: { name: string; onchange: PermissionStatus["onchange"]; state: PermissionState } = {
+    state: "denied",
+    onchange: null,
+    name: "camera",
+  };
+  const permission = Object.assign(new EventTarget(), native);
+  vi.spyOn(navigator.permissions, "query").mockResolvedValue(permission);
+  const media = vi.spyOn(navigator.mediaDevices, "getUserMedia");
+  const screen = await render(<Surface />);
+  await screen.getByRole("button", { name: "状態を確認", exact: true }).click();
+  await expect.element(screen.getByText(/"permission":"denied"/)).toBeVisible();
+  permission.state = "granted";
+  await screen.getByRole("button", { name: "状態を確認", exact: true }).click();
+  await expect.element(screen.getByText(/"permission":"granted"/)).toBeVisible();
+  expect(media).not.toHaveBeenCalled();
 });

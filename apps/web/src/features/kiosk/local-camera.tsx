@@ -16,13 +16,16 @@ export function useLocalCamera() {
   const video = useRef<HTMLVideoElement>(null);
   const generation = useRef(0);
   const state = useRef<VoiceCameraState>({ status: "off" });
+  const permission = useRef<PermissionStatus | undefined>(undefined);
   const getState = useCallback((): VoiceCameraState => {
-    if (document.hidden) return { status: "unavailable" };
+    const access = { permission: permission.current?.state ?? ("unknown" as const) };
+    if (permission.current?.state === "denied") return { ...access, status: "permission-denied" };
+    if (document.hidden) return { ...access, status: "unavailable" };
     if (!streamRef.current && ["ready", "capturing", "reading"].includes(state.current.status))
-      return { status: "off" };
+      return { ...access, status: "off" };
     if (streamRef.current && (!video.current || video.current.readyState < 2))
-      return { status: "starting" };
-    return state.current;
+      return { ...access, status: "starting" };
+    return { ...state.current, ...access };
   }, []);
   const attachVideo = useCallback((element: HTMLVideoElement | null) => {
     video.current = element;
@@ -36,41 +39,63 @@ export function useLocalCamera() {
     if (streamRef.current) state.current = { ...state.current, status: "ready" };
     setPhase("idle");
   }, []);
-  const capture = useCallback<VoiceCamera["capture"]>(async (signal, maxBytes) => {
-    const source = streamRef.current;
-    const element = video.current;
-    const request = generation.current;
-    if (!source)
-      return {
-        error:
-          state.current.status === "permission-denied"
-            ? "CAMERA_PERMISSION_DENIED"
-            : state.current.status === "starting"
-              ? "CAMERA_STARTING"
-              : state.current.status === "unavailable"
-                ? "CAMERA_UNAVAILABLE"
-                : "CAMERA_OFF",
-      };
-    if (!element || document.hidden) return { error: "CAMERA_UNAVAILABLE" };
-    if (element.readyState < 2) return { error: "CAMERA_STARTING" };
-    state.current = { ...state.current, status: "capturing" };
-    setPhase("capturing");
-    try {
-      const imageUrl = await captureCameraFrame(element, signal, maxBytes);
-      if (generation.current !== request || source !== streamRef.current || document.hidden)
+  const capture = useCallback<VoiceCamera["capture"]>(
+    async (signal, maxBytes) => {
+      if (getState().permission === "denied") return { error: "CAMERA_PERMISSION_DENIED" };
+      const source = streamRef.current;
+      const element = video.current;
+      const request = generation.current;
+      if (!source)
+        return {
+          error:
+            state.current.status === "permission-denied"
+              ? "CAMERA_PERMISSION_DENIED"
+              : state.current.status === "starting"
+                ? "CAMERA_STARTING"
+                : state.current.status === "unavailable"
+                  ? "CAMERA_UNAVAILABLE"
+                  : "CAMERA_OFF",
+        };
+      if (!element || document.hidden) return { error: "CAMERA_UNAVAILABLE" };
+      if (element.readyState < 2) return { error: "CAMERA_STARTING" };
+      state.current = { ...state.current, status: "capturing" };
+      setPhase("capturing");
+      try {
+        const imageUrl = await captureCameraFrame(element, signal, maxBytes);
+        if (getState().permission === "denied") {
+          setPhase("idle");
+          return { error: "CAMERA_PERMISSION_DENIED" };
+        }
+        if (generation.current !== request || source !== streamRef.current || document.hidden)
+          return { error: "CAMERA_UNAVAILABLE" };
+        state.current = { ...state.current, status: "reading" };
+        setPhase("reading");
+        setCaptureCount((count) => count + 1);
+        return { imageUrl };
+      } catch {
+        if (generation.current === request) setPhase("idle");
         return { error: "CAMERA_UNAVAILABLE" };
-      state.current = { ...state.current, status: "reading" };
-      setPhase("reading");
-      setCaptureCount((count) => count + 1);
-      return { imageUrl };
-    } catch {
-      if (generation.current === request) setPhase("idle");
-      return { error: "CAMERA_UNAVAILABLE" };
-    }
-  }, []);
+      }
+    },
+    [getState],
+  );
   const [stream, setStream] = useState<MediaStream>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<"permission" | "unavailable">();
+  useEffect(() => {
+    let disposed = false;
+    // 許可ダイアログを開かず、照会したPermissionStatusの現在値をツール実行時に読む。
+    void navigator.permissions
+      ?.query({ name: "camera" })
+      .then((access) => {
+        if (!disposed) permission.current = access;
+      })
+      .catch(() => {});
+    return () => {
+      disposed = true;
+      permission.current = undefined;
+    };
+  }, []);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState("");
   const stop = useCallback(() => {
@@ -125,7 +150,12 @@ export function useLocalCamera() {
             ? actualFacing
             : preferredFacing;
         setFacing(facingRef.current);
-        state.current = { status: "ready", facing: facingRef.current };
+        state.current = {
+          status: "ready",
+          ...(actualFacing === "environment" || actualFacing === "user"
+            ? { facing: actualFacing }
+            : {}),
+        };
         setDeviceId(next.getVideoTracks()[0]?.getSettings().deviceId ?? requestedDeviceId ?? "");
         setPending(false);
         next
@@ -187,9 +217,9 @@ export function useLocalCamera() {
                 ? "ready"
                 : phase
               : "off",
-      ...(stream ? { facing } : {}),
+      ...(stream && hasFacing ? { facing } : {}),
     };
-  }, [pending, error, stream, phase, facing]);
+  }, [pending, error, stream, phase, facing, hasFacing]);
   return {
     stream,
     pending,

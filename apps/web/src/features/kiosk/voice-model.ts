@@ -49,6 +49,7 @@ export type VoiceView = {
 
 export type VoiceCameraState = {
   facing?: "environment" | "user";
+  permission?: "unknown" | PermissionState;
   status:
     | "capturing"
     | "off"
