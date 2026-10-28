@@ -54,11 +54,14 @@ export function useStaffAssistance({
   const requestKey = useRef("");
   const guidance = useInfiniteQuery({
     ...guidanceOptions(endpoint, data, state.selection),
-    enabled: state.open && state.tab === "advice",
+    enabled:
+      state.open &&
+      state.tab === "advice" &&
+      Boolean(state.selection.query || state.selection.guideId),
   });
   const history = useInfiniteQuery({
     ...staffCallsOptions(endpoint, data.id),
-    enabled: state.open && state.tab === "history",
+    enabled: state.open,
   });
   const guides = [
     ...new Map(
@@ -81,11 +84,14 @@ export function useStaffAssistance({
       ].map((product) => [product.id, product]),
     ).values(),
   ];
-  const calls = [
+  const recordedCalls = [
     ...new Map(
       (history.data?.pages.flatMap((page) => page.calls) ?? []).map((call) => [call.id, call]),
     ).values(),
   ];
+  const calls = data.staffCall
+    ? [data.staffCall, ...recordedCalls.filter((entry) => entry.id !== data.staffCall?.id)]
+    : recordedCalls;
   const call = useMutation({
     mutationFn: (input: StaffCallInput) =>
       parseResponse(endpoint.client.call.$post({ query: { view: "core" }, json: input })),

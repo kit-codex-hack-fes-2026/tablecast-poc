@@ -1,8 +1,13 @@
 import type { StaffCall } from "@tablecast/api/schema";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, expect, it, vi } from "vitest";
+import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 import ja from "../../../messages/ja.json";
+import { LocaleProvider } from "../../i18n/locale";
+import { tableEndpoint } from "../../lib/api";
 import { catalog } from "../../test-support/tablecast-fixtures";
+import { StaffAssistance } from "./staff-assistance";
 import { fixture, mountKiosk, notify, requests } from "./test-support/kiosk-fixture";
 import { VoiceConnection } from "./voice-connection";
 
@@ -18,6 +23,10 @@ const open = async () => {
   await page.getByRole("button", { name: ja.kiosk_call_staff, exact: true }).click();
   await expect.element(popup()).toBeVisible();
 };
+const chooseWater = async () => {
+  await popup().getByText(ja.assistance_fallback, { exact: true }).click();
+  await popup().getByRole("button", { name: "お冷", exact: true }).click();
+};
 const savedCall: StaffCall = {
   id: "tablecast-history-call",
   createdAt: Date.now(),
@@ -31,6 +40,66 @@ const savedCall: StaffCall = {
     unresolved: "お冷2つの提供",
   },
 };
+
+it.each(["listening", "connecting"] as const)(
+  "%sの会話へ用件相談を渡し、接続を作り直さず閉じた後も会話を保つ",
+  async (status) => {
+    const voice = new VoiceConnection(
+      () => {},
+      () => {},
+    );
+    vi.spyOn(voice, "getSnapshot").mockReturnValue({ status });
+    const start = vi.spyOn(voice, "start").mockResolvedValue(undefined);
+    const request = vi.spyOn(voice, "requestAssistance");
+    const stop = vi.spyOn(voice, "stop").mockResolvedValue(undefined);
+    await render(
+      <LocaleProvider initialLocale="ja" persist={false}>
+        <QueryClientProvider client={fixture.client}>
+          <StaffAssistance
+            catalog={catalog}
+            data={fixture.current}
+            events={fixture.current.events}
+            endpoint={tableEndpoint}
+            onChoose={() => {}}
+            voice={voice}
+          />
+        </QueryClientProvider>
+      </LocaleProvider>,
+    );
+    await open();
+    expect(start).not.toHaveBeenCalled();
+    expect(request).toHaveBeenCalledExactlyOnceWith();
+    await popup().getByRole("button", { name: ja.common_close, exact: true }).click();
+    expect(stop).not.toHaveBeenCalled();
+  },
+);
+
+it("直近の履歴を最初から表示し、用件ボタンと引き継ぎ詳細は必要なときだけ開く", async () => {
+  fixture.staffCalls = [{ ...savedCall, status: "resolved", resolvedAt: Date.now() }];
+  await page.viewport(1180, 820);
+  await mountKiosk();
+  await open();
+  const recent = popup().getByRole("region", { name: ja.assistance_recent, exact: true });
+  await expect
+    .poll(() => recent.element().querySelector("summary")?.textContent)
+    .toContain(savedCall.handoff.originalText);
+  const summary = recent.element().querySelector("summary");
+  if (!summary) throw new Error("直近の呼び出しの詳細操作が必要です");
+  const preview = page.elementLocator(summary);
+  await expect.element(preview).toBeVisible();
+  await expect.element(preview).toMatchTextContent(ja.assistance_resolved);
+  await expect
+    .element(popup().getByRole("button", { name: "お冷", exact: true }))
+    .not.toBeInTheDocument();
+  expect(popup().element().getBoundingClientRect().height).toBeLessThan(450);
+  expect(
+    requests.filter((request) => new URL(request.url).pathname === "/api/table/guidance"),
+  ).toHaveLength(0);
+  await preview.click();
+  await expect
+    .element(recent.getByText(savedCall.handoff.summaryJa, { exact: true }))
+    .toBeVisible();
+});
 
 it.each([
   { ordering: false, expected: "停止する" },
@@ -56,6 +125,7 @@ it("案内の読込失敗から再試行でき、呼び出しを送信しない"
   fixture.guidanceResponse = Response.json({ code: "UNAVAILABLE" }, { status: 503 });
   await mountKiosk();
   await open();
+  await chooseWater();
   await expect.element(popup().getByRole("alert")).toBeVisible();
   fixture.guidanceResponse = Response.json({
     configVersion: fixture.current.configVersion,
@@ -77,12 +147,12 @@ it("長い履歴は吹き出し内でスクロールでき、音声を開始せ�
   fixture.current.staffCalled = true;
   fixture.staffCalls = Array.from({ length: 20 }, (_, index) => ({
     ...savedCall,
-    id: `tablecast-history-${index}`,
+    id: index === 0 ? savedCall.id : `tablecast-history-${index}`,
   }));
   await page.viewport(1024, 768);
   await mountKiosk();
   await page.getByRole("button", { name: ja.assistance_pending, exact: true }).click();
-  await expect.element(popup().getByRole("article").nth(0)).toBeVisible();
+  await expect.poll(() => popup().getByRole("article").elements().length).toBe(20);
   const content = popup()
     .getByRole("region", { name: ja.assistance_history, exact: true })
     .element();
@@ -119,7 +189,7 @@ it("吹き出しを開いたまま背景を操作でき、Escapeで閉じて呼�
 it("音声拒否後も用件を選んで直接呼び出し、メモと呼出中の状態を確認できる", async () => {
   await mountKiosk();
   await open();
-  await popup().getByRole("button", { name: "お冷", exact: true }).click();
+  await chooseWater();
   await popup().getByRole("button", { name: ja.assistance_direct, exact: true }).click();
   await expect
     .element(popup().getByText("お冷について店員の対応を希望しています。", { exact: true }))
@@ -138,7 +208,6 @@ it("履歴で客の原文を確認でき、対応済み通知でもメモを保�
   fixture.staffCalls = [structuredClone(savedCall)];
   await mountKiosk();
   await page.getByRole("button", { name: ja.assistance_pending, exact: true }).click();
-  await popup().getByRole("button", { name: ja.assistance_history, exact: true }).click();
   await expect
     .element(popup().getByText(savedCall.handoff.summaryJa, { exact: true }))
     .toBeVisible();
@@ -181,6 +250,11 @@ it("案内に関連する商品を通常の商品詳細へ渡し、呼び出し�
   });
   await mountKiosk();
   await open();
+  await chooseWater();
+  await popup()
+    .getByRole("group", { name: "お冷", exact: true })
+    .getByText("お冷", { exact: true })
+    .click();
   await expect
     .element(popup().getByText("こちらの商品からご依頼ください。", { exact: true }))
     .toBeVisible();

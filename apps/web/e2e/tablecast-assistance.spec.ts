@@ -13,7 +13,7 @@ import ja from "../messages/ja.json" with { type: "json" };
 import { approveGuestDevice, signInStaff } from "./support/session";
 import { test } from "./support/test";
 
-test.use({ serviceWorkers: "block", video: "on" });
+test.use({ serviceWorkers: "block", video: "on", viewport: { width: 1180, height: 820 } });
 
 test("呼び出しメモと対応済み状態が客と店員で共有され、次の来店には残らない", async ({
   page,
@@ -128,7 +128,12 @@ test("呼び出しメモと対応済み状態が客と店員で共有され、�
       .poll(() => menuScroll.evaluate((element) => element.scrollTop))
       .toBeGreaterThan(beforeScroll);
     await expect(popup).toBeVisible();
+    await popup.getByText(en.assistance_fallback, { exact: true }).click();
     await popup.getByRole("button", { name: "Water", exact: true }).click();
+    await popup
+      .getByRole("group", { name: "Water", exact: true })
+      .getByText("Water", { exact: true })
+      .click();
     await expect(
       popup.getByText("Tap water is free of charge. You can order it here.", { exact: true }),
     ).toBeVisible();
@@ -162,6 +167,28 @@ test("呼び出しメモと対応済み状態が客と店員で共有され、�
     await expect(popup.getByText(en.assistance_resolved, { exact: true })).toBeVisible();
     await page.reload();
     await page.getByRole("button", { name: en.kiosk_call_staff, exact: true }).click();
+    await expect(popup.getByRole("region", { name: en.assistance_recent })).toBeVisible();
+    await expect(popup.getByText(en.assistance_resolved, { exact: true }).first()).toBeVisible();
+    await expect(popup.getByRole("button", { name: "Water", exact: true })).toBeHidden();
+    await expect
+      .poll(() =>
+        page
+          .locator("img")
+          .evaluateAll((images) =>
+            images
+              .filter(
+                (image) =>
+                  image.getBoundingClientRect().top < window.innerHeight &&
+                  image.getBoundingClientRect().bottom > 0,
+              )
+              .every(
+                (image) =>
+                  image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
+              ),
+          ),
+      )
+      .toBe(true);
+    await page.screenshot({ path: resolve(evidence, "tablecast-assistance-compact.png") });
     await popup.getByRole("button", { name: en.assistance_history, exact: true }).click();
     await expect(popup.getByText(en.assistance_resolved, { exact: true })).toBeVisible();
     await expect(popup.getByText(call.handoff.summaryJa, { exact: true })).toBeVisible();

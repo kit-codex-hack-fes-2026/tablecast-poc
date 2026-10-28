@@ -25,6 +25,7 @@ import { LocalCamera, useLocalCamera } from "./local-camera";
 import { type VoiceView } from "./voice-connection";
 import { VoiceAttention, VoiceControls } from "./voice-controls";
 import { ConversationEntry, ConversationMessage } from "./voice-conversation-message";
+import { voiceStatusLabels } from "./voice-model";
 import { VoiceProgress } from "./voice-progress";
 import { VoiceReferenceCard } from "./voice-reference";
 import { VoiceWelcome } from "./voice-welcome";
@@ -131,16 +132,7 @@ export function VoicePanelContent({
   const merged = mergeConversation(lines, view, locale);
   const { tools, turns, failedTurns, latestBusinessTurn, running } = voiceOperationState(events);
   const active = !["idle", "paused", "error", "stopping"].includes(view.status);
-  const status = {
-    idle: t("kiosk_voice_paused"),
-    paused: t("kiosk_voice_paused"),
-    connecting: t("kiosk_voice_connecting"),
-    listening: t("kiosk_voice_listening"),
-    thinking: t("kiosk_voice_thinking"),
-    speaking: t("kiosk_voice_speaking"),
-    stopping: t("kiosk_voice_stopping"),
-    error: t("kiosk_voice_error"),
-  }[view.status];
+  const status = t(voiceStatusLabels[view.status]);
   const usingTools =
     running.length > 0 && (view.status === "thinking" || view.status === "speaking");
   const visualState: "tool" | VoiceView["status"] =
