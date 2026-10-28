@@ -192,12 +192,10 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       try {
         await interactive.goto("/", { waitUntil: "commit" });
         await expect(interactive.locator('[data-ui="voice-welcome"]')).toBeVisible();
-        expect(
-          await interactive.getByRole("log").evaluate((element) => {
-            const scroll = element.firstElementChild;
-            return scroll ? getComputedStyle(scroll).overflowY : null;
-          }),
-        ).toBe("auto");
+        await expect(interactive.getByRole("log").locator(":scope > div")).toHaveCSS(
+          "overflow-y",
+          "auto",
+        );
         await writeFile(
           testInfo.outputPath("tablecast-before-hydration.json"),
           JSON.stringify(
