@@ -130,13 +130,17 @@ it.each(["ja", "en"] as const)(
       );
       await screen.getByRole("button", { name: options[0], exact: true }).click();
       expect(suggestion).toHaveBeenCalledWith(options[0], options);
-      await userEvent.wheel(screen.getByText(text), { delta: { y: -400 } });
+      await userEvent.wheel(screen.getByText(text), { delta: { y: -1000 } });
       await expect
         .poll(() => current.closest('[data-ui="conversation-entry"]')?.getAttribute("data-pinned"))
         .toBe("false");
       const before = scroller.scrollTop;
       await screen.rerender(surface(true, []));
       await expect.poll(() => scroller.scrollTop).toBeLessThanOrEqual(before + 1);
+      // 候補が消えて内容が縮んでも、下向き80pxの操作が末尾へ到達しない位置で試す。
+      await expect
+        .poll(() => scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop)
+        .toBeGreaterThan(200);
       const bounds = scroller.getBoundingClientRect();
       const visible = [...scroller.querySelectorAll("article")].find((element) => {
         const box = element.getBoundingClientRect();
