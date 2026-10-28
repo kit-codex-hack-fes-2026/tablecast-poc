@@ -29,7 +29,6 @@ type ListBlock<Depth extends 0 | 1 | 2> = (
   }[];
 };
 export type InstructionBlock = ListBlock<2> | TextBlock;
-export type InstructionDocument = { content: InstructionBlock[]; type: "doc" };
 const paragraphSchema = z
   .object({ type: z.literal("paragraph"), content: z.array(inlineSchema).optional() })
   .strict()
@@ -94,7 +93,7 @@ const boundedDocument = z.unknown().superRefine((value, ctx) => {
     }
   }
 });
-export const instructionDocumentSchema = boundedDocument.pipe(
+const instructionDocumentSchema = boundedDocument.pipe(
   z
     .object({
       type: z.literal("doc"),

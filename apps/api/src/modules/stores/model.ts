@@ -17,7 +17,7 @@ export type StoreSummary = z.infer<typeof storeSummarySchema>;
 
 export type AdminState = z.infer<typeof adminStateSchema>;
 
-export const storeSummarySchema = z.object({
+const storeSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
   role: z.string(),

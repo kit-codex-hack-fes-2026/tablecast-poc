@@ -10,12 +10,11 @@
 AGENTS.mdとdocs/README.mdを読み、$minimum-implに従ってTableCastの実装を開始してください。
 
 既存ファイル、manifest、exports、Git差分を先に確認し、存在しない実装を前提にしないでください。
-Bun + Turborepo、TanStack Start + Hono、GPT-LiveのWebRTC、hosted OpenAI Agents APIを使います。
+Bun + Turborepo、TanStack Start + Hono、GPT-LiveのWebRTC、標準Responses delegationを使います。
 packages/domain、packages/contracts、独立Storybookアプリは作りません。
 客と店側の両UIを日英対応にし、会話を広く表示し、言語と音声停止・再開を目立たせてください。
 
 まず最小の依存・ローカル起動・音声接続を検証し、その後GUI注文から管理画面までを縦に完成させてください。
-公式pluginに不足があれば、docs/voice/upstream-patch.mdの範囲だけpatchしてください。
 ゲーム、声の複製、別モデルfallback、独自STTや独自LLMループは作りません。
 
 自作コメント、Markdown、docstring、テスト名は日本語にしてください。
@@ -31,8 +30,7 @@ Bun、TypeScript、Vite、TanStack Start、Cloudflare plugin、Wrangler、Hono�
 
 ## 段階1: リスクの高い接続を小さく確認
 
-日本語・英語のGPT-Live音声、字幕差分の表示、HonoとAgents APIのfunction・本文stream・取消を確認する。
-STTに話者・時刻がない場合だけ公式pluginへpatchし、上流と同じ試験を行う。
+日本語・英語のGPT-Live音声、字幕差分の表示、HonoとResponses delegationのfunction・本文stream・取消を確認する。
 LLM生成の中断、HTTP取消、音声停止、再開、GPT-Liveの業務委任と自然な注文確認を最小構成で確認する。
 未検証の接続を型キャストやmock成功で隠して大量のUI実装へ進まない。必要な機能を維持できない点は証拠と選択肢を記録する。
 
@@ -44,7 +42,7 @@ Storybookはこの時点からWeb内で使い、日英、長文、停止、エ�
 
 ## 段階3: 音声とリアルタイムを接続
 
-Agents APIのfunctionをGUIと同じAPI内の操作関数へ接続する。音声でカートを作り、GUIで変更し、同じsnapshotを確認する。
+Responses delegationのfunctionをGUIと同じAPI内の操作関数へ接続する。音声でカートを作り、GUIで変更し、同じsnapshotを確認する。
 D1の業務eventとDOの配信・欠落回復を接続し、店舗の卓タイムラインを完成させる。
 会話領域、停止・再開・言語変更の競合、古いturnの書込み、タグ漏れ、エコーを検証する。
 
@@ -56,19 +54,19 @@ MCPで日英メニュー・speechName・プラン・キャストを下書き登�
 
 ## 段階5: 公開環境と受入
 
-Workerのbuild・migration・secret・Service Bindingをデプロイし、GPT-LiveとAgents APIの実接続を確認する。
-実iPad、日英、実Inworld、MCP、管理画面を通した受入試験を行う。
+Workerのbuild・migration・secret・Service Bindingをデプロイし、GPT-LiveとResponses delegationの実接続を確認する。
+実iPad、日英の実音声、MCP、管理画面を通した受入試験を行う。
 本番設定の記録、ログ、故障時GUI継続、再デプロイ、データを失わないmigrationの運用を残す。
 受入条件を満たさない機能を説明だけで完成にしない。
 
 ## worktreeでの担当分割
 
-| 担当       | 主な所有範囲                                        | 同時変更を避ける箇所 |
-| ---------- | --------------------------------------------------- | -------------------- |
-| 基盤・統合 | root設定、local起動、公開exports、CI、migration統合 | lockfile、共通設定   |
-| Web        | kiosk、admin、日英、Storybook                       | APIの内部実装        |
-| 業務API    | 認証、catalog、cart/order/billing、MCP、DB、DO      | root起動構成         |
-| 音声       | GPT-Live WebRTC、Agents API接続、発話、実機試験     | APIの業務ロジック    |
+| 担当       | 主な所有範囲                                          | 同時変更を避ける箇所 |
+| ---------- | ----------------------------------------------------- | -------------------- |
+| 基盤・統合 | root設定、local起動、公開exports、CI、migration統合   | lockfile、共通設定   |
+| Web        | kiosk、admin、日英、Storybook                         | APIの内部実装        |
+| 業務API    | 認証、catalog、cart/order/billing、MCP、DB、DO        | root起動構成         |
+| 音声       | GPT-Live WebRTC、Responses delegation、発話、実機試験 | APIの業務ロジック    |
 
 契約の変更は所有API側で先に確定し、consumerのテストも同じ変更で更新する。
 担当を分けるためだけにpackageを増やさない。ディレクトリ所有と小さいPRで十分である。
