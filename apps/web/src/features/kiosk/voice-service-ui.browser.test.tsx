@@ -130,10 +130,14 @@ it.each(["ja", "en"] as const)(
       );
       await screen.getByRole("button", { name: options[0], exact: true }).click();
       expect(suggestion).toHaveBeenCalledWith(options[0], options);
+      const currentEntry = current.closest('[data-ui="conversation-entry"]');
+      if (!currentEntry) throw new Error("最新発話の表示領域がありません");
+      const followedHeight = currentEntry.getBoundingClientRect().height;
       await userEvent.wheel(screen.getByText(text), { delta: { y: -1000 } });
       await expect
         .poll(() => current.closest('[data-ui="conversation-entry"]')?.getAttribute("data-pinned"))
         .toBe("false");
+      expect(currentEntry.getBoundingClientRect().height).toBeCloseTo(followedHeight, 0);
       const before = scroller.scrollTop;
       await screen.rerender(surface(true, []));
       await expect.poll(() => scroller.scrollTop).toBeLessThanOrEqual(before + 1);

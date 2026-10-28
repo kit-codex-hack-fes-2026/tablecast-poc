@@ -64,8 +64,8 @@ const ConversationEntry = forwardRef<
       data-pinned={Boolean(pinned && following)}
       className={cn(
         className,
-        pinned && "order-last",
-        pinned && following && "sticky bottom-0 z-10 rounded-xl bg-card py-2",
+        pinned && "order-last py-2",
+        pinned && following && "sticky bottom-0 z-10 rounded-xl bg-card",
       )}
       inert={!present}
       aria-hidden={!present || undefined}
