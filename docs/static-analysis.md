@@ -141,6 +141,29 @@ GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト�
 
 共通actionはmanifestとworkflowで指定したNode/Bunを導入する。Bunの取得cacheをlockfileで更新し、node_modulesやDBは共有しない。Playwrightはジョブに必要なブラウザーだけ導入する。Paraglideは型付きlintの前に生成し、ローカルの生成済みファイルに依存しない。失敗したE2Eのtraceと画像は1日間保持する。
 
+## PRの種類別行数レポート
+
+通常PRの作成・commit更新・再オープン時に、CIの独立した`Report: 種類別の行数差分 (cloc)`がPRのmerge-baseとheadを比較する。release PRは対象外とし、同一repoでは専用のbotコメント1件を更新する。forkはActions Summaryだけへ出す。既存previewコメントとは独立し、ビルド・テスト・配備の完了を待たない。行数レポートは必須チェックの集約対象に含めず、増減による閾値やマージ制限を設けない。
+
+表には全分類の比較元・PR・純増減と合計、両commitへのリンク、計測完了日時（JST）、Actions runへのリンクを載せる。投稿直前にopen/head/baseを照合し、古いrunの再実行で現在のコメントを上書きしない。計測失敗はjobへ記録し、不完全な表や0行で代用しない。
+
+| 分類                        | 対象                                                                     |
+| --------------------------- | ------------------------------------------------------------------------ |
+| 文書・skills・Agent指示     | Markdown・テキスト文書、自作skills、AGENTS.md、pluginの説明文書          |
+| 実装コード                  | API・Web・emulate・運用CLI、CSS、手書き型定義。runtimeのseed・デモも含む |
+| 単体・統合テスト            | Browser・E2E以外のtest/specファイル                                      |
+| Browserコンポーネントテスト | browser.test/specファイル                                                |
+| Storybook                   | storiesファイル、WebのMDX、.storybook                                    |
+| E2Eテスト                   | WebのE2Eシナリオ                                                         |
+| テスト補助                  | test-support、テスト用fixture・setup・helper                             |
+| 設定・CI                    | Actions、manifest、ビルド・検査・開発環境設定                            |
+| DB migration                | API migrationのSQL                                                       |
+| データ・その他              | 翻訳JSONなど、他の分類に属さない計測可能なテキスト                       |
+
+cloc 2.10の`--git --by-file --json --skip-uniqueness`で両commitを各一回計測し、同じ分類規則を適用する。空行・コードのコメント行を除いた`code`を使い、文書はclocが数えた本文行数とする。ファイル名や配置から種類を判定し、実装の前にStory・テスト・補助・設定を分類する。同一内容でも別ファイルなら各々計上する。
+
+動画基盤、生成コード・migration meta・ビルド成果物、lockfile、画像・音声などは除外する。両commitの`skills-lock.json`に記載された取得skillの和集合を、両版の`.agents/skills`から除く。追跡commitだけを数え、未追跡・未commitの変更やローカル生成物を含めない。分類の正本は[scripts/tablecast-cloc.ts](../scripts/tablecast-cloc.ts)、固定版の導入・ローカル実行は[セットアップ](setup.md#種類別行数のローカル確認)を参照する。
+
 ## skillsと追加pluginの所有
 
 | 正本            | 所有する情報                                             |

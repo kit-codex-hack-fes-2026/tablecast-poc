@@ -113,6 +113,26 @@ PR初回投入用の固定JSONは`bunx --no-install turbo run seed:template`で�
 
 Portlessの共有stateを利用し、個別worktreeから `portless proxy stop` や `portless clean` を実行しない。80番が使用中の場合は `bunx --no-install portless doctor` と待受プロセスを確認する。初回のproxy起動はTurboの外で行い、非対話のdevタスクから管理者認証を要求しない。名前を変更する場合は自worktreeのWeb・Composeを停止し、`demo:reset`で設定と開発データを作り直す。
 
+### 種類別行数のローカル確認
+
+PRの[種類別行数レポート](static-analysis.md#prの種類別行数レポート)とrootのcloc統合テストには、Perlとcloc 2.10が必要になる。Dev Containerには同じ公式配布物をSHA-256固定で含めるため、既存コンテナはイメージを再buildする。通常のアプリ起動にはclocを使わない。
+
+ホストに2.10がない場合は、PerlとPATH上の配置先を用意して公式配布物を導入する。以下は`~/.local/bin`をPATHへ追加済みの環境で実行する。
+
+```sh
+mkdir -p "$HOME/.local/bin"
+curl --fail --location https://github.com/AlDanial/cloc/releases/download/v2.10/cloc-2.10.pl --output "$HOME/.local/bin/cloc"
+printf 'bf59272455172108072a0a106379f7509fd4349bdcfd85203bac038ccd286d83  %s\n' "$HOME/.local/bin/cloc" | shasum -a 256 --check
+chmod +x "$HOME/.local/bin/cloc"
+cloc --version
+bun run tablecast:cloc --base "$(git rev-parse origin/staging)" --head "$(git rev-parse HEAD)"
+bunx --no-install vitest run --project scripts-runtime scripts/tablecast-cloc.test.ts
+```
+
+比較引数には40桁のcommit SHAを渡す。比較元は指定baseとheadのmerge-baseへ解決する。Markdownは標準出力へ表示し、`--output /tmp/tablecast-cloc.md`で保存できる。別の配置先を使う場合は`TABLECAST_CLOC_PATH`へcloc実行ファイルのパスを指定する。版違い・Git/clocの失敗はエラーにし、0行で補わない。
+
+CIの計測jobは固定Bunとclocだけを導入し、アプリ依存install・codegenを行わない。rootのruntimeテストjobも同じcloc導入actionを使う。Cloudflare資格・有料モデル・DB資源は不要。
+
 ## 2C. agent開発環境
 
 Codex Desktopでは作業するworktreeをprojectとして開き、CLIではそのルートから `codex` を起動する。以下は開発者が必要な接続だけを選ぶ手順である。`bun run setup` はアプリ依存・生成物・Git hooksを準備し、agent pluginの導入や外部サービスへのログインは行わない。
