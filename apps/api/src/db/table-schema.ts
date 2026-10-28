@@ -69,6 +69,7 @@ export const tableSessions = sqliteTable("table_sessions", {
     .notNull()
     .default("menu"),
   selected_product_id: text("selected_product_id"),
+  menu_search_json: text("menu_search_json"),
   speech_speed: real("speech_speed").notNull().default(1),
   staff_called: integer("staff_called").notNull().default(0),
   plan_json: text("plan_json"),

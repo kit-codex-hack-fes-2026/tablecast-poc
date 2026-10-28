@@ -265,3 +265,52 @@ it("カゴ更新は一致する商品詳細だけを閉じ、タブ・別の商�
     await waitOnExecutionContext(context);
   }
 });
+
+it("2000商品の検索ページも実HTTPで8件・2往復・300msの予算を保つ", async () => {
+  await setupFixture();
+  const product = configuration.products[0];
+  if (!product) throw new Error("商品fixtureがありません");
+  await fixtureDb
+    .update(stores)
+    .set({
+      config_json: JSON.stringify({
+        ...configuration,
+        products: Array.from({ length: 2000 }, (_, index) => ({
+          ...product,
+          id: `tablecast-search-budget-${index}`,
+        })),
+      }),
+    })
+    .where(eq(stores.id, device.storeId));
+  const samples: number[] = [];
+  for (let sample = 0; sample < 31; sample++) {
+    const measured = measuredDatabase(env.TABLECAST_DB);
+    const context = createExecutionContext();
+    const started = performance.now();
+    const response = await app.request(
+      "/api/table/ui?view=core",
+      {
+        method: "PATCH",
+        headers: { Cookie: `tablecast.device=${deviceToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ section: "menu", search: { query: "", offset: 1992 } }),
+      },
+      { ...env, TABLECAST_DB: measured.database },
+      context,
+    );
+    const state = coreStateSchema.parse(await response.json());
+    samples.push(performance.now() - started);
+    await waitOnExecutionContext(context);
+    expect(response.status).toBe(200);
+    expect(state.menuSearch).toMatchObject({ offset: 1992, total: 2000, more: false });
+    expect(state.menuSearch?.productIds).toHaveLength(8);
+    expect(state.menuSearch?.productIds[0]).toBe("tablecast-search-budget-1992");
+    expect(measured.stats.roundtrips).toBeLessThanOrEqual(2);
+  }
+  const warm = samples.slice(1).toSorted((left, right) => left - right);
+  const p95 = warm[Math.ceil(warm.length * 0.95) - 1] ?? Number.POSITIVE_INFINITY;
+  console.info(
+    "tablecast.menu.search.performance",
+    JSON.stringify({ products: 2000, samples, p95 }),
+  );
+  expect(p95).toBeLessThanOrEqual(300);
+});

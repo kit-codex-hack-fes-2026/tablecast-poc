@@ -1500,5 +1500,13 @@
   "cast_system_default": "Default",
   "cast_system_overridden": "Overridden",
   "cast_system_override": "Override the system prompt (not recommended)",
-  "cast_edit_system": "Edit TableCast system"
+  "cast_edit_system": "Edit TableCast system",
+  "kiosk_menu_search": "Search",
+  "kiosk_menu_search_label": "Search the menu",
+  "kiosk_menu_search_placeholder": "Search names, categories and descriptions",
+  "kiosk_menu_search_clear": "Clear search",
+  "kiosk_menu_search_results": "Search results",
+  "kiosk_menu_search_empty": "No matching items. Try another search.",
+  "kiosk_menu_search_updating": "Updating search results",
+  "kiosk_tool_menu_search": "Showing menu search results"
 }

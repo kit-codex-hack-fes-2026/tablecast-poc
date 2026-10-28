@@ -1,14 +1,36 @@
 import { z } from "zod";
 import { decimalQuerySchema, id, localeSchema, pageLimitSchema } from "../../platform/model";
 import { planSchema } from "../catalog/model";
+import { maxConfigurationProducts } from "../configuration/model";
 import { billSchema, cartSchema, orderSchema, snapshotSchema } from "../orders/model";
 import { speechSpeedSchema } from "../voice/model";
 export const uiSectionSchema = z.enum(["menu", "cart", "orders", "bill"]);
 
 export type UiSection = z.infer<typeof uiSectionSchema>;
 
+export const menuSearchInputSchema = z
+  .object({
+    query: z.string().max(100),
+    offset: z.number().int().min(0).max(maxConfigurationProducts).optional(),
+  })
+  .strict();
+export const savedMenuSearchSchema = menuSearchInputSchema.extend({
+  offset: z.number().int().nonnegative(),
+  configVersion: z.number().int().positive(),
+});
+const menuSearchStateSchema = menuSearchInputSchema.extend({
+  offset: z.number().int().nonnegative(),
+  productIds: z.array(id).max(8),
+  total: z.number().int().nonnegative(),
+  more: z.boolean(),
+});
+
 export const uiSectionInputSchema = z
-  .object({ section: uiSectionSchema, productId: id.nullish() })
+  .object({
+    section: uiSectionSchema,
+    productId: id.nullish(),
+    search: menuSearchInputSchema.nullable().optional(),
+  })
   .strict();
 
 export type UiSectionInput = z.infer<typeof uiSectionInputSchema>;
@@ -150,6 +172,7 @@ export const tableStateSchema = z.object({
   voiceSessionId: z.string().nullable(),
   uiSection: uiSectionSchema,
   selectedProductId: id.nullable(),
+  menuSearch: menuSearchStateSchema.nullable().default(null),
   speechSpeed: speechSpeedSchema,
   guestCount: z.number().int(),
   openedAt: z.number().int(),

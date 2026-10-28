@@ -21,6 +21,7 @@ export const voiceToolNameSchema = z.enum([
   "submitOrder",
   "callStaff",
   "setUiSection",
+  "showMenuSearch",
   "setLanguage",
   "setSpeechSpeed",
   "setDisplayCurrency",

@@ -147,6 +147,7 @@ export {
   eventsSchema,
   historyPageSchema,
   historyQuerySchema,
+  menuSearchInputSchema,
   orderPageQuerySchema,
   orderPageSchema,
   sessionEventsPageSchema,

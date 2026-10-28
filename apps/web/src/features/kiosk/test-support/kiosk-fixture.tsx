@@ -1,6 +1,8 @@
+import { menuSearchPage } from "@tablecast/api/catalog-search";
 import {
   type CartUpdate,
   cartUpdateSchema,
+  catalogSchema,
   coreStateSchema,
   submitSchema,
   type TableState,
@@ -234,8 +236,29 @@ beforeEach(() => {
       }
       if (request.method === "PATCH" && path === "/api/table/ui") {
         const screenInput = uiSectionInputSchema.parse(await request.json());
+        const search = screenInput.search;
+        const searchPage = search
+          ? menuSearchPage(
+              catalogSchema.parse(await catalogResponse.clone().json()).configuration,
+              search,
+            )
+          : null;
         current = {
           ...current,
+          ...(search !== undefined
+            ? {
+                menuSearch:
+                  search && searchPage
+                    ? {
+                        query: search.query,
+                        offset: searchPage.offset,
+                        productIds: searchPage.productIds,
+                        total: searchPage.total,
+                        more: searchPage.more,
+                      }
+                    : null,
+              }
+            : {}),
           uiSection: screenInput.section,
           selectedProductId: screenInput.productId ?? null,
           cursor: current.cursor + 1,
