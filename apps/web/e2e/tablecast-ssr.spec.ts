@@ -184,7 +184,46 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
               }
           }).observe({ type: "layout-shift", buffered: true });
       });
-      await interactive.goto("/");
+      const hydrate = Promise.withResolvers<void>();
+      await interactive.route("**/assets/*.js", async (route) => {
+        await hydrate.promise;
+        await route.continue();
+      });
+      try {
+        await interactive.goto("/", { waitUntil: "commit" });
+        await expect(interactive.locator('[data-ui="voice-welcome"]')).toBeVisible();
+        expect(
+          await interactive.getByRole("log").evaluate((element) => {
+            const scroll = element.firstElementChild;
+            return scroll ? getComputedStyle(scroll).overflowY : null;
+          }),
+        ).toBe("auto");
+        await writeFile(
+          testInfo.outputPath("tablecast-before-hydration.json"),
+          JSON.stringify(
+            await interactive.evaluate(() => ({
+              shifts: window.tablecastLayoutShiftEntries,
+              layout: [
+                ...document.querySelectorAll(
+                  '[data-ui="voice-welcome"], [data-ui="conversation-history"], [role="log"], [data-ui="camera-window"]',
+                ),
+              ].map((element) => {
+                const rect = element.getBoundingClientRect();
+                return {
+                  name: element.getAttribute("data-ui") ?? element.getAttribute("role"),
+                  rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+                  html: element.outerHTML.slice(0, 300),
+                };
+              }),
+            })),
+            null,
+            2,
+          ),
+        );
+      } finally {
+        hydrate.resolve();
+        await interactive.unrouteAll({ behavior: "wait" });
+      }
       await expect(
         interactive.getByRole("button", { name: ja.kiosk_voice_resume, exact: true }),
       ).toBeEnabled();

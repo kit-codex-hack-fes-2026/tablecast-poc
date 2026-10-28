@@ -252,3 +252,5 @@ mainへの通常マージには同一repoの最新staging、stagingの最新push
 ## 組織課金の段階導入
 
 [課金・請求](billing.md#開発と導入)に従い、0026 migration、API Workerのsecret、既存組織のキー準備、切替、Stripeの順で有効化する。初期値は無効。GitHub variable `TABLECAST_BILLING_CONFIG` は環境名ごとの非秘密vars、`TABLECAST_RUNTIME_SECRETS`はAPIの秘密値を保持する。CIは両方を配備設定へ渡す。Web WorkerへOpenAI管理キー・暗号化鍵・Stripe鍵を渡さない。`TablecastVoiceUsage`はAPI WorkerのSQLite DOとして追加され、Cronは5分間隔で発行再試行・Meters送信と日次Costs同期を行う。
+
+作業branchから`CI`を手動実行し、`catalog_pr`を空欄にすると全検査を実行する。Workersはstaging設定でbuildし、productionの送信元などの資格を必要としない。作業branchからの全検査は配備jobを起動しない。mainはproduction、stagingはstaging、通常PRはPR専用previewの設定を使い、本番の入力検証を省略しない。

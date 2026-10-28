@@ -369,3 +369,5 @@ root・APIの`drizzle-orm`とAPIの`drizzle-kit`は`1.0.0-rc.5`へ固定する�
 ### 公開ヘルプの依存
 
 Web内のFumadocsは`fumadocs-core`・`fumadocs-ui` 16.17.8と`fumadocs-mdx` 15.4.10、型定義`@types/mdx` 2.0.13を使う。検索はZBSearch 4.0.1と公式の`@zbsearch/tokenizers` 4.0.1で日英の索引を分け、日本語は`Intl.Segmenter`を使うtokenizer、英語はstemmingを有効にする。外部辞書の取得は不要で、索引・検索語・ハイライトは同じ正規化を使い、複数の検索語はすべて含む候補を返す。通常の`bun install --frozen-lockfile`で導入でき、追加のenv・サービス・workspaceは不要。Vite pluginが`.agents/skills/tablecast-help/references`のMarkdownをビルド時に処理する。`bun run dev`で`/help`、`/llms.txt`、`/help/content/ja/mcp.md`を認証せず確認できる。原稿の追加・リンク規約は[Codexプラグイン](codex-plugin.md#公開ヘルプ)を参照する。
+
+CIの全検査はActionsの`CI`で作業branchを選択し、`catalog_pr`を空欄にして起動する。作業branchのWorkers buildはstaging設定を使い、公開環境へ配備しない。カートの100ms計測は通常の`bun run test:browser`に含まれる`browser-performance`で、他のBrowser・Storybook検査の終了後に実行する。詳細は[テスト戦略](testing.md#ciで観測した初期描画と性能の競合)と[配備](deployment.md)を参照する。

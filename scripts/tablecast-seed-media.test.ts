@@ -34,6 +34,7 @@ it("実R2で遅い画像を待たず4枠を使い、再配備・欠損復旧・�
   const real = platform.env.TABLECAST_MEDIA;
   let limit = 1000;
   const releaseFirst = Promise.withResolvers<void>();
+  const releaseOthers = Promise.withResolvers<void>();
   let firstPending = true;
   let holdFirst = true;
   let active = 0;
@@ -54,6 +55,7 @@ it("実R2で遅い画像を待たず4枠を使い、再配備・欠損復旧・�
       maximum = Math.max(maximum, active);
       try {
         if (first) await releaseFirst.promise;
+        else await releaseOthers.promise;
         return await real.put(key, bytes, options);
       } finally {
         active--;
@@ -65,11 +67,15 @@ it("実R2で遅い画像を待たず4枠を使い、再配備・欠損復旧・�
   try {
     const initial = seedMenuImages(bucket, false, configurations);
     try {
+      // ファイル読込速度によらず4枠すべての実書込みが到達してから空き枠を解放する。
+      await vi.waitFor(() => expect(active).toBe(4));
+      releaseOthers.resolve();
       // 最初の一枚が遅くても、完了した枠が次の画像の実R2書込みへ進む。
       await vi.waitFor(() => expect(bucket.put.mock.calls.length).toBeGreaterThan(4));
       expect(firstPending).toBe(true);
       expect(maximum).toBe(4);
     } finally {
+      releaseOthers.resolve();
       releaseFirst.resolve();
       await initial;
     }

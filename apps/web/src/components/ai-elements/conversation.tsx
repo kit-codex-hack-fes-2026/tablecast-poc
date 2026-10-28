@@ -22,7 +22,11 @@ export function ConversationContent({
   ...props
 }: ComponentProps<typeof StickToBottom.Content>) {
   return (
-    <StickToBottom.Content className={cn("flex flex-col gap-3 py-3 pr-2", className)} {...props} />
+    <StickToBottom.Content
+      scrollClassName="overflow-y-auto"
+      className={cn("flex flex-col gap-3 py-3 pr-2", className)}
+      {...props}
+    />
   );
 }
 export function ConversationScrollButton({ label }: { label: string }) {
