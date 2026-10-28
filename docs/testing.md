@@ -350,6 +350,8 @@ viewport・文字倍率・media設定を変更するcaseは開始時の値を記
 
 実SSRの文言・manifestの表示だけをhydration完了と扱わない。document遷移後の操作は、その画面で既存のButtonがenabledになる等の利用者から観測できる条件を待つ。PWA案内は店側のログインButtonが操作可能になってからsummaryを一度クリックし、手順の可視状態を確認する。任意のsleep・クリック反復・timeout延長で同期しない。
 
+ModキーのE2Eは製品と同じTanStack Hotkeysの`detectPlatform`をブラウザー内で評価し、MetaまたはControlを送る。Playwrightの`ControlOrMeta`はrunner側のOSを使うため、Linux runner上でMacintoshのUser-Agentを使うWebKitと一致するとは限らない。[Playwrightの修飾キー](https://playwright.dev/docs/api/class-keyboard)、[TanStackのplatform判定](https://tanstack.com/hotkeys/latest/docs/reference/functions/detectPlatform)を参照する。
+
 既存の`fixtureDb`/`insertFixture`とCloudflareのreset/migrationを使い、DB wrapperや汎用test frameworkを足さない。E2Eのスタッフ認証Givenは`e2e/support/session.ts`の`signInStaff()`を再利用する。helperは型付きの小さな準備と失敗検出を所有し、検証対象のHTTP・注文確定・明示公開とThenはspecに残す。直接DB更新で認可や公開操作の代わりを作らない。
 
 商品公開のE2Eでは、既存の実APIでスタッフ認証・端末request/approve/pollを準備し、独立したスタッフと客のCookieを使う。ログイン・端末登録画面と5秒pollを各journeyで反復せず、注文の代表journeyに残す。公開試験自身は`/admin/live`からの復帰、商品編集・再読込・明示承認・公開・実通知後の客画面の価格更新を観測する。
@@ -421,3 +423,15 @@ Webの`billing-page.browser.test.tsx`と隣接Storyは、日本語でrole・無�
 ### 注文操作の性能計測
 
 APIの`performance` projectは本番Hono・Cookie・実D1で8操作、8／120商品・カゴと履歴1／100件を測る。通常の`bun run --cwd apps/api test`に含め、Vitest標準の`sequence.groupOrder: 1`で他のAPI検査の終了後に1 workerで実行する。並列の別fileのworkerd起動待ちを性能の比較へ混ぜないための測定環境であり、300ms予算と初回を含む全31標本は変えない。個別診断は`bun run --cwd apps/api test -- --project performance`を使う。単独成功でpreviewや負荷中の達成と扱わず、失敗した元の全標本も残す。
+
+### CIで観測した初期描画と性能の競合
+
+会話のスクロール領域はSSRからoverflowを設定する。hydration後のeffectだけでscrollbarを出すと、常時表示するOSでは有効幅と折返しが変わり、歓迎案内が動く。実SSRの試験はJSをgateで止めた初期描画も通し、初期状態とlayout-shiftの要素・時刻をartifactへ残す。CLSの予算0.01は維持する。
+
+英語の日付はIntlのformatToPartsから曜日・日・月・年を組み立て、ICUの版で曜日の後のカンマが変わらないようにする。店舗会員の代表E2Eは日英ともreload直後のリンク操作を維持し、hydrationのpageerrorも失敗にする。
+
+カートのDOM応答100msは`browser-performance` projectへ割り当て、`sequence.groupOrder: 1`と1 workerでBrowser・Storybookの終了後に測る。通常の`test:browser`と差分CIに含め、他画面の並列マウント負荷を計測へ混ぜない。実Kiosk・QueryClient・HTTP clientと1.5秒の応答保留、3回の連打・版付き直列送信は維持する。実ネットワークの300ms目標や実機の負荷試験とは区別する。
+
+実R2の4枠試験は最初の4書込みが到達するまでgateで保留し、その後に最初の1枚以外を解放して進行を確認する。ファイルの読込速度から最大並列数を推定しない。finallyで全gateを解放して実R2の終了を待つ。
+
+Browserの色判定へ渡すCSSプロパティは`background-color`等の標準CSS名を使う。camelCaseをCSSStyleDeclarationへ渡した際のengine差に依存させず、色の期待値は維持する。

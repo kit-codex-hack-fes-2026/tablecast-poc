@@ -12,6 +12,8 @@ for (const locale of ["ja", "en"] as const) {
     baseURL,
   }) => {
     const labels = locale === "ja" ? ja : en;
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
     if (!baseURL) throw new Error("runtime fixtureの専用originが必要です。");
     await signInStaff(page.request, baseURL);
     await page.context().addCookies([{ name: "tablecast_locale", value: locale, url: baseURL }]);
@@ -27,6 +29,7 @@ for (const locale of ["ja", "en"] as const) {
     );
     await page.getByRole("button", { name: labels.customer_enrol, exact: true }).click();
     await expect(page.getByRole("heading", { name: labels.customer_points_balance })).toBeVisible();
+    expect(errors).toEqual([]);
     await expect(page.getByText("0 pt", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: labels.customer_owned_coupons })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
@@ -41,5 +44,6 @@ for (const locale of ["ja", "en"] as const) {
     await expect(back).toContainText("京料理こもれび");
     await back.click();
     await expect(page.getByRole("heading", { name: labels.customer_points_balance })).toBeVisible();
+    expect(errors).toEqual([]);
   });
 }

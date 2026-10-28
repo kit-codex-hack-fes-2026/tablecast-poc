@@ -141,7 +141,7 @@ it("Google・パスキー・区切り線・メールの順に並び、前回の�
   expect(document.body.textContent).not.toContain(ja.auth_passkey_description);
   await expect
     .element(page.getByRole("button", { name: ja.auth_send_magic_link, exact: true }))
-    .toHaveStyle({ backgroundColor: "rgb(255, 255, 255)" });
+    .toHaveStyle("background-color: rgb(255, 255, 255)");
   for (let i = 0; i < 8 && passkey.element() !== document.activeElement; i++)
     await userEvent.keyboard("{Tab}");
   await expect.element(passkey).toHaveFocus();

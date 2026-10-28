@@ -1,4 +1,5 @@
 import { expect } from "@playwright/test";
+import { detectPlatform } from "@tanstack/react-hotkeys";
 import { signInStaff } from "./support/session";
 import { test } from "./support/test";
 
@@ -87,17 +88,31 @@ test("ドキュメントをSSRで読み、関連章・言語・モバイル目�
     await anonymous.close();
   }
   await page.setViewportSize({ width: 1512, height: 982 });
-  await page.goto("/help");
+  const navigationToggle = page.getByRole("button", { name: "ナビゲーション", exact: true });
+  const hydration = Promise.withResolvers<void>();
+  await page.route(/\/assets\/[^/]+\.js(?:\?|$)/, async (route) => {
+    await hydration.promise;
+    await route.continue();
+  });
+  try {
+    await page.goto("/help", { waitUntil: "commit" });
+    await expect(navigationToggle).toBeDisabled();
+  } finally {
+    hydration.resolve();
+    await page.unrouteAll({ behavior: "wait" });
+  }
   await expect(
     page.getByRole("heading", { name: "TableCast ドキュメント", exact: true }),
   ).toBeVisible();
   await expect(page.locator('[data-ui="app-header"]')).toHaveCount(1);
-  const navigationToggle = page.getByRole("button", { name: "ナビゲーション", exact: true });
   await expect(navigationToggle).toHaveCount(1);
   await expect(page.locator('[data-ui="navigation-toggle"]')).toHaveCount(1);
   await expect(page.locator('[data-ui="app-header"] [data-ui="navigation-toggle"]')).toHaveCount(1);
   await expect(page.locator("[data-sidebar-panel]")).toHaveCount(0);
-  await page.keyboard.press("ControlOrMeta+b");
+  await expect(navigationToggle).toBeEnabled();
+  // runnerのOSとWebKitのnavigatorが異なるため、製品と同じブラウザー側の判定を使う。
+  const platform = await page.evaluate(detectPlatform);
+  await page.keyboard.press(platform === "mac" ? "Meta+b" : "Control+b");
   await expect(navigationToggle).toHaveAttribute("aria-expanded", "false");
   await expect(page.locator("#nd-sidebar")).toHaveAttribute("data-collapsed", "true");
   await expect(
