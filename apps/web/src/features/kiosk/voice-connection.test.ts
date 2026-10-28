@@ -484,3 +484,15 @@ it("通貨変更を適用した後の設定を次のtoolへ送り、全通貨レ
   expect(outputs).toHaveLength(2);
   expect(outputs.join(" ")).not.toContain("rates");
 });
+
+it("用件相談の開始目的を渡し、接続中の相談ではWebRTCを増やさない", async () => {
+  const { value } = connection();
+  await value.start("ja", 1, "assistance");
+  expect(requests.find(({ path }) => path.endsWith("/start"))?.body).toEqual({
+    sdp: "tablecast-offer",
+    purpose: "assistance",
+  });
+  value.requestAssistance("お冷");
+  expect(VoicePeer.instances).toHaveLength(1);
+  expect(peer().channel.send).toHaveBeenCalledWith(expect.stringContaining("お冷"));
+});

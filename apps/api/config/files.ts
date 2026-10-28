@@ -44,7 +44,7 @@ export const files = [
   ["use-case", "src/modules/*/use-cases/*.ts"],
   ["pure", "src/modules/configuration/{conditions,differences}.ts"],
   ["pure", "src/modules/tables/values.ts"],
-  ["query", "src/modules/tables/{timeline,core-queries}.ts"],
+  ["query", "src/modules/tables/{timeline,core-queries,assistance-queries}.ts"],
   ["query", "src/modules/stores/home.ts"],
   ["query", "src/modules/tables/history.ts"],
   ["query", "src/modules/orders/prerequisites.ts"],

@@ -14,10 +14,10 @@ import {
 } from "lucide-react";
 import { Suspense } from "react";
 import { CartLines } from "../../components/cart-lines";
-import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageLabel } from "../../components/language-label";
 import { PageHeader } from "../../components/page-header";
+import { RelativeTime } from "../../components/relative-time";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Skeleton } from "../../components/ui/skeleton";
@@ -33,6 +33,7 @@ import { ActivityLog } from "./events";
 import { type FloorSearch } from "./floor-model";
 import { tableDetailOptions } from "./floor-query";
 import { PaymentForm } from "./payment-form";
+import { PendingStaffCall } from "./pending-staff-call";
 import { SessionActivity } from "./session-activity";
 export function TableDetail({
   storeId,
@@ -62,13 +63,10 @@ export function TableDetail({
     mutationFn: async (
       operation:
         | { id: string; kind: "order"; status: Exclude<Order["status"], "submitted"> }
-        | { kind: "close" }
-        | { kind: "resolve" },
+        | { kind: "close" },
     ) => {
       if (operation.kind === "close")
         return parseResponse(route.tables[":id"].close.$post({ param }));
-      if (operation.kind === "resolve")
-        return parseResponse(route.tables[":id"].call.resolve.$post({ param }));
       return parseResponse(
         route.orders[":id"].status.$post({
           param: { storeId, id: operation.id },
@@ -120,7 +118,7 @@ export function TableDetail({
                 <LanguageLabel locale={table.locale} />
                 <span className="inline-flex items-center gap-1.5">
                   <Clock3 className="size-4" aria-hidden="true" />
-                  <DateTime value={table.openedAt} />
+                  <RelativeTime value={table.openedAt} initialNow={detail.dataUpdatedAt} />
                 </span>
               </span>
             </>
@@ -133,6 +131,9 @@ export function TableDetail({
     <section className="space-y-5">
       {renderHeader()}
       <ErrorNotice error={detail.error || action.error} />
+      {table.status === "open" && table.staffCalled && (
+        <PendingStaffCall table={table} initialNow={detail.dataUpdatedAt} />
+      )}
       {table && (
         <Tabs.Root
           className="flex min-h-0 flex-1 flex-col"
@@ -192,24 +193,6 @@ export function TableDetail({
                   </strong>
                 </div>
               </div>
-              {table.staffCalled && (
-                <div className="flex justify-between items-center bg-accent-soft p-3.5 rounded-md mt-5 gap-3.5">
-                  <strong className="text-base">{t("admin_attention")}</strong>
-                  {table.status === "open" && (
-                    <Button
-                      className="min-h-11 text-sm"
-                      size="lg"
-                      variant="outline"
-                      type="button"
-
-                      disabled={action.isPending}
-                      onClick={() => action.mutate({ kind: "resolve" })}
-                    >
-                      {t("admin_acknowledge")}
-                    </Button>
-                  )}
-                </div>
-              )}
               {table.plan && (
                 <p>
                   {t("kiosk_plan")}: {table.plan.rules.text[locale].displayName}

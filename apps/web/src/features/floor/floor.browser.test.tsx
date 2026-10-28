@@ -11,6 +11,7 @@ import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import { z } from "zod";
 import type * as StoreShellModule from "../store/store-shell";
+import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
 import { catalog, table } from "../../test-support/tablecast-fixtures";
@@ -37,6 +38,15 @@ class TablecastSocket extends EventTarget {
   }
   close() {}
 }
+
+const colour = (token: string) => {
+  const probe = document.createElement("span");
+  probe.style.backgroundColor = `var(${token})`;
+  document.body.appendChild(probe);
+  const value = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return value;
+};
 
 let client: QueryClient;
 let initialViewport: { height: number; width: number };
@@ -323,3 +333,112 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
     );
   await expect.poll(names).toEqual(["T06", "T05", "T04", "T03"]);
 });
+
+it.each(["ja", "en"] as const)(
+  "%sのフロア最上部に用件の全文を残し、更新失敗から再試行して対応済みにする",
+  async (locale) => {
+    await page.viewport(1180, 820);
+    const labels = locale === "ja" ? ja : en;
+    const now = Date.now();
+    const call = {
+      id: "tablecast-pending-call",
+      createdAt: now - 180_000,
+      resolvedAt: null,
+      status: "pending" as const,
+      handoff: {
+        summaryJa: "お冷を2つ希望しています。\n追加の依頼も省略せず引き継ぎます。",
+        originalText: "Two glasses of water, please.\nPlease bring extra chopsticks too.",
+        locale: "en" as const,
+        attempted: ["お冷の商品をご案内", "お箸の追加商品をご案内"],
+        unresolved: "お冷2つとお箸の提供が必要です。",
+      },
+    };
+    let current = {
+      ...table,
+      storeId: "tablecast-komorebi",
+      openedAt: now - 600_000,
+      staffCall: call,
+      events: [],
+    };
+    let attempts = 0;
+    const bodies: unknown[] = [];
+    const requests: string[] = [];
+    const floorData = () => ({
+      store: { id: current.storeId, name: "こもれび", role: "owner" },
+      tables: [current],
+      vacantTables: [],
+      events: [],
+      cursor: current.cursor,
+    });
+    vi.stubGlobal("WebSocket", TablecastSocket);
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      const path = new URL(request.url).pathname;
+      requests.push(`${request.method} ${path}`);
+      if (path.endsWith("/events")) return Response.json({ cursor: current.cursor, events: [] });
+      if (request.method === "GET" && path === `/api/admin/stores/${current.storeId}`)
+        return Response.json(floorData());
+      if (request.method === "POST" && path.endsWith("/call/resolve")) {
+        bodies.push(await request.json());
+        if (++attempts === 1)
+          return Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 });
+        current = { ...current, staffCalled: false };
+        return Response.json({ ...current, staffCall: null });
+      }
+      throw new Error(`未定義の要求: ${request.method} ${path}`);
+    });
+    client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    client.setQueryData(floorOptions(current.storeId).queryKey, floorData(), { updatedAt: now });
+    const root = createRootRoute({
+      component: () => (
+        <main className="space-y-6 p-6">
+          <Floor filter="vacant" q="存在しない卓" initialNow={now} />
+        </main>
+      ),
+    });
+    const router = createRouter({
+      routeTree: root,
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+    await render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initialLocale={locale} persist={false}>
+          <RouterProvider router={router} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    const queue = page.getByRole("region", { name: labels.staff_call_queue, exact: true });
+    const card = queue.getByRole("article");
+    await expect.element(card.getByText(call.handoff.summaryJa, { exact: true })).toBeVisible();
+    await expect.element(card.getByText(call.handoff.originalText, { exact: true })).toBeVisible();
+    await expect.element(card.getByText("お箸の追加商品をご案内", { exact: true })).toBeVisible();
+    await expect.element(card.getByText(call.handoff.unresolved, { exact: true })).toBeVisible();
+    await expect
+      .element(card.getByText(locale === "ja" ? "3 分前" : "3 minutes ago", { exact: true }))
+      .toBeVisible();
+    const queueRect = queue.element().getBoundingClientRect();
+    expect(queueRect.top).toBeLessThan(
+      page.getByRole("region", { name: labels.floor_current }).element().getBoundingClientRect()
+        .top,
+    );
+    expect(card.element().querySelector("details,summary,[data-slot=accordion]")).toBeNull();
+    expect(getComputedStyle(card.element()).backgroundColor).toBe(colour("--gray-1"));
+    const header = card.element().querySelector("header");
+    if (!header) throw new Error("呼び出しの見出しが必要です");
+    expect(getComputedStyle(header).backgroundColor).toBe(colour("--gray-2"));
+    const resolveButton = card.getByRole("button", { name: labels.admin_acknowledge, exact: true });
+    expect(getComputedStyle(resolveButton.element()).backgroundColor).toBe(
+      colour("--color-success-soft"),
+    );
+    expect(requests.filter((request) => request.includes(`/tables/${current.id}`))).toEqual([]);
+    await card.getByRole("button", { name: labels.admin_acknowledge, exact: true }).click();
+    await expect.element(card.getByRole("alert")).toBeVisible();
+    await expect.element(card.getByText(call.handoff.originalText, { exact: true })).toBeVisible();
+    await card.getByRole("button", { name: labels.admin_acknowledge, exact: true }).click();
+    await expect.element(queue).not.toBeInTheDocument();
+    expect(attempts).toBe(2);
+    expect(bodies).toEqual([{ callId: call.id }, { callId: call.id }]);
+  },
+);

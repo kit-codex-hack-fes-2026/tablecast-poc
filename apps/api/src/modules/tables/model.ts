@@ -158,6 +158,56 @@ export type HistoryPage = z.infer<typeof historyPageSchema>;
 
 export type SessionEventsPage = z.infer<typeof sessionEventsPageSchema>;
 
+export const staffHandoffSchema = z
+  .object({
+    summaryJa: z
+      .string()
+      .trim()
+      .min(1)
+      .max(1500)
+      .default("用件未確認。お客様が店員の直接呼び出しを希望しています。"),
+    originalText: z.string().max(10000).default(""),
+    locale: localeSchema.default("ja"),
+    attempted: z.array(z.string().max(300)).max(10).default([]),
+    unresolved: z.string().max(1000).default(""),
+  })
+  .strict();
+export const staffCallInputSchema = staffHandoffSchema
+  .extend({
+    locale: localeSchema.optional(),
+    idempotencyKey: z.string().min(8).max(100).optional(),
+  })
+  .strict();
+export type StaffCallInput = z.input<typeof staffCallInputSchema>;
+export const staffCallSchema = z.object({
+  id,
+  status: z.enum(["pending", "resolved"]),
+  handoff: staffHandoffSchema,
+  createdAt: z.number().int(),
+  resolvedAt: z.number().int().nullable(),
+});
+export type StaffCall = z.infer<typeof staffCallSchema>;
+export const staffCallPageQuerySchema = z
+  .object({
+    beforeCreatedAt: decimalQuerySchema.pipe(z.number().int().nonnegative()).optional(),
+    beforeId: id.optional(),
+    limit: decimalQuerySchema.pipe(z.number().int().min(1).max(50)).default(20),
+  })
+  .strict()
+  .refine((value) => (value.beforeId === undefined) === (value.beforeCreatedAt === undefined));
+export const staffCallPageSchema = z.object({
+  calls: z.array(staffCallSchema),
+  nextCursor: z.object({ createdAt: z.number().int(), id }).nullable(),
+});
+export type StaffCallPage = z.infer<typeof staffCallPageSchema>;
+export const serviceGuidanceQuerySchema = z
+  .object({
+    query: z.string().max(100).optional(),
+    guideId: id.optional(),
+    offset: decimalQuerySchema.pipe(z.number().int().nonnegative()).optional(),
+  })
+  .strict();
+
 export const tableStateSchema = z.object({
   id: z.string(),
   tableId: z.string().nullable(),
@@ -188,6 +238,7 @@ export const tableStateSchema = z.object({
   cursor: z.number().int(),
   plan: tablePlanSchema.nullable(),
   staffCalled: z.boolean(),
+  staffCall: staffCallSchema.nullable().optional(),
   snapshot: snapshotSchema.nullable(),
 });
 

@@ -19,6 +19,7 @@ import {
 import { parseResponse, tableEndpoint, type TableEndpoint } from "../../lib/api";
 import { apiError } from "../../lib/api-error";
 import { useRealtime } from "../../lib/use-realtime";
+import { staffCallsKey } from "./assistance-query";
 import { affectedTableQueries, latestTable } from "./table-cache";
 const baseTableKey = ["tablecast-table"];
 export const tableQueryKey = (endpoint: TableEndpoint) =>
@@ -163,6 +164,12 @@ export function useTableResources(data: CoreState, endpoint: TableEndpoint, refr
         current,
         client.getQueryData(tableOrdersOptions(endpoint, data.id).queryKey)?.pages[0],
       );
+      if (
+        update.events.some(
+          (event) => event.kind.startsWith("staff.") || event.kind === "demo.reset",
+        )
+      )
+        void client.invalidateQueries({ queryKey: staffCallsKey(endpoint, data.id) });
       if (affected.orders)
         void client.invalidateQueries(
           { queryKey: tableOrdersKey(endpoint, data.id) },

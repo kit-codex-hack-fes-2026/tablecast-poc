@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calendarDate, dateTime, money, time } from "./format";
+import { calendarDate, dateTime, money, relativeTime, time } from "./format";
 
 describe("店舗の金額・日時表示", () => {
   it("日英とも日本円の整数と桁区切りを表示し、円記号を正規化する", () => {
@@ -45,4 +45,19 @@ describe("店舗の金額・日時表示", () => {
 it("日付キーは曜日と月名を含む自然な表記になりタイムゾーン略称を表示しない", () => {
   expect(calendarDate("2026-10-20", "ja")).toBe("2026年10月20日(火)");
   expect(calendarDate("2026-10-20", "en")).toBe("Tuesday, 20 October 2026");
+});
+
+it.each([
+  [0, "今", "now"],
+  [59_999, "59 秒前", "59 seconds ago"],
+  [60_000, "1 分前", "1 minute ago"],
+  [3_599_999, "59 分前", "59 minutes ago"],
+  [3_600_000, "1 時間前", "1 hour ago"],
+  [86_400_000, "昨日", "yesterday"],
+  [172_800_000, "一昨日", "2 days ago"],
+  [-1_000, "今", "now"],
+])("経過%smsを日英の相対時刻で表示する", (elapsed, japanese, english) => {
+  const now = Date.parse("2026-10-29T00:00:00Z");
+  expect(relativeTime(now - elapsed, now, "ja")).toBe(japanese);
+  expect(relativeTime(now - elapsed, now, "en")).toBe(english);
 });

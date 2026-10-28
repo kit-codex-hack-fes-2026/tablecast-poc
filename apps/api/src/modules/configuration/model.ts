@@ -12,9 +12,34 @@ import {
 import { imageAssetsSchema } from "../media/model";
 import { selectionSchema } from "../orders/model";
 import { castInstructionSchema, instructionLimit } from "./instruction-model";
+export const guideSchema = z
+  .object({
+    id,
+    text: bilingualSchema,
+    productIds: z.array(id).max(20).default([]),
+    links: z
+      .array(
+        z
+          .object({
+            label: z
+              .object({ ja: z.string().min(1).max(150), en: z.string().min(1).max(150) })
+              .strict(),
+            url: z
+              .url()
+              .max(2048)
+              .refine((value) => new URL(value).protocol === "https:"),
+          })
+          .strict(),
+      )
+      .max(8)
+      .default([]),
+  })
+  .strict();
+export type Guide = z.infer<typeof guideSchema>;
 export const maxConfigurationProducts = 2000;
 export const configurationSchema = z
   .object({
+    guides: z.array(guideSchema).max(100).optional(),
     branding: brandingSchema.optional(),
     appearance: appearanceSchema.optional(),
     banners: z.array(bannerSchema).max(12).optional(),
@@ -158,6 +183,7 @@ export const draftChoiceSchema = z.object({
   changeCount: z.number().int(),
   sections: z.array(
     z.enum([
+      "guides",
       "products",
       "categories",
       "plans",

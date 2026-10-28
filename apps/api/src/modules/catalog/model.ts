@@ -75,10 +75,11 @@ function conditionNodeCount(condition: null | OptionCondition): number {
   return count;
 }
 
-export const optionConditionSchema = conditionAtDepth(1).refine(
-  (condition) => conditionNodeCount(condition) <= conditionLimits.nodes,
-  { message: "CONDITION_NODE_LIMIT" },
-);
+export const optionConditionSchema = conditionAtDepth(1)
+  .refine((condition) => conditionNodeCount(condition) <= conditionLimits.nodes, {
+    message: "CONDITION_NODE_LIMIT",
+  })
+  .meta({ id: "tablecastConditionDepth1" });
 export const optionConditionsSchema = z
   .object({
     version: z.literal(2),

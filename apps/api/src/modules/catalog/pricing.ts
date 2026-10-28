@@ -18,12 +18,24 @@ export function configurationErrors(config: Configuration): ConfigurationIssue[]
       seen.add(item.id);
     }
   };
+  unique(config.guides ?? [], ["guides"]);
   unique(config.categories, ["categories"]);
   unique(config.products, ["products"]);
   unique(config.plans, ["plans"]);
   unique(config.banners ?? [], ["banners"]);
   const categories = new Set(config.categories.map((c) => c.id));
   const products = new Set(config.products.map((p) => p.id));
+  for (const [index, guide] of (config.guides ?? []).entries()) {
+    for (const [productIndex, productId] of guide.productIds.entries()) {
+      if (!products.has(productId))
+        errors.push({
+          code: "PRODUCT_NOT_FOUND",
+          path: ["guides", index, "productIds", productIndex],
+          params: { productId },
+        });
+    }
+  }
+
   for (const [bannerIndex, banner] of (config.banners ?? []).entries()) {
     unique(banner.hotspots, ["banners", bannerIndex, "hotspots"]);
     for (const [spotIndex, spot] of banner.hotspots.entries()) {

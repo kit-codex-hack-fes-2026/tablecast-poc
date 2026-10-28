@@ -13,7 +13,6 @@ import {
 import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useHydrated } from "@tanstack/react-router";
 import {
-  Bell,
   Check,
   ChevronRight,
   LoaderCircle,
@@ -70,6 +69,7 @@ import { KioskVoicePanel } from "./kiosk-voice-panel";
 import { KioskMenu } from "./menu-search";
 import { useTablePresentation } from "./presentation-query";
 import { ProductPage } from "./product-dialog";
+import { StaffAssistance } from "./staff-assistance";
 import { latestTable } from "./table-cache";
 import {
   tableCatalogOptions,
@@ -365,7 +365,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       parseResponse(
         bill
           ? endpoint.client.bill.request.$post({ query: { view: "core" } })
-          : endpoint.client.call.$post({ query: { view: "core" } }),
+          : endpoint.client.call.$post({ query: { view: "core" }, json: {} }),
       ),
     onSuccess: (updated, bill) => {
       receive(updated);
@@ -591,22 +591,15 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             <CurrencySelector compact />
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          data-ui="call-staff"
-          className="h-13.5 min-h-13.5 shrink-0 whitespace-nowrap px-2"
-          onClick={() => call.mutate(false)}
-          disabled={call.isPending || data.staffCalled}
-          aria-busy={call.isPending}
-        >
-          {call.isPending ? (
-            <LoaderCircle aria-hidden className="motion-safe:animate-spin" />
-          ) : (
-            <Bell aria-hidden />
-          )}
-          <span>{data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}</span>
-        </Button>
+        <StaffAssistance
+          key={data.id}
+          data={data}
+          endpoint={endpoint}
+          catalog={catalog.data}
+          events={events}
+          voice={voice}
+          onChoose={choose}
+        />
       </header>
     );
   }

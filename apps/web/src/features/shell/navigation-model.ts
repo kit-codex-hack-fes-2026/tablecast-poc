@@ -92,6 +92,12 @@ export const navigationPages = {
     Icon: LayoutList,
     to: "/admin/stores/$storeId/menu/plans",
   },
+  guides: {
+    group: "menu",
+    label: "assistance_guides",
+    Icon: CircleHelp,
+    to: "/admin/stores/$storeId/menu/guides",
+  },
   cast: { group: "menu", label: "editor_cast", Icon: Mic, to: "/admin/stores/$storeId/menu/cast" },
   design: {
     group: "menu",

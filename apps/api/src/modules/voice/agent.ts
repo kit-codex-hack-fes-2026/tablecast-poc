@@ -16,8 +16,10 @@ import { saveAutomaticCustomerMemory } from "../customer-memory/use-cases/source
 import { cartUpdateSchema, submitSchema } from "../orders/model";
 import { updateCart } from "../orders/use-cases/cart";
 import { prepareConfirmation, submitOrder } from "../orders/use-cases/confirmation";
-import { menuSearchInputSchema, uiSectionInputSchema } from "../tables/model";
+import { getServiceGuidance } from "../tables/assistance-queries";
+import { menuSearchInputSchema, staffCallInputSchema, uiSectionInputSchema } from "../tables/model";
 import { getSession, getTableState } from "../tables/queries";
+import { showServiceGuidance } from "../tables/use-cases/assistance";
 import {
   callStaff,
   changeLocale,
@@ -74,6 +76,29 @@ export function createCastTools(
           }),
         }
       : {}),
+    getServiceGuidance: castTool({
+      id: "getServiceGuidance",
+      description: voiceToolDescriptions.getServiceGuidance,
+      inputSchema: z
+        .object({
+          query: z.string().max(100).optional(),
+          guideId: z.string().optional(),
+          offset: z.number().int().nonnegative().optional(),
+          show: z.boolean().optional(),
+        })
+        .strict(),
+      execute: async ({ show = true, ...input }) => {
+        guard();
+        const result = await getServiceGuidance(services, actor, input);
+        if (show && trigger === "user")
+          await showServiceGuidance(services, actor, {
+            configVersion: result.configVersion,
+            guideIds: result.guides.map((guide) => guide.id),
+            productIds: result.products.map((product) => product.id),
+          });
+        return result;
+      },
+    }),
     getCatalog: castTool({
       id: "getCatalog",
       description: voiceToolDescriptions.getCatalog,
@@ -360,11 +385,15 @@ export function createCastTools(
           callStaff: castTool({
             id: "callStaff",
             description: voiceToolDescriptions.callStaff,
-            inputSchema: z.object({}).strict(),
-            execute: async () => {
+            inputSchema: staffCallInputSchema,
+            execute: async (input) => {
               guard();
-              const state = await callStaff(services, actor);
-              return { staffCalled: state.staffCalled };
+              const state = await callStaff(services, actor, "core", input);
+              return {
+                staffCalled: state.staffCalled,
+                callId: state.staffCall?.id,
+                status: state.staffCall?.status,
+              };
             },
           }),
         }

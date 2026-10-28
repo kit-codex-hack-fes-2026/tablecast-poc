@@ -2,7 +2,7 @@ import type { Configuration } from "@tablecast/api/schema";
 import { z } from "zod";
 import { collectionSearchFields, collectionSearchSchema } from "../shell/collection-model";
 import { emptyText } from "./configuration-defaults";
-export const menuSectionSchema = z.enum(["products", "categories", "plans", "cast"]);
+export const menuSectionSchema = z.enum(["products", "categories", "plans", "guides", "cast"]);
 export const menuListSearchSchema = z.object({
   ...collectionSearchSchema.shape,
   ...collectionSearchFields("options"),
@@ -17,6 +17,7 @@ export type MenuListSearch = z.infer<typeof menuListSearchSchema>;
 export const emptyMenuListSearch: MenuListSearch = {};
 export type MenuSection = z.infer<typeof menuSectionSchema>;
 export const menuLabels = {
+  guides: "assistance_guides",
   products: "editor_products",
   categories: "editor_categories",
   plans: "editor_plans",
@@ -26,7 +27,7 @@ export const menuLabels = {
 export function menuDocument(configuration: Configuration, section: MenuSection, itemId?: string) {
   const item =
     section !== "cast" && itemId
-      ? configuration[section].find((candidate) => candidate.id === itemId)
+      ? (configuration[section] ?? []).find((candidate) => candidate.id === itemId)
       : undefined;
   return {
     title: menuLabels[section],
@@ -39,6 +40,14 @@ export function addMenuItem(
   section: MenuSection,
   id: string,
 ): Configuration {
+  if (section === "guides")
+    return {
+      ...configuration,
+      guides: [
+        ...(configuration.guides ?? []),
+        { id, text: emptyText(), productIds: [], links: [] },
+      ],
+    };
   if (section === "products")
     return {
       ...configuration,
@@ -106,3 +115,8 @@ export const castTargets = [
   "proactive",
 ] as const;
 export type CastTarget = (typeof castTargets)[number];
+
+export function findMenuItem(configuration: Configuration, section: MenuSection, itemId: string) {
+  if (section === "cast") return undefined;
+  return configuration[section]?.find((item) => item.id === itemId);
+}

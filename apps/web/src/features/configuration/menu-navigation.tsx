@@ -13,6 +13,7 @@ const items = [
   { section: "products", ...navigationPages.products },
   { section: "categories", ...navigationPages.categories },
   { section: "plans", ...navigationPages.plans },
+  { section: "guides", ...navigationPages.guides },
   { section: "cast", ...navigationPages.cast },
 ] as const;
 export function MenuNavigation({

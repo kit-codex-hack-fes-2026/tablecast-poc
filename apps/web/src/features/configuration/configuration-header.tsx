@@ -62,7 +62,7 @@ export function ConfigurationHeader({ storeId, role }: { role: string; storeId: 
       const exists =
         itemId &&
         itemId !== "new" &&
-        (section === "cast" || configuration?.[section].some((item) => item.id === itemId));
+        (section === "cast" || configuration?.[section]?.some((item) => item.id === itemId));
       if (pathname.endsWith("/design"))
         await navigate({
           to: "/admin/stores/$storeId/design",

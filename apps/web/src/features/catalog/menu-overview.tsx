@@ -8,11 +8,13 @@ import { useI18n } from "../../i18n/locale";
 import { StartConfigurationEditing } from "../configuration/configuration-workflow";
 import {
   emptyMenuListSearch,
+  findMenuItem,
   menuLabels,
   type MenuListSearch,
   type MenuSection,
 } from "../configuration/menu-model";
 import { useStore } from "../store/store-context";
+import { GuideContents } from "./guide-contents";
 import {
   MenuDescription,
   PlanContents,
@@ -34,8 +36,7 @@ export function MenuOverview({
   const { id: storeId, role } = useStore();
   const { locale, t } = useI18n();
   const navigate = useNavigate();
-  const item =
-    section === "cast" ? null : configuration[section].find((value) => value.id === itemId);
+  const item = findMenuItem(configuration, section, itemId);
   const product =
     section === "products"
       ? configuration.products.find((value) => value.id === itemId)
@@ -104,6 +105,7 @@ export function MenuOverview({
             </dl>
           )}
           <MenuDescription item={item} cast={configuration.cast} />
+          <GuideContents configuration={configuration} section={section} itemId={itemId} />
           {product && <ProductDetails product={product} />}
 
           {section === "categories" && (

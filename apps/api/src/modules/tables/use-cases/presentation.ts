@@ -11,7 +11,13 @@ import { observeOperation, recordD1Update } from "../../../platform/telemetry";
 import { getCatalog, sessionConfigVersion } from "../../catalog/queries";
 import { showProductsSchema } from "../../voice/model";
 import { getCoreState } from "../core-queries";
-import { type CoreState, type StateView, type TableState, uiSectionInputSchema } from "../model";
+import {
+  type CoreState,
+  type StaffCallInput,
+  type StateView,
+  type TableState,
+  uiSectionInputSchema,
+} from "../model";
 import {
   eventStatement,
   interruptVoiceTurns,
@@ -21,6 +27,7 @@ import {
 } from "../mutations";
 import { getSession, getTableState } from "../queries";
 import { withStateRead } from "../state-read";
+import { markStaffCallResolved, requestStaffCall } from "./assistance";
 
 export function setUiSection(
   services: ApiServices,
@@ -188,15 +195,31 @@ async function requestStaffAssistance(
   );
 }
 
-export function callStaff(services: ApiServices, actor: Actor, view: "core"): Promise<CoreState>;
-export function callStaff(services: ApiServices, actor: Actor, view?: "full"): Promise<TableState>;
+export function callStaff(
+  services: ApiServices,
+  actor: Actor,
+  view: "core",
+  input?: StaffCallInput,
+): Promise<CoreState>;
+export function callStaff(
+  services: ApiServices,
+  actor: Actor,
+  view?: "full",
+  input?: StaffCallInput,
+): Promise<TableState>;
 export function callStaff(
   services: ApiServices,
   actor: Actor,
   view: StateView,
+  input?: StaffCallInput,
 ): Promise<CoreState | TableState>;
-export function callStaff(services: ApiServices, actor: Actor, view: StateView = "full") {
-  return requestStaffAssistance(services, actor, "staff.called", view);
+export function callStaff(
+  services: ApiServices,
+  actor: Actor,
+  view: StateView = "full",
+  input?: StaffCallInput,
+) {
+  return requestStaffCall(services, actor, view, input);
 }
 
 export function changeLocale(
@@ -298,23 +321,7 @@ export function requestBill(services: ApiServices, actor: Actor, view: StateView
   return requestStaffAssistance(services, actor, "bill.requested", view);
 }
 
-export async function resolveCall(services: ApiServices, actor: Actor) {
-  const db = services.db;
-
-  ensure(actor.kind === "staff", "STAFF_REQUIRED", 403);
-  const row = await getSession(services, actor);
-  const mutation = crypto.randomUUID();
-  const result = await db.batch([
-    db
-      .update(business.tableSessions)
-      .set({ staff_called: 0, mutation_id: mutation })
-      .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'`),
-    eventStatement(services, actor, mutation, "staff.resolved", {}),
-  ]);
-  ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-  await notifyStore(services, actor.storeId, actor.tableSessionId, {
-    cursor: result[1].meta.last_row_id,
-    demoId: row.kind === "demo" ? row.id : undefined,
-  });
+export async function resolveCall(services: ApiServices, actor: Actor, callId?: string) {
+  await markStaffCallResolved(services, actor, callId);
   return getTableState(services, actor);
 }

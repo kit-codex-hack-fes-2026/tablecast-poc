@@ -8,6 +8,17 @@ export type VoiceStatus =
   | "speaking"
   | "stopping"
   | "thinking";
+
+export const voiceStatusLabels = {
+  idle: "kiosk_voice_paused",
+  paused: "kiosk_voice_paused",
+  connecting: "kiosk_voice_connecting",
+  listening: "kiosk_voice_listening",
+  thinking: "kiosk_voice_thinking",
+  speaking: "kiosk_voice_speaking",
+  stopping: "kiosk_voice_stopping",
+  error: "kiosk_voice_error",
+} as const;
 export type LiveMessage = {
   createdAt: number;
   displayIncomplete?: boolean;

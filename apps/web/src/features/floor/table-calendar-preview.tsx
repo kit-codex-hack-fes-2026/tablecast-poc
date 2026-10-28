@@ -173,6 +173,11 @@ export function VisitAttention({
   const { t } = useI18n();
   return (
     <>
+      {current?.staffCall && (
+        <p lang="ja" className="text-sm wrap-anywhere">
+          {current.staffCall.handoff.summaryJa}
+        </p>
+      )}
       {current?.staffCalled && (
         <span className="inline-flex items-center gap-1 text-warning">
           <Bell aria-label={t("admin_attention")} className="size-3.5 shrink-0" />

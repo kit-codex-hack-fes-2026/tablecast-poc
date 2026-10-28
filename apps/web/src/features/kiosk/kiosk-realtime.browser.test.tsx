@@ -104,8 +104,10 @@ it("日本語の商品0件でも店員を呼べる", async () => {
   await expect.element(page.getByText(labels.kiosk_menu_empty)).toBeVisible();
 
   await page.getByRole("button", { name: labels.kiosk_call_staff, exact: true }).click();
+  const assistance = page.getByRole("dialog", { name: labels.assistance_title });
+  await assistance.getByRole("button", { name: labels.assistance_direct, exact: true }).click();
   await expect
-    .element(page.getByRole("button", { name: labels.kiosk_called_staff, exact: true }))
+    .element(assistance.getByRole("button", { name: labels.assistance_pending, exact: true }))
     .toBeDisabled();
   expect(
     requests.filter(

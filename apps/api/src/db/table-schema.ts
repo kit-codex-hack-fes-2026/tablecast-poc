@@ -72,6 +72,7 @@ export const tableSessions = sqliteTable("table_sessions", {
   menu_search_json: text("menu_search_json"),
   speech_speed: real("speech_speed").notNull().default(1),
   staff_called: integer("staff_called").notNull().default(0),
+  staff_call_json: text("staff_call_json"),
   plan_json: text("plan_json"),
   opened_at: integer("opened_at").notNull(),
   closed_at: integer("closed_at"),
@@ -197,4 +198,15 @@ export const demoSessions = sqliteTable("demo_sessions", {
   source_version: integer("source_version").notNull(),
   config_version: integer("config_version").notNull().default(1),
   config_json: text("config_json").notNull(),
+});
+
+export const staffCalls = sqliteTable("staff_calls", {
+  id: text("id").primaryKey().notNull(),
+  store_id: text("store_id").notNull(),
+  table_session_id: text("table_session_id").notNull(),
+  idempotency_key: text("idempotency_key").notNull(),
+  status: text("status", { enum: ["pending", "resolved"] }).notNull(),
+  handoff_json: text("handoff_json").notNull(),
+  created_at: integer("created_at").notNull(),
+  resolved_at: integer("resolved_at"),
 });
