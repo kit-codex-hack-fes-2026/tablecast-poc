@@ -22,8 +22,8 @@ export function StaffCallDetails({ call }: { call: StaffCall }) {
           {call.handoff.summaryJa}
         </p>
       </div>
-      <details>
-        <summary className="cursor-pointer py-2">{t("assistance_original")}</summary>
+      <div>
+        <strong className="mb-1 block">{t("assistance_original")}</strong>
         <LanguageLabel locale={call.handoff.locale} />
         <p lang={call.handoff.locale} className="whitespace-pre-wrap wrap-anywhere">
           {call.handoff.originalText || t("assistance_no_original")}
@@ -48,7 +48,7 @@ export function StaffCallDetails({ call }: { call: StaffCall }) {
             </p>
           </div>
         )}
-      </details>
+      </div>
       {call.resolvedAt !== null && (
         <p className="text-muted-foreground">
           {t("assistance_resolved_at")}: {dateTime(call.resolvedAt, locale)}

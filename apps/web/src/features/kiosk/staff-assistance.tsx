@@ -1,6 +1,16 @@
 import type { StaffCall } from "@tablecast/api/schema";
 import { Popover } from "@base-ui/react/popover";
-import { AudioLines, Bell, ChevronDown, History, LoaderCircle, Mic, MicOff, X } from "lucide-react";
+import {
+  ArrowLeft,
+  AudioLines,
+  Bell,
+  ChevronRight,
+  History,
+  LoaderCircle,
+  Mic,
+  MicOff,
+  X,
+} from "lucide-react";
 import { useRef } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { Money } from "../../components/money";
@@ -13,10 +23,17 @@ import { guideTemplates } from "../configuration/guide-model";
 import { type AssistanceProps, useStaffAssistance } from "./staff-assistance-state";
 import { voiceStatusLabels } from "./voice-model";
 
+const viewLabels = {
+  advice: "assistance_title",
+  call: "assistance_memo",
+  history: "assistance_history",
+  topics: "assistance_fallback",
+} as const;
+
 export function StaffAssistance(props: AssistanceProps) {
   const { t } = useI18n();
   const model = useStaffAssistance(props);
-  const { state, call, begin, close, open, directCall } = model;
+  const { state, call, close, open, directCall } = model;
   const { data } = props;
   const trigger = useRef<HTMLButtonElement>(null);
   return (
@@ -75,24 +92,11 @@ export function StaffAssistance(props: AssistanceProps) {
             </header>
             <div
               role="region"
-              aria-label={t(state.tab === "advice" ? "assistance_title" : "assistance_history")}
+              aria-label={t(viewLabels[state.tab])}
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 space-y-3"
               data-ui="staff-assistance-content"
             >
-              {state.tab === "advice" ? (
-                <>
-                  <AssistanceAdvice model={model} />
-                  <RecentCall model={model} />
-                </>
-              ) : (
-                <>
-                  <Button variant="ghost" className="w-full justify-start" onClick={begin}>
-                    <Mic aria-hidden />
-                    {t("assistance_advice")}
-                  </Button>
-                  <AssistanceHistory model={model} />
-                </>
-              )}
+              <AssistanceContent model={model} />
             </div>
             <footer className="shrink-0 space-y-2 border-t border-border p-3">
               <ErrorNotice error={call.error} />
@@ -118,6 +122,62 @@ export function StaffAssistance(props: AssistanceProps) {
         </Popover.Positioner>
       </Popover.Portal>
     </Popover.Root>
+  );
+}
+
+function AssistanceContent({ model }: { model: ReturnType<typeof useStaffAssistance> }) {
+  const { t } = useI18n();
+  if (model.state.tab === "advice")
+    return (
+      <>
+        <AssistanceAdvice model={model} />
+        <RecentCall model={model} />
+      </>
+    );
+  if (model.state.tab === "topics")
+    return (
+      <>
+        <Button variant="ghost" className="w-full justify-start" onClick={model.showAdvice}>
+          <ArrowLeft aria-hidden />
+          {t("common_back")}
+        </Button>
+        <h3 className="font-medium">{t("assistance_fallback")}</h3>
+        <AssistanceTopics model={model} />
+      </>
+    );
+  if (model.state.tab === "call") {
+    const selected = model.calls.find((call) => call.id === model.state.selectedCallId);
+    return (
+      <>
+        <Button variant="ghost" className="w-full justify-start" onClick={model.showHistory}>
+          <ArrowLeft aria-hidden />
+          {t("assistance_history")}
+        </Button>
+        {selected ? <StaffCallDetails call={selected} /> : <p>{t("common_loading")}</p>}
+      </>
+    );
+  }
+  return (
+    <>
+      <Button variant="ghost" className="w-full justify-start" onClick={model.begin}>
+        <Mic aria-hidden />
+        {t("assistance_advice")}
+      </Button>
+      <AssistanceHistory model={model} />
+    </>
+  );
+}
+
+function AssistanceTopics({ model }: { model: ReturnType<typeof useStaffAssistance> }) {
+  const { locale } = useI18n();
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {guideTemplates.map((topic) => (
+        <Button key={topic.en} variant="outline" onClick={() => model.selectTopic(topic[locale])}>
+          {topic[locale]}
+        </Button>
+      ))}
+    </div>
   );
 }
 
@@ -175,30 +235,16 @@ function AssistanceVoice({ model }: { model: ReturnType<typeof useStaffAssistanc
 }
 
 function AssistanceAdvice({ model }: { model: ReturnType<typeof useStaffAssistance> }) {
-  const { t, locale } = useI18n();
-  const { state, guidance, guides, products, selectTopic, choose } = model;
+  const { t } = useI18n();
+  const { state, guidance, guides, products, choose } = model;
   const selected = Boolean(state.selection.guideId || state.selection.query);
   return (
     <>
       <AssistanceVoice model={model} />
-      <details className="group rounded-lg border border-border px-3">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-sm [&::-webkit-details-marker]:hidden">
-          {t("assistance_fallback")}
-          <ChevronDown aria-hidden className="size-4 group-open:rotate-180" />
-        </summary>
-        <div className="flex flex-wrap gap-2 pb-3">
-          {guideTemplates.map((topic) => (
-            <Button
-              key={topic.en}
-              variant="outline"
-              size="sm"
-              onClick={() => selectTopic(topic[locale])}
-            >
-              {topic[locale]}
-            </Button>
-          ))}
-        </div>
-      </details>
+      <Button variant="outline" className="w-full justify-between" onClick={model.showTopics}>
+        {t("assistance_fallback")}
+        <ChevronRight aria-hidden />
+      </Button>
       <ErrorNotice
         error={guidance.error}
         onRetry={() =>
@@ -209,27 +255,25 @@ function AssistanceAdvice({ model }: { model: ReturnType<typeof useStaffAssistan
         <LoaderCircle aria-label={t("common_loading")} className="motion-safe:animate-spin" />
       )}
       {guides.map((guide) => (
-        <details
+        <section
           key={guide.id}
           aria-label={guide.text.displayName}
-          className="rounded-lg border border-border px-3"
+          className="rounded-lg border border-border p-3 space-y-2"
         >
-          <summary className="min-h-11 cursor-pointer py-2.5 text-sm font-medium">
-            {guide.text.displayName}
-          </summary>
-          <p className="pb-2 whitespace-pre-wrap text-sm wrap-anywhere">{guide.text.description}</p>
+          <h3 className="text-sm font-medium">{guide.text.displayName}</h3>
+          <p className="whitespace-pre-wrap text-sm wrap-anywhere">{guide.text.description}</p>
           {guide.links.map((link) => (
             <a
               key={link.url}
               href={link.url}
               target="_blank"
               rel="noreferrer"
-              className="block min-h-11 py-2 underline wrap-anywhere"
+              className="block min-h-11 py-2 text-sm underline wrap-anywhere"
             >
               {link.label}
             </a>
           ))}
-        </details>
+        </section>
       ))}
       {products.map((product) => (
         <Button
@@ -275,7 +319,7 @@ function RecentCall({ model }: { model: ReturnType<typeof useStaffAssistance> })
         </Button>
       </div>
       {recent ? (
-        <CallPreview call={recent} />
+        <CallPreview call={recent} onClick={() => model.showCall(recent.id)} />
       ) : (
         !model.history.error && (
           <p className="py-2 text-xs text-muted-foreground">
@@ -288,34 +332,33 @@ function RecentCall({ model }: { model: ReturnType<typeof useStaffAssistance> })
   );
 }
 
-function CallPreview({ call }: { call: StaffCall }) {
+function CallPreview({ call, onClick }: { call: StaffCall; onClick: () => void }) {
   const { t, locale } = useI18n();
   return (
-    <details className="group rounded-lg border border-border px-3">
-      <summary className="cursor-pointer list-none py-2.5 text-sm [&::-webkit-details-marker]:hidden">
-        <span className="flex items-center justify-between gap-2">
-          <time
-            className="text-xs text-muted-foreground"
-            dateTime={new Date(call.createdAt).toISOString()}
-          >
-            {dateTime(call.createdAt, locale)}
-          </time>
-          <Badge variant={call.status === "pending" ? "warning" : "success"}>
-            {t(call.status === "pending" ? "assistance_pending" : "assistance_resolved")}
-          </Badge>
-          <ChevronDown aria-hidden className="size-4 shrink-0 group-open:rotate-180" />
-        </span>
-        <span
-          lang={call.handoff.originalText ? call.handoff.locale : "ja"}
-          className="mt-1 line-clamp-2 wrap-anywhere"
+    <Button
+      variant="outline"
+      className="h-auto w-full flex-col items-stretch gap-1 whitespace-normal py-3 text-left"
+      onClick={onClick}
+    >
+      <span className="flex items-center justify-between gap-2">
+        <time
+          className="text-xs text-muted-foreground"
+          dateTime={new Date(call.createdAt).toISOString()}
         >
-          {call.handoff.originalText || call.handoff.summaryJa}
-        </span>
-      </summary>
-      <div className="border-t border-border py-3">
-        <StaffCallDetails call={call} />
-      </div>
-    </details>
+          {dateTime(call.createdAt, locale)}
+        </time>
+        <Badge variant={call.status === "pending" ? "warning" : "success"}>
+          {t(call.status === "pending" ? "assistance_pending" : "assistance_resolved")}
+        </Badge>
+        <ChevronRight aria-hidden className="size-4 shrink-0" />
+      </span>
+      <span
+        lang={call.handoff.originalText ? call.handoff.locale : "ja"}
+        className="mt-1 line-clamp-2 wrap-anywhere"
+      >
+        {call.handoff.originalText || call.handoff.summaryJa}
+      </span>
+    </Button>
   );
 }
 function AssistanceHistory({ model }: { model: ReturnType<typeof useStaffAssistance> }) {
@@ -334,8 +377,8 @@ function AssistanceHistory({ model }: { model: ReturnType<typeof useStaffAssista
       )}
       {!history.isPending && !history.error && !calls.length && <p>{t("assistance_empty")}</p>}
       {calls.map((entry) => (
-        <article key={entry.id} className="rounded-xl border border-border p-3">
-          <StaffCallDetails call={entry} />
+        <article key={entry.id}>
+          <CallPreview call={entry} onClick={() => model.showCall(entry.id)} />
         </article>
       ))}
       {history.hasNextPage && (

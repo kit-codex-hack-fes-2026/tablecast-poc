@@ -32,9 +32,10 @@ export type AssistanceState = {
   mountedCursor: number;
   open: boolean;
   openedAt: number;
+  selectedCallId?: string;
   selection: { guideId?: string; query?: string };
   shownCursor: number;
-  tab: "advice" | "history";
+  tab: "advice" | "call" | "history" | "topics";
   voiceProductIds: string[];
 };
 

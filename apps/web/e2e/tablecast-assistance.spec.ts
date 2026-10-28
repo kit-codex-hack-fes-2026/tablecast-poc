@@ -21,7 +21,11 @@ test("呼び出しメモと対応済み状態が客と店員で共有され、�
   baseURL,
   browser,
 }) => {
-  const staffContext = await browser.newContext({ baseURL, serviceWorkers: "block" });
+  const staffContext = await browser.newContext({
+    baseURL,
+    serviceWorkers: "block",
+    viewport: { width: 1180, height: 820 },
+  });
   try {
     const storeId = "tablecast-komorebi";
     const admin = `/api/admin/stores/${storeId}`;
@@ -130,10 +134,6 @@ test("呼び出しメモと対応済み状態が客と店員で共有され、�
     await expect(popup).toBeVisible();
     await popup.getByText(en.assistance_fallback, { exact: true }).click();
     await popup.getByRole("button", { name: "Water", exact: true }).click();
-    await popup
-      .getByRole("group", { name: "Water", exact: true })
-      .getByText("Water", { exact: true })
-      .click();
     await expect(
       popup.getByText("Tap water is free of charge. You can order it here.", { exact: true }),
     ).toBeVisible();
@@ -144,7 +144,6 @@ test("呼び出しメモと対応済み状態が客と店員で共有され、�
     await expect(
       popup.getByText("お冷について店員の対応を希望しています。", { exact: true }),
     ).toBeVisible();
-    await popup.getByText(en.assistance_original, { exact: true }).click();
     await expect(popup.getByText("Water", { exact: true })).toBeVisible();
     const history = staffCallPageSchema.parse(
       await (await page.request.get("/api/table/calls")).json(),
@@ -163,6 +162,27 @@ test("呼び出しメモと対応済み状態が客と店員で共有され、�
     await staffPage.getByRole("button", { name: "日本語", exact: true }).click();
     await staffPage.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();
     await expect(staffPage.getByText(call.handoff.summaryJa, { exact: true }).last()).toBeVisible();
+    await expect(
+      staffPage.getByText(call.handoff.originalText, { exact: true }).last(),
+    ).toBeVisible();
+    await expect(
+      staffPage.getByRole("button", { name: ja.admin_acknowledge, exact: true }),
+    ).toBeVisible();
+    await expect
+      .poll(() =>
+        staffPage.evaluate(
+          () =>
+            document
+              .getAnimations()
+              .filter(
+                (animation) =>
+                  animation.playState === "running" &&
+                  animation.effect?.getComputedTiming().endTime !== Infinity,
+              ).length,
+        ),
+      )
+      .toBe(0);
+    await staffPage.screenshot({ path: resolve(evidence, "tablecast-assistance-staff.png") });
     await staffPage.getByRole("button", { name: ja.admin_acknowledge, exact: true }).click();
     await expect(popup.getByText(en.assistance_resolved, { exact: true })).toBeVisible();
     await page.reload();
@@ -191,6 +211,7 @@ test("呼び出しメモと対応済み状態が客と店員で共有され、�
     await page.screenshot({ path: resolve(evidence, "tablecast-assistance-compact.png") });
     await popup.getByRole("button", { name: en.assistance_history, exact: true }).click();
     await expect(popup.getByText(en.assistance_resolved, { exact: true })).toBeVisible();
+    await popup.getByRole("button", { name: /Water/ }).click();
     await expect(popup.getByText(call.handoff.summaryJa, { exact: true })).toBeVisible();
     expect((await staff.post(`${admin}/tables/${visit.id}/close`, { headers })).ok()).toBe(true);
     const next = await staff.post(`${admin}/tables/open`, {

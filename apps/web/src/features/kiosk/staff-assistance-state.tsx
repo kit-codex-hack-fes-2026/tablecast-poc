@@ -101,7 +101,11 @@ export function useStaffAssistance({
       );
       void client.invalidateQueries({ queryKey: staffCallsKey(endpoint, data.id) });
       requestKey.current = crypto.randomUUID();
-      setState((current) => ({ ...current, tab: "history" }));
+      setState((current) => ({
+        ...current,
+        tab: updated.staffCall ? "call" : "history",
+        selectedCallId: updated.staffCall?.id,
+      }));
     },
   });
   useEffect(
@@ -144,12 +148,17 @@ export function useStaffAssistance({
     }
   }
   function open() {
-    if (state.tab === "history" || data.staffCall)
+    if (state.tab === "call" || state.tab === "history" || data.staffCall)
       setState((current) => ({ ...current, open: true, tab: "history" }));
     else begin();
   }
   function selectTopic(query: string) {
-    setState((current) => ({ ...current, voiceProductIds: [], selection: { query } }));
+    setState((current) => ({
+      ...current,
+      tab: "advice",
+      voiceProductIds: [],
+      selection: { query },
+    }));
     voice.requestAssistance(query);
   }
   function directCall() {
@@ -167,6 +176,10 @@ export function useStaffAssistance({
     onChoose(product);
   }
   const showHistory = () => setState((current) => ({ ...current, tab: "history" }));
+  const showAdvice = () => setState((current) => ({ ...current, tab: "advice" }));
+  const showTopics = () => setState((current) => ({ ...current, tab: "topics" }));
+  const showCall = (id: string) =>
+    setState((current) => ({ ...current, tab: "call", selectedCallId: id }));
   return {
     state,
     view,
@@ -183,5 +196,8 @@ export function useStaffAssistance({
     directCall,
     choose,
     showHistory,
+    showAdvice,
+    showTopics,
+    showCall,
   };
 }

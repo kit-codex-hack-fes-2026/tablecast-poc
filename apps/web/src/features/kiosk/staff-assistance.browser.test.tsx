@@ -67,6 +67,9 @@ it.each(["listening", "connecting"] as const)(
       </LocaleProvider>,
     );
     await open();
+    await popup().getByRole("button", { name: ja.assistance_fallback, exact: true }).click();
+    expect(popup().element().querySelector("details,summary,[data-slot=accordion]")).toBeNull();
+    await popup().getByRole("button", { name: ja.common_back, exact: true }).click();
     expect(start).not.toHaveBeenCalled();
     expect(request).toHaveBeenCalledExactlyOnceWith();
     await popup().getByRole("button", { name: ja.common_close, exact: true }).click();
@@ -74,18 +77,13 @@ it.each(["listening", "connecting"] as const)(
   },
 );
 
-it("直近の履歴を最初から表示し、用件ボタンと引き継ぎ詳細は必要なときだけ開く", async () => {
+it("直近の履歴を最初から表示し、用件選択と引き継ぎ詳細へボタンで移動する", async () => {
   fixture.staffCalls = [{ ...savedCall, status: "resolved", resolvedAt: Date.now() }];
   await page.viewport(1180, 820);
   await mountKiosk();
   await open();
   const recent = popup().getByRole("region", { name: ja.assistance_recent, exact: true });
-  await expect
-    .poll(() => recent.element().querySelector("summary")?.textContent)
-    .toContain(savedCall.handoff.originalText);
-  const summary = recent.element().querySelector("summary");
-  if (!summary) throw new Error("直近の呼び出しの詳細操作が必要です");
-  const preview = page.elementLocator(summary);
+  const preview = recent.getByRole("button", { name: new RegExp(savedCall.handoff.originalText) });
   await expect.element(preview).toBeVisible();
   await expect.element(preview).toMatchTextContent(ja.assistance_resolved);
   await expect
@@ -97,8 +95,9 @@ it("直近の履歴を最初から表示し、用件ボタンと引き継ぎ詳�
   ).toHaveLength(0);
   await preview.click();
   await expect
-    .element(recent.getByText(savedCall.handoff.summaryJa, { exact: true }))
+    .element(popup().getByText(savedCall.handoff.summaryJa, { exact: true }))
     .toBeVisible();
+  expect(popup().element().querySelector("details,summary,[data-slot=accordion]")).toBeNull();
 });
 
 it.each([
@@ -208,10 +207,12 @@ it("履歴で客の原文を確認でき、対応済み通知でもメモを保�
   fixture.staffCalls = [structuredClone(savedCall)];
   await mountKiosk();
   await page.getByRole("button", { name: ja.assistance_pending, exact: true }).click();
+  await popup()
+    .getByRole("button", { name: new RegExp(savedCall.handoff.originalText) })
+    .click();
   await expect
     .element(popup().getByText(savedCall.handoff.summaryJa, { exact: true }))
     .toBeVisible();
-  await popup().getByText(ja.assistance_original, { exact: true }).click();
   await expect
     .element(popup().getByText(savedCall.handoff.originalText, { exact: true }))
     .toBeVisible();
@@ -251,10 +252,6 @@ it("案内に関連する商品を通常の商品詳細へ渡し、呼び出し�
   await mountKiosk();
   await open();
   await chooseWater();
-  await popup()
-    .getByRole("group", { name: "お冷", exact: true })
-    .getByText("お冷", { exact: true })
-    .click();
   await expect
     .element(popup().getByText("こちらの商品からご依頼ください。", { exact: true }))
     .toBeVisible();
