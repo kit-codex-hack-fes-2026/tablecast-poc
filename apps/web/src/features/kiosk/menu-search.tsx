@@ -37,21 +37,33 @@ export function KioskMenu({
   const trigger = useRef<HTMLButtonElement>(null);
   const focusInput = useRef(false);
   const focusTrigger = useRef(false);
-  const submitted = useRef<string | undefined>(undefined);
-  const previous = useRef(search?.query);
+  const submitted = useRef<undefined | { offset: number; query: string }>(undefined);
+  const previous = useRef({ search, active, version: catalog.version });
   const send = useCallback(
     (query: string, offset = 0) => {
-      submitted.current = query;
+      submitted.current = { query, offset };
       onChange({ section: "menu", search: { query, offset } });
     },
     [onChange],
   );
 
   useEffect(() => {
-    if (previous.current !== search?.query) {
-      previous.current = search?.query;
-      // 自分の応答で、その後に入力した検索語を巻き戻さない。
-      if (search?.query !== submitted.current) setDraft(search?.query ?? "");
+    if (
+      previous.current.search?.query !== search?.query ||
+      previous.current.search?.offset !== search?.offset ||
+      previous.current.active !== active ||
+      previous.current.version !== catalog.version
+    ) {
+      // 自分の検索操作後の入力は保ち、外部の検索・ページ・版変更では取り消す。
+      if (
+        previous.current.active !== active ||
+        previous.current.version !== catalog.version ||
+        search?.query !== submitted.current?.query ||
+        (search?.offset ?? 0) !== submitted.current?.offset
+      )
+        setDraft(search?.query ?? "");
+      previous.current = { search, active, version: catalog.version };
+      submitted.current = undefined;
     }
     if (!search && focusTrigger.current) {
       focusTrigger.current = false;
@@ -60,7 +72,7 @@ export function KioskMenu({
       return () => cancelAnimationFrame(frame);
     }
     return undefined;
-  }, [search]);
+  }, [search, active, catalog.version]);
   const runSearch = useEffectEvent(() => send(draft));
   useEffect(() => {
     if (!search || !active || composing || draft === search.query) return undefined;

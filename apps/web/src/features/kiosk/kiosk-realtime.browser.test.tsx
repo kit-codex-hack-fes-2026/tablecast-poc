@@ -305,6 +305,14 @@ it("音声の検索通知は同じID順を表示し、入力へfocusせず未送
       (id) => catalog.configuration.products.find((item) => item.id === id)?.text.ja.displayName,
     ),
   );
+  await input.fill("ページ移動前の未送信入力");
+  fixture.current.menuSearch = {
+    ...fixture.current.menuSearch,
+    offset: 8,
+    total: ids.length + 8,
+  };
+  notify("table.ui");
+  await expect.element(input).toHaveValue("音声の検索");
   await input.fill("未送信の入力");
   fixture.current.menuSearch = {
     ...fixture.current.menuSearch,
