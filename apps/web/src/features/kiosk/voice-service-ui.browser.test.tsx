@@ -138,6 +138,10 @@ it.each(["ja", "en"] as const)(
         .poll(() => current.closest('[data-ui="conversation-entry"]')?.getAttribute("data-pinned"))
         .toBe("false");
       expect(currentEntry.getBoundingClientRect().height).toBeCloseTo(followedHeight, 0);
+      // wheelでの固定解除通知だけでなく、ブラウザーが実際に履歴へ移動してから候補を消す。
+      await expect
+        .poll(() => scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop)
+        .toBeGreaterThan(400);
       const before = scroller.scrollTop;
       await screen.rerender(surface(true, []));
       await expect.poll(() => scroller.scrollTop).toBeLessThanOrEqual(before + 1);
