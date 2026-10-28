@@ -1,14 +1,4 @@
 services:
-  tablecast-lgtm:
-    extends:
-      file: ../compose.yaml
-      service: tablecast-lgtm
-    environment:
-      GF_SERVER_ROOT_URL: http://127.0.0.1:${TABLECAST_GRAFANA_PORT}
-    # OTLPはCompose内から使い、ホストへはGrafanaとTempoだけを公開する。
-    ports: !override
-      - "127.0.0.1:${TABLECAST_GRAFANA_PORT}:3000"
-      - "127.0.0.1:${TABLECAST_TEMPO_PORT}:3200"
   tablecast:
     build:
       context: ..
@@ -18,11 +8,11 @@ services:
       - "${TABLECAST_WORKTREE_NAME:-main}.${TABLECAST_REPO_NAME:-tablecast-poc}.container.localhost:127.0.0.1"
     working_dir: ${TABLECAST_WORKSPACE_FOLDER:?Run tablecast-init.sh first}
     command: [sh, -c, 'git config --global --add safe.directory "$$PWD" && sleep infinity']
-    depends_on:
-      - tablecast-lgtm
+    networks: [default, tablecast-observability]
     environment:
       BUN_INSTALL_CACHE_DIR: ${TABLECAST_WORKSPACE_FOLDER}/node_modules/.cache/tablecast-bun
       TABLECAST_CONTAINER: "1"
+      TABLECAST_OBSERVABILITY_DIR: ${TABLECAST_OBSERVABILITY_DIR}
       TABLECAST_WORKTREE_NAME: ${TABLECAST_WORKTREE_NAME:-main}
       TABLECAST_REPO_NAME: ${TABLECAST_REPO_NAME:-tablecast-poc}
       TABLECAST_CONTAINER_ORIGIN: ${TABLECAST_CONTAINER_ORIGIN:-http://localhost:3000}
@@ -34,6 +24,7 @@ services:
       dev.orbstack.domains: ${TABLECAST_WORKTREE_NAME:-main}.${TABLECAST_REPO_NAME:-tablecast-poc}.orb.local
       dev.orbstack.http-port: "3000"
     volumes:
+      - ${TABLECAST_OBSERVABILITY_DIR}:${TABLECAST_OBSERVABILITY_DIR}:ro
       - type: bind
         source: ${TABLECAST_WORKSPACE_FOLDER}
         target: ${TABLECAST_WORKSPACE_FOLDER}
@@ -49,7 +40,6 @@ services:
       - tablecast-web-output:${TABLECAST_WORKSPACE_FOLDER}/apps/web/.cloudflare
       - tablecast-api-output:${TABLECAST_WORKSPACE_FOLDER}/apps/api/.cloudflare
 volumes:
-  tablecast-lgtm:
   tablecast-node:
   tablecast-web-node:
   tablecast-api-node:
@@ -58,3 +48,7 @@ volumes:
   tablecast-state:
   tablecast-web-output:
   tablecast-api-output:
+networks:
+  tablecast-observability:
+    external: true
+    name: tablecast-observability-local

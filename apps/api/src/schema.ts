@@ -117,6 +117,7 @@ export type {
 } from "./modules/tables/model";
 
 export {
+  voiceObservationSchema,
   voicePageSchema,
   voiceReferenceEventSchema,
   voiceToolNameSchema,

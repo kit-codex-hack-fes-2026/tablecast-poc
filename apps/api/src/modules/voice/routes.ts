@@ -9,9 +9,11 @@ import {
   toolSchema,
   voiceConversationSchema,
   voiceDelegationSchema,
+  voiceObservationsSchema,
   voiceStartSchema,
   voiceSuggestionsSchema,
 } from "./model";
+import { recordVoiceObservations } from "./observability";
 import { invokeVoiceTool } from "./realtime";
 import { startVoiceDelegation, startVoiceSession, stopVoiceSession } from "./session";
 import { finishVoiceTurn } from "./turns";
@@ -21,6 +23,12 @@ import { createVoiceSuggestions } from "./use-cases/guidance";
 export const voiceRoutes = apiFactory
   .createApp()
   .use("*", bodyLimit({ maxSize: 256 * 1024 }))
+  .post("/observations", validate(voiceObservationsSchema), async (c) =>
+    c.json(
+      await recordVoiceObservations(c.get("services"), c.get("actor"), c.req.valid("json")),
+      200,
+    ),
+  )
   .post("/start", validate(voiceStartSchema), async (c) => {
     const started = startVoiceSession(
       c.get("services"),

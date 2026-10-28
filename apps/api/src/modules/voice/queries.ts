@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, exists, sql } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { VoiceTrigger } from "./model";
@@ -41,6 +41,17 @@ export async function voiceContext(services: ApiServices, voiceSessionId: string
   const result = await db
     .select({
       session: business.tableSessions,
+      personal: exists(
+        db
+          .select({ id: business.customerContexts.sessionId })
+          .from(business.customerContexts)
+          .where(
+            and(
+              eq(business.customerContexts.sessionId, business.tableSessions.id),
+              eq(business.customerContexts.storeId, business.tableSessions.store_id),
+            ),
+          ),
+      ).mapWith(Boolean),
       createdBy: business.demoSessions.created_by,
       opening:
         sql<number>`EXISTS(SELECT 1 FROM table_events WHERE table_session_id=${business.tableSessions.id} AND kind='voice.opening' AND json_extract(data_json,'$.turnId')=${turnId ?? null})`.mapWith(
@@ -80,6 +91,7 @@ export async function voiceContext(services: ApiServices, voiceSessionId: string
   return {
     actor,
     session: row,
+    personal: result.personal,
     proactive: Boolean(result.proactive),
     opening: result.opening,
   };

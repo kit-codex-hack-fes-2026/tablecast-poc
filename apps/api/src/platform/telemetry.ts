@@ -136,7 +136,7 @@ export function requestLog(attributes: Attributes, failed: boolean, env: Telemet
   );
 }
 
-function telemetryLog(
+export function telemetryLog(
   event: `tablecast.${string}`,
   attributes: Attributes,
   failed: "warn" | boolean = false,

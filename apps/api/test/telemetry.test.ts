@@ -17,6 +17,77 @@ import { telemetryConfig } from "../src/platform/telemetry-export";
 
 afterEach(() => vi.restoreAllMocks());
 
+it.each(["true", "false"])(
+  "LangfuseとGrafanaへ同じworktree相関と秘匿化を適用し本文収集=%sを守る",
+  async (capture) => {
+    const sent: ReadableSpan[][] = [];
+    vi.spyOn(OTLPExporter.prototype, "export").mockImplementation(
+      (spans: ReadableSpan[], callback) => {
+        sent.push(spans);
+        // Langfuseの障害でもGrafanaの独立したprocessorは送信を続ける。
+        callback(
+          spans.some((span) => span.attributes["langfuse.observation.type"])
+            ? { code: 1, error: new Error("collector unavailable") }
+            : { code: 0 },
+        );
+      },
+    );
+    const config = telemetryConfig(
+      {
+        TABLECAST_ENV: "development",
+        TABLECAST_WORKTREE_ID: "tablecast-worktree",
+        TABLECAST_WORKTREE_NAME: "test",
+        TABLECAST_OTEL_CAPTURE_CONTENT: capture,
+        TABLECAST_OTEL_ENDPOINT: "http://tablecast-grafana",
+        TABLECAST_LANGFUSE_BASE_URL: "http://tablecast-langfuse",
+        TABLECAST_LANGFUSE_PUBLIC_KEY: "pk-lf-tablecast",
+        TABLECAST_LANGFUSE_SECRET_KEY: "sk-lf-tablecast-secret",
+      },
+      "tablecast-api",
+    );
+    const span: ReadableSpan = {
+      name: "tablecast.voice.response",
+      kind: SpanKind.INTERNAL,
+      spanContext: () => ({ traceId: "1".repeat(32), spanId: "2".repeat(16), traceFlags: 1 }),
+      startTime: [1, 0],
+      endTime: [2, 0],
+      duration: [1, 0],
+      ended: true,
+      status: { code: SpanStatusCode.OK },
+      attributes: {
+        "tablecast.observation.type": "generation",
+        "tablecast.session.id": "tablecast-session",
+        "tablecast.input": "会話 sk-lf-tablecast-secret",
+        "gen_ai.usage.input_tokens": 12,
+      },
+      events: [],
+      links: [],
+      resource: resourceFromAttributes({ private: "sk-lf-tablecast-secret" }),
+      instrumentationScope: { name: "tablecast" },
+      droppedAttributesCount: 0,
+      droppedEventsCount: 0,
+      droppedLinksCount: 0,
+    };
+    const processors =
+      config.trace && "spanProcessors" in config.trace ? config.trace.spanProcessors : undefined;
+    if (!Array.isArray(processors)) throw new Error("独立したprocessorがありません。");
+    for (const processor of processors) processor.onEnd(span);
+    await Promise.allSettled(processors.map((processor) => processor.forceFlush()));
+    expect(sent).toHaveLength(2);
+    expect(JSON.stringify(sent)).not.toContain("sk-lf-tablecast-secret");
+    const langfuse = sent.flat().find((item) => item.attributes["langfuse.observation.type"]);
+    expect(langfuse?.resource.attributes["tablecast.worktree.id"]).toBe("tablecast-worktree");
+    expect(langfuse?.attributes).toMatchObject({
+      "langfuse.session.id": "tablecast-session",
+      "langfuse.observation.metadata.tablecast_worktree_id": "tablecast-worktree",
+      "gen_ai.usage.input_tokens": 12,
+    });
+    expect(Boolean(langfuse?.attributes["langfuse.observation.input"])).toBe(capture === "true");
+    expect(langfuse?.attributes).not.toHaveProperty("tablecast.input");
+    expect(langfuse?.attributes).not.toHaveProperty("tablecast.output");
+  },
+);
+
 it("sampling対象外でも操作の完了と業務拒否を各一度記録し、HTTP経路と応答を維持する", async () => {
   // Given: traceのhead samplingを0にし、実際のWorker入口とHTTP境界を使う。
   const output = vi.spyOn(console, "info").mockImplementation(() => {});

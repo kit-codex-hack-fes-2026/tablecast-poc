@@ -7,11 +7,23 @@
       "skillPath": "skills/animate/SKILL.md",
       "computedHash": "609e30351bf518b21a8cfe87cd1111554855527075d6563605bafe61963252f7"
     },
+    "assistant-mcp": {
+      "source": "grafana/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grafana-cloud/assistant-mcp/SKILL.md",
+      "computedHash": "944553a66a94f99cbba0167823cc0ebae253c2fa443fc380c467e0c0f58648bb"
+    },
     "conventional-commit": {
       "source": "ReoHakase/skills",
       "sourceType": "github",
       "skillPath": "conventional-commit/SKILL.md",
       "computedHash": "3d5f561355d53d32c8702df40ca14daac58cd91bf9a78f326e07e4a96a4d7142"
+    },
+    "dashboarding": {
+      "source": "grafana/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grafana-core/dashboarding/SKILL.md",
+      "computedHash": "f9ad2b49a4b91cecad7d76c86f5e8d1b36c7ba1c932284289715fa8935ccb7c7"
     },
     "emil-design-eng": {
       "source": "emilkowalski/skill",
@@ -58,6 +70,18 @@
       "skillPath": "skills/hyperframes-creative/SKILL.md",
       "computedHash": "8483595fb0beaa4bdbc878a94e55ca7bb02994b26f8d01dfdd44470579a8d168"
     },
+    "langfuse": {
+      "source": "langfuse/skills",
+      "sourceType": "github",
+      "skillPath": "skills/langfuse/SKILL.md",
+      "computedHash": "ff5c606d22961ae0c70968e8944c73ce576a3a0a8422415861d6d7839a45539d"
+    },
+    "loki": {
+      "source": "grafana/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grafana-lgtm/loki/SKILL.md",
+      "computedHash": "0c83822f226a02921e12cecb35f1270d89744a782895690d4a4e8904588fb07c"
+    },
     "mastra": {
       "source": "mastra-ai/skills",
       "sourceType": "github",
@@ -75,6 +99,18 @@
       "sourceType": "github",
       "skillPath": "openscreen-demo-video/SKILL.md",
       "computedHash": "d2b326aceedee82af0470218c9367586b066cd6943e7d942151a6b3bfd8ddd4e"
+    },
+    "promql": {
+      "source": "grafana/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grafana-core/promql/SKILL.md",
+      "computedHash": "0d45e3db2b92907b99aa41a645d5e685cdac5bc6fa6741189c54aad7ca5b2322"
+    },
+    "tempo": {
+      "source": "grafana/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grafana-lgtm/tempo/SKILL.md",
+      "computedHash": "aa4bff51512423cb70f7020d589d56cfc3748fd8650525b1130f66ac794e81a5"
     }
   }
 }

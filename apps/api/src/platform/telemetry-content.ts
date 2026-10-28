@@ -3,20 +3,36 @@ import { redactCredentials } from "./diagnostics";
 
 export interface TelemetryEnv {
   TABLECAST_ENV?: string;
+  TABLECAST_LANGFUSE_BASE_URL?: string;
+  TABLECAST_LANGFUSE_PUBLIC_KEY?: string;
+  TABLECAST_LANGFUSE_SECRET_KEY?: string;
+  TABLECAST_MODEL?: string;
   TABLECAST_OTEL_AUTHORIZATION?: string;
   TABLECAST_OTEL_CAPTURE_CONTENT?: string;
   TABLECAST_OTEL_ENDPOINT?: string;
   TABLECAST_PR_NUMBER?: string;
   TABLECAST_RELEASE_SHA?: string;
+  TABLECAST_WORKTREE_ID?: string;
+  TABLECAST_WORKTREE_NAME?: string;
 }
 
 // 自動計測はURL・SQL・ヘッダーを含むため、送信境界で許可した属性だけを残す。
 export const allowed = new Set([
+  "tablecast.observation.type",
+  "tablecast.session.id",
+  "tablecast.response.id",
+  "tablecast.delegation.id",
+  "tablecast.prompt.hash",
+  "tablecast.event.id",
+  "tablecast.observation.source",
+  "tablecast.observation.content_truncated",
+  "tablecast.observation.dropped_events",
   "tablecast.voice.session.id",
   "tablecast.voice.turn.id",
   "tablecast.agent.session.id",
   "tablecast.tool.name",
   "tablecast.tool.call.id",
+  "tablecast.tool.call.ids",
   "tablecast.tool.output_bytes",
   "tablecast.operation",
   "tablecast.channel",

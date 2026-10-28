@@ -2,7 +2,7 @@
 
 [仕様索引](README.md) · [開発環境の仕組み](development.md) · [テスト戦略](testing.md)
 
-macOSではHomebrewと、起動済みのOrbStackまたはDocker Desktopを使う。ホスト開発でもMailpit・GrafanaにはDockerが必要である。外部APIキーなしでGUI注文・ログイン・メールを開発できる。Composeは2.24.4以降を使い、`docker compose version` で確認する（Dev Containerの[ポート置換](https://docs.docker.com/reference/compose-file/merge/#replace-value)に必要）。
+macOSではHomebrewと、起動済みのOrbStackまたはDocker Desktopを使う。ホスト開発でもMailpitと共有LGTM・LangfuseにはDockerが必要である。初回は`bun run setup`の後に`bun run tablecast:observability:up`を実行し、共有観測基盤を準備する。外部APIキーなしでGUI注文・ログイン・メールを開発できる。Composeは2.24.4以降を使い、`docker compose version` で確認する（Dev Containerの[ポート置換](https://docs.docker.com/reference/compose-file/merge/#replace-value)に必要）。
 
 > [!TIP]
 > `package.json` に実行するCLI、`turbo.json` に順序と常駐タスクを記載する。WebはTurborepo、コンテナ資源はComposeで管理する。独自のdaemonや起動ラッパーは使わない。
@@ -41,6 +41,7 @@ bun run dev:container
 Docker CLIだけでも同じ構成を使える。
 
 ```sh
+sh scripts/tablecast-observability.sh up
 sh .devcontainer/tablecast-init.sh
 docker compose -f .devcontainer/compose.yaml up -d --build
 docker compose -f .devcontainer/compose.yaml exec tablecast bun run setup
@@ -53,11 +54,10 @@ docker compose -f .devcontainer/compose.yaml exec tablecast bun run dev:containe
 
 ```sh
 docker compose -f .devcontainer/compose.yaml port tablecast 8025
-docker compose -f .devcontainer/compose.yaml port tablecast-lgtm 3000
 docker compose -f .devcontainer/compose.yaml port tablecast 6006
 ```
 
-上からMailpit・Grafana・Storybookの公開ポートを確認できる。Storybookはコンテナ内で別途 `bun run storybook --host 0.0.0.0` を実行する。[OrbStackのHTTPS設定](devcontainer.md)も参照できる。
+上からMailpit・Storybookの公開ポートを確認できる。共有Grafanaは既定で`http://127.0.0.1:3300`、Langfuseは`http://127.0.0.1:3301`。Storybookはコンテナ内で別途 `bun run storybook --host 0.0.0.0` を実行する。[OrbStackのHTTPS設定](devcontainer.md)も参照できる。
 
 > [!NOTE]
 > Docker socketは渡さない。Dockerを直接使うE2Eは2BのホストかCIで実行する。コンテナ内のブラウザー試験には `bunx --no-install playwright install --with-deps chromium webkit` が必要。実iPadはlocalhostへ接続できないため、[実機試験](development.md#実機公開環境)を参照する。
@@ -144,6 +144,8 @@ Codex Desktopでは作業するworktreeをprojectとして開き、CLIではそ�
 | MCP                      | 外部サービスやローカルツールへの接続。plugin同梱設定、または利用者の `.codex/config.toml` で管理する                                                                                |
 | Git hooks                | [lefthook.yml](../lefthook.yml) のcommit時format/lint・fallow検査。`bun run setup` が導入し、修復は `bun run hooks:install`。検証の分担は [静的解析](static-analysis.md) を参照する |
 
+Langfuse公式skillとGrafana公式の`loki`・`tempo`・`promql`・`dashboarding`・`assistant-mcp`もrepo skillsとして共有する。Langfuseのlocal／日本CloudのMCP設定と秘密値を含まないheader helperは[観測手順](observability.md#langfuseとcodexの改善ループ)に従う。
+
 repo skillsは個人のglobal skillsへコピーしない。同じ外部skillをpluginとglobal配置の両方から導入済みなら、取得元と適用対象を確認して一方を選ぶ。各タスクでは `AGENTS.md` の入口から必要なskill本文と参照先を読む。skillsの所有・更新は [静的解析](static-analysis.md#skillsと追加pluginの所有) に従う。
 
 動画制作のHyperFrames Core・Animation・Creativeもrepo skillsとして共有する。導入時のHyperFrames 0.8.33の公開元コミットへ固定しており、通常はcloneだけで参照できる。[動画制作スキルの取得元・復元コマンド](../apps/presentation/TOOLS.md#制作スキルの固定と復元)に従い、描画ライブラリの更新とは分けて管理する。
@@ -157,7 +159,7 @@ MCPはCodexが動くホストから接続する。Dev Container内でCLIを動�
 | 接続            | 導入・認証と確認                                                                                                                                                                   |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Cloudflare      | 公式Cloudflare pluginを導入し、同梱MCPのOAuthで対象アカウントと必要な権限を選ぶ。API仕様検索や許可した設定の読取で確認する                                                         |
-| Grafana local   | LGTM起動後に設定例の `tablecast-grafana-local` を追加する。ホストはDocker、Dev Container内は同梱binaryを使う                                                                       |
+| Grafana local   | 共有観測基盤の起動後に設定例の `tablecast-grafana-local` を追加する。ホストはDocker、Dev Container内は同梱binaryを使う                                                             |
 | Grafana Cloud   | `tablecast-grafana-cloud` を追加する。Viewer service account tokenを `.local/tablecast-grafana-read-token` に保存し、権限を `600` にする。送信用tokenは流用しない                  |
 | Storybook       | `bun run storybook` を起動し、[開発環境のMCP手順](development.md#storybook-mcp)に従って実際のportを登録する。`docs-list`・`docs-show`で確認する                                    |
 | fallow          | `bun run setup`後に`tablecast-fallow`を追加し、設定例の`cwd`をCodexが動くホストのworktree絶対パスへ置き換える。`project_info`で対象workspaceと入口を確認する。OAuthは不要          |
@@ -260,7 +262,7 @@ Storybookは公式の`@storybook/tanstack-react`でStart・Routerを扱い、Wor
 
 PRの公開カタログは通常のpushでは生成しない。PR通知の表内でStorybook・React Emailのビルド・デプロイをチェックして最新headを要求する。write/admin権限を持つ利用者だけが起動できる。workflowの統合前は、Actionsの`CI`からRun workflowを開き、通常PRの作業branchと`catalog_pr`・`catalog`を指定する。main/stagingからのカタログ専用起動は拒否する。対象SHAの照合・再配備・削除は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
 
-Composeの正本はルートの [compose.yaml](../compose.yaml) で、ホストのLGTM・Mailpitを定義する。[.devcontainer/compose.yaml](../.devcontainer/compose.yaml) はLGTMだけを `extends` し、開発コンテナとホスト公開ポートを定義する。ホストの `services:*` は `.local/.env`、Dev Containerは `.devcontainer/.env` の `COMPOSE_PROJECT_NAME` を使う。Dev Containerのproject名・volume名は変更しない。
+worktree用Composeの正本はルートの [compose.yaml](../compose.yaml) で、ホストのMailpitを定義する。[.devcontainer/compose.yaml](../.devcontainer/compose.yaml) は開発コンテナとホスト公開ポートを定義し、共有観測networkへ接続する。LGTM/Langfuseは`infra/observability/compose.yaml`を正本に、[観測手順](observability.md#ローカル起動とmcp)でホストに一組を用意する。ホストの `services:*` は `.local/.env`、Dev Containerは `.devcontainer/.env` の `COMPOSE_PROJECT_NAME` を使う。Dev Containerのproject名・volume名は変更しない。
 
 GrafanaのTempo設定とダッシュボードは `infra/grafana/`、Codex設定例は [.codex/config.toml.example](../.codex/config.toml.example) に置く。接続とダッシュボードの使い方は [観測手順](observability.md) を参照する。
 
@@ -279,6 +281,8 @@ bun run test:e2e
 E2Eはworkerごとに専用環境を作り、ケース間でWebを停止してD1・R2・DOの状態をtemplateから復元する。通常のdevは不要。入口とWorkerのTCPポートは実起動時にOSが割り当てる。LinuxのMailpitはDocker imageから抽出したバイナリをworker単位で起動し、macOSはworker単位のDockerコンテナと動的ポート公開を使う。`bun install --frozen-lockfile`でOAuth emulatorの管理パッチも適用される。E2E専用の`TABLECAST_OAUTH_READY_FILE`はfixtureが設定し、手動設定は不要。global setupが`TABLECAST_BUILD_DIRECTORY`で実行ごとのbuild出力を指定する。この変数を省略した通常buildは`apps/web/dist`を使う。同じworktree内ではcodegenやdeploy metadataを共有する別buildと重ねない。失敗したケースの診断ログと画像は`apps/web/test-results/`へ残り、fixtureが専用プロセス群・container・storageを片付ける。テストの選び方と隔離の範囲は [テスト戦略](testing.md#e2eの隔離)を正本とする。
 
 ## 6. 終了・再開・復旧
+
+共有観測基盤は初回に`bun run tablecast:observability:up`で準備する。ホストにBunがない場合は`sh scripts/tablecast-observability.sh up`を使う。通常のworktree終了では共有LGTM/Langfuseを停止しない。停止・更新は共有基盤の専用コマンドで明示的に行う。
 
 WebはTurboを実行したターミナルでCtrl+Cを押す。ホストのDockerサービスは別管理なので、終了時に `bun run services:down` を実行する。コンテナ環境全体はホストで次を実行する。
 

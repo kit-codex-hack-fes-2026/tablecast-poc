@@ -254,3 +254,7 @@ mainへの通常マージには同一repoの最新staging、stagingの最新push
 [課金・請求](billing.md#開発と導入)に従い、0026 migration、API Workerのsecret、既存組織のキー準備、切替、Stripeの順で有効化する。初期値は無効。GitHub variable `TABLECAST_BILLING_CONFIG` は環境名ごとの非秘密vars、`TABLECAST_RUNTIME_SECRETS`はAPIの秘密値を保持する。CIは両方を配備設定へ渡す。Web WorkerへOpenAI管理キー・暗号化鍵・Stripe鍵を渡さない。`TablecastVoiceUsage`はAPI WorkerのSQLite DOとして追加され、Cronは5分間隔で発行再試行・Meters送信と日次Costs同期を行う。
 
 作業branchから`CI`を手動実行し、`catalog_pr`を空欄にすると全検査を実行する。Workersはstaging設定でbuildし、productionの送信元などの資格を必要としない。作業branchからの全検査は配備jobを起動しない。mainはproduction、stagingはstaging、通常PRはPR専用previewの設定を使い、本番の入力検証を省略しない。
+
+## 開発用Langfuse
+
+preview/stagingでLangfuse Cloud日本リージョンを使う場合は、同じ開発用projectの`TABLECAST_LANGFUSE_PUBLIC_KEY`・`TABLECAST_LANGFUSE_SECRET_KEY`をActions secretへ設定する。送信先は`https://jp.cloud.langfuse.com`で、配備時にAPI Workerへだけ注入する。既存のGrafana送信は継続し、LangfuseはLLM関連Observationだけを受け取る。資格未設定ではLangfuse送信を無効にし、API・音声・Grafanaを継続する。productionへは追加しない。本文は既存の`TABLECAST_OTEL_CAPTURE_CONTENT`で制御する。SDK/OTLPはv4対応を使い、詳細とCodexからの調査は[観測手順](observability.md#langfuseとcodexの改善ループ)を参照する。

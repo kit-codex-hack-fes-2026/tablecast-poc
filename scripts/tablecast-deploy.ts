@@ -205,6 +205,16 @@ async function main(resetFinished = false) {
             type: "text",
             value: apiConfig.vars.TABLECAST_OTEL_CAPTURE_CONTENT,
           },
+          ...(name === target.api && apiConfig.vars.TABLECAST_LANGFUSE_BASE_URL
+            ? {
+                TABLECAST_LANGFUSE_BASE_URL: {
+                  type: "text",
+                  value: apiConfig.vars.TABLECAST_LANGFUSE_BASE_URL,
+                },
+                TABLECAST_LANGFUSE_PUBLIC_KEY: { type: "secret" },
+                TABLECAST_LANGFUSE_SECRET_KEY: { type: "secret" },
+              }
+            : {}),
         },
       }),
     );

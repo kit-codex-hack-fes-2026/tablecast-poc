@@ -127,6 +127,38 @@ describe("本番とPRの配備境界", () => {
     ).toThrow(SyntaxError);
   });
 
+  test("Langfuseの資格情報をpreviewとstagingのAPIだけへ渡し本番・Webへ含めない", () => {
+    vi.stubEnv("TABLECAST_LANGFUSE_PUBLIC_KEY", "pk-lf-tablecast-fixture");
+    const keys = {
+      ...input,
+      TABLECAST_LANGFUSE_PUBLIC_KEY: "pk-lf-tablecast-fixture",
+      TABLECAST_LANGFUSE_SECRET_KEY: "sk-lf-tablecast-fixture",
+    };
+    for (const target of [deploymentTarget("424"), deploymentTarget(undefined, "staging")]) {
+      const config = deploymentConfigs(
+        target,
+        "a".repeat(40),
+        "11111111-1111-4111-8111-111111111111",
+      );
+      expect(config.api.vars.TABLECAST_LANGFUSE_BASE_URL).toBe("https://jp.cloud.langfuse.com");
+      expect(config.web.vars).not.toHaveProperty("TABLECAST_LANGFUSE_BASE_URL");
+      expect(deploymentSecrets(target, keys)).toMatchObject({
+        TABLECAST_LANGFUSE_PUBLIC_KEY: keys.TABLECAST_LANGFUSE_PUBLIC_KEY,
+        TABLECAST_LANGFUSE_SECRET_KEY: keys.TABLECAST_LANGFUSE_SECRET_KEY,
+      });
+      expect(JSON.stringify(config)).not.toContain(keys.TABLECAST_LANGFUSE_SECRET_KEY);
+      expect(() =>
+        deploymentSecrets(target, { ...keys, TABLECAST_LANGFUSE_SECRET_KEY: undefined }),
+      ).toThrow("TABLECAST_LANGFUSE_SECRET_KEY");
+    }
+    const production = deploymentTarget();
+    expect(deploymentSecrets(production, keys)).not.toHaveProperty("TABLECAST_LANGFUSE_SECRET_KEY");
+    expect(
+      deploymentConfigs(production, "a".repeat(40), "11111111-1111-4111-8111-111111111111").api
+        .vars,
+    ).not.toHaveProperty("TABLECAST_LANGFUSE_BASE_URL");
+  });
+
   test("配備時に指定した業務モデルを優先し既存のAPIキーを維持する", () => {
     const secrets = deploymentSecrets(deploymentTarget("104"), {
       ...input,

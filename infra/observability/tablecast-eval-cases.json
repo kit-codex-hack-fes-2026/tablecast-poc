@@ -1,0 +1,182 @@
+[
+  {
+    "id": "tablecast-confirmation-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "お茶を1つください。"
+        }
+      ]
+    },
+    "expectedOutput": "注文内容の確認を準備し、次の明示承認を待つ。同じ客発話で確定しない。",
+    "metadata": {
+      "scenario": "confirmation",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-confirmation-ja"
+    }
+  },
+  {
+    "id": "tablecast-confirmation-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "One tea, please."
+        }
+      ]
+    },
+    "expectedOutput": "注文内容の確認を準備し、次の明示承認を待つ。同じ客発話で確定しない。",
+    "metadata": {
+      "scenario": "confirmation",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-confirmation-en"
+    }
+  },
+  {
+    "id": "tablecast-sold-out-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "売切れのお茶を注文したい。"
+        }
+      ]
+    },
+    "expectedOutput": "最新の登録情報を確認し、売切商品を注文成功と伝えない。",
+    "metadata": {
+      "scenario": "sold-out",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-sold-out-ja"
+    }
+  },
+  {
+    "id": "tablecast-sold-out-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I would like the tea marked as sold out."
+        }
+      ]
+    },
+    "expectedOutput": "最新の登録情報を確認し、売切商品を注文成功と伝えない。",
+    "metadata": {
+      "scenario": "sold-out",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-sold-out-en"
+    }
+  },
+  {
+    "id": "tablecast-required-selection-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "必須の選択はお任せで注文して。"
+        }
+      ]
+    },
+    "expectedOutput": "必須選択を黙って省略せず、候補を声で説明して確認する。",
+    "metadata": {
+      "scenario": "required-selection",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-required-selection-ja"
+    }
+  },
+  {
+    "id": "tablecast-required-selection-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Please choose the required options for me."
+        }
+      ]
+    },
+    "expectedOutput": "必須選択を黙って省略せず、候補を声で説明して確認する。",
+    "metadata": {
+      "scenario": "required-selection",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-required-selection-en"
+    }
+  },
+  {
+    "id": "tablecast-language-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "英語で案内して。"
+        }
+      ]
+    },
+    "expectedOutput": "setLanguageを使い、切替前の確認や承認を再利用しない。",
+    "metadata": {
+      "scenario": "language",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-language-ja"
+    }
+  },
+  {
+    "id": "tablecast-language-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Please speak Japanese."
+        }
+      ]
+    },
+    "expectedOutput": "setLanguageを使い、切替前の確認や承認を再利用しない。",
+    "metadata": {
+      "scenario": "language",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-language-en"
+    }
+  },
+  {
+    "id": "tablecast-stop-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "接客はもう結構です。"
+        }
+      ]
+    },
+    "expectedOutput": "endConversationへ委任する。注文確認への承認と混同しない。",
+    "metadata": {
+      "scenario": "stop",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-stop-ja"
+    }
+  },
+  {
+    "id": "tablecast-stop-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Please stop assisting us now."
+        }
+      ]
+    },
+    "expectedOutput": "endConversationへ委任する。注文確認への承認と混同しない。",
+    "metadata": {
+      "scenario": "stop",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-stop-en"
+    }
+  }
+]

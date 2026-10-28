@@ -11,6 +11,7 @@ import {
   tablecastBillingSecrets,
   tablecastBillingVars,
 } from "./tablecast-deploy-config.ts";
+import { localObservability, worktreeId } from "./tablecast-observability-config.ts";
 
 const execute = promisify(execFile);
 export const tablecastRoot = await realpath(resolve(import.meta.dirname, ".."));
@@ -112,6 +113,7 @@ if (import.meta.main) {
     return url.origin;
   };
   const external = developmentSecrets();
+  const observability = await localObservability(tablecastContainer);
   const voice = Boolean(
     external.TABLECAST_MODEL &&
     (external.TABLECAST_MODEL_API_KEY || external.TABLECAST_ORGANIZATION_AI_ENABLED === "true"),
@@ -123,6 +125,7 @@ if (import.meta.main) {
       ),
     ),
     TABLECAST_WORKTREE_NAME: name,
+    TABLECAST_WORKTREE_ID: await worktreeId(tablecastRoot),
     TABLECAST_RESOURCE_NAME: resource,
     TABLECAST_HOST: tablecastContainer
       ? `${name}.${process.env.TABLECAST_REPO_NAME}.container`
@@ -133,9 +136,7 @@ if (import.meta.main) {
     TABLECAST_STATE_PATH: state,
     TABLECAST_WEB_PORT: String(process.env.PORT ?? (tablecastContainer ? 3001 : 0)),
     TABLECAST_INSPECTOR_PORT: tablecastContainer ? "3002" : "0",
-    TABLECAST_OTEL_ENDPOINT: tablecastContainer
-      ? "http://tablecast-lgtm:4318"
-      : serviceOrigin("otlp"),
+    TABLECAST_OTEL_ENDPOINT: observability.TABLECAST_OTEL_ENDPOINT,
     TABLECAST_GOOGLE_EMULATOR_URL: tablecastContainer
       ? "http://127.0.0.1:3008"
       : serviceOrigin("oauth"),
@@ -150,9 +151,8 @@ if (import.meta.main) {
     TABLECAST_EMAIL_FROM: "tablecast@localhost.test",
     TABLECAST_VOICE_ENABLED: voice,
     TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
-    TABLECAST_GRAFANA_ORIGIN: tablecastContainer
-      ? "http://tablecast-lgtm:3000"
-      : serviceOrigin("grafana"),
+    TABLECAST_GRAFANA_ORIGIN: observability.TABLECAST_GRAFANA_ORIGIN,
+    TABLECAST_LANGFUSE_BASE_URL: observability.TABLECAST_LANGFUSE_BASE_URL,
     HOST: tablecastContainer ? "0.0.0.0" : "127.0.0.1",
     PORTLESS_HTTPS: "0",
     PORTLESS_PORT: process.env.PORTLESS_PORT ?? "80",
@@ -185,6 +185,8 @@ if (import.meta.main) {
   const previous = await readEnv(secretPath);
   await writeEnv(secretPath, {
     ...external,
+    TABLECAST_LANGFUSE_PUBLIC_KEY: observability.TABLECAST_LANGFUSE_PUBLIC_KEY,
+    TABLECAST_LANGFUSE_SECRET_KEY: observability.TABLECAST_LANGFUSE_SECRET_KEY,
     TABLECAST_AUTH_SECRET: previous.TABLECAST_AUTH_SECRET ?? randomUUID().replaceAll("-", ""),
     TABLECAST_VOICE_ENABLED: voice,
     TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",

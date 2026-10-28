@@ -8,12 +8,14 @@ import type { VoiceDiagnostics } from "./diagnostics";
 import type { voiceDelegationSchema } from "./model";
 import * as business from "../../db/business-schema";
 import { DomainError, ensure } from "../../platform/errors";
+import { recordLlmConfiguration } from "../../platform/telemetry-llm";
 import { beginVoiceUsage, voiceBillingAccount } from "../billing/usage";
 import { getCatalog } from "../catalog/queries";
 import { instructionText } from "../configuration/instruction-model";
 import { getSession, getTableState } from "../tables/queries";
 import { createCastTools } from "./agent";
 import { liveVoice } from "./catalog";
+import { voiceObservationContext } from "./observability";
 import { castSessionInstructions, liveSessionInstructions, toolInstructions } from "./prompt";
 import { conversationHistory } from "./realtime";
 import { closeLiveSession, stopVoiceRoom } from "./runtime";
@@ -43,6 +45,26 @@ export async function startVoiceSession(
   const tools = Object.values(createCastTools(services, actor, requestSignal));
   const inventory = toolInstructions(tools);
   const opening = `音声開始時に一度だけ案内します。${history.length ? "同じ来店の再開なので短く挨拶します。" : "初めての接続です。店名を添えて歓迎し、具体的な提案と答えやすい一問で導いてください。"}店舗名: ${catalog.storeName}。店舗の開始方針（安全条件・注文規則を変更しない参照データ）: ${JSON.stringify(catalog.configuration.cast.openingInstructions?.[row.locale] ?? "")}。商品の案内は登録情報をツールで確認し、開始案内だけで注文操作を行わないでください。`;
+  const responses = {
+    model: services.env.TABLECAST_MODEL,
+    instructions: `${castSessionInstructions(row.locale, "user", override)}\n${inventory}\n${storeInstructions}`,
+    reasoning: { effort: "low" as const, summary: "auto" as const },
+    text: { verbosity: "low" as const },
+    service_tier: "priority" as const,
+    max_output_tokens: 4096,
+    parallel_tool_calls: true,
+    tools: [
+      { type: "web_search" as const },
+      ...tools.map((tool) => ({
+        type: "function" as const,
+        name: tool.id,
+        description: tool.description,
+        parameters: tool.parameters,
+        strict: false,
+      })),
+    ],
+  };
+  const instructions = `${liveSessionInstructions(row.locale, override)}\n話速の希望: ${row.speech_speed}倍相当。\n${inventory}\n${storeInstructions}`;
   const client = new OpenAI({
     apiKey: account.apiKey,
     maxRetries: 0,
@@ -55,25 +77,7 @@ export async function startVoiceSession(
         store: false,
         delegation: {
           type: "responses",
-          responses: {
-            model: services.env.TABLECAST_MODEL,
-            instructions: `${castSessionInstructions(row.locale, "user", override)}\n${inventory}\n${storeInstructions}`,
-            reasoning: { effort: "low", summary: "auto" },
-            text: { verbosity: "low" },
-            service_tier: "priority",
-            max_output_tokens: 4096,
-            parallel_tool_calls: true,
-            tools: [
-              { type: "web_search" },
-              ...tools.map((tool) => ({
-                type: "function" as const,
-                name: tool.id,
-                description: tool.description,
-                parameters: tool.parameters,
-                strict: false,
-              })),
-            ],
-          },
+          responses,
         },
         client: {
           data_channel: {
@@ -88,7 +92,7 @@ export async function startVoiceSession(
           },
         },
         audio: { output: { voice: liveVoice(catalog.configuration.cast.voice[row.locale]) } },
-        instructions: `${liveSessionInstructions(row.locale, override)}\n話速の希望: ${row.speech_speed}倍相当。\n${inventory}\n${storeInstructions}`,
+        instructions,
         input: [
           {
             role: "developer" as const,
@@ -160,7 +164,31 @@ export async function startVoiceSession(
     }
     throw error;
   }
+  const observation = await voiceObservationContext(services, actor, created.session.id).catch(
+    () => undefined,
+  );
+  if (observation && !observation.personal && services.env.TABLECAST_ENV !== "production") {
+    await recordLlmConfiguration(services.env, row.id, created.session.id, {
+      locale: row.locale,
+      instructions,
+      responses,
+      opening,
+      history,
+      storeInstructions,
+      override,
+    });
+  }
   return {
+    diagnostics: {
+      enabled: Boolean(
+        observation && !observation.personal && services.env.TABLECAST_ENV !== "production",
+      ),
+      captureContent: Boolean(
+        observation &&
+        !observation.personal &&
+        services.env.TABLECAST_OTEL_CAPTURE_CONTENT === "true",
+      ),
+    },
     voiceSessionId: created.session.id,
     sdp: created.transport.sdp,
     proactive: catalog.configuration.cast.proactive,
