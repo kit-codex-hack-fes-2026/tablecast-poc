@@ -5,6 +5,7 @@ import type { VoicePanelProps } from "./voice-panel";
 import { catalog } from "../../../.storybook/tablecast-fixtures";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
+import { CurrencyContext } from "../../i18n/currency-context";
 import { event, startedAt, Surface } from "./test-support/voice-panel-fixture";
 import { VoicePanel } from "./voice-panel";
 
@@ -54,22 +55,34 @@ it.each(["ja", "en"] as const)(
       };
       const surface = (show: boolean, suggestions?: string[]) => (
         <Surface locale={locale} height={692}>
-          <div style={{ width, height: 692 }}>
-            <VoicePanel
-              {...props}
-              view={{ status: "listening", suggestions }}
-              events={
-                show
-                  ? [
-                      event(1, "voice.products", {
-                        turnId: "tablecast-offers",
-                        productIds: products.toReversed().map(({ id }) => id),
-                      }),
-                    ]
-                  : []
-              }
-            />
-          </div>
+          <CurrencyContext.Provider
+            value={{
+              currency: "USD",
+              rates: {
+                base: "JPY",
+                date: "2026-10-28",
+                source: "currency-api",
+                rates: { USD: 0.0065 },
+              },
+            }}
+          >
+            <div style={{ width, height: 692 }}>
+              <VoicePanel
+                {...props}
+                view={{ status: "listening", suggestions }}
+                events={
+                  show
+                    ? [
+                        event(1, "voice.products", {
+                          turnId: "tablecast-offers",
+                          productIds: products.toReversed().map(({ id }) => id),
+                        }),
+                      ]
+                    : []
+                }
+              />
+            </div>
+          </CurrencyContext.Provider>
         </Surface>
       );
       const screen = await render(surface(false));
@@ -92,6 +105,8 @@ it.each(["ja", "en"] as const)(
       );
       expect(card.getBoundingClientRect().width).toBeLessThanOrEqual(176);
       expect(card.getBoundingClientRect().height).toBeLessThanOrEqual(260);
+      expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+      expect(card.textContent).toContain("≈");
       expect(row.getBoundingClientRect().width).toBeLessThanOrEqual(width - 24);
       const scroller = screen.getByRole("log").element().firstElementChild;
       if (!(scroller instanceof HTMLElement)) throw new Error("会話のスクロール領域がありません");

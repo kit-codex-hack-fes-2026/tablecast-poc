@@ -9,11 +9,13 @@ export function Money({
   signed = false,
   taxIncluded = false,
   secondaryTone = "muted",
+  wrap = false,
 }: {
   secondaryTone?: "inherit" | "muted";
   signed?: boolean;
   taxIncluded?: boolean;
   value: number;
+  wrap?: boolean;
 }) {
   const { locale, t } = useI18n();
   const { currency, rates } = useContext(CurrencyContext);
@@ -22,17 +24,27 @@ export function Money({
   const secondaryColor = secondaryTone === "inherit" ? "text-inherit" : "text-muted-foreground";
   const estimate = currency && rate ? `${sign}${money(value * rate, locale, currency)}` : undefined;
   return (
-    <span className="whitespace-nowrap tabular-nums">
-      <span>
+    <span
+      className={
+        wrap
+          ? "flex min-w-0 flex-wrap items-baseline gap-x-1 tabular-nums"
+          : "whitespace-nowrap tabular-nums"
+      }
+    >
+      <span className="whitespace-nowrap">
         {sign}
         {money(value, locale)}
       </span>
-      {taxIncluded && <span className={`ml-1 ${secondaryColor}`}>{t("price_tax_included")}</span>}
+      {taxIncluded && (
+        <span className={`whitespace-nowrap ${wrap ? "" : "ml-1"} ${secondaryColor}`}>
+          {t("price_tax_included")}
+        </span>
+      )}
       {estimate && (
         <>
           {" "}
           <span
-            className={`${secondaryColor} ${secondaryTone === "inherit" ? "opacity-75" : ""}`}
+            className={`whitespace-nowrap ${secondaryColor} ${secondaryTone === "inherit" ? "opacity-75" : ""}`}
             aria-label={`${t("currency_approximate")}: ${estimate}`}
           >
             ≈ {estimate}

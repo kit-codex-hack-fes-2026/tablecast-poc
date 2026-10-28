@@ -185,7 +185,7 @@ export const ProductMenu = memo(function ProductMenu({
                   compact && "mt-2 text-sm",
                 )}
               >
-                <Money taxIncluded value={product.price} />
+                <Money taxIncluded value={product.price} wrap={compact} />
               </span>
             </span>
           </Button>
