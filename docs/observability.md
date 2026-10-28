@@ -84,11 +84,11 @@ bunx @modelcontextprotocol/inspector@2.6.0 --cli bun --no-env-file scripts/table
 bunx @modelcontextprotocol/inspector@2.6.0 --cli bun --no-env-file scripts/tablecast-grafana-mcp.ts local -- --method tools/call --tool-name query_loki_logs --tool-arg datasourceUid=loki --tool-arg 'logql={service_namespace="tablecast"}' --tool-arg limit=5
 ```
 
-Cloud datasource UIDは`grafanacloud-logs`・`grafanacloud-traces`。MCPはTempo内蔵MCPを自動検出し、`tempo_traceql-search`と`tempo_get-trace`を公開する。LokiはLogQLであり、LogsQL/SQLとは別の言語である。
+Cloud datasource UIDは`grafanacloud-logs`・`grafanacloud-traces`。Grafana MCPの`tempo` tool groupを明示して有効にし、`search_tempo_traces`と`get_tempo_trace`で検索・取得する。LokiはLogQLであり、LogsQL/SQLとは別の言語である。
 
 ## 商品注文のクリティカルパス
 
-GUIで商品をカートへ入れ、確認画面を経て明示承認する。`/api/table/orders`のログから`trace_id`を取り、`tempo_get-trace`でウォーターフォールを取得する。認可・確認版・冪等性の判定を迂回する測定用endpointは作らない。
+GUIで商品をカートへ入れ、確認画面を経て明示承認する。`/api/table/orders`のログから`trace_id`を取り、`get_tempo_trace`でウォーターフォールを取得する。認可・確認版・冪等性の判定を迂回する測定用endpointは作らない。
 
 認可は`tablecast.authentication.authorise`とデモの`tablecast.authentication.demo`、カゴは`tablecast.cart.update`配下の`session`・`pricing`・`commit`と`tablecast.table.read`を確認する。注文serviceは`tablecast.order.submit`配下の`session`・`prerequisites`・`commit`・`notify`を使う。Web→service binding→API→業務serviceの親子関係とstart/endを確認する。`commit`配下のD1 batch子spanは時間が重なるため、子spanのdurationを足した値を応答時間としない。SQL時間はD1の`cloudflare.d1.response.sql_duration_ms`、binding往復は親のD1 spanのwall timeで分ける。
 

@@ -27,7 +27,7 @@ const flags = [
   "stdio",
   "--disable-write",
   "--enabled-tools",
-  "datasource,loki,prometheus,navigation",
+  "datasource,loki,prometheus,navigation,tempo",
   "--max-loki-log-limit",
   "100",
 ];
