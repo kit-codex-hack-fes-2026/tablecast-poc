@@ -67,7 +67,14 @@ export { customerConsentVersion, customerPreferencesSchema } from "./modules/cus
 export { type Demo, demoSchema, type DemoUpdate, demoUpdateSchema } from "./modules/demo/model";
 export { gameMessageSchema, gamePackageSchema, gameStateSchema } from "./modules/games/model";
 export type { GamePackage, GameState } from "./modules/games/model";
-export { imageMetadataSchema, maxImageBytes, uploadedImageSchema } from "./modules/media/model";
+export {
+  imageAssetSchema,
+  imageAssetsSchema,
+  imageMetadataSchema,
+  maxImageBytes,
+  uploadedImageSchema,
+} from "./modules/media/model";
+export type { ImageAsset, ImageAssets } from "./modules/media/model";
 export {
   cartLineSchema,
   cartUpdateSchema,

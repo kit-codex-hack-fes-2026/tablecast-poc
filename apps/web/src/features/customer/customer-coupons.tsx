@@ -64,7 +64,7 @@ function OwnedCoupons({
       {query.isSuccess && !coupons.length && <p>{t("customer_coupons_empty")}</p>}
       <div className="grid gap-5">
         {coupons.map((coupon) => (
-          <CouponCard key={coupon.id} rules={coupon.rules}>
+          <CouponCard storeId={storeId} key={coupon.id} rules={coupon.rules}>
             <p>{t(`coupon_${coupon.state}`)}</p>
             {!coupon.inDate ? (
               <p>{t("coupon_expired")}</p>
@@ -126,7 +126,7 @@ function ExchangeCoupons({ storeId, onChanged }: CouponCollectionProps) {
       {query.isSuccess && !rules.length && <p>{t("customer_exchanges_empty")}</p>}
       <div className="grid gap-5">
         {rules.map((rule) => (
-          <CouponCard key={rule.id} rules={rule.rules}>
+          <CouponCard storeId={storeId} key={rule.id} rules={rule.rules}>
             <Button
               disabled={exchange.isPending}
               onClick={() => {

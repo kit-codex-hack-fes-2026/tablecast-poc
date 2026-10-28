@@ -88,9 +88,14 @@ async function seed() {
       {
         name: `tablecast-${process.env.TABLECAST_RESOURCE_NAME}-seed`,
         ...Object.fromEntries(
-          ["compatibility_date", "compatibility_flags", "vars", "d1_databases", "r2_buckets"].map(
-            (key) => [key, generated[key]],
-          ),
+          [
+            "compatibility_date",
+            "compatibility_flags",
+            "vars",
+            "d1_databases",
+            "r2_buckets",
+            "images",
+          ].map((key) => [key, generated[key]]),
         ),
       },
       null,

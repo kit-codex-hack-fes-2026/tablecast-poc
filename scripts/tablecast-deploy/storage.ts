@@ -1,4 +1,5 @@
 import { business, createDatabase } from "@tablecast/api/db";
+import { migrateImageAssets } from "@tablecast/api/media-migration";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { getPlatformProxy } from "wrangler";
@@ -51,6 +52,7 @@ export async function prepareStorage({
         name: `${target.web}-storage`,
         account_id: tablecastAccountId,
         compatibility_date: "2026-09-03",
+        images: { binding: "TABLECAST_IMAGES", remote: true },
         d1_databases: apiConfig.d1_databases.map((value) => ({ ...value, remote: true })),
         r2_buckets:
           bucketExists || bucketCreated
@@ -58,14 +60,14 @@ export async function prepareStorage({
             : [],
       }),
     );
-    const platform = await getPlatformProxy<Pick<TablecastEnv, "TABLECAST_DB" | "TABLECAST_MEDIA">>(
-      {
-        configPath: storagePath,
-        envFiles: [resolve(directory, "empty.env")],
-        remoteBindings: true,
-        persist: false,
-      },
-    );
+    const platform = await getPlatformProxy<
+      Pick<TablecastEnv, "TABLECAST_DB" | "TABLECAST_IMAGES" | "TABLECAST_MEDIA">
+    >({
+      configPath: storagePath,
+      envFiles: [resolve(directory, "empty.env")],
+      remoteBindings: true,
+      persist: false,
+    });
     try {
       if (bucketExists || bucketCreated) {
         const ownerKey = "tablecast/deployment-owner.json";
@@ -253,6 +255,8 @@ export async function prepareStorage({
               .update(deploymentOwner)
               .set({ seeded: 1 });
           }
+        } else {
+          await migrateImageAssets(platform.env);
         }
       }
     } finally {

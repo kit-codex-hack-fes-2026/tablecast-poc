@@ -83,10 +83,18 @@ function createTablecastSeedPreview() {
     const bytes = readFileSync(resolve(source, file));
     const asset = demoMediaAsset(file, bytes);
     if (!required.has(asset.key)) continue;
-    const destination = resolve(directory, "media", asset.key);
-    if (!existsSync(destination)) {
-      mkdirSync(dirname(destination), { recursive: true });
-      writeFileSync(destination, bytes);
+    const paths = [
+      "api/table",
+      ...stores
+        .filter((candidate) => JSON.stringify(candidate.configuration).includes(asset.key))
+        .map((candidate) => `api/admin/stores/${candidate.id}`),
+    ];
+    for (const base of paths) {
+      const destination = resolve(directory, base, "images", asset.key);
+      if (!existsSync(destination)) {
+        mkdirSync(dirname(destination), { recursive: true });
+        writeFileSync(destination, bytes);
+      }
     }
     required.delete(asset.key);
   }

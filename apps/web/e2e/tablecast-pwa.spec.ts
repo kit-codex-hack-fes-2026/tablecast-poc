@@ -4,7 +4,7 @@ import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { z } from "zod";
 import ja from "../messages/ja.json" with { type: "json" };
-import { signInStaff } from "./support/session";
+import { approveGuestDevice, signInStaff } from "./support/session";
 import { test } from "./support/test";
 
 test("PWAの入口を分け、画像を再利用し、オフラインでは復帰案内を表示する", async ({
@@ -54,7 +54,33 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
   );
   const key = catalog.configuration.products[0]?.imageKey;
   expect(key).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.webp$/);
-  const imageUrl = `/media/${key}?width=128`;
+  await approveGuestDevice(page.request, api, {
+    origin: baseURL,
+    storeId: "tablecast-komorebi",
+    tableId: "tablecast-komorebi-table-01",
+  });
+  const imageUrl = `/api/table/images/${key}?width=128`;
+  const deniedUrl = imageUrl.replace("128", "192");
+  expect(
+    await page.evaluate(
+      async (url) => (await fetch(url, { credentials: "omit" })).status,
+      deniedUrl,
+    ),
+  ).toBe(401);
+  expect(
+    await page.evaluate(
+      async (url) => Boolean(await (await caches.open("tablecast-menu-images-v1")).match(url)),
+      deniedUrl,
+    ),
+  ).toBe(false);
+  const missingUrl = imageUrl.replace(String(key), `tablecast/images/${"f".repeat(64)}.webp`);
+  expect(await page.evaluate(async (url) => (await fetch(url)).status, missingUrl)).toBe(404);
+  expect(
+    await page.evaluate(
+      async (url) => Boolean(await (await caches.open("tablecast-menu-images-v1")).match(url)),
+      missingUrl,
+    ),
+  ).toBe(false);
   // When: 同じURLを二度取得する。
   let fetches = 0;
   if (testInfo.project.name === "tablecast-chromium")
@@ -95,7 +121,7 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
     urls.some(
       (path) =>
         path === "/" ||
-        path.startsWith("/api/") ||
+        (path.startsWith("/api/") && !path.startsWith("/api/table/images/")) ||
         path.includes("/server/") ||
         path.includes("tablecast_api"),
     ),
@@ -146,6 +172,12 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
       });
     }, new URL(uncached, runtime.origin).href);
     expect(await page.evaluate(async (url) => (await fetch(url)).status, uncached)).toBe(200);
+    expect(
+      await page.evaluate(
+        async (url) => Boolean(await (await caches.open("tablecast-menu-images-v1")).match(url)),
+        imageUrl,
+      ),
+    ).toBe(true);
     await expect
       .poll(() => worker.evaluate(() => Cache.prototype.put.name))
       .not.toBe("tablecastQuotaFailure");

@@ -28,8 +28,7 @@ export const WithoutPlaceholder: Story = { name: "placeholder未指定" };
 export const InlinePlaceholder: Story = {
   name: "inlineぼかし背景と透過画像",
   args: {
-    blurDataURL:
-      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cdefs%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='3'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='24' height='24' fill='%23ece4d9'/%3E%3Ccircle cx='12' cy='12' r='7' fill='%2396704e' filter='url(%23b)'/%3E%3C/svg%3E",
+    blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
   },
   play: async ({ canvasElement }) => {
     const image = canvasElement.querySelector("img");

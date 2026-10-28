@@ -9,6 +9,7 @@ import {
   productConditionNodeCount,
   productSchema,
 } from "../catalog/model";
+import { imageAssetsSchema } from "../media/model";
 import { selectionSchema } from "../orders/model";
 import { castInstructionSchema, instructionLimit } from "./instruction-model";
 export const maxConfigurationProducts = 2000;
@@ -179,6 +180,7 @@ const configurationChangesSchema = z.array(
 );
 
 export const configDraftSchema = z.object({
+  imageAssets: imageAssetsSchema.optional(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
   id: z.string(),
@@ -194,6 +196,7 @@ export const configDraftSchema = z.object({
 export type Catalog = z.infer<typeof catalogSchema>;
 
 export const catalogSchema = z.object({
+  imageAssets: imageAssetsSchema.optional(),
   storeId: z.string(),
   storeName: z.string(),
   version: z.number().int(),

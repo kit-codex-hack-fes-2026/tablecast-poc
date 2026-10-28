@@ -20,7 +20,9 @@ const serwist = new Serwist({
       matcher: ({ url, request }) =>
         request.method === "GET" &&
         url.origin === self.location.origin &&
-        /^\/media\/tablecast\/images\/[a-f0-9]{64}\.(png|webp)$/.test(url.pathname),
+        /^\/api\/(?:table|admin\/stores\/[^/]+(?:\/demo\/[^/]+\/table)?|customer\/stores\/[^/]+\/coupons)\/images\/tablecast\/(?:images|uploads)\/[a-f0-9]{64}\.(png|webp)$/.test(
+          url.pathname,
+        ),
       handler: new CacheFirst({
         cacheName: "tablecast-menu-images-v1",
         plugins: [
@@ -30,7 +32,6 @@ const serwist = new Serwist({
             maxEntries: 256,
             maxAgeSeconds: 30 * 86400,
             maxAgeFrom: "last-used",
-            purgeOnQuotaError: true,
           }),
         ],
       }),

@@ -32,6 +32,7 @@ async function seedDatabase(directory: string, pr: number) {
         TABLECAST_AUTH_SECRET: `${name}-secret-not-used-in-deployment`,
       },
       d1_databases: [{ binding: "TABLECAST_DB", database_name: name, database_id: databaseId }],
+      images: { binding: "TABLECAST_IMAGES" },
       r2_buckets: [{ binding: "TABLECAST_MEDIA", bucket_name: `${name}-media` }],
     }),
   );

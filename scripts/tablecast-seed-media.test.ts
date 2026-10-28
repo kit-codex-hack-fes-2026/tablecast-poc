@@ -24,6 +24,7 @@ it("実R2で遅い画像を待たず4枠を使い、再配備・欠損復旧・�
     JSON.stringify({
       name: "tablecast-media-test",
       compatibility_date: "2026-09-03",
+      images: { binding: "TABLECAST_IMAGES" },
       r2_buckets: [{ binding: "TABLECAST_MEDIA", bucket_name: "tablecast-media-test" }],
     }),
   );

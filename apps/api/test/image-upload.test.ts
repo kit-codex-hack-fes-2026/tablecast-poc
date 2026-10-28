@@ -1,5 +1,7 @@
 import { env, exports } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
+import { mediaAssets, stores } from "../src/db/business-schema";
 import {
   createDraft,
   updateDraft,
@@ -103,6 +105,11 @@ it("MCPと管理APIの画像取り込みが同じキーと出所へ収束する"
   const { staff, cookie } = await setupFixture();
   const services = createApiServices(env);
   const first = await uploadImage(services, staff, input);
+  expect(first.asset).toMatchObject({ width: 1, height: 1 });
+  expect(first.asset.blurhash).toHaveLength(28);
+  expect(await services.db.select().from(mediaAssets)).toEqual([
+    { store_id: staff.storeId, image_key: first.imageKey, ...first.asset },
+  ]);
   const asset = await env.TABLECAST_MEDIA.get(first.imageKey);
   expect(asset?.httpMetadata?.contentType).toBe("image/webp");
   expect(asset?.customMetadata).toEqual({
@@ -210,6 +217,17 @@ it.each(["商品", "選択肢"])(
     const services = createApiServices(env);
     const saved = await uploadImage(services, staff, input);
     const other = { ...staff, storeId: "tablecast-other-store" };
+    const originalStore = await services.db
+      .select()
+      .from(stores)
+      .where(eq(stores.id, staff.storeId))
+      .get();
+    if (!originalStore) throw new Error("店舗fixtureがありません");
+    await services.db.insert(stores).values({
+      ...originalStore,
+      id: other.storeId,
+      organization_id: "tablecast-fixture-other-org",
+    });
     const foreign = await uploadImage(services, other, input);
     expect(foreign.imageKey).not.toBe(saved.imageKey);
     let draft = await createDraft(services, staff);

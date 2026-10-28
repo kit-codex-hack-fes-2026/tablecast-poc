@@ -6,16 +6,18 @@ import { DateTime } from "./date-time";
 import { ProductImage } from "./product-image";
 export function CouponCard({
   rules,
+  storeId,
   children,
 }: {
   children?: ReactNode;
   rules: z.infer<typeof couponRuleSchema>;
+  storeId: string;
 }) {
   const { t, locale } = useI18n();
   return (
     <article className="overflow-hidden rounded-2xl border border-warning/20 bg-warning-soft/30">
       <ProductImage
-        src={`/media/${rules.imageKey}`}
+        src={`/api/customer/stores/${storeId}/coupons/images/${rules.imageKey}`}
         alt={rules.title[locale]}
         width={600}
         height={300}

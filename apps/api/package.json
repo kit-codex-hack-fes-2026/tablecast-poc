@@ -10,7 +10,8 @@
     "./speech": "./src/modules/voice/prompt.ts",
     "./telemetry": "./src/platform/telemetry.ts",
     "./db": "./src/db/public.ts",
-    "./bootstrap": "./src/bootstrap.ts"
+    "./bootstrap": "./src/bootstrap.ts",
+    "./media-migration": "./src/modules/media/migration.ts"
   },
   "scripts": {
     "typecheck": "node ../../node_modules/@tablecast/typescript-native/bin/tsc --noEmit",
@@ -37,7 +38,9 @@
     "@opentelemetry/sdk-trace-base": "2.12.0",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.1",
+    "@unpic/pixels": "1.3.0",
     "better-auth": "1.7.10",
+    "blurhash": "2.0.5",
     "css-tree": "^3.2.1",
     "drizzle-orm": "1.0.0-rc.5",
     "fuse.js": "7.5.0",

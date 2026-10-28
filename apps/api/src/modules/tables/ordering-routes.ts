@@ -10,6 +10,8 @@ import { attributeCustomerConsumption } from "../customer-memory/use-cases/consu
 import { selectCustomerTarget } from "../customer-memory/use-cases/target";
 import { getDeviceParticipants } from "../customer-visits/queries";
 import { createCustomerVisitCode } from "../customer-visits/service";
+import { withImageAssets } from "../media/queries";
+import { protectedMediaRoutes } from "../media/routes";
 import { cartUpdateSchema, prepareSchema, submitSchema } from "../orders/model";
 import { updateCart } from "../orders/use-cases/cart";
 import { prepareConfirmation, submitOrder } from "../orders/use-cases/confirmation";
@@ -22,6 +24,7 @@ import { getTableState } from "./queries";
 import { callStaff, changeLocale, requestBill, setUiSection } from "./use-cases/presentation";
 export const orderingOperations = apiFactory
   .createApp()
+  .route("/", protectedMediaRoutes)
   .post("/customer-target", validate(customerTargetSchema), async (c) =>
     c.json(await selectCustomerTarget(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
   )
@@ -54,7 +57,10 @@ export const orderingOperations = apiFactory
   .get("/catalog", async (c) =>
     c.json(
       instructionResponse(
-        await getCatalog(c.get("services"), c.get("actor").storeId, c.get("actor").demoId),
+        await withImageAssets(
+          c.var.services,
+          await getCatalog(c.var.services, c.var.actor.storeId, c.var.actor.demoId),
+        ),
         c.req.header("X-Tablecast-Instructions"),
       ),
       200,

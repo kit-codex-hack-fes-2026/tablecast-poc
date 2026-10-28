@@ -2,6 +2,7 @@ import type { Catalog, Product } from "@tablecast/api/schema";
 import { useState } from "react";
 import { tv } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
+import { ProductImage } from "./product-image";
 import { Button } from "./ui/button";
 const bannerGrid = tv({
   base: "grid",
@@ -34,8 +35,13 @@ export function MenuBanners({
             >
               {!failed.has(banner.image.imageKey) && (
                 <div className="relative w-full">
-                  <img
-                    src={`/media/${banner.image.imageKey}?width=1600`}
+                  <ProductImage
+                    responsive
+                    natural
+                    width={1600}
+                    height={600}
+                    sizes="100vw"
+                    src={`/media/${banner.image.imageKey}`}
                     alt={banner.image.alt[locale]}
                     className="block h-auto w-full"
                     onError={() => setFailed((keys) => new Set([...keys, banner.image.imageKey]))}

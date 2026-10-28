@@ -1,6 +1,7 @@
 import type { ThemeImage } from "@tablecast/api/schema";
 import { useState } from "react";
 import { useI18n } from "../i18n/locale";
+import { ProductImage } from "./product-image";
 export function StoreLogo({
   logo,
   fallbackLogo,
@@ -18,11 +19,11 @@ export function StoreLogo({
   const current = images.find((image) => image && !failed.includes(image.imageKey));
   if (!current) return null;
   return (
-    <img
-      src={`/media/${current.imageKey}?width=${Math.min(768, width * 2)}`}
+    <ProductImage
+      src={`/media/${current.imageKey}`}
+      sizes={`${width}px`}
       alt={current.alt[locale]}
       className="max-w-full shrink-0 object-contain"
-      style={{ width, height }}
       width={width}
       height={height}
       onError={() =>

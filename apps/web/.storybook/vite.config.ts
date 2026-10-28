@@ -16,6 +16,8 @@ export default defineConfig({
       "@base-ui/react/slider",
       "@better-auth/infra/client",
       "@better-auth/stripe/client",
+      "@unpic/react/base",
+      "@unpic/placeholder",
       "react",
       "react-dom",
       "react-dom/client",

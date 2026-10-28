@@ -44,6 +44,8 @@ const browser = (performance = false) =>
         "qr-scanner",
         "react-resizable-panels",
         "tailwind-variants",
+        "@unpic/react/base",
+        "@unpic/placeholder",
         "zod",
         "@paper-design/shaders-react",
         "motion",

@@ -31,7 +31,7 @@ const moduleContracts = {
   devices: [],
   games: ["model", "queries", "use-cases/publication"],
   mcp: [],
-  media: ["model", "service"],
+  media: ["model", "service", "queries"],
   orders: ["queries", "model", "use-cases/cart", "use-cases/confirmation"],
   statistics: ["model", "service"],
   stores: ["queries"],
@@ -67,6 +67,8 @@ const compositions = {
     "customer-points/routes",
     "customer-coupons/routes",
   ],
+  "tables/ordering-routes": ["media/routes"],
+  "customer-coupons/routes": ["media/routes"],
   "tables/operations-routes": ["games/routes", "voice/routes"],
   "demo/routes": ["tables/operations-routes"],
 };

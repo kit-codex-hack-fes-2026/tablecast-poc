@@ -15,7 +15,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const 標準: Story = {
   play: async ({ canvasElement }) => {
-    const image = canvasElement.querySelector('img[src^="/media/"]');
+    const image = canvasElement.querySelector('img[src*="/images/tablecast/"]');
     if (!(image instanceof HTMLImageElement)) throw new Error("seedの商品画像がありません。");
     await waitFor(async () => {
       await image.decode();
