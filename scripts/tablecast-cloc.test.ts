@@ -115,10 +115,15 @@ describe("種類別のcloc行数", () => {
     expect(body).toContain(`/commit/${"a".repeat(40)}`);
     expect(body).toContain(`/commit/${"b".repeat(40)}`);
     for (const { label } of clocCategories) expect(body).toContain(`| ${label} |`);
-    expect(body).toContain("| 実装コード | 1,001 | 999 | -2 |");
-    expect(body).toContain("| 単体・統合テスト | 10 | 13 | +3 |");
-    expect(body).toContain("| Storybook | 0 | 0 | 0 |");
+    expect(body).toContain("| 💻 実装コード | 1,001 | 999 | -2 |");
+    expect(body).toContain("| 🧪 単体・統合テスト | 10 | 13 | +3 |");
+    expect(body).toContain("| 📚 Storybook | 0 | 0 | 0 |");
     expect(body).toContain("| **合計** | **1,011** | **1,012** | **+1** |");
+    expect(body).toContain("<summary>計測条件・分類glob</summary>");
+    expect(body).toContain("`**/*.stories.*`");
+    expect(body).toContain("空白だけの行（`blank`）");
+    expect(body).toContain("コードとコメントが混在する行は1行");
+    expect(body).toContain(`/blob/${"b".repeat(40)}/scripts/tablecast-cloc.ts`);
   });
 });
 

@@ -4,16 +4,47 @@ import { parseArgs, promisify } from "node:util";
 
 export const clocCommentMarker = "<!-- tablecast-cloc -->";
 export const clocCategories = [
-  { id: "documentation", label: "文書・skills・Agent指示" },
-  { id: "implementation", label: "実装コード" },
-  { id: "unit", label: "単体・統合テスト" },
-  { id: "browser", label: "Browserコンポーネントテスト" },
-  { id: "storybook", label: "Storybook" },
-  { id: "e2e", label: "E2Eテスト" },
-  { id: "support", label: "テスト補助" },
-  { id: "configuration", label: "設定・CI" },
-  { id: "migration", label: "DB migration" },
-  { id: "other", label: "データ・その他" },
+  {
+    id: "documentation",
+    label: "📖 文書・skills・Agent指示",
+    globs: ["**/*.{md,mdx,txt}", ".agents/skills/**"],
+  },
+  {
+    id: "implementation",
+    label: "💻 実装コード",
+    globs: ["**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs,css,html,sh,py,sql}"],
+  },
+  { id: "unit", label: "🧪 単体・統合テスト", globs: ["**/*.{test,spec}.*"] },
+  { id: "browser", label: "🌐 Browserコンポーネントテスト", globs: ["**/*.browser.{test,spec}.*"] },
+  {
+    id: "storybook",
+    label: "📚 Storybook",
+    globs: ["**/*.stories.*", "**/.storybook/**", "apps/web/**/*.mdx"],
+  },
+  { id: "e2e", label: "🎭 E2Eテスト", globs: ["apps/web/e2e/**/*.{test,spec}.*"] },
+  {
+    id: "support",
+    label: "🧰 テスト補助",
+    globs: [
+      "**/{test,tests,test-support,testing,fixtures,__fixtures__}/**",
+      "apps/web/e2e/**",
+      "**/*-fixture.*",
+    ],
+  },
+  {
+    id: "configuration",
+    label: "⚙️ 設定・CI",
+    globs: [
+      "{.github,.devcontainer,infra}/**",
+      "**/*.config.*",
+      "**/{package,tsconfig,turbo,components}.json",
+      "**/{compose,lefthook}.{yml,yaml}",
+      "**/{mise.toml,Dockerfile}",
+      ".env*",
+    ],
+  },
+  { id: "migration", label: "🗃️ DB migration", globs: ["apps/api/migrations/**/*.sql"] },
+  { id: "other", label: "📦 データ・その他", globs: ["**/*"] },
 ] as const;
 
 type Category = (typeof clocCategories)[number]["id"];
@@ -176,6 +207,10 @@ export function renderClocComment(measurement: Measurement, repository?: string,
     afterTotal += after;
     return `| ${label} | ${format(before)} | ${format(after)} | ${difference(before, after)} |`;
   });
+  const patterns = (globs: readonly string[]) => globs.map((glob) => `\`${glob}\``).join("<br>");
+  const classification = repository
+    ? `[分類コード](https://github.com/${repository}/blob/${measurement.head}/scripts/tablecast-cloc.ts)`
+    : "scripts/tablecast-cloc.ts";
   return [
     clocCommentMarker,
     `📏 **行数レポート** · ${commit(measurement.base)} → ${commit(measurement.head)}`,
@@ -187,8 +222,29 @@ export function renderClocComment(measurement: Measurement, repository?: string,
     ...rows,
     `| **合計** | **${format(beforeTotal)}** | **${format(afterTotal)}** | **${difference(beforeTotal, afterTotal)}** |`,
     "",
-    "cloc 2.10のcode行数（空行・コードのコメント行を除外）。文書はclocが数えた本文行数。比較元はPRのmerge-base。",
-    "動画基盤・生成物・lockfile・画像や音声・両版のskills-lockに記載された取得skillを除外。同一内容の別ファイルは各々計上。",
+    "<details>",
+    "<summary>計測条件・分類glob</summary>",
+    "",
+    "- cloc 2.10の`code`（物理行数）を集計。空行・空白だけの行（`blank`）と、言語ごとの規則でコメントだけと判定した行（`comment`）は除外。コードとコメントが混在する行は1行として計上。",
+    "- Markdown・MDXはMarkdownの規則で本文・コードブロックを計測。HTMLコメントは除外し、コードブロック内の`//`などを別言語として再解析しない。",
+    "- 比較元はPRのmerge-base。Gitのcommit snapshotだけを数え、未追跡・未commitの変更を含めない。同一内容でも別ファイルなら各々計上。",
+    "",
+    "| 分類 | 主な対象glob |",
+    "| --- | --- |",
+    ...clocCategories.map(({ label, globs }) => `| ${label} | ${patterns(globs)} |`),
+    "",
+    "除外を先に適用し、Storybook・テスト・補助・設定を実装より優先して一つの分類へ割り当てる。`scripts/tablecast-fixtures{.ts,/**}`はruntime seedとして実装に含め、その他には残ったcloc対応ファイルを割り当てる。",
+    `上のglobは条件の要約。ファイル名の細部と優先順位の正本は対象commitの${classification}。`,
+    "",
+    "除外glob:",
+    "",
+    "- 動画基盤: `apps/presentation/**`",
+    "- 生成物・実行結果: `**/{node_modules,dist,out,coverage,storybook-static,paraglide,test-results,playwright-report,.local,.turbo,.wrangler,.cloudflare}/**`、`**/migrations/meta/**`、`**/{*.gen.*,*.generated.*,generated-*}`、`**/{cloudflare-env,worker-configuration}.d.ts`",
+    "- lockfile: `**/{bun.lock,bun.lockb,*.lock,package-lock.json,npm-shrinkwrap.json,pnpm-lock.yaml,skills-lock.json}`",
+    "- 画像・音声など: `**/*.{avif,gif,ico,jpg,jpeg,png,svg,webp,mp3,mp4,wav,ogg,webm,mov,pdf,woff,woff2,ttf,zip,gz,snap}`",
+    "- 取得skill: `.agents/skills/*/**`のうち、両commitの`skills-lock.json`に記載されたskillの和集合",
+    "",
+    "</details>",
   ].join("\n");
 }
 
