@@ -26,7 +26,7 @@ export const themeFonts = {
 const text = z
   .object({ ja: z.string().trim().min(1).max(200), en: z.string().trim().min(1).max(200) })
   .strict();
-export const themeImageSchema = imageMetadataSchema
+const themeImageSchema = imageMetadataSchema
   .extend({
     imageKey: z.string().regex(/^tablecast\/uploads\/[a-f0-9]{64}\.webp$/),
     alt: text,

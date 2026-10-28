@@ -105,7 +105,7 @@ PORT、PUBLIC_ORIGIN、state path、認証secret、Cloudflare本番資格、TLS�
 `.worktreeinclude` はCodexのローカルworktree機能であり、Git標準ではない。通常のgit worktreeでは自動コピーされない。[S15](sources.md#s15)
 .gitignoreで無視される同一ファイルだけを対象とし、node_modules、.cloudflare、.wrangler、DB、ログ、証明書をコピーしない。
 手動worktreeでは既存のsecret管理から同じファイルを安全に配置する。汎用glob同期やsymlink追跡の再実装はしない。
-Bunのlockfile、migration、fixtureソース、必要な上流patchはGitへ保存する。
+Bunのlockfile、migration、fixtureソースはGitへ保存する。
 
 ## 提供するscript契約
 

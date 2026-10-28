@@ -1,6 +1,6 @@
 import type { Catalog, Product } from "@tablecast/api/schema";
-import { ImageOff, Plus } from "lucide-react";
-import { memo, useState } from "react";
+import { ImageOff, Plus, Search } from "lucide-react";
+import { memo, type RefObject, useState } from "react";
 import { cn, tv } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
 import { IllustrationNotice } from "./illustration-notice";
@@ -32,14 +32,26 @@ export const ProductMenu = memo(function ProductMenu({
   onChoose,
   productIds,
   compact = false,
+  category: controlledCategory,
+  onCategoryChange,
+  onSearch,
+  searchButtonRef,
+  searchResults = false,
 }: {
   catalog: Catalog;
+  category?: string;
   compact?: boolean;
+  onCategoryChange?: (category: string) => void;
   onChoose: (product: Product) => void;
+  onSearch?: () => void;
   productIds?: string[];
+  searchButtonRef?: RefObject<HTMLButtonElement | null>;
+  searchResults?: boolean;
 }) {
   const { locale, t } = useI18n();
-  const [category, setCategory] = useState("all");
+  const [localCategory, setLocalCategory] = useState("all");
+  const category = controlledCategory ?? localCategory;
+  const setCategory = onCategoryChange ?? setLocalCategory;
   const masthead = catalog.configuration.appearance?.composition?.masthead;
   const byId = new Map(catalog.configuration.products.map((product) => [product.id, product]));
   const products = productIds
@@ -73,36 +85,13 @@ export const ProductMenu = memo(function ProductMenu({
       )}
       {!productIds && <MenuBanners catalog={catalog} onChoose={onChoose} />}
       {!productIds && (
-        <fieldset
-          className="flex gap-2 overflow-x-auto px-4 pt-4 pb-6"
-          aria-label={t("kiosk_menu")}
-        >
-          <Button
-            className="shrink-0 whitespace-nowrap"
-            variant={category === "all" ? "secondary" : "outline"}
-            size="lg"
-            type="button"
-            data-theme-part="category-button"
-            aria-pressed={category === "all"}
-            onClick={() => setCategory("all")}
-          >
-            {t("kiosk_all")}
-          </Button>
-          {catalog.configuration.categories.map((item) => (
-            <Button
-              className="shrink-0 whitespace-nowrap"
-              variant={category === item.id ? "secondary" : "outline"}
-              size="lg"
-              type="button"
-              key={item.id}
-              data-theme-part="category-button"
-              aria-pressed={category === item.id}
-              onClick={() => setCategory(item.id)}
-            >
-              {item.text[locale].displayName}
-            </Button>
-          ))}
-        </fieldset>
+        <MenuCategories
+          catalog={catalog}
+          category={category}
+          onCategoryChange={setCategory}
+          onSearch={onSearch}
+          searchButtonRef={searchButtonRef}
+        />
       )}
       {!productIds && products.length === 0 && (
         <p role="status" className="py-12 px-6 text-muted-foreground text-center">
@@ -115,7 +104,7 @@ export const ProductMenu = memo(function ProductMenu({
       )}
       <div
         data-ui={compact ? "conversation-products" : undefined}
-        className={productGrid({ recommended: Boolean(productIds), compact })}
+        className={productGrid({ recommended: Boolean(productIds) && !searchResults, compact })}
       >
         {products.map((product) => (
           <Button
@@ -194,3 +183,63 @@ export const ProductMenu = memo(function ProductMenu({
     </div>
   );
 });
+
+function MenuCategories({
+  catalog,
+  category,
+  onCategoryChange,
+  onSearch,
+  searchButtonRef,
+}: {
+  catalog: Catalog;
+  category: string;
+  onCategoryChange: (category: string) => void;
+  onSearch?: () => void;
+  searchButtonRef?: RefObject<HTMLButtonElement | null>;
+}) {
+  const { locale, t } = useI18n();
+  return (
+    <div className="flex gap-2 px-4 pt-4 pb-6">
+      {onSearch && (
+        <Button
+          ref={searchButtonRef}
+          className="shrink-0"
+          variant="outline"
+          size="lg"
+          type="button"
+          onClick={onSearch}
+        >
+          <Search size={20} aria-hidden="true" />
+          {t("kiosk_menu_search")}
+        </Button>
+      )}
+      <fieldset className="flex min-w-0 gap-2 overflow-x-auto" aria-label={t("kiosk_menu")}>
+        <Button
+          className="shrink-0 whitespace-nowrap"
+          variant={category === "all" ? "secondary" : "outline"}
+          size="lg"
+          type="button"
+          data-theme-part="category-button"
+          aria-pressed={category === "all"}
+          onClick={() => onCategoryChange("all")}
+        >
+          {t("kiosk_all")}
+        </Button>
+        {catalog.configuration.categories.map((item) => (
+          <Button
+            className="shrink-0 whitespace-nowrap"
+            variant={category === item.id ? "secondary" : "outline"}
+            size="lg"
+            type="button"
+            key={item.id}
+            data-theme-part="category-button"
+            aria-pressed={category === item.id}
+            onClick={() => onCategoryChange(item.id)}
+          >
+            {item.text[locale].displayName}
+          </Button>
+        ))}
+      </fieldset>
+    </div>
+  );
+}

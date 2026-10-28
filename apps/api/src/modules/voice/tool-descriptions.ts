@@ -12,7 +12,7 @@ export const voiceToolDescriptions = {
   getCatalog:
     "商品検索。客が話した商品名・読み・別名・カテゴリ・説明文をqueryへ指定する。かな表記と全半角を同一視し、誤字・脱字も候補へ含める。複数対象は空白区切りのOR検索で、全語一致を上位へ返す。紹介時はshow=trueで候補カードも表示する。結果のdetail=falseは概要であり、選択肢を取得できないという意味ではない。注文対象が決まったら客の商品名や表示順を取得済みの結果に対応付けて、productIdsへ内部IDを最大8件まとめて指定し、必須・任意の選択肢、温度・容量・追加料金・販売状態・条件を含む詳細を取得する。IDは内部照合だけに使い、客に尋ねたり説明・発話・入力を求めない。requiredSelectionsは概要でも必須項目を示す。未取得の詳細は必ず照会し、画面で選んでもらう依頼へ逃げない。商品を選ぶ前に必須選択肢を先回りして尋ねない。more=trueならoffsetを進める。同じ委任で取得済みの詳細は再照会しない。",
   getTableState:
-    "現在の卓、locale（言語）・speechSpeed（話速）、画面のuiSection、表示中の商品詳細のselectedProductId（nullなら詳細なし）、カート版、確認、注文、請求状態と、最後に会話へ表示したdisplayedProductIds（画面と同じ順）を取得する。最後のやつ等はこの順序とselectedProductIdから対象を特定し、曖昧なら商品名で確認する。話者番号から人数や席を推定しない。",
+    "現在の卓、locale（言語）・speechSpeed（話速）、画面のuiSection、表示中の商品詳細のselectedProductId（nullなら詳細なし）、検索画面のmenuSearch（query・offset・結果productIdsは画面順）、カート版、確認、注文、請求状態と、最後に会話へ表示したdisplayedProductIds（画面と同じ順）を取得する。最後のやつ等はこの順序とselectedProductIdから対象を特定し、曖昧なら商品名で確認する。話者番号から人数や席を推定しない。",
   showReference:
     "Web検索で確認した参考ページをQR・タイトル・favicon・OGP画像付きで会話欄へ表示する。質問の補足をスマホで読むと役立つとき、最も関連するページを1つ選ぶ。urlは公開HTTPS、URLはUTF-8で1000byteまで。1応答の表示は最大3件。店舗の価格・在庫・注文の根拠にはしない。",
   captureCamera:
@@ -27,8 +27,10 @@ export const voiceToolDescriptions = {
     "客の明示依頼で、この端末の外貨参考表示を変更する。currencyは対応ISOコード、nullは円のみ。価格の外貨質問だけならgetCatalog/getTableStateのquoteCurrencyを使い表示は変更しない。円の注文・会計、音声接続は変更しない。",
   setSpeechSpeed:
     "客の明示依頼で話速を0.5〜1.5倍、0.1刻みで変更する。通常は1倍。相対的な依頼はgetTableStateのspeechSpeedから0.1増減し、範囲を守る。次の発話から反映する。",
+  showMenuSearch:
+    "客向けメニューペインに検索結果を表示する。queryとoffset（既定0）を指定し、8件の同じ商品・順序・件数を画面と結果で共有する。more=trueならoffsetを8増やして次のページを表示できる。フォーカスやキーボードを変更せず、注文も変更しない。必須選択の詳細はgetCatalog(productIds)で取得する。",
   setUiSection:
-    "メニューペインの画面遷移ツール。section=menu（メニュー）、cart（カート）、orders（注文履歴）、bill（会計）へ切り替える。紹介した商品を詳しく見せるときはsection=menuと取得済みproductIdを指定して詳細を開く。productId省略/nullなら詳細を閉じて一覧へ戻る。menu以外では商品選択を解除する。客の画面遷移依頼に加え、選択肢の説明や注文確認の補助として適切な画面を表示する。操作は音声で完結させ、画面を押すよう求めない。表示だけでカート追加や注文・会計の確定は行わない。",
+    "メニューペインの画面遷移ツール。section=menu（メニュー）、cart（カート）、orders（注文履歴）、bill（会計）へ切り替える。紹介した商品を詳しく見せるときはsection=menuと取得済みproductIdを指定して詳細を開く。productId省略/nullなら詳細を閉じる。検索状態は保持し、通常のカテゴリ一覧を明示表示する場合はsearch=nullを指定する。検索結果を開く場合はshowMenuSearchを使う。menu以外では商品選択を解除する。客の画面遷移依頼に加え、選択肢の説明や注文確認の補助として適切な画面を表示する。操作は音声で完結させ、画面を押すよう求めない。表示だけでカート追加や注文・会計の確定は行わない。",
   showProducts:
     "商品紹介やおすすめを依頼されたら、getCatalogで確認した商品IDを最大4件指定して会話内に商品カードを表示する。カードは補助であり、候補の名前・違い・価格を同じ応答の音声でも伝える。表示だけでカート追加や注文を行わない。",
   updateCart:

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { id, money } from "../../platform/model";
 import { imageSourceSchema } from "../media/model";
-export const contentSchema = z
+const contentSchema = z
   .object({
     displayName: z.string().min(1).max(150),
     speechName: z.string().min(1).max(150),

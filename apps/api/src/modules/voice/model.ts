@@ -21,6 +21,7 @@ export const voiceToolNameSchema = z.enum([
   "submitOrder",
   "callStaff",
   "setUiSection",
+  "showMenuSearch",
   "setLanguage",
   "setSpeechSpeed",
   "setDisplayCurrency",
@@ -38,18 +39,11 @@ export const voiceToolEventSchema = z.object({
     .optional(),
 });
 
-export const voiceProductsEventSchema = showProductsSchema.extend({ turnId: id });
-
-export const voiceFailedEventSchema = z.object({
-  turnId: id,
-  code: z.enum(["VOICE_MODEL_FAILED", "VOICE_INTERNAL_ERROR"]),
-});
-
 export const voiceListQuerySchema = z
   .object({ locale: localeSchema, pageToken: z.string().max(2048).optional() })
   .strict();
 
-export const voiceSummarySchema = z.object({
+const voiceSummarySchema = z.object({
   voiceId: id,
   displayName: z.string().min(1).max(150),
   langCode: z.string().min(2).max(35),
@@ -60,13 +54,11 @@ export const voicePageSchema = z.object({
   nextPageToken: z.string().max(2048).nullable(),
 });
 
-export type VoiceSummary = z.infer<typeof voiceSummarySchema>;
-
 export type VoicePage = z.infer<typeof voicePageSchema>;
 
 export type VoiceListQuery = z.infer<typeof voiceListQuerySchema>;
 
-export const voiceTriggerSchema = z.enum(["user", "proactive", "opening"]);
+const voiceTriggerSchema = z.enum(["user", "proactive", "opening"]);
 
 export type VoiceTrigger = z.infer<typeof voiceTriggerSchema>;
 

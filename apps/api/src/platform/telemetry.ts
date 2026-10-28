@@ -42,7 +42,7 @@ export async function measured<T>(
 export const telemetryChannel = createContextKey("tablecast.channel");
 export const telemetryTimings = createContextKey("tablecast.timings");
 
-export function recordTiming(name: string, duration: number, description?: string) {
+function recordTiming(name: string, duration: number, description?: string) {
   const timings = context.active().getValue(telemetryTimings);
   if (timings instanceof Map) timings.set(name, { duration, description });
 }

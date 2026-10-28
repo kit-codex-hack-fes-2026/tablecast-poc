@@ -2,6 +2,7 @@ import type { ConfirmationRecord, EventRecord, OrderRecord, TableRecord } from "
 import type { Catalog } from "../configuration/model";
 import { DomainError } from "../../platform/errors";
 import { type PlanContext, priceCart } from "../catalog/pricing";
+import { menuSearchPage } from "../catalog/search";
 import {
   type Bill,
   type Cart,
@@ -15,6 +16,7 @@ import {
 import {
   type CoreState,
   eventDataSchema,
+  savedMenuSearchSchema,
   type TableEvent,
   tablePlanSchema,
   type TableState,
@@ -162,6 +164,25 @@ export function coreStateValue(
         }
       : null,
   );
+  const savedSearch = row.menu_search_json
+    ? savedMenuSearchSchema.parse(JSON.parse(row.menu_search_json))
+    : null;
+  const searchPage = savedSearch
+    ? menuSearchPage(catalog.configuration, {
+        query: savedSearch.query,
+        offset: savedSearch.configVersion === catalog.version ? savedSearch.offset : 0,
+      })
+    : null;
+  const menuSearch =
+    savedSearch && searchPage
+      ? {
+          query: savedSearch.query,
+          offset: searchPage.offset,
+          productIds: searchPage.productIds,
+          total: searchPage.total,
+          more: searchPage.more,
+        }
+      : null;
   const adjustmentTotal = payments.find((p) => p.kind === "adjustment")?.total ?? 0;
   const paidTotal = payments.find((p) => p.kind === "payment")?.total ?? 0;
   return {
@@ -177,6 +198,7 @@ export function coreStateValue(
     voiceState: row.voice_state,
     voiceSessionId: row.voice_session_id,
     uiSection: row.ui_section,
+    menuSearch,
     selectedProductId:
       row.ui_section === "menu" &&
       catalog.configuration.products.some((product) => product.id === row.selected_product_id)

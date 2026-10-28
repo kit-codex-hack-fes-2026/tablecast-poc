@@ -8,7 +8,7 @@ import { openscreenPath } from "./tablecast-openscreen.ts";
 
 type Event = z.infer<typeof pointerEvent>;
 // 画像の中心ではなく矢印の先端・指先を実際の操作座標へ置く。
-export const cursorArt = {
+const cursorArt = {
   arrow: { width: 42, height: 70, tipX: 0.119, tipY: 0.0874 },
   pointer: { width: 58, height: 73, tipX: 0.3893, tipY: 0.0032 },
 };

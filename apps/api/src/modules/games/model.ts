@@ -62,5 +62,4 @@ export const gameMessageSchema = z.discriminatedUnion("type", [
     .strict(),
 ]);
 export type GamePackage = z.infer<typeof gamePackageSchema>;
-export type GameManifest = z.infer<typeof gameManifestSchema>;
 export type GameState = z.infer<typeof gameStateSchema>;

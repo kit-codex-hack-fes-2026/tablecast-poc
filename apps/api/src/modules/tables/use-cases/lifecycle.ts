@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, notExists, sql } from "drizzle-orm";
 import type { ApiServices } from "../../../platform/context";
 import type { Actor } from "../../auth/model";
 import type { openTableSchema } from "../model";
@@ -114,11 +114,55 @@ export async function openTable(
       const now = Date.now();
       const sessionId = crypto.randomUUID();
       const result = await db.batch([
-        db
-          .insert(business.tableSessions)
-          .select(
-            sql`SELECT ${sessionId},${actor.storeId},${input.tableId},'table',${input.locale},'open',${input.guestCount},0,'[]',NULL,'stopped',NULL,0,NULL,'menu',NULL,1,0,${plan ? JSON.stringify({ id: plan.id, startedAt: now, rules: plan }) : null},${now},NULL WHERE NOT EXISTS(SELECT 1 FROM table_sessions WHERE table_id=${input.tableId} AND status='open')`,
-          ),
+        db.insert(business.tableSessions).select(
+          db
+            .select({
+              id: sql<string>`${sessionId}`.as("id"),
+              store_id: business.restaurantTables.store_id,
+              table_id: business.restaurantTables.id,
+              kind: sql<"table">`'table'`.as("kind"),
+              locale: sql<typeof input.locale>`${input.locale}`.as("locale"),
+              status: sql<"open">`'open'`.as("status"),
+              guest_count: sql<number>`${input.guestCount}`.as("guest_count"),
+              cart_version: sql<number>`0`.as("cart_version"),
+              cart_json: sql<string>`'[]'`.as("cart_json"),
+              mutation_id: sql<null>`NULL`.as("mutation_id"),
+              voice_state: sql<"stopped">`'stopped'`.as("voice_state"),
+              voice_session_id: sql<null>`NULL`.as("voice_session_id"),
+              voice_version: sql<number>`0`.as("voice_version"),
+              active_turn_id: sql<null>`NULL`.as("active_turn_id"),
+              ui_section: sql<"menu">`'menu'`.as("ui_section"),
+              selected_product_id: sql<null>`NULL`.as("selected_product_id"),
+              menu_search_json: sql<null>`NULL`.as("menu_search_json"),
+              speech_speed: sql<number>`1`.as("speech_speed"),
+              staff_called: sql<number>`0`.as("staff_called"),
+              plan_json: sql<
+                null | string
+              >`${plan ? JSON.stringify({ id: plan.id, startedAt: now, rules: plan }) : null}`.as(
+                "plan_json",
+              ),
+              opened_at: sql<number>`${now}`.as("opened_at"),
+              closed_at: sql<null>`NULL`.as("closed_at"),
+            })
+            .from(business.restaurantTables)
+            .where(
+              and(
+                eq(business.restaurantTables.id, table.id),
+                eq(business.restaurantTables.store_id, actor.storeId),
+                notExists(
+                  db
+                    .select({ id: business.tableSessions.id })
+                    .from(business.tableSessions)
+                    .where(
+                      and(
+                        eq(business.tableSessions.table_id, business.restaurantTables.id),
+                        eq(business.tableSessions.status, "open"),
+                      ),
+                    ),
+                ),
+              ),
+            ),
+        ),
         snapshotPointPolicy(services, actor.storeId, sessionId),
         db
           .insert(business.tableEvents)
