@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     environment:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SERVER_ROOT_URL: http://127.0.0.1:${TABLECAST_GRAFANA_PORT}
       GF_LOG_LEVEL: warn
     ports:
       - "127.0.0.1:${TABLECAST_GRAFANA_PORT}:3000"
