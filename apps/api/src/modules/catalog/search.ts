@@ -38,7 +38,11 @@ function searchFields(text: Configuration["categories"][number]["text"]) {
 }
 
 // 設定の寿命で索引を再利用する。価格・認可・DBや表示言語には依存しない。
-export function createMenuSearch(configuration: Configuration, section: MenuSection = "products") {
+export function createMenuSearch(
+  configuration: Configuration,
+  section: MenuSection = "products",
+  { exactNamesOnly = false }: { exactNamesOnly?: boolean } = {},
+) {
   const categoryFields = new Map(
     configuration.categories.map((category) => [category.id, searchFields(category.text)]),
   );
@@ -55,6 +59,16 @@ export function createMenuSearch(configuration: Configuration, section: MenuSect
       descriptions: [...fields.descriptions, ...(category?.descriptions ?? [])],
     };
   });
+  const exactMatches = (value: string, includeIds = true) =>
+    documents.filter(
+      (item) => (includeIds && normalise(item.id) === value) || item.names.includes(value),
+    );
+  if (exactNamesOnly)
+    return (query = "") => {
+      const value = normalise(query);
+      const ids = value ? exactMatches(value, false).map((item) => item.id) : [];
+      return { ids, detail: ids.length === 1 };
+    };
   const options = {
     keys: [
       { name: "names", weight: 4 },
@@ -73,9 +87,7 @@ export function createMenuSearch(configuration: Configuration, section: MenuSect
   return (query = "") => {
     const value = normalise(query);
     if (!value) return { ids: documents.map((item) => item.id), detail: false };
-    const exact = documents.filter(
-      (item) => normalise(item.id) === value || item.names.includes(value),
-    );
+    const exact = exactMatches(value);
     if (exact.length)
       return {
         ids: exact.map((item) => item.id),

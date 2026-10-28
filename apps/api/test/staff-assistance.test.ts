@@ -279,3 +279,24 @@ it("従来の空JSON本文の呼び出しを受け付け、壊れたJSONでは�
   expect(rejected.status).toBe(400);
   expect((await getStaffCalls(services(), device, { limit: 20 })).calls).toHaveLength(1);
 });
+
+it("お冷の自動候補に説明文や部分一致だけの酒類を混ぜず、登録した別名でサービス商品を見つける", async () => {
+  await setupFixture();
+  const source = configuration.products[0];
+  if (!source) throw new Error("商品fixtureが必要です");
+  const whisky = { ...source, id: "water", text: text("ウイスキーの水割り", "Whisky with water") };
+  const waterText = text("お冷", "Glass of cold water");
+  const water = {
+    ...source,
+    id: "tablecast-water",
+    price: 0,
+    text: { ...waterText, en: { ...waterText.en, aliases: ["Water"] } },
+  };
+  await fixtureDb
+    .update(business.stores)
+    .set({ config_json: JSON.stringify({ ...configuration, products: [whisky, water] }) })
+    .where(eq(business.stores.id, device.storeId));
+  const result = await getServiceGuidance(services(), device, { query: "Water" });
+  expect(result.products.map((product) => product.id)).toEqual([water.id]);
+  expect(result.products[0]?.price).toBe(0);
+});

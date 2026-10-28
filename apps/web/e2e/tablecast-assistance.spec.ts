@@ -1,5 +1,11 @@
 import { expect } from "@playwright/test";
-import { adminStateSchema, staffCallPageSchema, tableStateSchema } from "@tablecast/api/schema";
+import {
+  adminStateSchema,
+  catalogSchema,
+  configDraftSchema,
+  staffCallPageSchema,
+  tableStateSchema,
+} from "@tablecast/api/schema";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import en from "../messages/en.json" with { type: "json" };
@@ -21,6 +27,83 @@ test("呼び出しメモと対応済み状態が客と店員で共有され、�
     const admin = `/api/admin/stores/${storeId}`;
     const headers = { Origin: baseURL ?? "" };
     await signInStaff(staff, baseURL);
+    const catalog = catalogSchema.parse(await (await staff.get(`${admin}/catalog`)).json());
+    const template = catalog.configuration.products[0];
+    if (!template) throw new Error("商品のfixtureが必要です");
+    const text = {
+      ja: {
+        displayName: "お冷",
+        speechName: "お冷",
+        description: "無料のお冷です。こちらからご注文いただけます。",
+        aliases: ["お水"],
+      },
+      en: {
+        displayName: "Water",
+        speechName: "Water",
+        description: "Tap water is free of charge. You can order it here.",
+        aliases: ["Glass of water"],
+      },
+    };
+    const draft = configDraftSchema.parse(
+      await (await staff.post(`${admin}/drafts`, { headers })).json(),
+    );
+    const saved = configDraftSchema.parse(
+      await (
+        await staff.put(`${admin}/drafts/${draft.id}`, {
+          headers,
+          data: {
+            expectedVersion: draft.version,
+            configuration: {
+              ...catalog.configuration,
+              products: [
+                ...catalog.configuration.products,
+                {
+                  ...template,
+                  id: "tablecast-water-service",
+                  text,
+                  price: 0,
+                  available: true,
+                  imageKey: null,
+                  imageSource: undefined,
+                  modifiers: [],
+                },
+              ],
+              guides: [
+                ...(catalog.configuration.guides ?? []),
+                {
+                  id: "tablecast-water-guide",
+                  text,
+                  productIds: ["tablecast-water-service"],
+                  links: [],
+                },
+              ],
+            },
+          },
+        })
+      ).json(),
+    );
+    const ready = configDraftSchema.parse(
+      await (
+        await staff.post(`${admin}/drafts/${draft.id}/validate`, {
+          headers,
+          data: { expectedVersion: saved.version },
+        })
+      ).json(),
+    );
+    expect(ready.errors).toEqual([]);
+    expect(
+      (
+        await staff.post(`${admin}/drafts/${draft.id}/publish`, {
+          headers,
+          data: {
+            expectedVersion: ready.version,
+            baseVersion: ready.baseVersion,
+            idempotencyKey: "tablecast-assistance-guide-publication",
+            approved: true,
+          },
+        })
+      ).ok(),
+    ).toBe(true);
     const floor = adminStateSchema.parse(await (await staff.get(admin)).json());
     const vacant = floor.vacantTables[0];
     if (!vacant) throw new Error("試験用の空卓が必要です");
@@ -46,6 +129,9 @@ test("呼び出しメモと対応済み状態が客と店員で共有され、�
       .toBeGreaterThan(beforeScroll);
     await expect(popup).toBeVisible();
     await popup.getByRole("button", { name: "Water", exact: true }).click();
+    await expect(
+      popup.getByText("Tap water is free of charge. You can order it here.", { exact: true }),
+    ).toBeVisible();
     const evidence = resolve(".local/tablecast-assistance-evidence");
     await mkdir(evidence, { recursive: true });
     await page.screenshot({ path: resolve(evidence, "tablecast-assistance-advice.png") });

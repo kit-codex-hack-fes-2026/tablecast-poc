@@ -83,7 +83,9 @@ export async function getServiceGuidance(
   const productIds = [
     ...new Set([
       ...guides.flatMap((guide) => guide.productIds),
-      ...(input.query ? createMenuSearch(configuration)(input.query).ids : []),
+      ...(input.query
+        ? createMenuSearch(configuration, "products", { exactNamesOnly: true })(input.query).ids
+        : []),
     ]),
   ];
   return {
