@@ -350,6 +350,8 @@ viewport・文字倍率・media設定を変更するcaseは開始時の値を記
 
 実SSRの文言・manifestの表示だけをhydration完了と扱わない。document遷移後の操作は、その画面で既存のButtonがenabledになる等の利用者から観測できる条件を待つ。PWA案内は店側のログインButtonが操作可能になってからsummaryを一度クリックし、手順の可視状態を確認する。任意のsleep・クリック反復・timeout延長で同期しない。
 
+ModキーのE2Eは製品と同じTanStack Hotkeysの`detectPlatform`をブラウザー内で評価し、MetaまたはControlを送る。Playwrightの`ControlOrMeta`はrunner側のOSを使うため、Linux runner上でMacintoshのUser-Agentを使うWebKitと一致するとは限らない。[Playwrightの修飾キー](https://playwright.dev/docs/api/class-keyboard)、[TanStackのplatform判定](https://tanstack.com/hotkeys/latest/docs/reference/functions/detectPlatform)を参照する。
+
 既存の`fixtureDb`/`insertFixture`とCloudflareのreset/migrationを使い、DB wrapperや汎用test frameworkを足さない。E2Eのスタッフ認証Givenは`e2e/support/session.ts`の`signInStaff()`を再利用する。helperは型付きの小さな準備と失敗検出を所有し、検証対象のHTTP・注文確定・明示公開とThenはspecに残す。直接DB更新で認可や公開操作の代わりを作らない。
 
 商品公開のE2Eでは、既存の実APIでスタッフ認証・端末request/approve/pollを準備し、独立したスタッフと客のCookieを使う。ログイン・端末登録画面と5秒pollを各journeyで反復せず、注文の代表journeyに残す。公開試験自身は`/admin/live`からの復帰、商品編集・再読込・明示承認・公開・実通知後の客画面の価格更新を観測する。
