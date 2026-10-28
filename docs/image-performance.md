@@ -2,6 +2,16 @@
 
 [UI仕様](ui.md) / [Issue #166](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/166)
 
+## PR #415の初回取得とplaceholderの改善
+
+`461ff36`のPRプレビューで画像要求約1.0〜1.9秒を観測した。代表trace `20961c60643925e4451730fb64fb2e8e`は全体1.84秒、API 1.61秒、デモ認可D1 408ms、画像索引43ms、R2 HEAD 28ms・GET 38msだった。未計測区間をImages変換時間と断定しない。端末cacheは通信0で再利用できたが、Worker HITでもAPI内322ms・TTFB約963msの例があった。
+
+画像のデモ・端末認可は必要なID・所有者・権限だけのprojectionへ分け、設定JSON・カート・プラン利用集計を読まない。画像の店舗索引確認は維持し、304・内部cacheより先に認可する。Images bindingのWebP品質85を明示し、URLの`v=2`と内部キー・ETagで変換版を分離する。旧キャッシュの一括削除やR2派生画像の事前保存は行わない。
+
+BlurHashは6×4の52文字へ更新する。元の長辺32px縮小・既存encoderを使い、D1の旧28文字だけを再生成する。SSRのdata URLは元の縦横比・長辺16pxへ復元し、同じhashと寸法をmemo化する。正方形は350→1,118 bytesとなる。共通のplaceholder層だけをCSS blur 4pxとし、本画像のdecode後に既存200msのopacity遷移で消す。キャッシュ済み・hydration前の完了・失敗・reduced motionは即時に消す。
+
+変更後の隔離ローカルWorkers/D1/R2/Imagesで、24/120商品の既存性能試験はcold 267,048 bytes、取得済みURLのwarm 0、CLS 0を維持した。HTML・JSON・JSとSSR/LCPは容量増も含めて最終headのPR本文へ記録する。実Cloudflareの前後比較では端末cache無効の同一画像要求をWorker HIT/MISSで分け、TTFBと本文受信完了を別集計する。保存済みServer-Timingを今回の時間として使わない。試験のdecode後の次frameは表示準備の観測で、実機の画面発光時刻ではない。
+
 ## 2026-10-29の認可・BlurHashへの移行
 
 Issue #411では、設定JSONへBlurHashを埋め込む案を再検討し、R2を本体、D1の`media_assets`を所有店舗・実寸・BlurHashの正本にした。画面用HTTPの`imageAssets`だけへ一括付与し、注文計算・MCPの共有カタログには取得を加えない。既存Images bindingで長辺32px以内のPNGへ縮小し、`@unpic/pixels`と`blurhash.encode(..., 4, 3)`で生成する。`@unpic/placeholder`でSSRのdata URLへ復元し、読込成功・失敗で背景を消す。旧`blurDataURL` propは廃止した。

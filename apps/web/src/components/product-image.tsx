@@ -1,12 +1,13 @@
+import { imageDeliveryVersion } from "@tablecast/api/schema";
 import { blurhashToDataUri } from "@unpic/placeholder";
 import { Image } from "@unpic/react/base";
-import { useState } from "react";
+import { type CSSProperties, useCallback, useMemo, useState } from "react";
 import { cn } from "tailwind-variants";
 import { useMediaImage } from "./image-provider";
 
 function transformImage(src: string | URL, { width = 640 }: { width?: number }) {
   const path = String(src).split("?")[0];
-  return `${path}?width=${Math.min(1600, Math.max(1, Math.round(width)))}`;
+  return `${path}?width=${Math.min(1600, Math.max(1, Math.round(width)))}&v=${imageDeliveryVersion}`;
 }
 
 function imageBreakpoints(sizes?: string, originalWidth = 1600) {
@@ -16,6 +17,67 @@ function imageBreakpoints(sizes?: string, originalWidth = 1600) {
     ? [fixedWidth, fixedWidth * 2, fixedWidth * 3]
     : [32, 64, 96, 128, 192, 256, 384, 416, 512, 640, 768, 960, 1280, 1600];
   return [...new Set([...candidates.filter((value) => value < maximum), maximum])];
+}
+
+/** placeholderの復元と、decode・再利用・差替えの寿命を同じ場所で管理する。 */
+function useImagePlaceholder(
+  src: string,
+  hash: string | undefined,
+  width: number,
+  height: number,
+  onError?: () => void,
+) {
+  const data = useMemo(() => {
+    if (!hash) return undefined;
+    const scale = 16 / Math.max(width, height);
+    return blurhashToDataUri(
+      hash,
+      Math.max(1, Math.round(width * scale)),
+      Math.max(1, Math.round(height * scale)),
+    );
+  }, [hash, width, height]);
+  const [settled, setSettled] = useState<{ src: string; state: "finished" | "loaded" }>();
+  const state = settled?.src === src ? settled.state : "pending";
+  const finish = () => setSettled({ src, state: "finished" });
+  const fail = () => {
+    finish();
+    onError?.();
+  };
+  const frameRef = useCallback(
+    (frame: HTMLSpanElement | null) => {
+      const image = frame?.querySelector("img");
+      // 読込済みの再利用とSSR後のhydrationでは、待機表示の演出を繰り返さない。
+      if (data && image?.currentSrc && image.complete) setSettled({ src, state: "finished" });
+    },
+    [data, src],
+  );
+  async function load(image: HTMLImageElement) {
+    if (!data) return;
+    const selected = image.currentSrc;
+    const current = () => image.isConnected && image.currentSrc === selected;
+    try {
+      await image.decode();
+    } catch {
+      if (current()) fail();
+      return;
+    }
+    if (!current()) return;
+    const next = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "finished"
+      : "loaded";
+    setSettled((previous) =>
+      previous?.src === src && previous.state === "finished" ? previous : { src, state: next },
+    );
+  }
+  return {
+    background: state === "finished" ? undefined : data,
+    fail,
+    finish,
+    frameRef,
+    hasPlaceholder: data !== undefined,
+    load,
+    state,
+  };
 }
 
 /**
@@ -51,31 +113,34 @@ export function ProductImage({
   width: number;
 }) {
   const { src, asset } = useMediaImage(source);
-  const hash = blurhash ?? asset?.blurhash;
-  const placeholder = hash ? blurhashToDataUri(hash) : undefined;
+  const { background, fail, finish, frameRef, hasPlaceholder, load, state } = useImagePlaceholder(
+    src,
+    blurhash ?? asset?.blurhash,
+    asset?.width ?? width,
+    asset?.height ?? height,
+    onError,
+  );
   if (natural && asset) {
     width = asset.width;
     height = asset.height;
   }
-  const [settledSrc, setSettledSrc] = useState<string>();
-  const background = placeholder && settledSrc !== src ? placeholder : undefined;
   const breakpoints = imageBreakpoints(responsive ? undefined : sizes, asset?.width);
-  const imageStyle = {
+  const imageStyle: CSSProperties & Record<`--${string}`, string> = {
+    "--tablecast-image-width": `${width}px`,
+    "--tablecast-image-height": `${height}px`,
     "--tablecast-image-ratio": `${width} / ${height}`,
     "--tablecast-image-placeholder": background ? `url("${background}")` : "none",
   };
   return (
     <span
       key={src}
-      style={{ display: "contents", ...imageStyle }}
-      ref={
-        placeholder
-          ? (frame) => {
-              const image = frame?.querySelector("img");
-              if (image?.currentSrc && image.complete) setSettledSrc(src);
-            }
-          : undefined
-      }
+      data-image-state={state}
+      style={imageStyle}
+      className={cn(
+        "relative inline-block h-(--tablecast-image-height) w-(--tablecast-image-width) max-w-full overflow-hidden align-middle aspect-(--tablecast-image-ratio)",
+        className,
+      )}
+      ref={frameRef}
     >
       <Image
         src={src}
@@ -86,20 +151,29 @@ export function ProductImage({
         layout="fixed"
         unstyled
         priority={priority}
-        onLoad={placeholder ? () => setSettledSrc(src) : undefined}
-        onError={() => {
-          if (placeholder) setSettledSrc(src);
-          onError?.();
-        }}
-        className={cn(
-          "object-contain aspect-(--tablecast-image-ratio) [background-image:var(--tablecast-image-placeholder)] bg-contain bg-center bg-no-repeat",
-          className,
-        )}
+        onLoad={(event) => void load(event.currentTarget)}
+        onError={fail}
+        className={cn("block size-full object-contain aspect-(--tablecast-image-ratio)", className)}
         transformer={(input: string | URL, options: { width?: number }) =>
           transformImage(input, { width: Math.min(options.width ?? 640, asset?.width ?? 1600) })
         }
         breakpoints={breakpoints}
       />
+      {hasPlaceholder && (
+        <span
+          aria-hidden="true"
+          data-ui="image-placeholder"
+          className={cn(
+            "pointer-events-none absolute inset-0 bg-contain bg-center bg-no-repeat blur-[4px] [background-image:var(--tablecast-image-placeholder)]",
+            state === "pending" ? "opacity-100" : "opacity-0",
+            state === "loaded" &&
+              "transition-opacity duration-(--motion-state) ease-(--motion-ease-out) motion-reduce:transition-none",
+          )}
+          onTransitionEnd={(event) => {
+            if (event.target === event.currentTarget && event.propertyName === "opacity") finish();
+          }}
+        />
+      )}
     </span>
   );
 }

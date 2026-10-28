@@ -1,7 +1,9 @@
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { beforeEach, expect, it } from "vitest";
-import { devices, mediaAssets, stores } from "../src/db/business-schema";
+import { demoSessions, devices, mediaAssets, stores } from "../src/db/business-schema";
+import { member } from "../src/db/identity-schema";
+import { createAuth } from "../src/modules/auth/service";
 import { getCatalog } from "../src/modules/catalog/queries";
 import { createDemo } from "../src/modules/demo/service";
 import { migrateImageAssets } from "../src/modules/media/migration";
@@ -60,6 +62,7 @@ it("認可後に幅別の304を返し、過大・不正な幅を拒否する", a
   await first.arrayBuffer();
   const etag = first.headers.get("ETag") ?? "";
   expect(etag).toContain("128-webp");
+  expect(etag).toContain("q85-v2");
   const response = await request(path(), fixture.cookie, etag);
   expect(response.status).toBe(304);
   expect(await response.text()).toBe("");
@@ -104,9 +107,30 @@ it("デモ画像はデモを所有するスタッフだけが取得できる", a
   await seed();
   const demo = await createDemo(createApiServices(env), fixture.staff);
   const url = `/api/admin/stores/tablecast-store/demo/${demo.id}/table/images/${key}`;
-  expect((await request(url)).status).toBe(200);
+  const response = await request(url);
+  expect(response.status).toBe(200);
+  await response.arrayBuffer();
+  const etag = response.headers.get("ETag") ?? "";
   expect((await request(url, "")).status).toBe(401);
   expect((await request(url.replace(demo.id, "tablecast-other-demo"))).status).toBe(404);
+  const identity = await createAuth(env).$context;
+  const other = await identity.internalAdapter.createUser(
+    { email: "tablecast-other-demo@example.test", name: "別の所有者", emailVerified: true },
+    { method: "admin" },
+  );
+  await fixtureDb
+    .update(demoSessions)
+    .set({ created_by: other.id })
+    .where(eq(demoSessions.session_id, demo.id));
+  for (const tag of [undefined, etag])
+    expect((await request(url, fixture.cookie, tag)).status).toBe(404);
+  await fixtureDb
+    .update(demoSessions)
+    .set({ created_by: fixture.staff.userId })
+    .where(eq(demoSessions.session_id, demo.id));
+  await fixtureDb.update(member).set({ role: "member" }).where(eq(member.id, "tablecast-member"));
+  for (const tag of [undefined, etag])
+    expect((await request(url, fixture.cookie, tag)).status).toBe(403);
 });
 
 it("変換結果を再利用し、幅・元画像の更新・削除を内部cacheから分離する", async () => {
@@ -150,11 +174,14 @@ it("既存画像の移行は寸法・BlurHashと店舗別索引だけを生成�
   await fixtureDb
     .insert(stores)
     .values({ ...original, id: "tablecast-other", organization_id: "tablecast-fixture-other-org" });
-  expect(await migrateImageAssets(env)).toEqual({ inserted: 2, missing: [] });
-  expect(await migrateImageAssets(env)).toEqual({ inserted: 0, missing: [] });
+  expect(await migrateImageAssets(env)).toEqual({ inserted: 2, updated: 0, missing: [] });
+  expect(await migrateImageAssets(env)).toEqual({ inserted: 0, updated: 0, missing: [] });
+  await fixtureDb.update(mediaAssets).set({ blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj" });
+  expect(await migrateImageAssets(env)).toEqual({ inserted: 0, updated: 2, missing: [] });
+  expect(await migrateImageAssets(env)).toEqual({ inserted: 0, updated: 0, missing: [] });
   const rows = await fixtureDb.select().from(mediaAssets);
   expect(rows).toHaveLength(2);
-  expect(rows[0]?.blurhash).toHaveLength(28);
+  expect(rows[0]?.blurhash).toHaveLength(52);
   expect(rows[0]).toMatchObject({
     width: 1,
     height: 1,

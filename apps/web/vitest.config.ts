@@ -107,6 +107,7 @@ const browser = (performance = false) =>
                   "src/features/kiosk/voice-service-ui.browser.test.tsx",
                   "src/features/kiosk/local-camera-reading.browser.test.tsx",
                   "src/components/motion-system.browser.test.tsx",
+                  "src/components/product-image.browser.test.tsx",
                   "src/components/route-motion.browser.test.tsx",
                 ],
               },

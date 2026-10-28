@@ -70,6 +70,7 @@ export type { GamePackage, GameState } from "./modules/games/model";
 export {
   imageAssetSchema,
   imageAssetsSchema,
+  imageDeliveryVersion,
   imageMetadataSchema,
   maxImageBytes,
   uploadedImageSchema,

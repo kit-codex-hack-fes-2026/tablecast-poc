@@ -113,7 +113,7 @@ it("MCPと管理APIの画像取り込みが同じキーと出所へ収束する"
     width: 1,
     height: 1,
   });
-  expect(indexed[0]?.blurhash).toHaveLength(28);
+  expect(indexed[0]?.blurhash).toHaveLength(52);
   const asset = await env.TABLECAST_MEDIA.get(first.imageKey);
   expect(asset?.httpMetadata?.contentType).toBe("image/webp");
   expect(asset?.customMetadata).toEqual({

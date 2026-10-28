@@ -19,6 +19,6 @@ export async function generateImageAsset(
   return {
     width: info.width,
     height: info.height,
-    blurhash: encode(Uint8ClampedArray.from(pixels.data), pixels.width, pixels.height, 4, 3),
+    blurhash: encode(Uint8ClampedArray.from(pixels.data), pixels.width, pixels.height, 6, 4),
   };
 }

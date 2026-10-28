@@ -42,8 +42,8 @@ export const ProductMenu = memo(function ProductMenu({
   catalog: Catalog;
   category?: string;
   compact?: boolean;
-  onCategoryChange?: (category: string) => void;
   imageSizes?: string;
+  onCategoryChange?: (category: string) => void;
   onChoose: (product: Product) => void;
   onSearch?: () => void;
   productIds?: string[];

@@ -7,7 +7,12 @@ import { test } from "./support/test";
 
 declare global {
   interface Window {
-    tablecastImageMetrics: { cls: null | number; lcp: null | number; resourceBufferFull: boolean };
+    tablecastImageMetrics: {
+      cls: null | number;
+      decoded: Record<string, number>;
+      lcp: null | number;
+      resourceBufferFull: boolean;
+    };
   }
 }
 
@@ -93,10 +98,28 @@ for (const count of [24, 120]) {
       });
       const supported = PerformanceObserver.supportedEntryTypes;
       window.tablecastImageMetrics = {
+        decoded: {},
         resourceBufferFull: false,
         lcp: supported.includes("largest-contentful-paint") ? 0 : null,
         cls: supported.includes("layout-shift") ? 0 : null,
       };
+      // 本画像のdecodeと次の描画frameを記録し、placeholderの表示時間と区別する。
+      document.addEventListener(
+        "load",
+        (event) => {
+          const image = event.target;
+          if (image instanceof HTMLImageElement && image.currentSrc.includes("/images/tablecast/"))
+            void image
+              .decode()
+              .then(() =>
+                requestAnimationFrame(() => {
+                  window.tablecastImageMetrics.decoded[image.currentSrc] = performance.now();
+                }),
+              )
+              .catch(() => undefined);
+        },
+        true,
+      );
       if (supported.includes("largest-contentful-paint")) {
         new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) window.tablecastImageMetrics.lcp = entry.startTime;
@@ -175,7 +198,7 @@ for (const count of [24, 120]) {
         navigation: performance.getEntriesByType("navigation").map((entry) => {
           if (!(entry instanceof PerformanceNavigationTiming)) return null;
           return {
-            ttfb: entry.responseStart - entry.requestStart,
+            ttfb: entry.responseStart > 0 ? entry.responseStart - entry.requestStart : null,
             duration: entry.duration,
             serverTiming: entry.serverTiming.map(({ name, duration }) => ({ name, duration })),
             encodedBytes: entry.encodedBodySize,
@@ -201,7 +224,11 @@ for (const count of [24, 120]) {
             transfer: entry.transferSize,
             body: entry.encodedBodySize,
             start: entry.startTime,
+            request: entry.requestStart,
+            response: entry.responseStart,
+            ttfb: entry.responseStart - entry.requestStart,
             end: entry.responseEnd,
+            serverTiming: entry.serverTiming.map(({ name, duration }) => ({ name, duration })),
           })),
         images: [...document.querySelectorAll("#tablecast-order img")]
           .filter((image): image is HTMLImageElement => image instanceof HTMLImageElement)

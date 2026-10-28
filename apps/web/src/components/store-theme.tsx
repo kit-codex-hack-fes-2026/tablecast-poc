@@ -1,6 +1,7 @@
 import {
   type Appearance,
   appearanceSchema,
+  imageDeliveryVersion,
   themeCssRules,
   themeFonts,
 } from "@tablecast/api/schema";
@@ -27,7 +28,7 @@ function themeStyles(value: Appearance, id: string, basePath: string) {
     `--tablecast-font-heading:${themeFonts[value.fonts?.heading ?? "sans"]};--tablecast-font-body:${themeFonts[value.fonts?.body ?? "sans"]}`,
     ...Object.entries(value.assets ?? {}).map(
       ([name, image]) =>
-        `--tablecast-image-${name}:url("${basePath}/images/${image.imageKey}?width=1600")`,
+        `--tablecast-image-${name}:url("${basePath}/images/${image.imageKey}?width=1600&v=${imageDeliveryVersion}")`,
     ),
   ].join(";");
   const parts = Object.entries(value.parts ?? {}).map(([part, style]) => {

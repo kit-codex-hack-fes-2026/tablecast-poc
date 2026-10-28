@@ -60,11 +60,17 @@ export async function migrateImageAssets(
   }
   for (const row of [...rules, ...coupons])
     add(row.storeId, couponRuleSchema.parse(JSON.parse(row.json)).imageKey);
-  const existing = new Set(indexed.map((row) => JSON.stringify([row.store_id, row.image_key])));
+  for (const row of indexed) add(row.store_id, row.image_key);
+  const existing = new Map(
+    indexed.map((row) => [JSON.stringify([row.store_id, row.image_key]), row]),
+  );
   const missing: string[] = [];
   let inserted = 0;
+  let updated = 0;
   for (const [key, referencedStores] of references) {
-    const owners = [...referencedStores].filter((id) => !existing.has(JSON.stringify([id, key])));
+    const owners = [...referencedStores].filter(
+      (id) => existing.get(JSON.stringify([id, key]))?.blurhash.length !== 52,
+    );
     if (!owners.length) continue;
     const object = await env.TABLECAST_MEDIA.get(key);
     if (!object) {
@@ -82,14 +88,25 @@ export async function migrateImageAssets(
       env.TABLECAST_IMAGES,
       await object.arrayBuffer(),
     );
-    for (let start = 0; start < owners.length; start += 20) {
+    // 1行5bindと更新用3bindをD1の100bind以内へ収める。
+    for (let start = 0; start < owners.length; start += 16) {
       const rows = owners
-        .slice(start, start + 20)
+        .slice(start, start + 16)
         .map((store_id) => ({ store_id, image_key: key, ...asset }));
-      await db.insert(mediaAssets).values(rows).onConflictDoNothing();
-      inserted += rows.length;
+      // 複数店舗で共有する画像も一度の生成結果を使い、旧4×3の索引だけを更新する。
+      await db
+        .insert(mediaAssets)
+        .values(rows)
+        .onConflictDoUpdate({
+          target: [mediaAssets.store_id, mediaAssets.image_key],
+          set: asset,
+        });
+      for (const row of rows) {
+        if (existing.has(JSON.stringify([row.store_id, key]))) updated++;
+        else inserted++;
+      }
     }
   }
-  console.info({ event: "tablecast.media_migration", inserted, missing });
-  return { inserted, missing };
+  console.info({ event: "tablecast.media_migration", inserted, updated, missing });
+  return { inserted, updated, missing };
 }

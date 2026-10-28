@@ -1,10 +1,11 @@
 import { z } from "zod";
 
 export const maxImageBytes = 5 * 1024 * 1024;
+export const imageDeliveryVersion = 2;
 export const imageAssetSchema = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
-  blurhash: z.string().length(28),
+  blurhash: z.string().length(52),
 });
 export const imageAssetsSchema = z.record(z.string(), imageAssetSchema);
 export type ImageAsset = z.infer<typeof imageAssetSchema>;

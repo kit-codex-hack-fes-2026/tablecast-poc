@@ -5,16 +5,14 @@ import type { ImageAssets } from "./model";
 import { mediaAssets } from "../../db/media-schema";
 import { ensure } from "../../platform/errors";
 
-export async function getStoredImage(services: ApiServices, storeId: string, imageKey: string) {
+export async function getImageMetadata(services: ApiServices, storeId: string, imageKey: string) {
   const metadata = await services.db
     .select()
     .from(mediaAssets)
     .where(and(eq(mediaAssets.store_id, storeId), eq(mediaAssets.image_key, imageKey)))
     .get();
   ensure(metadata, "MEDIA_NOT_FOUND", 404);
-  const object = await services.env.TABLECAST_MEDIA.head(imageKey);
-  ensure(object, "MEDIA_NOT_FOUND", 404);
-  return { metadata, object };
+  return metadata;
 }
 
 export function configurationImageKeys(configuration: Configuration): string[] {
