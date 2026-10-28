@@ -1,7 +1,7 @@
-import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { applyD1Migrations, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
-import { expect, it } from "vitest";
+import { eq, sql } from "drizzle-orm";
+import { expect, inject, it } from "vitest";
 import { z } from "zod";
 import app from "../src/app";
 import * as business from "../src/db/business-schema";
@@ -10,7 +10,14 @@ import { setUiSection } from "../src/modules/tables/use-cases/presentation";
 import { invokeVoiceTool } from "../src/modules/voice/realtime";
 import { createApiServices } from "../src/platform/context";
 import { coreStateSchema } from "../src/schema";
-import { configuration, device, deviceToken, setupVoiceFixture, text } from "./fixture";
+import {
+  configuration,
+  device,
+  deviceToken,
+  resetFixtureStorage,
+  setupVoiceFixture,
+  text,
+} from "./fixture";
 import { measuredDatabase } from "./measured-database";
 
 const services = () => createApiServices(env);
@@ -199,4 +206,48 @@ it("検索条件を別店舗・閉卓・停止済みturnから更新できず、
   await expect(
     setUiSection(services(), device, { section: "menu", search: { query: "" } }, "core"),
   ).rejects.toThrow("SESSION_CLOSED");
+});
+
+it("検索列を追加しても既存セッションのカートと状態を変えず、検索条件をNULLで開始する", async () => {
+  await resetFixtureStorage();
+  const migrations = inject("tablecastMigrations");
+  const index = migrations.findIndex((migration) =>
+    migration.name.includes("0031_tablecast_menu_search"),
+  );
+  if (index < 1) throw new Error("検索条件のmigrationが必要です");
+  await applyD1Migrations(env.TABLECAST_DB, migrations.slice(0, index));
+  // 移行前には新列がないため、旧列だけを明示してfixtureを保存する。
+  await services().db.run(
+    sql`INSERT INTO organization(id,name,slug,created_at) VALUES ('tablecast-search-migration-org','検索移行','tablecast-search-migration',1)`,
+  );
+  await services()
+    .db.insert(business.stores)
+    .values({
+      id: "tablecast-search-migration-store",
+      organization_id: "tablecast-search-migration-org",
+      name: "検索移行",
+      config_json: JSON.stringify(configuration),
+      updated_at: 1,
+    });
+  await services().db.insert(business.restaurantTables).values({
+    id: "tablecast-search-migration-table",
+    store_id: "tablecast-search-migration-store",
+    name: "01",
+  });
+  await services().db.run(
+    sql`INSERT INTO table_sessions(id,store_id,table_id,locale,guest_count,opened_at,cart_json) VALUES ('tablecast-search-migration-session','tablecast-search-migration-store','tablecast-search-migration-table','ja',2,123,'[]')`,
+  );
+  await applyD1Migrations(env.TABLECAST_DB, migrations.slice(index));
+  const row = await services()
+    .db.select()
+    .from(business.tableSessions)
+    .where(eq(business.tableSessions.id, "tablecast-search-migration-session"))
+    .get();
+  expect(row).toMatchObject({
+    cart_json: "[]",
+    status: "open",
+    locale: "ja",
+    opened_at: 123,
+    menu_search_json: null,
+  });
 });

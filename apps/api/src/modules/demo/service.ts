@@ -138,6 +138,7 @@ export async function resetDemo(services: ApiServices, actor: Actor, expectedVer
         staff_called: 0,
         ui_section: "menu",
         selected_product_id: null,
+        menu_search_json: null,
         opened_at: Date.now(),
         mutation_id: mutation,
         plan_json: plan ? JSON.stringify({ ...plan, startedAt: Date.now() }) : null,

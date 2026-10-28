@@ -39,6 +39,12 @@ it.for([false, true])(
       billingCompatibility,
       passwordlessCompatibility,
     ]);
+    // 履歴の移行対象と独立したnullable表示列だけを現行fixtureへ揃える。
+    const menuSearchCompatibility = migrations.find((migration) =>
+      migration.name.includes("0031_tablecast_menu_search"),
+    );
+    if (!menuSearchCompatibility) throw new Error("検索条件のmigrationが必要です");
+    await applyD1Migrations(env.TABLECAST_DB, [menuSearchCompatibility]);
     const { staff } = await setupFixture();
     const day = 86_400_000;
     const start = Date.parse("2026-09-01T00:00:00+09:00");

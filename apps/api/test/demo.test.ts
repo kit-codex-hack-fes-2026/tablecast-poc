@@ -12,7 +12,7 @@ import { updateCart } from "../src/modules/orders/use-cases/cart";
 import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
 import { getAdminState, getEvents } from "../src/modules/stores/queries";
 import { getTableState } from "../src/modules/tables/queries";
-import { callStaff, requestBill } from "../src/modules/tables/use-cases/presentation";
+import { callStaff, requestBill, setUiSection } from "../src/modules/tables/use-cases/presentation";
 import { createCastTools } from "../src/modules/voice/agent";
 import { voiceContext } from "../src/modules/voice/queries";
 import { setVoiceSession } from "../src/modules/voice/service";
@@ -423,6 +423,7 @@ describe("卓を使わない会話注文デモ", () => {
       approved: true,
     });
     await requestBill(services(), actor);
+    await setUiSection(services(), actor, { section: "menu", search: { query: "tea" } }, "core");
     await resetDemo(services(), actor, 2);
     const state = await getTableState(services(), actor);
     expect(state.orders).toEqual([]);
@@ -430,6 +431,7 @@ describe("卓を使わない会話注文デモ", () => {
     expect(state.staffCalled).toBe(false);
     expect(state.billRequested).toBe(false);
     expect(state.events.map((event) => event.kind)).toEqual(["demo.reset"]);
+    expect(state.menuSearch).toBeNull();
     expect(state.guestCount).toBe(4);
     expect((await getDemo(services(), actor)).configuration.cast.proactive).toBe(true);
     expect(

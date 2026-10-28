@@ -147,7 +147,8 @@ export function useTableResources(data: CoreState, endpoint: TableEndpoint, refr
   const events = eventQuery.data?.events ?? [];
   useRealtime(
     eventQuery.data ? "table" : undefined,
-    eventQuery.data?.cursor ?? 0,
+    // 初回の履歴取得が卓snapshotより新しくても、その間の状態変更を取りこぼさない。
+    data.cursor,
     (update) => {
       if (!update) {
         refresh();

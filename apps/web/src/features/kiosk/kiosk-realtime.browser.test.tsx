@@ -360,3 +360,38 @@ it("古い検索応答が音声で表示した新しい検索語と結果を巻�
     release.resolve();
   }
 });
+
+it("卓snapshotと通知接続の間に検索が変わっても、初回同期で結果を回復する", async () => {
+  fixture.current.uiSection = "menu";
+  let changed = false;
+  fixture.beforeRequest = async (request) => {
+    const url = new URL(request.url);
+    if (changed || url.pathname !== "/api/table/events" || !url.searchParams.has("tail")) return;
+    changed = true;
+    fixture.current.menuSearch = {
+      query: "接続前の検索",
+      offset: 0,
+      total: 1,
+      more: false,
+      productIds: [product.id],
+    };
+    fixture.current.cursor += 1;
+    fixture.current.events.push({
+      cursor: fixture.current.cursor,
+      storeId: fixture.current.storeId,
+      tableSessionId: fixture.current.id,
+      kind: "table.ui",
+      data: {},
+      createdAt: Date.now(),
+    });
+  };
+  await mountKiosk();
+  await expect.poll(() => TablecastSocket.instances.length).toBeGreaterThan(0);
+  TablecastSocket.instances.at(-1)?.dispatchEvent(new Event("open"));
+  await expect
+    .element(page.getByRole("searchbox", { name: ja.kiosk_menu_search_label }))
+    .toHaveValue("接続前の検索");
+  await expect
+    .element(page.getByRole("button", { name: new RegExp(product.text.ja.displayName) }))
+    .toBeVisible();
+});
