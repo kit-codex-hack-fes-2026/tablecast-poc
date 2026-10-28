@@ -4,6 +4,7 @@ import { page, userEvent } from "vitest/browser";
 import ja from "../../../messages/ja.json";
 import { catalog } from "../../test-support/tablecast-fixtures";
 import { fixture, mountKiosk, notify, requests } from "./test-support/kiosk-fixture";
+import { VoiceConnection } from "./voice-connection";
 
 beforeEach(() => {
   vi.spyOn(navigator.mediaDevices, "getUserMedia").mockRejectedValue(
@@ -11,6 +12,8 @@ beforeEach(() => {
   );
 });
 const popup = () => page.getByRole("dialog", { name: ja.assistance_title });
+const eventReads = () =>
+  requests.filter((request) => new URL(request.url).pathname === "/api/table/events").length;
 const open = async () => {
   await page.getByRole("button", { name: ja.kiosk_call_staff, exact: true }).click();
   await expect.element(popup()).toBeVisible();
@@ -28,6 +31,70 @@ const savedCall: StaffCall = {
     unresolved: "お冷2つの提供",
   },
 };
+
+it.each([
+  { ordering: false, expected: "停止する" },
+  { ordering: true, expected: "継続する" },
+])(
+  "注文への移行が$orderingのとき、相談で開始した音声を閉じる操作で$expected",
+  async ({ ordering }) => {
+    const start = vi.spyOn(VoiceConnection.prototype, "start").mockResolvedValue(undefined);
+    const stop = vi.spyOn(VoiceConnection.prototype, "stop").mockResolvedValue(undefined);
+    await mountKiosk();
+    await open();
+    expect(start).toHaveBeenCalledWith("ja", fixture.current.speechSpeed, "assistance");
+    const before = eventReads();
+    if (ordering) notify("cart.updated");
+    await expect.poll(eventReads).toBeGreaterThanOrEqual(before + Number(ordering));
+    await popup().getByRole("button", { name: ja.common_close, exact: true }).click();
+    await expect.element(popup()).not.toBeInTheDocument();
+    expect(stop).toHaveBeenCalledTimes(ordering ? 0 : 1);
+  },
+);
+
+it("案内の読込失敗から再試行でき、呼び出しを送信しない", async () => {
+  fixture.guidanceResponse = Response.json({ code: "UNAVAILABLE" }, { status: 503 });
+  await mountKiosk();
+  await open();
+  await expect.element(popup().getByRole("alert")).toBeVisible();
+  fixture.guidanceResponse = Response.json({
+    configVersion: fixture.current.configVersion,
+    guides: [],
+    products: [],
+    nextOffset: null,
+  });
+  await popup().getByRole("button", { name: ja.common_retry, exact: true }).click();
+  await expect.element(popup().getByRole("alert")).not.toBeInTheDocument();
+  await expect.element(popup().getByText(ja.assistance_no_answer, { exact: true })).toBeVisible();
+  expect(
+    requests.filter((request) => new URL(request.url).pathname === "/api/table/call"),
+  ).toHaveLength(0);
+});
+
+it("長い履歴は吹き出し内でスクロールでき、音声を開始せず直接呼び出しボタンを残す", async () => {
+  const start = vi.spyOn(VoiceConnection.prototype, "start").mockResolvedValue(undefined);
+  fixture.current.staffCall = structuredClone(savedCall);
+  fixture.current.staffCalled = true;
+  fixture.staffCalls = Array.from({ length: 20 }, (_, index) => ({
+    ...savedCall,
+    id: `tablecast-history-${index}`,
+  }));
+  await page.viewport(1024, 768);
+  await mountKiosk();
+  await page.getByRole("button", { name: ja.assistance_pending, exact: true }).click();
+  await expect.element(popup().getByRole("article").nth(0)).toBeVisible();
+  const content = popup()
+    .getByRole("region", { name: ja.assistance_history, exact: true })
+    .element();
+  expect(content.scrollHeight).toBeGreaterThan(content.clientHeight);
+  content.scrollTo({ top: content.scrollHeight });
+  await expect.poll(() => content.scrollTop).toBeGreaterThan(0);
+  const direct = popup().getByRole("button", { name: ja.assistance_pending, exact: true });
+  await expect.element(direct).toBeVisible();
+  expect(direct.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(768);
+  await popup().getByRole("button", { name: ja.common_close, exact: true }).click();
+  expect(start).not.toHaveBeenCalled();
+});
 
 it("吹き出しを開いたまま背景を操作でき、Escapeで閉じて呼び出しボタンへ戻る", async () => {
   await page.viewport(1024, 768);

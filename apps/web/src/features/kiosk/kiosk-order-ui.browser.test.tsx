@@ -205,9 +205,11 @@ it.each(["ja", "en"] as const)(
       getComputedStyle(pane.querySelector('[data-ui="line-actions"]') ?? card).justifyContent,
     ).toBe("flex-end");
     await page.getByRole("button", { name: labels.kiosk_call_staff, exact: true }).click();
+    const assistance = page.getByRole("dialog", { name: labels.assistance_title, exact: true });
+    await assistance.getByRole("button", { name: labels.assistance_direct, exact: true }).click();
     await expect
-      .element(page.getByRole("dialog", { name: labels.kiosk_called_staff, exact: true }))
-      .toBeVisible();
+      .element(assistance.getByRole("button", { name: labels.assistance_pending, exact: true }))
+      .toBeDisabled();
   },
 );
 

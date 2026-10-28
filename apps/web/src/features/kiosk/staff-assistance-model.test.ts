@@ -1,9 +1,32 @@
+import type { TableEvent } from "@tablecast/api/schema";
 import { expect, it } from "vitest";
 import {
   assistanceHandoff,
   assistanceNotification,
+  assistanceOrderStarted,
   type AssistanceState,
 } from "./staff-assistance-model";
+
+const tableEvent = (kind: string, cursor: number, data: TableEvent["data"] = {}): TableEvent => ({
+  cursor,
+  kind,
+  data,
+  storeId: "tablecast-store",
+  tableSessionId: "tablecast-visit",
+  createdAt: cursor,
+});
+
+it("案内候補や過去の注文では音声を引き継がず、今回の商品選択とカート更新で継続する", () => {
+  expect(assistanceOrderStarted([tableEvent("cart.updated", 1)], 1)).toBe(false);
+  expect(
+    assistanceOrderStarted([tableEvent("voice.products", 2, { productIds: ["water"] })], 1),
+  ).toBe(false);
+  expect(assistanceOrderStarted([tableEvent("table.ui", 2, { section: "menu" })], 1)).toBe(false);
+  expect(
+    assistanceOrderStarted([tableEvent("table.ui", 2, { section: "menu", productId: "water" })], 1),
+  ).toBe(true);
+  expect(assistanceOrderStarted([tableEvent("cart.updated", 2)], 1)).toBe(true);
+});
 
 it("英語の用件ボタンから日本語の要約と原文を作る", () => {
   expect(

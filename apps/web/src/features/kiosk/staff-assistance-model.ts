@@ -38,6 +38,18 @@ export type AssistanceState = {
   voiceProductIds: string[];
 };
 
+export function assistanceOrderStarted(events: TableEvent[], afterCursor: number) {
+  return events.some(
+    (event) =>
+      event.cursor > afterCursor &&
+      (event.kind === "cart.updated" ||
+        event.kind === "confirmation.prepared" ||
+        event.kind === "order.submitted" ||
+        (event.kind === "table.ui" &&
+          (typeof event.data.productId === "string" || event.data.section === "cart"))),
+  );
+}
+
 export function assistanceNotification(
   state: AssistanceState,
   events: TableEvent[],

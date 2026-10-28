@@ -294,7 +294,11 @@ it("店舗テーマでもヘッダーと音声・カート操作を縦横で維�
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
   }
   await page.getByRole("button", { name: ja.kiosk_call_staff }).click();
-  await expect.element(page.getByRole("button", { name: ja.kiosk_called_staff })).toBeDisabled();
+  const assistance = page.getByRole("dialog", { name: ja.assistance_title });
+  await assistance.getByRole("button", { name: ja.assistance_direct, exact: true }).click();
+  await expect
+    .element(assistance.getByRole("button", { name: ja.assistance_pending, exact: true }))
+    .toBeDisabled();
 });
 
 it.each(["ja", "en"] as const)(

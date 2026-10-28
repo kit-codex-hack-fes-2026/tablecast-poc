@@ -14,6 +14,7 @@ import { guidanceOptions, staffCallsKey, staffCallsOptions } from "./assistance-
 import {
   assistanceHandoff,
   assistanceNotification,
+  assistanceOrderStarted,
   type AssistanceState,
 } from "./staff-assistance-model";
 import { latestTable } from "./table-cache";
@@ -49,7 +50,7 @@ export function useStaffAssistance({
     dismissedAt: 0,
     shownCursor: 0,
   }));
-  const ownedVoice = useRef(false);
+  const ownedVoice = useRef<null | number>(null);
   const requestKey = useRef("");
   const guidance = useInfiniteQuery({
     ...guidanceOptions(endpoint, data, state.selection),
@@ -99,10 +100,14 @@ export function useStaffAssistance({
   });
   useEffect(
     () => () => {
-      if (ownedVoice.current) void voice.stop();
+      if (ownedVoice.current !== null) void voice.stop();
     },
     [voice],
   );
+  useEffect(() => {
+    if (ownedVoice.current !== null && assistanceOrderStarted(events, ownedVoice.current))
+      ownedVoice.current = null;
+  }, [events]);
   const notification = assistanceNotification(
     state,
     events,
@@ -121,15 +126,15 @@ export function useStaffAssistance({
     }));
     requestKey.current = crypto.randomUUID();
     if (["idle", "paused", "error"].includes(view.status)) {
-      ownedVoice.current = true;
+      ownedVoice.current = data.cursor;
       void voice.start(locale, data.speechSpeed, "assistance");
     } else voice.requestAssistance();
   }
   function close() {
     setState((current) => ({ ...current, open: false, dismissedAt: Date.now() }));
-    if (ownedVoice.current) {
-      ownedVoice.current = false;
-      void voice.stop();
+    if (ownedVoice.current !== null) {
+      if (!assistanceOrderStarted(events, ownedVoice.current)) void voice.stop();
+      ownedVoice.current = null;
     }
   }
   function open() {
@@ -151,7 +156,7 @@ export function useStaffAssistance({
   function choose(productId: string) {
     const product = catalog?.configuration.products.find((item) => item.id === productId);
     if (!product) return;
-    ownedVoice.current = false;
+    ownedVoice.current = null;
     setState((current) => ({ ...current, open: false, dismissedAt: Date.now() }));
     onChoose(product);
   }
