@@ -9,7 +9,6 @@ import { byteStream } from "../../platform/streams";
 import { requireManager } from "../auth/policy";
 import { imageMetadataSchema, maxImageBytes, uploadImageSchema } from "./model";
 import { generateImageAsset } from "./placeholder";
-import { findImageAsset } from "./queries";
 
 export async function uploadImage(
   services: ApiServices,
@@ -188,14 +187,6 @@ export async function saveMenuImage(
     ...metadata,
     url: `${services.env.TABLECAST_PUBLIC_ORIGIN}/api/admin/stores/${encodeURIComponent(actor.storeId)}/images/${imageKey}`,
   };
-}
-
-export async function getStoredImage(services: ApiServices, storeId: string, key: string) {
-  const metadata = await findImageAsset(services, storeId, key);
-  ensure(metadata, "MEDIA_NOT_FOUND", 404);
-  const object = await services.env.TABLECAST_MEDIA.head(key);
-  ensure(object, "MEDIA_NOT_FOUND", 404);
-  return { metadata, object };
 }
 
 export async function requireConfigurationImages(

@@ -4,7 +4,7 @@ import type { ApiEnv } from "../../platform/context";
 import { ensure } from "../../platform/errors";
 import { apiFactory } from "../../platform/http";
 import { byteStream } from "../../platform/streams";
-import { getStoredImage } from "./service";
+import { getStoredImage } from "./queries";
 
 // avatarは既存の公開プロフィール契約を維持する。商品画像の公開経路は設けない。
 export const mediaRoutes = apiFactory.createApp().get("/api/avatars/:key", async (c) => {
