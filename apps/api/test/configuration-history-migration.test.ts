@@ -22,7 +22,7 @@ it("履歴の由来を記録する列を追加しても旧snapshotを変えず�
   await applyD1Migrations(env.TABLECAST_DB, [authCompatibility]);
   // 現行の来店fixtureに必要な呼出し列だけ先行し、検証対象の履歴・索引schemaは旧状態を保つ。
   const callCompatibility = migrations.find((migration) =>
-    migration.name.includes("0030_tablecast_staff_calls"),
+    migration.name.includes("0032_tablecast_staff_calls"),
   );
   if (!callCompatibility) throw new Error("呼び出しのmigrationが必要です");
   await applyD1Migrations(env.TABLECAST_DB, [callCompatibility]);
