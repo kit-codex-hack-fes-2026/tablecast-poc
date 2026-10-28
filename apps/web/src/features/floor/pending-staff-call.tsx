@@ -42,9 +42,9 @@ export function PendingStaffCall({
   return (
     <article
       aria-label={`${table.tableName} · ${t("assistance_pending")}`}
-      className="overflow-hidden rounded-xl border border-border bg-card text-foreground"
+      className="overflow-hidden rounded-xl border border-border bg-background text-foreground"
     >
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-accent-soft px-5 py-4">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-surface-subtle px-5 py-4">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning-soft text-warning">
             <BellRing className="size-5" aria-hidden />

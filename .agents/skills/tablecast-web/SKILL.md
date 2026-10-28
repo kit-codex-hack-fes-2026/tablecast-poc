@@ -23,6 +23,8 @@ description: TableCastのWeb画面・SSR・データ取得・フォーム・日�
 
 ## 部品と操作
 
+- 背景と操作部品の色を混同しない。[配色規約](../../../docs/ui.md#配色)の用途区分を確認し、画面・カード・見出しの背景はRadix ColorsのStep 1・2を使う。
+
 - フォームは既存`components/form`のTanStack Form連携を使い、項目エラー、入力保持、非同期submit、mutationの失敗表示を揃える。
 - 標準Tailwind utilityを優先し、同じ意味の見た目は既存Tailwind Variantsの`tv`・`VariantProps`へまとめる。業務状態を持つ部品をUIプリミティブへ移さず、未使用のvariantや独自フォーム・query wrapperを増やさない。
 - Motionは既存`MotionProvider`、共通の操作結果は`ActionFeedback`を使う。日英の支援技術向け表示、画像の寸法予約、reduced motionを確認する。
