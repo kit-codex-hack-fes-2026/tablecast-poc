@@ -74,7 +74,7 @@ export async function cleanupCatalogs(pr: string) {
   }
 }
 
-export async function inspectCatalog(origin: string, pr: string, kind: CatalogKind) {
+async function inspectCatalog(origin: string, pr: string, kind: CatalogKind) {
   const headers = {
     "CF-Access-Client-Id": z.string().min(1).parse(process.env.CF_ACCESS_CLIENT_ID),
     "CF-Access-Client-Secret": z.string().min(1).parse(process.env.CF_ACCESS_CLIENT_SECRET),

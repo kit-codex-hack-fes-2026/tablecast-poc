@@ -156,11 +156,7 @@ export async function bootstrapDatabase(
 
 export { isHostedEmulator } from "./modules/auth/preview";
 // 初期化・seed・reset用のCLI契約。HTTPの業務入口には公開しない。
-export {
-  createAuth,
-  tablecastCredentialIssuer,
-  tablecastGoogleMockIssuer,
-} from "./modules/auth/service";
+export { createAuth, tablecastGoogleMockIssuer } from "./modules/auth/service";
 export {
   configurationErrors,
   confirmationText,

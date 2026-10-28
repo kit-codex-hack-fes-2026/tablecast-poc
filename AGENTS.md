@@ -16,7 +16,7 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 | Issue・PRの作成・更新                    | [github-issue-pr-ops](.agents/skills/github-issue-pr-ops/SKILL.md)。PR本文の正本は[PRテンプレート](.github/pull_request_template.md)                                                 |
 | Projectsの登録・更新                     | [github-project-ops](.agents/skills/github-project-ops/SKILL.md)                                                                                                                     |
 | 環境構築・agent plugins・MCP接続         | [セットアップ](docs/setup.md)。worktree・起動は[開発環境](docs/development.md)、コンテナは[Dev Container](docs/devcontainer.md)、製品pluginは[codex-plugin.md](docs/codex-plugin.md) |
-| 音声接続・Responses delegation・演技     | [接続](docs/voice/integration.md)と[発話仕様](docs/voice/speech.md)。上流変更は[パッチ方針](docs/voice/upstream-patch.md)                                                            |
+| 音声接続・Responses delegation・演技     | [接続](docs/voice/integration.md)と[発話仕様](docs/voice/speech.md)                                                                                                                  |
 | 性能診断・公開配備                       | [観測手順](docs/observability.md)、配備時は[deployment.md](docs/deployment.md)                                                                                                       |
 | 計画・完了判定                           | [着手順](docs/implementation.md)、[進捗](docs/progress.md)、[受入条件](docs/acceptance.md)。他の仕様は[索引](docs/README.md)から探す                                                 |
 

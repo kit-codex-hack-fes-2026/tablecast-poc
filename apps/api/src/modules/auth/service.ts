@@ -18,8 +18,6 @@ import { isHostedEmulator, previewGoogleToken, previewOAuthFetch } from "./previ
 
 export const tablecastGoogleMockIssuer = "https://tablecast-google.localhost";
 
-export const tablecastCredentialIssuer = "local:credential";
-
 export function createAuth(
   env: AuthEnv,
   logger?: BetterAuthOptions["logger"],

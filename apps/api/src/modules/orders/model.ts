@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { id, localeSchema } from "../../platform/model";
 
-export const conditionIssueSchema = z
+const conditionIssueSchema = z
   .object({
     optionId: id,
     relation: z.enum(["requires", "excludes"]),
@@ -54,7 +54,7 @@ export const submitSchema = z
   .object({ snapshotId: id, idempotencyKey: z.string().min(8).max(100), approved: z.literal(true) })
   .strict();
 
-export const pricedLineSchema = cartLineSchema.extend({
+const pricedLineSchema = cartLineSchema.extend({
   name: z.object({ ja: z.string(), en: z.string() }),
   speechName: z.object({ ja: z.string(), en: z.string() }),
   options: z.array(
