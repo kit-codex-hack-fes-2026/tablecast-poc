@@ -2,6 +2,27 @@
 
 [UI仕様](ui.md) / [Issue #166](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/166)
 
+## 2026-10-29の認可・BlurHashへの移行
+
+Issue #411では、設定JSONへBlurHashを埋め込む案を再検討し、R2を本体、D1の`media_assets`を所有店舗・実寸・BlurHashの正本にした。画面用HTTPの`imageAssets`だけへ一括付与し、注文計算・MCPの共有カタログには取得を加えない。既存Images bindingで長辺32px以内のPNGへ縮小し、`@unpic/pixels`と`blurhash.encode(..., 4, 3)`で生成する。`@unpic/placeholder`でSSRのdata URLへ復元し、読込成功・失敗で背景を消す。旧`blurDataURL` propは廃止した。
+
+商品・選択肢・バナー・店舗ロゴ・テーマ画像の取得には既存の店舗認可を要求し、公開`/media/*`を閉じる。認可は内部cacheと304より先に行う。取得済みURLはブラウザーとService Workerで通信なしに再利用し、権限失効後も保存済み画像を即時消去しない。詳細は[構成仕様](architecture.md)と[画像の移行](deployment.md#画像の表示情報の移行)を参照する。
+
+比較した基準は`f9ffc3c46c294ac76520b68a9f5102866620350d`、実装は`9f779a61f4bb07e7dbc519c33f70818cdd59affc`。後続のstaging再統合と既存試験URL・文書修正はこの測定に含めない。Node 24.22.0 / Bun 1.4.3 / Playwright 1.64.1、macOSの隔離Workers/D1/R2/Images、Chromium、1024×768 CSS px、DPR 2、workers 1で、既存24/120商品試験を再利用した。基準には同じ計測コードとServer-Timingだけを加えた。cookieの準備後、最初のdocumentから測り、通信のabortは使わない。cold 1回とwarm 2回であり、独立したcold 3標本ではない。
+
+| 商品数 | カタログJSON bytes: 基準→実装 | SSR HTML bytes: 基準→実装 | SSR経路 ms: cold / warm / warm | LCP ms: cold / warm / warm |
+| ------ | ----------------------------- | ------------------------- | ------------------------------ | -------------------------- |
+| 24     | 38,896→43,071                 | 242,695→259,953           | 155/21/16→120/23/19            | 792/60/52→428/68/60        |
+| 120    | 167,489→177,104               | 820,999→892,018           | 113/26/25→121/55/49            | 228/72/68→452/108/96       |
+
+HTMLはnavigationのencodedBodySize、JSはResource Timingの全JS encodedBodySizeである。JSは両件数とも2,881,270→2,886,249 bytes（+4,979）。SSR経路にはWorkerの起動・module読込を含み、SSR描画だけのCPU時間ではない。本番圧縮率や公開環境の速度比較ではない。追加DB読取と背景のHTML容量増があり、LCP・SSRの高速化とは断定しない。
+
+両実装・両件数のcold画像転送は267,048 bytes、取得済みURLのwarm転送0、CLS 0。実装の一覧枠は206×206 CSS pxで、DPR 2に対して416px候補を選ぶ。可変ペインの確定で候補集合を変えず、再取得を避ける。原寸と1600px上限を守る。中断した通信を取得済みURLとして数えない。全リストをスクロールした後の総転送とは区別する。
+
+Chromium/WebKitの既存画像性能・PWA試験8件は成功した。WebKitはbyte数・CLSを提供しないためnullとして残し、0の成功にしない。認可・生成・保存・再送・索引移行・cache/304の拒否は実API統合へ、SSR/hydrationと表示の失敗分岐は既存Browserへ置いた。新規E2Eは追加していない。実Cloudflareの遠隔移行・課金、iPad実機、帯域制限下での複数cold標本は未実施である。
+
+以下は2026-09-14時点の実装と測定の記録で、placeholder・公開経路・店舗ロゴの説明は上記の現行契約へ置き換わっている。
+
 ## 条件と対象
 
 2026-09-14、基準は`0150bf6bd396c3b4774d48823d9da68e2117ead7`。同じ専用worktreeで変更後と基準の画像実装をそれぞれbuildした。変更後は本PRの実装差分、測定時は未コミット。実行環境のrelease識別子は既存E2Eの`tablecast-e2e`であり、公開配備SHAではない。

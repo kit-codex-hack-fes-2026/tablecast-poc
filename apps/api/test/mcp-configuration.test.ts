@@ -342,7 +342,9 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
   );
   expect(current.version).toBe(published.version + 1);
   expect(current.configuration).toEqual(configuration);
-  const image = await exports.default.fetch(new Request(uploaded.url));
+  const image = await exports.default.fetch(
+    new Request(uploaded.url, { headers: { Cookie: cookie } }),
+  );
   expect(image.status).toBe(200);
   expect(image.headers.get("Content-Type")).toBe("image/webp");
   expect((await image.arrayBuffer()).byteLength).toBeGreaterThan(0);

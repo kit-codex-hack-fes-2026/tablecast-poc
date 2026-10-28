@@ -105,11 +105,15 @@ it("MCPと管理APIの画像取り込みが同じキーと出所へ収束する"
   const { staff, cookie } = await setupFixture();
   const services = createApiServices(env);
   const first = await uploadImage(services, staff, input);
-  expect(first.asset).toMatchObject({ width: 1, height: 1 });
-  expect(first.asset.blurhash).toHaveLength(28);
-  expect(await services.db.select().from(mediaAssets)).toEqual([
-    { store_id: staff.storeId, image_key: first.imageKey, ...first.asset },
-  ]);
+  const indexed = await services.db.select().from(mediaAssets);
+  expect(indexed).toHaveLength(1);
+  expect(indexed[0]).toMatchObject({
+    store_id: staff.storeId,
+    image_key: first.imageKey,
+    width: 1,
+    height: 1,
+  });
+  expect(indexed[0]?.blurhash).toHaveLength(28);
   const asset = await env.TABLECAST_MEDIA.get(first.imageKey);
   expect(asset?.httpMetadata?.contentType).toBe("image/webp");
   expect(asset?.customMetadata).toEqual({

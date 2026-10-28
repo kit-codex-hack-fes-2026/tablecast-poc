@@ -186,7 +186,6 @@ export async function saveMenuImage(
   return {
     imageKey,
     ...metadata,
-    asset,
     url: `${services.env.TABLECAST_PUBLIC_ORIGIN}/api/admin/stores/${encodeURIComponent(actor.storeId)}/images/${imageKey}`,
   };
 }

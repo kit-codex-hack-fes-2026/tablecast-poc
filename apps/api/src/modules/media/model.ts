@@ -44,6 +44,5 @@ export const uploadedImageSchema = imageMetadataSchema
   .extend({
     imageKey: z.string(),
     url: z.string(),
-    asset: imageAssetSchema,
   })
   .strict();
