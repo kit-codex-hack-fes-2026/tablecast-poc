@@ -2,10 +2,10 @@ import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 import type { VoicePanelProps } from "./voice-panel";
-import { catalog } from "../../../.storybook/tablecast-fixtures";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { CurrencyContext } from "../../i18n/currency-context";
+import { catalog } from "../../test-support/tablecast-fixtures";
 import { event, startedAt, Surface } from "./test-support/voice-panel-fixture";
 import { VoicePanel } from "./voice-panel";
 

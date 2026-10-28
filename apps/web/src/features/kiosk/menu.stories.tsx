@@ -1,9 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { type CartLine, type Product, productSchema } from "@tablecast/api/schema";
 import { expect, fn, userEvent, within } from "storybook/test";
-import { catalog, product, table } from "../../../.storybook/tablecast-fixtures";
+import {
+  catalog as seedCatalog,
+  product as seedProduct,
+  table as seedTable,
+} from "../../../.storybook/tablecast-fixtures";
 import { CartLines } from "../../components/cart-lines";
 import { ProductMenu } from "../../components/product-menu";
+import { catalog, product, table } from "../../test-support/tablecast-fixtures";
 import { ProductPage } from "./product-dialog";
 
 const meta = {
@@ -16,11 +21,23 @@ const meta = {
       </div>
     ),
   ],
-  args: { catalog, onChoose: fn() },
+  args: { catalog: seedCatalog, onChoose: fn() },
 } satisfies Meta<typeof ProductMenu>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+export const SeedMenu: Story = { name: "seedの店舗設定と商品画像", args: { catalog: seedCatalog } };
+export const SeedMenuEnglish: Story = {
+  ...SeedMenu,
+  name: "seedの店舗設定と商品画像・英語",
+  globals: { locale: "en" },
+};
+export const SeedProductDetails: Story = {
+  name: "seedの日本酒と温度・容量・選択肢画像",
+  render: () => <ProductPage product={seedProduct} busy={false} onClose={fn()} onSave={fn()} />,
+};
+
 export const Products: Story = {
+  args: { catalog },
   name: "画像なしと売切",
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -31,6 +48,7 @@ export const Products: Story = {
   },
 };
 export const EnglishProducts: Story = {
+  args: { catalog },
   name: "長い英語の商品名",
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
@@ -43,6 +61,7 @@ export const EnglishProducts: Story = {
   },
 };
 export const NarrowProducts: Story = {
+  args: { catalog },
   name: "狭いペイン・長い英語・売切",
   globals: { locale: "en" },
   decorators: [
@@ -351,7 +370,7 @@ export const JapaneseLongDescription: Story = {
 };
 export const Basket: Story = {
   name: "変更内容と合計を表示",
-  render: () => <CartLines lines={table.cart.lines} onEdit={fn()} onRemove={fn()} />,
+  render: () => <CartLines lines={seedTable.cart.lines} onEdit={fn()} onRemove={fn()} />,
 };
 export const Incomplete: Story = {
   name: "必須選択が未完了",

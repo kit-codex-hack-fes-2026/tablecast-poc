@@ -3,7 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, vi } from "vitest";
 import { cleanup } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { table } from "../../../../.storybook/tablecast-fixtures";
+import { table } from "../../../test-support/tablecast-fixtures";
 import "../../../styles.css";
 
 export const startAt = Date.parse("2026-09-15T00:00:00+09:00");

@@ -44,7 +44,13 @@
       "cache": false
     },
     "@tablecast/web#build:storybook": {
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/api/src/**"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/apps/api/src/**",
+        "$TURBO_ROOT$/scripts/**",
+        "$TURBO_ROOT$/assets/demo/**",
+        "$TURBO_ROOT$/apps/emulate/src/tablecast-demo-identities.ts"
+      ],
       "outputs": ["storybook-static/**"]
     },
     "@tablecast/api#typecheck": {
@@ -130,7 +136,8 @@
         "$TURBO_ROOT$/plugins/tablecast/.mcp.json",
         "$TURBO_ROOT$/plugins/tablecast/skills/**",
         "$TURBO_ROOT$/.agents/skills/tablecast-help/**",
-        "$TURBO_ROOT$/apps/emulate/src/**"
+        "$TURBO_ROOT$/apps/emulate/src/**",
+        "$TURBO_ROOT$/scripts/**"
       ]
     },
     "@tablecast/web#lint": {

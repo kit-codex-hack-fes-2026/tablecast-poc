@@ -1,9 +1,9 @@
 import { type Configuration, configurationSchema } from "@tablecast/api/schema";
 import { expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
-import { product } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
 import { fixtureValue } from "../../test-support/fixture-value";
+import { product } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 import { draftId, mountForm, png, storeId } from "./test-support/menu-item-fixture";
 

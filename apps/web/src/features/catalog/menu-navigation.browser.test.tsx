@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
-import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
+import { catalog, product } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 import { catalogOptions } from "./catalog-query";
 import { fixture, showMenu } from "./test-support/menu-collection-fixture";

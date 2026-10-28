@@ -1,8 +1,8 @@
 import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import type { LiveMessage } from "./voice-model";
-import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import { StoreTheme } from "../../components/store-theme";
+import { catalog, product } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 import { type ConversationLine, conversationLines } from "./conversation-model";
 import {

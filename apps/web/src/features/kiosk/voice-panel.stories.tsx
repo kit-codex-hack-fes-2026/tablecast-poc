@@ -4,6 +4,9 @@ import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import { VoicePanel } from "./voice-panel";
 
+const soldOutProduct = catalog.configuration.products.find((item) => !item.available);
+if (!soldOutProduct) throw new Error("seedの売切商品がありません。");
+
 const meta = {
   title: "客向け/会話",
   component: VoicePanel,
@@ -177,7 +180,7 @@ export const ToolAndCards: Story = {
         tableSessionId: "tablecast-session",
         createdAt: 1788645000200,
         kind: "voice.products",
-        data: { turnId: "tablecast-turn", productIds: [product.id, "tablecast-sold-out"] },
+        data: { turnId: "tablecast-turn", productIds: [product.id, soldOutProduct.id] },
       },
     ],
   },
@@ -186,7 +189,9 @@ export const ToolAndCards: Story = {
     await expect(canvas.getByText("完了", { exact: true })).toBeVisible();
     await expect(canvas.getByText("実行中", { exact: true })).toBeVisible();
     await expect(canvasElement.querySelector("figure[data-voice-state=tool]")).toBeVisible();
-    await expect(canvas.getByRole("button", { name: /白霞/ })).toBeDisabled();
+    await expect(
+      canvas.getByRole("button", { name: new RegExp(soldOutProduct.text.ja.displayName) }),
+    ).toBeDisabled();
     await userEvent.click(canvas.getByRole("button", { name: /月凪/ }));
     await expect(args.onChoose).toHaveBeenCalledWith(product);
   },

@@ -10,11 +10,11 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { catalog, configurationHistoryFixture } from "../../../.storybook/tablecast-fixtures";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import { PanelLayoutProvider } from "../../lib/panel-layout";
 import { parseFlatSearch, stringifyFlatSearch } from "../../lib/router-search";
+import { catalog, configurationHistoryFixture } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 import { StoreShell } from "../store/store-shell";
 import { ConfigurationHistory } from "./configuration-history";

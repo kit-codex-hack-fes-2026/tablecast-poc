@@ -1,11 +1,11 @@
 import { expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
-import "../../styles.css";
 import { fixtureValue } from "../../test-support/fixture-value";
+import { catalog, product } from "../../test-support/tablecast-fixtures";
 import { fixture, showMenu } from "./test-support/menu-collection-fixture";
+import "../../styles.css";
 
 it.each([
   { locale: "ja" as const, draft: false },

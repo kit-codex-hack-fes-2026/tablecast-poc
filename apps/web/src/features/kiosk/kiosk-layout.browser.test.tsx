@@ -2,12 +2,12 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, server, userEvent } from "vitest/browser";
-import { catalog } from "../../../.storybook/tablecast-fixtures";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import { fixtureValue } from "../../test-support/fixture-value";
+import { catalog } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 import { Kiosk } from "./kiosk";
 import {
@@ -183,7 +183,7 @@ it.each(["ja", "en"] as const)(
         expect(bounds.bottom).toBeLessThanOrEqual(height);
       }
       await page.screenshot({
-        path: `../../../test-results/tablecast-guest-compact-${locale}-${width}.png`,
+        path: `../../../test-results/tablecast-test-only-layout-${locale}-${width}.png`,
       });
       expect(tools.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
@@ -340,7 +340,7 @@ it.each(["ja", "en"] as const)(
         tableSessionId: fixture.current.id,
         createdAt: 1788645000000,
         data: {
-          turnId: "tablecast-service-offers",
+          turnId: "tablecast-test-only-fallback-offers",
           productIds: catalog.configuration.products
             .toReversed()
             .slice(0, 4)
@@ -386,7 +386,9 @@ it.each(["ja", "en"] as const)(
         ),
       ].flatMap((element) => element.getAnimations().map((animation) => animation.finished)),
     );
-    await page.screenshot({ path: `../../../test-results/tablecast-service-${locale}-ipad.png` });
+    await page.screenshot({
+      path: `../../../test-results/tablecast-test-only-fallback-${locale}-ipad.png`,
+    });
     image.element().dispatchEvent(new Event("error"));
     await expect.element(image).not.toBeInTheDocument();
     expect(header.getBoundingClientRect().height).toBe(64);

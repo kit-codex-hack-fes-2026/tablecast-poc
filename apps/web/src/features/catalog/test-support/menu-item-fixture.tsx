@@ -11,11 +11,11 @@ import {
 import { afterEach, beforeEach, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { catalog, product } from "../../../../.storybook/tablecast-fixtures";
 import { DocumentHead } from "../../../components/document-head";
 import { MotionProvider } from "../../../components/motion-provider";
 import { LocaleProvider } from "../../../i18n/locale";
 import { sessionOptions } from "../../../lib/session-query";
+import { catalog, product } from "../../../test-support/tablecast-fixtures";
 import "../../../styles.css";
 import { menuDocument } from "../../configuration/menu-model";
 import { draftOptions } from "../../configuration/menu-query";

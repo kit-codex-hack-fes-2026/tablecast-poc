@@ -8,7 +8,7 @@ const meta = {
   parameters: {
     layout: "padded",
   },
-  args: { expression: { kind: "option", optionId: "tablecast-large-glass" }, product },
+  args: { expression: { kind: "option", optionId: "tablecast-komorebi-serving-glass" }, product },
 } satisfies Meta<typeof ConditionSummary>;
 export default meta;
 type Story = StoryObj<typeof meta>;

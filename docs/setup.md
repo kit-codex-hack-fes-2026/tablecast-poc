@@ -233,6 +233,8 @@ OpenAI projectにはGPT-Live 1の利用権限に加え、Responses delegationの
 
 デモ音声の作成にはホストの`ffmpeg`・`ffprobe`とInworldキーを使う。`bun run demo:audio`は生成予定の表示だけで、`bun --env-file=.env.local run demo:audio --generate`を明示した場合に有料TTSを呼ぶ。同じ台本・声・音声SHAの素材は再利用し、通常CIでは合成しない。台本、US/UK/India/Chinaを含む声の指定と実有料E2Eの判定方法は[合成音声素材](demo/audio.md)を参照する。
 
+StorybookとVitest Browserは設定読込時にBunでdemo seedと同じ公開設定・商品・画像を準備し、`apps/web/.local/tablecast-storybook-public`へ生成する。通常のStoryはseedの3店舗を共用するため、DB・R2の起動や手動画像コピーは不要。画像なし・失敗専用のfixtureは通常のPR画像へ使わない。
+
 Storybookは標準の6006番を使う。他worktreeが使用中なら `bun run storybook --port 6007` と指定する。コンテナ内では公開済みの6006番を使う。
 Storybookは公式の`@storybook/tanstack-react`でStart・Routerを扱い、WorkersやDBを起動せずに利用する。環境分岐とテストの責務は [テスト戦略](testing.md) を参照する。
 

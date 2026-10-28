@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 import { page } from "vitest/browser";
-import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
 import { fixtureValue } from "../../test-support/fixture-value";
+import { catalog, product } from "../../test-support/tablecast-fixtures";
 import { cartWrites, fixture, mountKiosk, notify, requests } from "./test-support/kiosk-fixture";
 
 it("1.5秒の応答待ちでも数量・件数は100ms以内に変わり、連打を最新の版で直列送信する", async () => {

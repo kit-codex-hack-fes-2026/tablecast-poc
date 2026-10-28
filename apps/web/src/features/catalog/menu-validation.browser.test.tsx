@@ -5,8 +5,8 @@ import {
 } from "@tablecast/api/schema";
 import { expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
-import { catalog } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
+import { catalog } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 import { draftId, mountForm, storeId } from "./test-support/menu-item-fixture";
 

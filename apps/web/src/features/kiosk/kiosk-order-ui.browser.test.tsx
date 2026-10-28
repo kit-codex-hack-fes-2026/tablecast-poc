@@ -1,10 +1,10 @@
 import { expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { money } from "../../i18n/format";
 import { fixtureValue } from "../../test-support/fixture-value";
+import { catalog, product } from "../../test-support/tablecast-fixtures";
 import { cartWrites, fixture, mountKiosk, orderPanel } from "./test-support/kiosk-fixture";
 
 it.each(["ja", "en"] as const)(

@@ -1,8 +1,8 @@
 import type { ConfigDraft } from "@tablecast/api/schema";
 import { MutationObserver, QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { catalog } from "../../../.storybook/tablecast-fixtures";
 import { apiFetch } from "../../lib/api-fetch";
+import { catalog } from "../../test-support/tablecast-fixtures";
 import { draftChoicesOptions, draftOptions, receiveDraft, saveDraftOptions } from "./menu-query";
 
 vi.mock("../../lib/api-fetch", () => ({ apiFetch: vi.fn<typeof apiFetch>() }));

@@ -1,10 +1,9 @@
 import { type TableState } from "@tablecast/api/schema";
 import { expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { catalog, product, table } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
-import "../../styles.css";
 import { fixtureValue } from "../../test-support/fixture-value";
+import { catalog, product, table } from "../../test-support/tablecast-fixtures";
 import {
   cartWrites,
   fixture,
@@ -15,6 +14,7 @@ import {
   requests,
   TablecastSocket,
 } from "./test-support/kiosk-fixture";
+import "../../styles.css";
 
 it("未充足行の修正は競合後も選択を保持し、再送でも同じ行だけを更新する", async () => {
   await page.viewport(1280, 1000);

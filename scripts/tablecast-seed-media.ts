@@ -62,6 +62,22 @@ export function demoStoreBanner(storeId: string, name: string): ThemeImage {
   };
 }
 
+// seedと静的プレビューで同じ画像identityを使う。
+export function demoMediaAsset(file: string, bytes: Uint8Array) {
+  const storeId = Object.entries(tablecastDemoStoreIcons).find(
+    ([, icon]) =>
+      file === `identities/${icon}` ||
+      file === `identities/${icon.replace("-logo.webp", "-banner.webp")}`,
+  )?.[0];
+  const logo = storeId
+    ? storeLogoAsset(storeId, file.endsWith("-banner.webp") ? "banner" : "logo")
+    : undefined;
+  return {
+    key: logo?.imageKey ?? imageKey(bytes, extname(file) === ".webp" ? "webp" : "png"),
+    metadata: logo && storeId ? { storeId, metadata: JSON.stringify(logo.metadata) } : undefined,
+  };
+}
+
 export async function seedMenuImages(
   bucket: Parameters<typeof uploadPreviewImage>[0] & Pick<R2Bucket, "list">,
   legacy = false,
@@ -123,16 +139,8 @@ export async function seedMenuImages(
             if (!file) return;
             try {
               const bytes = await readFile(resolve(directory, file));
-              const contentKey = imageKey(bytes, extname(file) === ".webp" ? "webp" : "png");
-              const logoStore = Object.entries(tablecastDemoStoreIcons).find(
-                ([, icon]) =>
-                  file === `identities/${icon}` ||
-                  file === `identities/${icon.replace("-logo.webp", "-banner.webp")}`,
-              )?.[0];
-              const logo = logoStore
-                ? storeLogoAsset(logoStore, file.endsWith("-banner.webp") ? "banner" : "logo")
-                : undefined;
-              const key = logo?.imageKey ?? contentKey;
+              const asset = demoMediaAsset(file, bytes);
+              const key = asset.key;
               if (required && !required.has(key)) continue;
               for (const target of legacy ? [key, `tablecast/demo/${file}`] : [key]) {
                 if (failed) return;
@@ -142,9 +150,7 @@ export async function seedMenuImages(
                   bytes,
                   undefined,
                   existing.get(target) ?? null,
-                  logo && logoStore
-                    ? { storeId: logoStore, metadata: JSON.stringify(logo.metadata) }
-                    : undefined,
+                  asset.metadata,
                 );
                 if (result === "uploaded") {
                   uploaded++;

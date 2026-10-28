@@ -10,10 +10,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { catalog, table } from "../../../../.storybook/tablecast-fixtures";
 import { MotionProvider } from "../../../components/motion-provider";
 import { LocaleProvider } from "../../../i18n/locale";
 import { useRealtime } from "../../../lib/use-realtime";
+import { catalog, table } from "../../../test-support/tablecast-fixtures";
 import "../../../styles.css";
 import { Kiosk } from "../kiosk";
 

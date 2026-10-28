@@ -1,8 +1,11 @@
 import type { StorybookConfig } from "@storybook/tanstack-react";
 import remarkGfm from "remark-gfm";
+import { prepareTablecastSeedPreview } from "./tablecast-seed-config.ts";
+
+const seedPreview = prepareTablecastSeedPreview();
 
 const config: StorybookConfig = {
-  staticDirs: ["../public"],
+  staticDirs: [seedPreview.directory],
   stories: ["../src/**/*.mdx", "../src/**/*.stories.tsx"],
   framework: {
     name: "@storybook/tanstack-react",

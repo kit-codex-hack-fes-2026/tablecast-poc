@@ -4,7 +4,14 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
-import { tablecastLogoFixture } from "./src/test-support/tablecast-logo-fixture";
+import { prepareTablecastSeedPreview } from "./.storybook/tablecast-seed-config.ts";
+import { tablecastLogoFixture } from "./src/test-support/tablecast-logo-fixture.ts";
+
+const seedPreview = prepareTablecastSeedPreview();
+const preview = {
+  publicDir: seedPreview.directory,
+  define: { TABLECAST_SEED_PREVIEW: seedPreview.data },
+};
 
 export default defineConfig({
   test: {
@@ -12,6 +19,7 @@ export default defineConfig({
     projects: [
       { test: { name: "unit", include: ["src/**/*.test.ts"], environment: "node" } },
       {
+        ...preview,
         resolve: { dedupe: ["react", "react-dom"] },
         optimizeDeps: {
           exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
@@ -117,6 +125,7 @@ export default defineConfig({
                   "src/features/kiosk/store-theme.browser.test.tsx",
                   "src/features/kiosk/kiosk.browser.test.tsx",
                   "src/features/kiosk/kiosk-layout.browser.test.tsx",
+                  "src/features/kiosk/kiosk-seed-preview.browser.test.tsx",
                   "src/features/kiosk/kiosk-voice.browser.test.tsx",
                   "src/features/kiosk/kiosk-realtime.browser.test.tsx",
                   "src/features/kiosk/local-camera.browser.test.tsx",
@@ -135,6 +144,7 @@ export default defineConfig({
         },
       },
       {
+        ...preview,
         resolve: { dedupe: ["react", "react-dom"] },
         optimizeDeps: {
           exclude: ["cloudflare:workers", "@tanstack/react-start/server"],

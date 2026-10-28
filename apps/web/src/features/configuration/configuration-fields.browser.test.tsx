@@ -2,10 +2,10 @@ import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { product } from "../../../.storybook/tablecast-fixtures";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
+import { product } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 import { BilingualFields } from "./configuration-fields";
 

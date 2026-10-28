@@ -10,9 +10,9 @@ import {
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { z } from "zod";
-import { catalog } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
+import { catalog } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 import { catalogOptions } from "../catalog/catalog-query";
 import { draftsOptions } from "../configuration/drafts-query";

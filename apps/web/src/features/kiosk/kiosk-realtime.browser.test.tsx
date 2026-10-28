@@ -2,11 +2,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
+import { catalog, product } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 import { Kiosk } from "./kiosk";
 import {
