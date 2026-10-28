@@ -14,6 +14,7 @@ export const clocCategories = [
     label: "💻 実装コード",
     globs: ["**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs,css,html,sh,py,sql}"],
   },
+  { id: "scripts", label: "🛠️ 開発用スクリプト", globs: ["scripts/**"] },
   { id: "unit", label: "🧪 単体・統合テスト", globs: ["**/*.{test,spec}.*"] },
   { id: "browser", label: "🌐 Browserコンポーネントテスト", globs: ["**/*.browser.{test,spec}.*"] },
   {
@@ -116,6 +117,7 @@ export function classifyClocFile(
     /^plugins\/[^/]+\/(?:\.codex-plugin|\.mcp\.json)/.test(path)
   )
     return "configuration";
+  if (path.startsWith("scripts/")) return "scripts";
   if (/\.(?:[cm]?[jt]sx?|css|html|sh|py|sql)$/.test(name)) return "implementation";
   return "other";
 }
@@ -167,6 +169,7 @@ export async function measureCloc(
       "--by-file",
       "--json",
       "--skip-uniqueness",
+      "--strip-str-comments",
       "--quiet",
       "--timeout=0",
     ]);
@@ -205,7 +208,10 @@ export function renderClocComment(measurement: Measurement, repository?: string,
     const after = measurement.after[id] ?? 0;
     beforeTotal += before;
     afterTotal += after;
-    return `| ${label} | ${format(before)} | ${format(after)} | ${difference(before, after)} |`;
+    const cells = [label, format(before), format(after), difference(before, after)].map(
+      (value, index) => (id === "implementation" || index === 3 ? `**${value}**` : value),
+    );
+    return `| ${cells.join(" | ")} |`;
   });
   const patterns = (globs: readonly string[]) => globs.map((glob) => `\`${glob}\``).join("<br>");
   const classification = repository
@@ -226,6 +232,7 @@ export function renderClocComment(measurement: Measurement, repository?: string,
     "<summary>計測条件・分類glob</summary>",
     "",
     "- cloc 2.10の`code`（物理行数）を集計。空行・空白だけの行（`blank`）と、言語ごとの規則でコメントだけと判定した行（`comment`）は除外。コードとコメントが混在する行は1行として計上。",
+    "- 両commitに`--strip-str-comments`を適用し、globなどの文字列内にあるコメント記号の誤判定を補正。文字列の内容はコードとして数える。",
     "- Markdown・MDXはMarkdownの規則で本文・コードブロックを計測。HTMLコメントは除外し、コードブロック内の`//`などを別言語として再解析しない。",
     "- 比較元はPRのmerge-base。Gitのcommit snapshotだけを数え、未追跡・未commitの変更を含めない。同一内容でも別ファイルなら各々計上。",
     "",
@@ -233,7 +240,8 @@ export function renderClocComment(measurement: Measurement, repository?: string,
     "| --- | --- |",
     ...clocCategories.map(({ label, globs }) => `| ${label} | ${patterns(globs)} |`),
     "",
-    "除外を先に適用し、Storybook・テスト・補助・設定を実装より優先して一つの分類へ割り当てる。`scripts/tablecast-fixtures{.ts,/**}`はruntime seedとして実装に含め、その他には残ったcloc対応ファイルを割り当てる。",
+    "除外後は1ファイルを1分類だけへ割り当て、合計は全分類の和とする。globが重なっても複数分類へ加算しない。",
+    "Storybook・文書・テスト・補助・設定を先に判定し、残った`scripts/**`は開発用スクリプトへ分ける。runtime seedの`scripts/tablecast-fixtures{.ts,/**}`も開発用スクリプトに含め、その他には残ったcloc対応ファイルを割り当てる。",
     `上のglobは条件の要約。ファイル名の細部と優先順位の正本は対象commitの${classification}。`,
     "",
     "除外glob:",

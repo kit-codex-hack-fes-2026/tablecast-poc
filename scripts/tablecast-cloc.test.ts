@@ -34,9 +34,9 @@ describe("種類別のcloc行数", () => {
     ["apps/web/src/env.d.ts", "implementation"],
     ["apps/web/src/styles.css", "implementation"],
     ["apps/emulate/index.ts", "implementation"],
-    ["scripts/tablecast-seed.ts", "implementation"],
-    ["scripts/tablecast-fixtures/items.ts", "implementation"],
-    ["scripts/tablecast-fixtures.ts", "implementation"],
+    ["scripts/tablecast-seed.ts", "scripts"],
+    ["scripts/tablecast-fixtures/items.ts", "scripts"],
+    ["scripts/tablecast-fixtures.ts", "scripts"],
     ["apps/api/test/orders.test.ts", "unit"],
     ["scripts/tablecast-cloc.test.ts", "unit"],
     ["apps/web/src/features/kiosk/kiosk.browser.test.tsx", "browser"],
@@ -70,7 +70,7 @@ describe("種類別のcloc行数", () => {
     expect(classifyClocFile(path, externalSkills)).toBe(expected);
   });
 
-  test("空分類は0行にでき、不正な版・行数は計測失敗にする", () => {
+  test("重なるglobでも二重計上せず、空分類と不正な計測を区別する", () => {
     expect(aggregateCloc({ header: { cloc_version: "2.10" } }, externalSkills)).toEqual({});
     expect(
       aggregateCloc(
@@ -78,12 +78,16 @@ describe("種類別のcloc行数", () => {
           header: { cloc_version: "2.10" },
           "./apps/web/src/button.tsx": { code: 7 },
           "apps/web/src/button.stories.tsx": { code: 3 },
+          "apps/web/src/button.browser.test.tsx": { code: 5 },
+          "apps/web/src/test-support/button.tsx": { code: 4 },
+          "scripts/tablecast-cloc.ts": { code: 6 },
+          "scripts/tablecast-cloc.test.ts": { code: 2 },
           "apps/presentation/main.ts": { code: 999 },
-          SUM: { code: 1009 },
+          SUM: { code: 1026 },
         },
         externalSkills,
       ),
-    ).toEqual({ implementation: 7, storybook: 3 });
+    ).toEqual({ implementation: 7, storybook: 3, browser: 5, support: 4, scripts: 6, unit: 2 });
     for (const data of [
       null,
       {},
@@ -102,8 +106,8 @@ describe("種類別のcloc行数", () => {
       {
         base: "a".repeat(40),
         head: "b".repeat(40),
-        before: { implementation: 1001, unit: 10 },
-        after: { implementation: 999, unit: 13 },
+        before: { implementation: 1001, scripts: 5, unit: 10 },
+        after: { implementation: 999, scripts: 7, unit: 13 },
         measuredAt: "2026-10-29T00:12:34.000Z",
       },
       "example/tablecast",
@@ -115,10 +119,11 @@ describe("種類別のcloc行数", () => {
     expect(body).toContain(`/commit/${"a".repeat(40)}`);
     expect(body).toContain(`/commit/${"b".repeat(40)}`);
     for (const { label } of clocCategories) expect(body).toContain(`| ${label} |`);
-    expect(body).toContain("| 💻 実装コード | 1,001 | 999 | -2 |");
-    expect(body).toContain("| 🧪 単体・統合テスト | 10 | 13 | +3 |");
-    expect(body).toContain("| 📚 Storybook | 0 | 0 | 0 |");
-    expect(body).toContain("| **合計** | **1,011** | **1,012** | **+1** |");
+    expect(body).toContain("| **💻 実装コード** | **1,001** | **999** | **-2** |");
+    expect(body).toContain("| 🧪 単体・統合テスト | 10 | 13 | **+3** |");
+    expect(body).toContain("| 📚 Storybook | 0 | 0 | **0** |");
+    expect(body).toContain("| 🛠️ 開発用スクリプト | 5 | 7 | **+2** |");
+    expect(body).toContain("| **合計** | **1,016** | **1,019** | **+3** |");
     expect(body).toContain("<summary>計測条件・分類glob</summary>");
     expect(body).toContain("`**/*.stories.*`");
     expect(body).toContain("空白だけの行（`blank`）");
@@ -159,7 +164,7 @@ describe("実clocとGit snapshotの比較", () => {
     await file(".agents/skills/new-skill/SKILL.md", "new\n");
     await file(
       "apps/web/src/app.ts",
-      "// コメント\nexport const first = 1;\n\nexport const second = 2;\n",
+      '// コメント\nexport const first = "**/*.tsx";\n\nexport const second = 2;\n',
     );
     await file("apps/api/src/remove.ts", "export const removed = true;\n");
     await file("apps/web/src/move.ts", "export const story = true;\n");
@@ -176,7 +181,7 @@ describe("実clocとGit snapshotの比較", () => {
     await file("skills-lock.json", JSON.stringify({ skills: { "new-skill": {} } }));
     await file(
       "apps/web/src/app.ts",
-      "/* 別のコメント */\n\nexport const first = 1;\nexport const second = 2;\n\n",
+      '/* 別のコメント */\n\nexport const first = "**/*.tsx";\nexport const second = 2;\n\n',
     );
     await rm(join(directory, "apps/api/src/remove.ts"));
     await rename(
@@ -188,8 +193,14 @@ describe("実clocとGit snapshotの比較", () => {
     await file("apps/api/src/untracked.ts", "export const untracked = true;\n");
     const result = await measureCloc(base, head, directory);
     expect(result.base).toBe(common);
-    expect(result.before).toEqual({ documentation: 1, implementation: 7, unit: 1 });
-    expect(result.after).toEqual({ documentation: 1, implementation: 6, storybook: 1, unit: 1 });
+    expect(result.before).toEqual({ documentation: 1, implementation: 6, scripts: 1, unit: 1 });
+    expect(result.after).toEqual({
+      documentation: 1,
+      implementation: 5,
+      scripts: 1,
+      storybook: 1,
+      unit: 1,
+    });
     expect(Number.isFinite(Date.parse(result.measuredAt))).toBe(true);
     const reverse = await measureCloc(head, common, directory);
     expect(reverse.before).toEqual(reverse.after);
