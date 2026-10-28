@@ -617,7 +617,6 @@
   "kiosk_tools_working": "Working",
   "kiosk_tool_waiting": "Waiting",
   "kiosk_tool_separator": ", ",
-  "kiosk_tool_search_label": "Search: ",
   "workflow_choose_title": "Choose a draft to edit",
   "workflow_choose_note": "Resume a saved draft or create a new draft from the current published configuration.",
   "workflow_resume": "Resume this draft",

@@ -85,7 +85,9 @@ export function createCastTools(
             .min(1)
             .max(8)
             .optional()
-            .describe("検索済みの商品ID。必須選択肢・追加料金を含む詳細を必ず返す"),
+            .describe(
+              "検索結果から自分で照合した内部の商品ID。客には尋ねず案内しない。必須選択肢・追加料金を含む詳細を返す",
+            ),
           offset: z.number().int().min(0).max(maxConfigurationProducts).optional(),
           limit: z.number().int().min(1).max(8).optional(),
           show: z.boolean().optional(),

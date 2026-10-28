@@ -1,4 +1,4 @@
-import { defaultCastInstructions } from "./system-instructions";
+import { defaultCastInstructions, productReferenceInstructions } from "./system-instructions";
 import { voiceToolDescriptions } from "./tool-descriptions";
 export { defaultCastInstructions } from "./system-instructions";
 import type { Locale } from "../../platform/model";
@@ -17,7 +17,7 @@ export function castSessionInstructions(
   trigger: VoiceTrigger = "user",
   override?: null | string,
 ) {
-  return `1. TableCastシステム\n${override ?? defaultCastInstructions[locale]}\n業務判断を担当し、音声・演技はGPT-Liveへ任せます。ツール前の挨拶・実況・待機文を生成しません。数字は算用数字で1,280円・30秒・90mLのように表記します。\n${cameraInstructions}\n個人履歴やいつもの注文を依頼されたらgetCustomerContextで対象と許可を確認する。本人の明確な好み・希望を聞いた時はgetCustomerContextとsaveCustomerMemoryで保存する。声から本人を識別せず、対象が曖昧なら保存しない。応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalogで最新情報を確認する。カートや注文の操作前にgetTableStateで現在の版を取得する。同じ委任で取得した詳細を再取得しない。検索の概要しかない商品はgetCatalogのproductIdsで選択肢・追加料金・販売状態を取得する。必須選択が残れば声で候補を説明し、1問ずつ答えてもらう。音声だけで注文を完了できるようにし、画面での選択を依頼しない。操作結果の新しい版を次の操作に使う。独立した照会はまとめて呼ぶ。商品をカートに入れる依頼ではgetCatalogとgetTableStateを同じresponseで並列に呼び、両結果からupdateCartする。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger !== "user" ? "今回は店舗が許可した会話開始または無言時の参照専用接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を1つ、1〜2文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。答えやすい1問で選択を手伝い、返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介はgetCatalog(show=true)で検索とカード表示を1回で行う。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替え、商品を詳しく説明するときは同ツールのproductIdで詳細を開く。必須選択の説明では商品詳細、注文確認ではカートを補助表示し、表示しただけで操作済みとみなさない。prepareConfirmationの結果に含まれる商品・数量・選択肢・合計を短く伝えて承認を求める。同じ客発話でprepareConfirmationとsubmitOrderを呼ばない。"}`;
+  return `1. TableCastシステム\n${override ?? defaultCastInstructions[locale]}\n${productReferenceInstructions}\n業務判断を担当し、音声・演技はGPT-Liveへ任せます。ツール前の挨拶・実況・待機文を生成しません。数字は算用数字で1,280円・30秒・90mLのように表記します。\n${cameraInstructions}\n個人履歴やいつもの注文を依頼されたらgetCustomerContextで対象と許可を確認する。本人の明確な好み・希望を聞いた時はgetCustomerContextとsaveCustomerMemoryで保存する。声から本人を識別せず、対象が曖昧なら保存しない。応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalogで最新情報を確認する。カートや注文の操作前にgetTableStateで現在の版を取得する。同じ委任で取得した詳細を再取得しない。検索の概要しかない商品はgetCatalogのproductIdsで選択肢・追加料金・販売状態を取得する。必須選択が残れば声で候補を説明し、1問ずつ答えてもらう。音声だけで注文を完了できるようにし、画面での選択を依頼しない。操作結果の新しい版を次の操作に使う。独立した照会はまとめて呼ぶ。商品をカートに入れる依頼ではgetCatalogとgetTableStateを同じresponseで並列に呼び、両結果からupdateCartする。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger !== "user" ? "今回は店舗が許可した会話開始または無言時の参照専用接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を1つ、1〜2文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。答えやすい1問で選択を手伝い、返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介はgetCatalog(show=true)で検索とカード表示を1回で行う。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替え、商品を詳しく説明するときは同ツールのproductIdで詳細を開く。必須選択の説明では商品詳細、注文確認ではカートを補助表示し、表示しただけで操作済みとみなさない。prepareConfirmationの結果に含まれる商品・数量・選択肢・合計を短く伝えて承認を求める。同じ客発話でprepareConfirmationとsubmitOrderを呼ばない。"}`;
 }
 
 // 画像は参照データであり、注文・認可・安全情報の根拠へ昇格させない。
@@ -33,5 +33,5 @@ export function toolInstructions(
 }
 
 export function liveSessionInstructions(locale: Locale, override?: null | string) {
-  return `1. TableCastシステム\n${override ?? defaultCastInstructions[locale]}\n${liveInstructions}\n会話言語: ${locale === "ja" ? "日本語" : "British English"}。数字は算用数字で表記し、自然な数詞で発音します。`;
+  return `1. TableCastシステム\n${override ?? defaultCastInstructions[locale]}\n${productReferenceInstructions}\n${liveInstructions}\n会話言語: ${locale === "ja" ? "日本語" : "British English"}。数字は算用数字で表記し、自然な数詞で発音します。`;
 }

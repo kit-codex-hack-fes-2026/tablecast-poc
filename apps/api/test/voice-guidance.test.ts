@@ -130,6 +130,10 @@ it("同じ字幕の並行要求では一度だけ候補を生成し、予約で�
     model: "gpt-6.1-terra",
     reasoning: { effort: "low" },
   });
+  expect(JSON.parse(request)).toHaveProperty(
+    "instructions",
+    expect.stringContaining("客がIDを伝える候補を作らない"),
+  );
   const state = await getTableState(services, device);
   expect(state.events.some((event) => event.kind === "voice.suggestions")).toBe(false);
   expect(state.orders).toHaveLength(0);

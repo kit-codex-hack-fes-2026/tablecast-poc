@@ -42,6 +42,7 @@ it.each(["ja", "en"] as const)(
           toolCallId: "tablecast-seed-call",
           toolName: "getCatalog",
           state: "completed",
+          query: product.id,
         },
       },
       {
@@ -80,6 +81,7 @@ it.each(["ja", "en"] as const)(
     await expect
       .element(conversation.getByText(product.text[locale].displayName, { exact: true }))
       .toBeVisible();
+    await expect.element(conversation.getByText(product.id)).not.toBeInTheDocument();
     for (const [width, height] of [
       [1180, 820],
       [402, 874],

@@ -242,6 +242,14 @@ it.each([
         const instructions =
           selected.cast.systemInstructions?.[locale] ?? defaultCastInstructions[locale];
         expect(JSON.parse(init.body)).toHaveProperty(path, expect.stringContaining(instructions));
+        expect(JSON.parse(init.body)).toHaveProperty(
+          path,
+          expect.stringContaining("客にIDの存在を説明せず"),
+        );
+        expect(JSON.parse(init.body)).toHaveProperty(
+          path,
+          expect.stringContaining("商品名・特徴・表示順で対象を確認"),
+        );
         const tools = z
           .object({
             session: z.object({

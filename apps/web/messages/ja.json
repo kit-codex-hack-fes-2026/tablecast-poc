@@ -617,7 +617,6 @@
   "kiosk_tools_working": "処理中",
   "kiosk_tool_waiting": "待機中",
   "kiosk_tool_separator": "・",
-  "kiosk_tool_search_label": "検索：",
   "workflow_choose_title": "編集する下書きを選択",
   "workflow_choose_note": "保存済みの下書きを再開するか、現在公開中の設定から新しい下書きを作成します。",
   "workflow_resume": "この下書きを再開",

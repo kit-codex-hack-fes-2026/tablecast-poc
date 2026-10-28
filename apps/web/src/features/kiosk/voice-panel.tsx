@@ -169,10 +169,6 @@ export function VoicePanelContent({
       else if (stale) toolStatus = "kiosk_tool_interrupted";
       else if (event.data.state === "requested") toolStatus = "kiosk_tool_waiting";
       else if (pending) toolStatus = "kiosk_tool_running";
-      const query =
-        name === "getCatalog" && typeof event.data.query === "string"
-          ? event.data.query
-          : undefined;
       return [
         <Tool
           key={String(event.data.toolCallId)}
@@ -190,17 +186,7 @@ export function VoicePanelContent({
                   : "completed"
           }
         >
-          {query || failed ? (
-            <>
-              {query && (
-                <p className="wrap-anywhere text-muted-foreground">
-                  {t("kiosk_tool_search_label")}
-                  {query}
-                </p>
-              )}
-              {failed && <p className="text-destructive">{t("kiosk_tool_failed_hint")}</p>}
-            </>
-          ) : undefined}
+          {failed ? <p className="text-destructive">{t("kiosk_tool_failed_hint")}</p> : undefined}
         </Tool>,
       ];
     });
