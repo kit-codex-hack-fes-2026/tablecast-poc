@@ -97,6 +97,7 @@ export const table: TableState = {
   kind: "table",
   uiSection: "menu",
   selectedProductId: null,
+  menuSearch: null,
   speechSpeed: 1.0,
   id: "tablecast-session",
   openedAt: 1788645000000,

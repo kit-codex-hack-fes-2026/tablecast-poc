@@ -43,6 +43,7 @@ const toolLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["
   setLanguage: "kiosk_tool_set_language",
   setSpeechSpeed: "kiosk_tool_set_speech_speed",
   setUiSection: "kiosk_tool_set_ui_section",
+  showMenuSearch: "kiosk_tool_menu_search",
 };
 
 export type VoicePanelProps = {

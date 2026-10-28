@@ -9,8 +9,6 @@ import {
   type Snapshot,
   submittedCoreOrderSchema,
   type UiSection,
-  type UiSectionInput,
-  uiSectionInputSchema,
 } from "@tablecast/api/schema";
 import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useHydrated } from "@tanstack/react-router";
@@ -43,7 +41,6 @@ import { LanguageSwitch } from "../../components/language-switch";
 import { LoadingState } from "../../components/loading-state";
 import { Money } from "../../components/money";
 import { ProductImage } from "../../components/product-image";
-import { ProductMenu } from "../../components/product-menu";
 import { StoreLogo } from "../../components/store-logo";
 import { StoreTheme } from "../../components/store-theme";
 import { Badge } from "../../components/ui/badge";
@@ -69,6 +66,8 @@ import { CustomerOrderAttribution } from "./customer-order-attribution";
 import { CustomerVisitPanel } from "./customer-visit-panel";
 import { KioskGames } from "./games";
 import { KioskVoicePanel } from "./kiosk-voice-panel";
+import { KioskMenu } from "./menu-search";
+import { useTablePresentation } from "./presentation-query";
 import { ProductPage } from "./product-dialog";
 import { latestTable } from "./table-cache";
 import {
@@ -139,6 +138,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     product: Product;
   }>();
   const [prepared, setSnapshot] = useState<Snapshot>();
+  const [menuCategory, setMenuCategory] = useState("all");
   const confirmationHeading = useRef<HTMLHeadingElement>(null);
   const toasts = Toast.useToastManager();
   const [flights, setFlights] = useState<CartFlight[]>([]);
@@ -180,51 +180,13 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     updateCart.pending,
     catalog.data?.configuration.products ?? [],
   );
-  const screenKey = ["tablecast-ui-update", endpoint.key, data.id];
-  const pendingScreens = useMutationState({
-    filters: { mutationKey: screenKey, status: "pending", exact: true },
-    select: (mutation) => ({
-      ...uiSectionInputSchema.parse(mutation.state.variables),
-      order: mutation.mutationId,
-    }),
-  });
-  const screen = useMutation({
-    mutationKey: screenKey,
-    scope: { id: `tablecast-presentation-${endpoint.key}-${data.id}` },
-    mutationFn: (input: UiSectionInput) =>
-      parseResponse(endpoint.client.ui.$patch({ json: input, query: { view: "core" } })),
-    onMutate: () => client.cancelQueries({ queryKey: tableKey, exact: true }),
-    onSuccess: receive,
-    onError: refresh,
+  const { screen, presentation } = useTablePresentation({
+    data,
+    endpoint,
+    refresh,
+    dismissals: updateCart.pending,
   });
   const { mutate: changeScreen } = screen;
-  const previousConfigVersion = useRef(data.configVersion);
-  useEffect(() => {
-    if (previousConfigVersion.current !== data.configVersion) {
-      previousConfigVersion.current = data.configVersion;
-      changeScreen({ section: "menu", productId: null });
-    }
-  }, [data.configVersion, changeScreen]);
-  const presentation = [
-    ...pendingScreens,
-    ...updateCart.pending
-      .filter((input) => input.dismissProductId)
-      .map((input) => ({
-        section: undefined,
-        productId: input.dismissProductId,
-        order: input.order,
-      })),
-  ]
-    .toSorted((left, right) => left.order - right.order)
-    .reduce(
-      (current, input) =>
-        input.section
-          ? { section: input.section, productId: input.productId ?? null }
-          : current.productId === input.productId
-            ? { ...current, productId: null }
-            : current,
-      { section: data.uiSection, productId: data.selectedProductId },
-    );
   const section = presentation.section;
   useEffect(() => {
     if (section === "bill") billingSummary.current?.scrollIntoView({ block: "start" });
@@ -490,7 +452,18 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     return (
       <Tabs.Panel value="menu">
         {catalog.data ? (
-          <ProductMenu catalog={catalog.data} onChoose={choose} />
+          <KioskMenu
+            catalog={catalog.data}
+            category={menuCategory}
+            onCategoryChange={setMenuCategory}
+            onChoose={choose}
+            search={presentation.search ?? null}
+            result={data.menuSearch}
+            active={section === "menu" && !selectedProductId}
+            pending={screen.isPending}
+            error={screen.variables?.search !== undefined ? screen.error : null}
+            onChange={changeScreen}
+          />
         ) : catalog.isPending ? (
           <div className="p-4">
             <LoadingState cards />
@@ -851,7 +824,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                   className="@container/tablecast-order relative isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
                 >
                   {renderPlanSummary()}
-                  <ErrorNotice error={screen.error} />
+                  <ErrorNotice error={screen.variables?.search ? null : screen.error} />
                   <Tabs.Root
                     className="flex flex-col min-h-0 flex-1"
                     value={section === "bill" ? "orders" : section}

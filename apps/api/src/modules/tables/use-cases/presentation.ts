@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import { sql } from "drizzle-orm";
+import type { TableRecord } from "../../../db/records";
 import type { ApiServices } from "../../../platform/context";
 import type { Locale } from "../../../platform/model";
 import type { Actor } from "../../auth/model";
@@ -26,33 +27,42 @@ export function setUiSection(
   actor: Actor,
   input: z.infer<typeof uiSectionInputSchema>,
   view: "core",
+  known?: { catalog: Catalog; session?: TableRecord },
 ): Promise<CoreState>;
 export function setUiSection(
   services: ApiServices,
   actor: Actor,
   input: z.infer<typeof uiSectionInputSchema>,
   view?: "full",
+  known?: { catalog: Catalog; session?: TableRecord },
 ): Promise<TableState>;
 export function setUiSection(
   services: ApiServices,
   actor: Actor,
   input: z.infer<typeof uiSectionInputSchema>,
   view: StateView,
+  known?: { catalog: Catalog; session?: TableRecord },
 ): Promise<CoreState | TableState>;
 export async function setUiSection(
   services: ApiServices,
   actor: Actor,
   input: z.infer<typeof uiSectionInputSchema>,
   view: StateView = "full",
+  known?: { catalog: Catalog; session?: TableRecord },
 ): Promise<CoreState | TableState> {
   const db = services.db;
 
   const parsed = uiSectionInputSchema.safeParse(input);
   ensure(parsed.success, "INVALID_INPUT", 422);
-  const session = await getSession(services, actor);
+  const session = known?.session ?? (await getSession(services, actor));
   ensure(session.status === "open", "SESSION_CLOSED");
   const productId = parsed.data.section === "menu" ? (parsed.data.productId ?? null) : null;
-  const catalog = productId ? await getCatalog(services, actor.storeId, actor.demoId) : null;
+  const search = parsed.data.search;
+  ensure(search == null || parsed.data.section === "menu", "INVALID_INPUT", 422);
+  const catalog =
+    productId || search
+      ? (known?.catalog ?? (await getCatalog(services, actor.storeId, actor.demoId)))
+      : null;
   ensure(
     !productId || catalog?.configuration.products.some((product) => product.id === productId),
     "PRODUCT_NOT_FOUND",
@@ -67,14 +77,29 @@ export async function setUiSection(
         .set({
           ui_section: parsed.data.section,
           selected_product_id: productId,
+          ...(search !== undefined
+            ? {
+                menu_search_json:
+                  search === null
+                    ? null
+                    : JSON.stringify({
+                        ...search,
+                        offset: search.offset ?? 0,
+                        configVersion: catalog?.version,
+                      }),
+              }
+            : {}),
           mutation_id: mutation,
         })
         .where(
-          sql`id=${session.id} AND store_id=${actor.storeId} AND status='open'${gate} AND (${productId} IS NULL OR ${sessionConfigVersion(actor.storeId, actor.tableSessionId)}=${catalog?.version ?? null})`,
+          sql`id=${session.id} AND store_id=${actor.storeId} AND status='open'${gate} AND (${catalog?.version ?? null} IS NULL OR ${sessionConfigVersion(actor.storeId, actor.tableSessionId)}=${catalog?.version ?? null})`,
         ),
       eventStatement(services, actor, mutation, "table.ui", {
         section: parsed.data.section,
         productId,
+        ...(search !== undefined
+          ? { search: search === null ? null : { ...search, offset: search.offset ?? 0 } }
+          : {}),
       }),
       ...queries,
     ] as const);

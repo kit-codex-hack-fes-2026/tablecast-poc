@@ -35,6 +35,7 @@ function createTablecastSeedPreview() {
     guestCount: 2,
     uiSection: "menu",
     selectedProductId: null,
+    menuSearch: null,
     speechSpeed: 1,
     voiceState: "stopped",
     voiceSessionId: null,

@@ -123,3 +123,19 @@ export function createMenuSearch(configuration: Configuration, section: MenuSect
     return { ids, detail };
   };
 }
+
+// 関連度順を保ったまま、音声照会と客向け画面の同じページを返す。
+export function menuSearchPage(
+  configuration: Configuration,
+  { query = "", offset = 0, limit = 8 }: { limit?: number; offset?: number; query?: string },
+) {
+  const { ids, detail } = createMenuSearch(configuration)(query);
+  const productIds = ids.slice(offset, offset + limit);
+  return {
+    productIds,
+    detail,
+    offset,
+    total: ids.length,
+    more: offset + productIds.length < ids.length,
+  };
+}

@@ -95,7 +95,7 @@ bun run dev
 
 Webのアプリ操作ショートカットは`@tanstack/react-hotkeys`を使う。依存はWebのpackageとrootのlockで固定し、追加のブラウザー拡張やOS設定は不要。フォームの保存可否と同じ制約で動作し、コンポーネント固有の矢印キー操作は既存部品へ任せる。
 
-メニュー検索はAPI依存のFuse.js 7.5.0を共通利用する。既存checkoutはlockfile更新後に `bun run setup` を実行する。外部検索サービス・モデル・追加env・DB migrationは不要で、検索の単体検証は `bun run --cwd apps/api test --project unit test/catalog-search.test.ts` で実行する。
+メニュー検索はAPI依存のFuse.js 7.5.0を共通利用する。既存checkoutはlockfile更新後に `bun run setup` を実行する。外部検索サービス・モデル・追加envは不要で、検索の単体検証は `bun run --cwd apps/api test --project unit test/catalog-search.test.ts` で実行する。
 
 CIのNodeは`>=24.22.0 <25`を指定し、`setup-node`がrunnerのtoolcacheから適合する24系を選ぶ。収録版があればNodeの取得・展開・コピーを省き、なければ取得する。ローカルとDev Containerの24.22.0固定、Bunと依存lockは維持する。CIのminor・patch版はrunner image更新に追従するため、CI固有の問題を再現するときは`setup-node`ログの実行版とrunner imageを照合する。[setup-nodeの版選択](https://github.com/actions/setup-node/blob/49933ea5288caeca8642d1e84afbd3f7d6820020/README.md#supported-version-syntax)
 
@@ -391,3 +391,7 @@ root・APIの`drizzle-orm`とAPIの`drizzle-kit`は`1.0.0-rc.5`へ固定する�
 Web内のFumadocsは`fumadocs-core`・`fumadocs-ui` 16.17.8と`fumadocs-mdx` 15.4.10、型定義`@types/mdx` 2.0.13を使う。検索はZBSearch 4.0.1と公式の`@zbsearch/tokenizers` 4.0.1で日英の索引を分け、日本語は`Intl.Segmenter`を使うtokenizer、英語はstemmingを有効にする。外部辞書の取得は不要で、索引・検索語・ハイライトは同じ正規化を使い、複数の検索語はすべて含む候補を返す。通常の`bun install --frozen-lockfile`で導入でき、追加のenv・サービス・workspaceは不要。Vite pluginが`.agents/skills/tablecast-help/references`のMarkdownをビルド時に処理する。`bun run dev`で`/help`、`/llms.txt`、`/help/content/ja/mcp.md`を認証せず確認できる。原稿の追加・リンク規約は[Codexプラグイン](codex-plugin.md#公開ヘルプ)を参照する。
 
 CIの全検査はActionsの`CI`で作業branchを選択し、`catalog_pr`を空欄にして起動する。作業branchのWorkers buildはstaging設定を使い、公開環境へ配備しない。カートの100ms計測は通常の`bun run test:browser`に含まれる`browser-performance`で、他のBrowser・Storybook検査の終了後に実行する。詳細は[テスト戦略](testing.md#ciで観測した初期描画と性能の競合)と[配備](deployment.md)を参照する。
+
+### 客向けメニュー検索の移行
+
+`0031_tablecast_menu_search.sql`は`table_sessions.menu_search_json`をnullableで追加する。新APIの配備前に既存のmigration経路で適用する。既存セッションのNULLは通常メニューとして扱う。検索語・offset・検索時のカタログ版だけを保存し、結果IDと件数は現在の同じカタログから計算する。旧APIへの復帰時も追加列は残してよく、注文・カート・既存設定の変換は不要。

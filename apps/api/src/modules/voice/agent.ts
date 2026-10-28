@@ -6,7 +6,7 @@ import type { DisplayCurrencyContext } from "../currency/model";
 import { ensure } from "../../platform/errors";
 import { localeSchema, id as productIdSchema } from "../../platform/model";
 import { getCatalog } from "../catalog/queries";
-import { createMenuSearch } from "../catalog/search";
+import { menuSearchPage } from "../catalog/search";
 import { maxConfigurationProducts } from "../configuration/model";
 import { approximateAmounts, currencyMetadata } from "../currency/display";
 import { displayCurrencyCodeSchema } from "../currency/model";
@@ -16,7 +16,7 @@ import { saveAutomaticCustomerMemory } from "../customer-memory/use-cases/source
 import { cartUpdateSchema, submitSchema } from "../orders/model";
 import { updateCart } from "../orders/use-cases/cart";
 import { prepareConfirmation, submitOrder } from "../orders/use-cases/confirmation";
-import { uiSectionInputSchema } from "../tables/model";
+import { menuSearchInputSchema, uiSectionInputSchema } from "../tables/model";
 import { getSession, getTableState } from "../tables/queries";
 import {
   callStaff,
@@ -28,7 +28,7 @@ import { showProductsSchema, type VoiceTrigger } from "./model";
 import { setSpeechSpeed } from "./service";
 import { castTool } from "./tool";
 import { voiceToolDescriptions } from "./tool-descriptions";
-import { voiceTableState } from "./tool-state";
+import { voiceCatalogProduct, voiceTableState } from "./tool-state";
 import { showReference } from "./use-cases/references";
 
 export function createCastTools(
@@ -115,9 +115,9 @@ export function createCastTools(
         const locale = session.locale;
         const currency = quoteCurrency ?? selectedCurrency;
         const search = productIds
-          ? { ids: productIds, detail: true }
-          : createMenuSearch(catalog.configuration)(query);
-        const ids = productIds ? [...new Set(productIds)] : search.ids;
+          ? { productIds, detail: true, total: new Set(productIds).size, more: false }
+          : menuSearchPage(catalog.configuration, { query, offset, limit });
+        const ids = [...new Set(search.productIds)];
         const detail = Boolean(productIds) || search.detail;
         const byId = new Map(
           catalog.configuration.products.map((product) => [product.id, product]),
@@ -127,7 +127,7 @@ export function createCastTools(
           return product ? [product] : [];
         });
         ensure(!productIds || matches.length === ids.length, "PRODUCT_NOT_FOUND", 422);
-        const products = productIds ? matches : matches.slice(offset, offset + limit);
+        const products = matches;
         if (show) {
           ensure(trigger === "user", "VOICE_TOOL_FORBIDDEN", 403);
           if (products.length)
@@ -140,8 +140,8 @@ export function createCastTools(
         }
         return {
           displayCurrency: currencyMetadata(currency, rates),
-          total: matches.length,
-          more: !productIds && offset + products.length < matches.length,
+          total: search.total,
+          more: search.more,
           ...(show
             ? { displayedProductIds: products.slice(0, 4).map((product) => product.id) }
             : {}),
@@ -161,52 +161,9 @@ export function createCastTools(
             displayName: category.text[locale].displayName,
           })),
           detail,
-          products: products.map((product) => ({
-            id: product.id,
-            categoryId: product.categoryId,
-            price: product.price,
-            ...approximateAmounts({ price: product.price }, currency, rates),
-            available: product.available,
-            displayName: product.text[locale].displayName,
-            speechName: product.text[locale].speechName,
-            description: product.text[locale].description,
-            requiredSelections:
-              product.modifiers
-                ?.filter((modifier) => modifier.min > 0)
-                .map((modifier) => ({
-                  id: modifier.id,
-                  displayName: modifier.text[locale].displayName,
-                  min: modifier.min,
-                  max: modifier.max,
-                })) ?? [],
-            ...(detail
-              ? {
-                  allergens: product.allergens,
-                  modifiers: product.modifiers?.map((modifier) => ({
-                    id: modifier.id,
-                    kind: modifier.kind,
-                    min: modifier.min,
-                    max: modifier.max,
-                    displayName: modifier.text[locale].displayName,
-                    speechName: modifier.text[locale].speechName,
-                    description: modifier.text[locale].description,
-                    options: modifier.options.map((option) => ({
-                      id: option.id,
-                      priceDelta: option.priceDelta,
-                      ...approximateAmounts({ priceDelta: option.priceDelta }, currency, rates),
-                      available: option.available,
-                      maxQuantity: option.maxQuantity,
-                      ...(option.conditions
-                        ? { conditions: option.conditions }
-                        : { requires: option.requires, excludes: option.excludes }),
-                      displayName: option.text[locale].displayName,
-                      speechName: option.text[locale].speechName,
-                      description: option.text[locale].description,
-                    })),
-                  })),
-                }
-              : {}),
-          })),
+          products: products.map((product) =>
+            voiceCatalogProduct(product, locale, currency, rates, detail),
+          ),
         };
       },
     }),
@@ -297,6 +254,37 @@ export function createCastTools(
               guard();
               const state = await setSpeechSpeed(services, actor, input);
               return { speechSpeed: state.speechSpeed };
+            },
+          }),
+          showMenuSearch: castTool({
+            id: "showMenuSearch",
+            description: voiceToolDescriptions.showMenuSearch,
+            inputSchema: menuSearchInputSchema,
+            execute: async (input) => {
+              guard();
+              const catalog = await getCatalog(services, actor.storeId, actor.demoId);
+              const state = await setUiSection(
+                services,
+                actor,
+                { section: "menu", search: input },
+                "core",
+                { catalog, session: currentSession },
+              );
+              ensure(catalog.version === state.configVersion, "TABLE_CONFLICT");
+              const byId = new Map(
+                catalog.configuration.products.map((product) => [product.id, product]),
+              );
+              return {
+                version: state.configVersion,
+                ...state.menuSearch,
+                products: (state.menuSearch?.productIds ?? []).flatMap((id) => {
+                  const product = byId.get(id);
+                  return product
+                    ? [voiceCatalogProduct(product, state.locale, selectedCurrency, rates, false)]
+                    : [];
+                }),
+                displayCurrency: currencyMetadata(selectedCurrency, rates),
+              };
             },
           }),
           setUiSection: castTool({

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createMenuSearch } from "../src/modules/catalog/search";
+import { createMenuSearch, menuSearchPage } from "../src/modules/catalog/search";
 import { configurationSchema } from "../src/modules/configuration/model";
 
 const text = (ja: string, en: string, description = "") => ({
@@ -205,5 +205,30 @@ describe("音声と店側で共有するメニュー検索", () => {
       ids: ["tablecast-chicken", "tablecast-salad"],
       detail: false,
     });
+  });
+});
+
+it("検索順のページ切出しは先頭・末尾・範囲外・0件を同じ規則で返す", () => {
+  const configuration = menu();
+  const ordered = createMenuSearch(configuration)("").ids;
+  expect(menuSearchPage(configuration, { limit: 1 })).toMatchObject({
+    productIds: ordered.slice(0, 1),
+    offset: 0,
+    total: ordered.length,
+    more: true,
+  });
+  expect(menuSearchPage(configuration, { offset: ordered.length - 1, limit: 1 })).toMatchObject({
+    productIds: ordered.slice(-1),
+    more: false,
+  });
+  expect(menuSearchPage(configuration, { offset: ordered.length })).toMatchObject({
+    productIds: [],
+    total: ordered.length,
+    more: false,
+  });
+  expect(menuSearchPage(configuration, { query: "zxqv未登録" })).toMatchObject({
+    productIds: [],
+    total: 0,
+    more: false,
   });
 });

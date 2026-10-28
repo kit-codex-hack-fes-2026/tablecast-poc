@@ -20,6 +20,12 @@ it("履歴の由来を記録する列を追加しても旧snapshotを変えず�
   );
   if (!authCompatibility) throw new Error("パスワードレス認証のmigrationが必要です");
   await applyD1Migrations(env.TABLECAST_DB, [authCompatibility]);
+  // 履歴の移行対象と独立したnullable表示列だけを現行fixtureへ揃える。
+  const menuSearchCompatibility = migrations.find((migration) =>
+    migration.name.includes("0031_tablecast_menu_search"),
+  );
+  if (!menuSearchCompatibility) throw new Error("検索条件のmigrationが必要です");
+  await applyD1Migrations(env.TABLECAST_DB, [menuSearchCompatibility]);
   const { staff } = await setupFixture();
   const snapshot = JSON.stringify(configuration);
   // 移行前の列だけで既存の公開版と破棄下書きを再現する。

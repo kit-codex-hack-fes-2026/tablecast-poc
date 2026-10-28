@@ -1500,5 +1500,13 @@
   "cast_system_default": "標準設定",
   "cast_system_overridden": "上書き中",
   "cast_system_override": "標準プロンプトを上書きする（非推奨）",
-  "cast_edit_system": "TableCastシステムを編集"
+  "cast_edit_system": "TableCastシステムを編集",
+  "kiosk_menu_search": "検索",
+  "kiosk_menu_search_label": "メニューを検索",
+  "kiosk_menu_search_placeholder": "商品名・カテゴリ・説明から検索",
+  "kiosk_menu_search_clear": "検索語を消去",
+  "kiosk_menu_search_results": "検索結果",
+  "kiosk_menu_search_empty": "該当する商品はありません。別の言葉で検索してください。",
+  "kiosk_menu_search_updating": "検索結果を更新中",
+  "kiosk_tool_menu_search": "メニュー検索結果を表示"
 }

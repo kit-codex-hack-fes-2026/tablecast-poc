@@ -147,7 +147,8 @@ export function useTableResources(data: CoreState, endpoint: TableEndpoint, refr
   const events = eventQuery.data?.events ?? [];
   useRealtime(
     eventQuery.data ? "table" : undefined,
-    eventQuery.data?.cursor ?? 0,
+    // 卓状態と会話履歴の両方が受領した位置から同期し、どちらの変更も取りこぼさない。
+    Math.min(data.cursor, eventQuery.data?.cursor ?? data.cursor),
     (update) => {
       if (!update) {
         refresh();
