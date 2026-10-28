@@ -32,7 +32,6 @@ Web/APIを2 Workersに保ち、音声はブラウザーからGPT-Liveへ直接�
 | [音声接続](voice/integration.md)                     | GPT-Live・Hono・Agents API、履歴、中断                |
 | [音声接客の代表シナリオ](voice/scenarios.md)         | 音声での選択・注文、画面誘導、カメラ状態、検証の分担  |
 | [発話と標準音声](voice/speech.md)                    | ペルソナ、読み、つなぎ言葉、感情・非言語音・間        |
-| [上流パッチ](voice/upstream-patch.md)                | 公式plugin、fork、commit固定、PR、削除条件            |
 | [店舗ChatGPTとMCP](mcp.md)                           | メニュー・翻訳・接客設定、下書きと公開                |
 | [ローカル・worktree](development.md)                 | Bun、Wrangler、単一オリジン、ポート、秘密情報         |
 | [テスト戦略](testing.md)                             | 保証の所有層、E2E昇格条件、移行対応、実行と隔離       |
@@ -63,7 +62,7 @@ Web/APIを2 Workersに保ち、音声はブラウザーからGPT-Liveへ直接�
 
 ## 同梱範囲
 
-仕様、Web/API実装、lockfile、migration、デモ画像、開発スクリプト、CI定義を含む。DB・秘密情報・node_modulesはGit管理しない。旧Inworld patchとbundleは過去の検証資料として保持し、通常音声の実行時依存には含めない。
+仕様、Web/API実装、lockfile、migration、デモ画像、開発スクリプト、CI定義を含む。DB・秘密情報・node_modulesはGit管理しない。旧Inworld patchとbundleは削除済みであり、当時の資料は[旧音声構成の検証記録](feasibility.md)からGit履歴を参照する。
 
 旧ZIPの梱包記録は当時の記録として残す。実行結果は現行の進捗記録と受入条件の証拠を使い、ローカル実音声接続の成功を実iPad・実店舗・公開環境の受入成功とは扱わない。
 

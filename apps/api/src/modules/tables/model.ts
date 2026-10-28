@@ -3,7 +3,7 @@ import { decimalQuerySchema, id, localeSchema, pageLimitSchema } from "../../pla
 import { planSchema } from "../catalog/model";
 import { billSchema, cartSchema, orderSchema, snapshotSchema } from "../orders/model";
 import { speechSpeedSchema } from "../voice/model";
-export const uiSectionSchema = z.enum(["menu", "cart", "orders", "bill"]);
+const uiSectionSchema = z.enum(["menu", "cart", "orders", "bill"]);
 
 export type UiSection = z.infer<typeof uiSectionSchema>;
 
@@ -109,7 +109,7 @@ export const tableEventSchema = z.object({
   createdAt: z.number(),
 });
 
-export const closedSessionSummarySchema = z.object({
+const closedSessionSummarySchema = z.object({
   id: z.string(),
   tableId: z.string(),
   tableName: z.string(),

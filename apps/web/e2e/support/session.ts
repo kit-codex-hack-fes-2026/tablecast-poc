@@ -8,7 +8,7 @@ const usedMessages = new Set<string>();
 export function registerTestMailpit(origin: string, mailpit: string) {
   mailpitOrigins.set(origin, mailpit);
 }
-export async function readMagicLink(
+async function readMagicLink(
   request: APIRequestContext,
   origin: string | undefined,
   email: string,
