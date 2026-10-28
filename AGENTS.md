@@ -20,6 +20,8 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 | 性能診断・公開配備                       | [観測手順](docs/observability.md)、配備時は[deployment.md](docs/deployment.md)                                                                                                       |
 | 計画・完了判定                           | [着手順](docs/implementation.md)、[進捗](docs/progress.md)、[受入条件](docs/acceptance.md)。他の仕様は[索引](docs/README.md)から探す                                                 |
 
+観測履歴の調査では[観測手順](docs/observability.md)からlocal／Cloud・環境・worktreeまたはPR・時間範囲を先に定める。会話・prompt・評価は[Langfuse skill](.agents/skills/langfuse/SKILL.md)、ログは[Loki](.agents/skills/loki/SKILL.md)、traceは[Tempo](.agents/skills/tempo/SKILL.md)、metricsは[PromQL](.agents/skills/promql/SKILL.md)、dashboardは[Dashboarding](.agents/skills/dashboarding/SKILL.md)、Grafana MCP接続は[Assistant MCP](.agents/skills/assistant-mcp/SKILL.md)を使う。
+
 ## 作業契約
 
 全ての作業はIssue起点とする。Renovateの自動更新だけは標準のDependency Dashboardで継続管理し、個別の実装Issue作成と1 Issue対1 PRの例外とする。PR・commitから標準のDependency Dashboard #302をRefsで参照し、Dashboardを自動更新PRで閉じない。既存Issue・Assignee・branch・PRを確認し、なければ起票する。新しく見つけた問題もIssueへ記録し、依頼範囲に含まれるか判断する。分割・担当・ラベル・Projects・Draft・本文・添付・マージの運用は上記GitHub skillsへ集約する。
@@ -71,7 +73,7 @@ Webは標準Tailwind utilityをTSXへ置き、`styles.css`はトークンと最�
 
 PRのマージ完了を確認したら、対応worktreeのdev・preview・Storybook・watch・音声Agentと子プロセス、開発用Compose/Dev Containerを[終了手順](docs/setup.md#6-終了再開復旧)に従って停止してから完了報告する。別の場所でマージされたPRも、再開時にマージ済みと判明したら同じ終了処理を行う。ユーザーが継続稼働を明示したものだけを除外する。
 
-停止前にPR・branch・worktreeの対応と、作業ディレクトリ・起動元・PIDの親子関係・Compose projectで所属を確認する。停止後は子プロセス・待受ポート・containerが残っていないことを確認し、停止結果や残存理由を報告する。対象外のworktree、共有proxy、Docker/OrbStack全体は停止せず、停止のためにvolume・worktree・未commit差分を削除しない。
+停止前にPR・branch・worktreeの対応と、作業ディレクトリ・起動元・PIDの親子関係・Compose projectで所属を確認する。停止後は子プロセス・待受ポート・containerが残っていないことを確認し、停止結果や残存理由を報告する。対象外のworktree、共有proxy、共有観測基盤（`tablecast-observability-local`）、Docker/OrbStack全体は停止せず、停止のためにvolume・worktree・未commit差分を削除しない。
 
 変更に関係するformat・lint・型・実行境界を[テスト戦略](docs/testing.md#変更に応じた検証)で選ぶ。成功済みの検証は、追加変更・失敗・未解決の懸念があるときに広げる。skip、型キャスト、広いignore、恒久mockで失敗を隠さない。
 

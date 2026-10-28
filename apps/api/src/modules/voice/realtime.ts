@@ -5,6 +5,7 @@ import type { ApiServices } from "../../platform/context";
 import * as business from "../../db/business-schema";
 import { DomainError, ensure } from "../../platform/errors";
 import { observeOperation } from "../../platform/telemetry";
+import { llmSessionId } from "../../platform/telemetry-llm";
 import { displayCurrencyActionSchema } from "../currency/model";
 import { createCastTools } from "./agent";
 import { type toolSchema, voiceToolEventSchema } from "./model";
@@ -72,15 +73,26 @@ export async function invokeVoiceTool(
         "tablecast.voice.session.id": input.voiceSessionId,
         "tablecast.voice.turn.id": input.turnId,
       });
-      const { actor, session, proactive, opening } = await voiceContext(
+      const { actor, session, proactive, opening, personal } = await voiceContext(
         services,
         input.voiceSessionId,
         input.turnId,
       );
+      if (!personal && services.env.TABLECAST_ENV !== "production") {
+        trace.getActiveSpan()?.setAttributes({
+          "tablecast.observation.type": "tool",
+          "tablecast.session.id": llmSessionId(services.env, session.id),
+          ...(services.env.TABLECAST_OTEL_CAPTURE_CONTENT === "true"
+            ? { "tablecast.input": JSON.stringify(input.arguments) }
+            : {}),
+        });
+      }
       const trigger = opening ? "opening" : proactive ? "proactive" : "user";
       if (trigger === "proactive") await currentVoiceTurn(services, actor, session.locale, trigger);
       const tools = createCastTools(
-        services,
+        personal
+          ? { ...services, env: { ...services.env, TABLECAST_OTEL_CAPTURE_CONTENT: "false" } }
+          : services,
         actor,
         signal,
         trigger,
@@ -109,6 +121,12 @@ export async function invokeVoiceTool(
       try {
         ensure(tool?.execute, "VOICE_TOOL_FORBIDDEN", 403);
         const result = await tool.invoke(input.arguments);
+        if (
+          !personal &&
+          services.env.TABLECAST_OTEL_CAPTURE_CONTENT === "true" &&
+          services.env.TABLECAST_ENV !== "production"
+        )
+          trace.getActiveSpan()?.setAttribute("tablecast.output", JSON.stringify(result));
         trace
           .getActiveSpan()
           ?.setAttribute(
@@ -145,6 +163,9 @@ export async function invokeVoiceTool(
         throw error;
       }
     },
-    { env: services.env, input: { toolName: input.toolName } },
+    {
+      env: { ...services.env, TABLECAST_OTEL_CAPTURE_CONTENT: "false" },
+      input: { toolName: input.toolName },
+    },
   );
 }

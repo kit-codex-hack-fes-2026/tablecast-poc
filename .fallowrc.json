@@ -11,6 +11,7 @@
     "scripts/tablecast-changed-vitest.ts",
     "scripts/tablecast-demo.ts",
     "scripts/tablecast-grafana-mcp.ts",
+    "scripts/tablecast-langfuse-headers.ts",
     "scripts/tablecast-plugin.ts",
     "apps/api/src/worker.ts"
   ],

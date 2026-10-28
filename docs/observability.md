@@ -28,16 +28,17 @@ SDKの自動計測にはURL・SQL・ヘッダーが含まれるので、実際�
 
 Grafana Cloudは`beigepuma130`の一つのstackを使う。PRごとにstackやdatasourceを作らない。これは検索上の分離であり、機密性の境界ではない。Viewer tokenを持つ開発者はprodとpreviewの双方を検索できる。
 
-| 対象       | OTel resource                                                              | Loki                                                 |
-| ---------- | -------------------------------------------------------------------------- | ---------------------------------------------------- |
-| 共通       | `service.namespace=tablecast`                                              | `service_namespace` index label                      |
-| サービス   | `service.name=tablecast-api` / `tablecast-web`                             | `service_name` index label                           |
-| 本番       | `deployment.environment.name=production`                                   | `deployment_environment_name` index label            |
-| PR preview | `deployment.environment.name=preview`, `tablecast.pr.number=123`（文字列） | 環境labelと`tablecast_pr_number` structured metadata |
-| ローカル   | `deployment.environment.name=development`                                  | 環境label                                            |
-| リリース   | `service.version=<SHA>`                                                    | `service_version` structured metadata                |
+| 対象       | OTel resource                                                              | Loki                                                                    |
+| ---------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 共通       | `service.namespace=tablecast`                                              | `service_namespace` index label                                         |
+| サービス   | `service.name=tablecast-api` / `tablecast-web`                             | `service_name` index label                                              |
+| 本番       | `deployment.environment.name=production`                                   | `deployment_environment_name` index label                               |
+| PR preview | `deployment.environment.name=preview`, `tablecast.pr.number=123`（文字列） | 環境labelと`tablecast_pr_number` structured metadata                    |
+| ローカル   | `deployment.environment.name=development`                                  | 環境label                                                               |
+| リリース   | `service.version=<SHA>`                                                    | `service_version` structured metadata                                   |
+| worktree   | `tablecast.worktree.id` / `tablecast.worktree.name`                        | `tablecast_worktree_id` / `tablecast_worktree_name` structured metadata |
 
-PR番号・request ID・trace IDをLoki index labelに増やさない。APIとWebの環境・PR番号・SHAは配備設定から同時に注入し、HTTP headerから決めない。
+worktree IDは実worktreeのrealpathのSHA-256先頭16桁で、branch・commitに依存しない。パス自体を送らず、API/Webの起動設定から注入する。worktree・PR番号・request ID・trace IDをLoki index labelに増やさない。APIとWebの環境・PR番号・SHAは配備設定から同時に注入し、HTTP headerから決めない。
 
 prodのLogQL:
 
@@ -62,9 +63,13 @@ prodは環境を`production`へ変えてPR条件を外す。ローカルは`deve
 
 ## ローカル起動とMCP
 
-`bun run dev`でworktree専用のLGTMも起動する。ホストでは `http://grafana.<worktree名>.tablecast-poc.localhost` と `http://tempo.<worktree名>.tablecast-poc.localhost` を使い、traceは `http://otlp.<worktree名>.tablecast-poc.localhost` へ送る。Dockerが公開ポートを割り当て、Portless aliasが転送する。Grafana MCPは `docker compose port` で実ポートを直接取得するため、LGTM起動後に接続できる。Docker volume `tablecast-<worktree名>-lgtm`にデータを保持し、WebはTurboのターミナルでCtrl+C、Dockerサービスは `bun run services:down` で停止する。この操作は自worktreeのalias・containerとnetworkを片付け、volumeを保持する。共有proxyは停止しない。Dev ContainerはComposeの`tablecast-lgtm`を使う。
+LGTMとLangfuseは開発ホストにつき一組を共有する。初回に`bun run tablecast:observability:up`、状態確認に`bun run tablecast:observability:status`を使う。ホストにBunがないDev Container開発では`sh scripts/tablecast-observability.sh up`を先に実行する。通常のdevと`services:up`はworktree固有のMailpitとアプリを起動し、共有観測先へ接続する。
 
-LGTMのサービス定義はルート `compose.yaml` を正本とし、Dev Containerからも参照する。`infra/grafana/tempo.yaml` はTempoの実行設定、`infra/grafana/dashboards/` はGrafanaへimportするJSONである。
+共有Composeの正本は`infra/observability/compose.yaml`。実行用Compose、Tempo設定、資格情報は`${XDG_DATA_HOME:-$HOME/.local/share}/tablecast/observability`へ保存する。`TABLECAST_OBSERVABILITY_DIR`で変更できる。実行時のmount元はworktreeへ依存しない。データは固定project `tablecast-observability-local`のnamed volumeへ永続化する。
+
+既定のホストURLはGrafana `http://127.0.0.1:3300`、Tempo `http://127.0.0.1:3320`、OTLP `http://127.0.0.1:4318`、Langfuse `http://127.0.0.1:3301`。初回up前に`TABLECAST_GRAFANA_PORT`・`TABLECAST_TEMPO_PORT`・`TABLECAST_OTLP_PORT`・`TABLECAST_LANGFUSE_PORT`で変更でき、以後は共有`.env`の値を使う。Dev ContainerとGrafana MCPのDocker clientは外部network `tablecast-observability-local`へ接続する。
+
+`services:down`とDev Containerのdownは共有基盤を止めない。共有基盤を止める場合だけ`bun run tablecast:observability:down`を使う。volumeは保持する。旧worktree別LGTMのvolumeは削除・自動取り込みせず、新しいログから共有先へ切り替える。Tempo設定の正本は`infra/grafana/tempo.yaml`、手動importするdashboardは`infra/grafana/dashboards/`にある。
 
 LGTMは開発用で、host公開はloopbackに限定する。Grafanaは匿名Viewer、設定変更用の初期ログインは`admin` / `admin`。Tempoの読み取りMCPは同梱設定で有効にする。
 
@@ -111,7 +116,7 @@ GUIで商品をカートへ入れ、確認画面を経て明示承認する。`/
 
 ## 全体の性能集計
 
-`infra/grafana/dashboards/tablecast-operations.json`をGrafanaのImport dashboardで読み込む。Loki datasource、環境、PR番号、サービスを選ぶ。PR番号の`.*`は全件、`123`はそのPRだけを対象にする。APIを既定サービスとし、Web proxyとAPIの件数を重複合算しない。
+`infra/grafana/dashboards/tablecast-operations.json`をGrafanaのImport dashboardで読み込む。Loki datasource、環境、PR番号、worktree ID、サービスを選ぶ。PR番号の`.*`は全件、`123`はそのPRだけを対象にする。APIを既定サービスとし、Web proxyとAPIの件数を重複合算しない。
 
 HTTPは全ルートの完了ログ、業務処理は`tablecast.operation_completed`から件数・失敗率・p50/p95を集計する。カタログ取得、卓状態、カート、注文確認・確定・状態変更、スタッフ呼出、卓の開始・終了、会計要求・入金、設定公開を同じ操作名で追える。処理内訳の子spanは完了イベントを重ねず、共有操作のネストは操作名別に集計する。業務拒否の`rejected`と障害の`error`を区別する。ログ配送はbest effortなので、これを売上帳簿や厳密な監査件数にしない。
 
@@ -157,3 +162,57 @@ voice session / アプリのturn / tool call IDとHTTP traceを区別して記�
 ブラウザーでsession.delegation.createdとresponse.created / response.completed、tool HTTP、入力音声終了、出力音声を同じ時計で測る。モデルusageはresponseイベントのusageから取得し、cached・cache write・outputを分ける。推論完了・字幕到着・実再生は異なる。
 
 D1はspanとsql_duration_msを分け、取得できる場合にserved_by_region / served_by_primary / total_attemptsも残す。差分を純粋なネットワークRTTと断定しない。属性の許可だけでは、bindingやadapterが返さないmetadataを取得できた証拠にはならない。
+
+## worktreeと会話の調査
+
+共有localの検索は環境・worktree・時間範囲を指定し、必要に応じてSHAを絞る。表示名は現在の開発設定の名前、IDはcheckoutの安定した識別子である。同じbranch名の別checkoutを表示名だけで判定しない。
+
+```logql
+{service_namespace="tablecast", deployment_environment_name="development"}
+  | tablecast_worktree_id="<worktree-id>"
+```
+
+```traceql
+{ resource.deployment.environment.name="development" && resource.tablecast.worktree.id="<worktree-id>" }
+```
+
+運用dashboardのworktree欄にはIDを入力し、全件は`.*`にする。LangfuseのSessionも環境・worktreeまたはPR・来店IDを組み合わせ、別worktreeの同じfixture IDを混ぜない。metadataの`tablecast_worktree_id`・`tablecast_pr_number`・`service_version`から絞り、voice session・turn・delegation・response・tool callのIDで対応を追う。HTTP traceは別の区間であり、長時間のモデルspanをWorker内で保持しない。
+
+## LangfuseとCodexの改善ループ
+
+localはLangfuse v4.71.0、評価SDKはJS 6.0.2とOTel trace SDK 2.12.0・exporter 0.223.0、CLIは固定依存の公式`@langfuse/cli`を使う。localの初期ユーザーは`developer@tablecast.localhost`。初期passwordとproject API keyは共有`.env`へ権限600で生成する。資格情報をチャット・Git・ブラウザーの公開設定へ貼らない。
+
+preview/stagingは日本リージョンの同じCloud開発用projectを使い、environmentで分ける。GitHub Actionsのpreview/stagingで使用するsecret `TABLECAST_LANGFUSE_PUBLIC_KEY`と`TABLECAST_LANGFUSE_SECRET_KEY`を登録する。productionはLangfuse送信対象に含めない。CodexからCloudを読む場合は共有ディレクトリの`cloud.env`に同じ二つの変数を保存し、権限600にする。Cloud無料枠は50k units/月、履歴アクセス30日。unitsは会話数ではなくObservationやscoreも含む。
+
+```sh
+bun run tablecast:langfuse local api observations list --help
+bun run tablecast:langfuse cloud api observations list --help
+```
+
+リポジトリの`.codex/config.toml.example`には`tablecast-langfuse-local`と`tablecast-langfuse-cloud`も用意する。必要なテーブルをGit管理外の`.codex/config.toml`へ統合し、MCPを再接続する。公式のデータ用MCPへ直接接続し、`http_headers_helper`が共有資格情報を実行時に読む。helperの標準出力は秘密値なので手動表示しない。localのportを変更した場合はURLも合わせ、Dev Container内のCodexでは`http://tablecast-langfuse-web:3000/api/public/mcp`を使う。Cloudは日本リージョンのURLへ固定する。登録後は`codex mcp get tablecast-langfuse-local`と`listPrompts`・`listObservations`の実読取を区別して確認する。履歴調査用MCPは`enabled_tools`で読取に限定し、評価やscoreなどの変更は対象を明示したCLIから行う。[Langfuse公式MCP](https://langfuse.com/docs/api-and-data-platform/features/mcp-server)、[Codex header helper](https://learn.chatgpt.com/docs/extend/mcp)を参照する。
+
+実際の引数とschemaは公式CLIの`api __schema`と`--help`で確認する。Observations API v2を使い、廃止されるlegacy traces/sessions APIへ新規依存しない。公式Langfuse Skillは`.agents/skills/langfuse`、取得元は`skills-lock.json`で管理する。Grafana公式の`loki`・`tempo`・`promql`・`dashboarding`・`assistant-mcp`も同じリポジトリに導入する。外部skillの一般例より、この文書の固定版・接続先・秘匿化・worktree条件を優先する。skillは次のターンから利用でき、global配置へのコピーは不要である。
+
+収集はsession開始時のprompt・店舗設定・tool定義・モデル設定とhash、字幕、委任、公開response event、APIのtool引数・結果を対象にする。promptの正本はGitと店舗設定である。`TABLECAST_OTEL_CAPTURE_CONTENT=false`では本文を送らず、取得できたモデル名・usage等だけを残す。会員参加後は診断本文を収集しない。認証資格の秘匿化は両exporterへ適用する。生音声・画像は収集しない。
+
+ブラウザーの診断は最大20件・240KiB未満のbatchで認可済み`voice/observations`へ送る。最大100件の待機queueと重複event IDの抑制を持ち、送信失敗は再試行せず音声状態を変えない。容量超過は`tablecast.observation.dropped_events`、本文上限は`tablecast.observation.content_truncated`で示す。停止・会員切替との競合、タブ終了時は欠落しうる。providerが公開しない委任入力は再現済みと扱わない。usageは公開event由来の診断値で、課金ledgerではない。
+
+Codexへの依頼では、環境・期間・worktreeまたはPR・対象SHAと問題の動作を指定する。失敗例と成功例を確認し、ケース化してからprompt・tool説明・実装を変更する。PRへ匿名化した再現手順・trace参照・検証結果を残す。
+
+### 手動再評価
+
+`infra/observability/tablecast-eval-cases.json`は日英の注文確認・売切・必須選択・言語切替・停止の10件を持つ合成draftで、人が期待動作をレビューするための出発点である。自動の品質合格判定や本番会話由来のground truthではない。
+
+```sh
+# draftの確認のみ。外部接続・有料モデル実行は行わない。
+bun run tablecast:eval
+# Langfuseで収集したconfigurationの入力JSONを.local/tablecast-configuration.jsonへ保存する。
+# 記録済み応答はcase IDをkeyにしたJSON objectを用意する。
+bun run tablecast:eval --target local --configuration .local/tablecast-configuration.json --replay .local/tablecast-recorded-responses.json --output .local/tablecast-baseline.json
+# 実モデルを明示起動する。初期値は最大10件・並列1・最大出力1024token。
+bun run tablecast:eval --target local --configuration .local/tablecast-configuration.json --live --output .local/tablecast-candidate.json
+```
+
+snapshotと同じ言語のケースだけを実行し、実tool定義と店舗設定に現在コードのprompt生成を組み合わせる。比較には同じ評価方式で作成した結果JSONを`--baseline`へ渡す。データセットhashが異なる比較は拒否する。`--dataset`でレビュー済みの独自ケースへ差し替えられる。`--limit`は1〜20、`--concurrency`は1〜2、`--max-output-tokens`は128〜4096に制限する。
+
+結果JSONにはExperiment ID・URL・SHA・dataset hash・比較前後の出力を保存し、LangfuseのExperiments画面でも比較できる。SDK task内のtool callを実店舗へ実行することはなく、Responsesのテキスト出力と呼出し要求をレビューする。GPT-Liveの実音声・割り込み・再生開始の検証とは区別する。実モデル実行には`.env.local`か実行環境の`TABLECAST_MODEL_API_KEY`を使う。

@@ -218,6 +218,7 @@ describe("開発資源の所有境界", () => {
       await symlink(join(process.cwd(), "node_modules"), join(root, "node_modules"), "dir");
       for (const path of [
         "scripts/tablecast-runtime.ts",
+        "scripts/tablecast-observability-config.ts",
         "scripts/tablecast-env.sh",
         "scripts/tablecast-deploy-config.ts",
         "scripts/tablecast-deploy",

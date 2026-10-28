@@ -1,0 +1,136 @@
+name: tablecast-observability-local
+services:
+  tablecast-lgtm:
+    image: grafana/otel-lgtm:0.37.0
+    restart: unless-stopped
+    environment:
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_LOG_LEVEL: warn
+    ports:
+      - "127.0.0.1:${TABLECAST_GRAFANA_PORT}:3000"
+      - "127.0.0.1:${TABLECAST_OTLP_PORT}:4318"
+      - "127.0.0.1:${TABLECAST_TEMPO_PORT}:3200"
+    volumes:
+      - tablecast-lgtm:/data
+      - ./tempo.yaml:/otel-lgtm/tempo-config.yaml:ro
+  tablecast-langfuse-worker:
+    image: docker.langfuse.com/langfuse/langfuse-worker:4.71.0
+    restart: unless-stopped
+    depends_on: &tablecast-langfuse-dependencies
+      tablecast-postgres:
+        condition: service_healthy
+      tablecast-clickhouse:
+        condition: service_healthy
+      tablecast-redis:
+        condition: service_healthy
+      tablecast-minio:
+        condition: service_healthy
+    environment: &tablecast-langfuse-environment
+      NEXTAUTH_URL: http://127.0.0.1:${TABLECAST_LANGFUSE_PORT}
+      DATABASE_URL: postgresql://postgres:${TABLECAST_STORAGE_SECRET}@tablecast-postgres:5432/postgres
+      SALT: ${TABLECAST_LANGFUSE_SALT}
+      ENCRYPTION_KEY: ${TABLECAST_LANGFUSE_ENCRYPTION_KEY}
+      TELEMETRY_ENABLED: "false"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://tablecast-clickhouse:9000
+      CLICKHOUSE_URL: http://tablecast-clickhouse:8123
+      CLICKHOUSE_USER: tablecast
+      CLICKHOUSE_PASSWORD: ${TABLECAST_STORAGE_SECRET}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_HOST: tablecast-redis
+      REDIS_AUTH: ${TABLECAST_STORAGE_SECRET}
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: tablecast
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: tablecast
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${TABLECAST_STORAGE_SECRET}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://tablecast-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: tablecast
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: tablecast
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${TABLECAST_STORAGE_SECRET}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://tablecast-minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+  tablecast-langfuse-web:
+    image: docker.langfuse.com/langfuse/langfuse:4.71.0
+    restart: unless-stopped
+    depends_on: *tablecast-langfuse-dependencies
+    ports:
+      - "127.0.0.1:${TABLECAST_LANGFUSE_PORT}:3000"
+    environment:
+      <<: *tablecast-langfuse-environment
+      NEXTAUTH_SECRET: ${TABLECAST_LANGFUSE_AUTH_SECRET}
+      LANGFUSE_INIT_ORG_ID: tablecast-local
+      LANGFUSE_INIT_ORG_NAME: TableCast local
+      LANGFUSE_INIT_PROJECT_ID: tablecast-development
+      LANGFUSE_INIT_PROJECT_NAME: TableCast development
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${TABLECAST_LANGFUSE_PUBLIC_KEY}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${TABLECAST_LANGFUSE_SECRET_KEY}
+      LANGFUSE_INIT_USER_EMAIL: developer@tablecast.localhost
+      LANGFUSE_INIT_USER_NAME: TableCast developer
+      LANGFUSE_INIT_USER_PASSWORD: ${TABLECAST_LANGFUSE_PASSWORD}
+      LANGFUSE_MCP_ALLOWED_HOSTS: tablecast-langfuse-web:3000
+  tablecast-postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${TABLECAST_STORAGE_SECRET}
+    volumes:
+      - tablecast-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  tablecast-clickhouse:
+    image: clickhouse/clickhouse-server:25.12
+    restart: unless-stopped
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: tablecast
+      CLICKHOUSE_PASSWORD: ${TABLECAST_STORAGE_SECRET}
+    volumes:
+      - tablecast-clickhouse:/var/lib/clickhouse
+    healthcheck:
+      test: [CMD, wget, --spider, -q, http://localhost:8123/ping]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  tablecast-redis:
+    image: redis:7
+    restart: unless-stopped
+    command:
+      [redis-server, --requirepass, "${TABLECAST_STORAGE_SECRET}", --maxmemory-policy, noeviction]
+    volumes:
+      - tablecast-redis:/data
+    healthcheck:
+      test: [CMD-SHELL, 'redis-cli -a "$$TABLECAST_STORAGE_SECRET" ping | grep PONG']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    environment:
+      TABLECAST_STORAGE_SECRET: ${TABLECAST_STORAGE_SECRET}
+  tablecast-minio:
+    image: cgr.dev/chainguard/minio
+    restart: unless-stopped
+    entrypoint: sh
+    command: -c 'mkdir -p /data/tablecast && minio server --address ":9000" /data'
+    environment:
+      MINIO_ROOT_USER: tablecast
+      MINIO_ROOT_PASSWORD: ${TABLECAST_STORAGE_SECRET}
+    volumes:
+      - tablecast-minio:/data
+    healthcheck:
+      test: [CMD, mc, ready, local]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+volumes:
+  tablecast-lgtm:
+  tablecast-postgres:
+  tablecast-clickhouse:
+  tablecast-redis:
+  tablecast-minio:
+networks:
+  default:
+    name: tablecast-observability-local

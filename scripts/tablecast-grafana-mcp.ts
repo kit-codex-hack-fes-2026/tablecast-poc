@@ -1,5 +1,5 @@
-import { $ } from "bun";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
+import { localObservability } from "./tablecast-observability-config.ts";
 import { tablecastContainer, tablecastLocal } from "./tablecast-runtime.ts";
 
 const target = process.argv[2];
@@ -8,16 +8,10 @@ if (target !== "local" && target !== "cloud")
 const args = ["run", "--rm", "-i"];
 const environment: Record<string, string> = {};
 if (target === "local") {
-  if (tablecastContainer) environment.GRAFANA_URL = "http://tablecast-lgtm:3000";
-  else {
-    const port = (
-      await $`docker compose --env-file ${join(tablecastLocal, ".env")} port tablecast-lgtm 3000`.text()
-    )
-      .trim()
-      .split(":")
-      .at(-1);
-    environment.GRAFANA_URL = `http://host.docker.internal:${port}`;
-  }
+  const local = await localObservability(tablecastContainer);
+  environment.GRAFANA_URL = local.TABLECAST_GRAFANA_ORIGIN;
+  if (!tablecastContainer) args.push("--network", "tablecast-observability-local");
+  if (!tablecastContainer) environment.GRAFANA_URL = "http://tablecast-lgtm:3000";
 } else {
   const token = resolve(tablecastLocal, "tablecast-grafana-read-token");
   if (!(await Bun.file(token).exists()))

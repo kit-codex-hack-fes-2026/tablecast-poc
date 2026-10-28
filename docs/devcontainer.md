@@ -6,7 +6,7 @@ cloneから起動までの手順は [セットアップ](setup.md#2a-dev-contain
 
 ## runtimeと分離
 
-Node 24.22.0、Bun 1.4.3を使用する。Mailpit・Caddyはイメージ内の実行ファイル、Grafana LGTMはComposeの別サービスとして起動する。Docker socketを渡さず、コンテナ内でDockerを必要とするE2EはホストまたはCIで行う。
+Node 24.22.0、Bun 1.4.3を使用する。Mailpit・Caddyはイメージ内の実行ファイル、Grafana LGTM/Langfuseはホスト共有のComposeで先に起動し、外部network `tablecast-observability-local`から接続する。初回はホストで`sh scripts/tablecast-observability.sh up`を実行する。Docker socketを渡さず、コンテナ内でDockerを必要とするE2EはホストまたはCIで行う。
 
 `tablecast-init.sh` はホストのGit共通ディレクトリとworktree実パスからCompose設定を生成する。メインcheckoutは `main`、追加worktreeはフォルダー名、Codexの同名repoフォルダーでは親のIDを使う。branch名やcommitには依存しない。Compose project・volumeと公開ポートを実パスごとに分離する。
 

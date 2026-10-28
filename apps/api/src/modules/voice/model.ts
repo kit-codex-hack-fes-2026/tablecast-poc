@@ -110,6 +110,41 @@ const conversationItemSchema = z
 
 export const voiceStartSchema = z.object({ sdp: z.string().min(1).max(64000) }).strict();
 
+export const voiceObservationSchema = z
+  .object({
+    eventId: id,
+    kind: z.enum(["transcript", "delegation", "response", "instructions"]),
+    startedAt: z.number().int().nonnegative(),
+    endedAt: z.number().int().nonnegative(),
+    turnId: id.optional(),
+    delegationId: id.optional(),
+    responseId: id.optional(),
+    toolCallIds: z.array(id).max(50).optional(),
+    model: z.string().max(100).optional(),
+    usage: z
+      .object({
+        input_tokens: z.number().int().nonnegative(),
+        output_tokens: z.number().int().nonnegative(),
+        input_tokens_details: z
+          .object({ cached_tokens: z.number().int().nonnegative() })
+          .optional(),
+      })
+      .optional(),
+    content: z.string().max(16000).optional(),
+    contentTruncated: z.boolean().optional(),
+    droppedEvents: z.number().int().nonnegative().optional(),
+    role: z.enum(["user", "assistant"]).optional(),
+    status: z.enum(["completed", "failed", "incomplete", "interrupted"]).optional(),
+  })
+  .strict();
+
+export const voiceObservationsSchema = z
+  .object({
+    voiceSessionId: id,
+    events: z.array(voiceObservationSchema).min(1).max(20),
+  })
+  .strict();
+
 export const voiceDelegationSchema = z
   .object({
     voiceSessionId: id,

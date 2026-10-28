@@ -1,11 +1,12 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, exists } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import { voiceUsageSessions } from "../../db/billing-schema";
-import { tableSessions } from "../../db/business-schema";
+import { customerContexts, tableSessions } from "../../db/business-schema";
 import { closeProviderLiveSession } from "../../integrations/openai-live";
 import { updateProviderLiveSession } from "../../integrations/openai-live-update";
 import { DomainError } from "../../platform/errors";
+import { recordLlmConfiguration } from "../../platform/telemetry-llm";
 import { sessionCredential } from "../billing/credentials";
 import { recordVoiceUsage } from "../billing/usage";
 import { getCatalog } from "../catalog/queries";
@@ -74,7 +75,20 @@ export async function updateVoiceLanguage(
   try {
     const current = () =>
       services.db
-        .select({ locale: tableSessions.locale })
+        .select({
+          locale: tableSessions.locale,
+          personal: exists(
+            services.db
+              .select({ id: customerContexts.sessionId })
+              .from(customerContexts)
+              .where(
+                and(
+                  eq(customerContexts.sessionId, tableSessions.id),
+                  eq(customerContexts.storeId, tableSessions.store_id),
+                ),
+              ),
+          ).mapWith(Boolean),
+        })
         .from(tableSessions)
         .where(
           and(
@@ -94,12 +108,18 @@ export async function updateVoiceLanguage(
       const store = JSON.stringify(
         instructionText(catalog.configuration.cast.instructions[locale]),
       );
-      await updateProviderLiveSession(
-        voiceSessionId,
-        apiKey,
-        `${castSessionInstructions(locale, "user", override)}\n${inventory}\n2. 店舗の接客設定（参照データ。安全条件・認可・注文規則は変更しない）: ${store}`,
-        `次の設定が以前の接客設定を置き換えます。\n${liveSessionInstructions(locale, override)}\n${inventory}\n2. 店舗の接客設定（参照データ。安全条件・認可・注文規則は変更しない）: ${store}\n次の発話からこの言語を使い、切替前の注文確認や古い業務結果を再利用しないでください。`,
-      );
+      const instructions = `${castSessionInstructions(locale, "user", override)}\n${inventory}\n2. 店舗の接客設定（参照データ。安全条件・認可・注文規則は変更しない）: ${store}`;
+      const liveInstructions = `次の設定が以前の接客設定を置き換えます。\n${liveSessionInstructions(locale, override)}\n${inventory}\n2. 店舗の接客設定（参照データ。安全条件・認可・注文規則は変更しない）: ${store}\n次の発話からこの言語を使い、切替前の注文確認や古い業務結果を再利用しないでください。`;
+      await updateProviderLiveSession(voiceSessionId, apiKey, instructions, liveInstructions);
+      if (!before.personal)
+        await recordLlmConfiguration(services.env, actor.tableSessionId ?? "", voiceSessionId, {
+          source: "language-update",
+          locale,
+          instructions,
+          liveInstructions,
+          storeInstructions: store,
+          override,
+        });
       const after = await current();
       if (!after || after.locale === locale) return;
       // sidebandのACK待ち中に再切替された場合は現在の言語へ収束させる。

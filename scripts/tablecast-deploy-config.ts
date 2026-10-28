@@ -82,6 +82,8 @@ export function modeOptions(
                   [
                     "TABLECAST_RELEASE_SHA",
                     "TABLECAST_OTEL_ENDPOINT",
+                    "TABLECAST_WORKTREE_ID",
+                    "TABLECAST_WORKTREE_NAME",
                     ...(workspace === "api"
                       ? [
                           "TABLECAST_PUBLIC_ORIGIN",
@@ -92,6 +94,7 @@ export function modeOptions(
                           "TABLECAST_VOICE_ENABLED",
                           ...tablecastBillingVars,
                           "TABLECAST_OTEL_CAPTURE_CONTENT",
+                          "TABLECAST_LANGFUSE_BASE_URL",
                         ]
                       : []),
                   ].flatMap((key) => (localEnv[key] === undefined ? [] : [[key, localEnv[key]]])),
@@ -120,6 +123,9 @@ export function requiredApiSecrets(
     ...(vars.TABLECAST_BILLING_ENABLED === "true" ? tablecastBillingSecrets.slice(2) : []),
     ...(hosted || voiceEnabled ? ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL"] : []),
     ...(hosted ? ["TABLECAST_OTEL_AUTHORIZATION"] : []),
+    ...(["preview", "staging"].includes(environment) && vars.TABLECAST_LANGFUSE_BASE_URL
+      ? ["TABLECAST_LANGFUSE_PUBLIC_KEY", "TABLECAST_LANGFUSE_SECRET_KEY"]
+      : []),
     ...(["preview", "staging"].includes(environment) ? ["TABLECAST_CONTAINER_METRICS_TOKEN"] : []),
     ...(environment === "preview" ? ["CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_SECRET"] : []),
     ...(environment === "production"
@@ -252,6 +258,10 @@ export function deploymentOptions(
     TABLECAST_PUBLIC_ORIGIN: target.origin,
     TABLECAST_EMAIL_FROM: emailDeploymentFrom(target.environment),
     TABLECAST_VOICE_ENABLED: "true",
+    ...(["preview", "staging"].includes(target.environment) &&
+    process.env.TABLECAST_LANGFUSE_PUBLIC_KEY
+      ? { TABLECAST_LANGFUSE_BASE_URL: "https://jp.cloud.langfuse.com" }
+      : {}),
     ...(target.emulate
       ? {
           TABLECAST_GOOGLE_EMULATOR_URL: "http://tablecast-emulate",
@@ -309,6 +319,13 @@ export function deploymentSecrets(
   );
   for (const key of tablecastBillingSecrets)
     if (enabledSecrets.includes(key)) secrets[key] = required(runtime[key], key);
+  if (target.emulate && input.TABLECAST_LANGFUSE_PUBLIC_KEY) {
+    secrets.TABLECAST_LANGFUSE_PUBLIC_KEY = input.TABLECAST_LANGFUSE_PUBLIC_KEY;
+    secrets.TABLECAST_LANGFUSE_SECRET_KEY = required(
+      input.TABLECAST_LANGFUSE_SECRET_KEY,
+      "TABLECAST_LANGFUSE_SECRET_KEY",
+    );
+  }
   if (target.emulate) {
     secrets.TABLECAST_CONTAINER_METRICS_TOKEN = required(
       input.TABLECAST_CONTAINER_METRICS_TOKEN,

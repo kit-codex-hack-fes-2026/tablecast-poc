@@ -189,6 +189,7 @@ export {
   speechSpeedSchema,
   voiceFailedEventSchema,
   voiceListQuerySchema,
+  voiceObservationSchema,
   voicePageSchema,
   voiceProductsEventSchema,
   voiceReferenceEventSchema,

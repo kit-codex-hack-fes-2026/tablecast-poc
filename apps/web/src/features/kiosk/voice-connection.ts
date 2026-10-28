@@ -22,6 +22,7 @@ import {
   type VoiceCamera,
   type VoiceView,
 } from "./voice-model";
+import { VoiceObservations } from "./voice-observations";
 import { observeVoiceActivity } from "./voice-runtime";
 export type { VoiceStatus, VoiceView } from "./voice-model";
 export class VoiceConnection {
@@ -34,6 +35,7 @@ export class VoiceConnection {
   private switchingMicrophone?: MediaStream;
   private audio?: HTMLAudioElement;
   private sessionId?: string;
+  private observations?: VoiceObservations;
   private desired = false;
   private ready = false;
   private stopping?: Promise<void>;
@@ -130,6 +132,13 @@ export class VoiceConnection {
         return;
       }
       this.sessionId = created.voiceSessionId;
+      this.observations = created.diagnostics?.enabled
+        ? new VoiceObservations(
+            this.client,
+            created.voiceSessionId,
+            created.diagnostics.captureContent,
+          )
+        : undefined;
       this.proactive = created.proactive;
       this.opening = created.opening;
       this.guidanceEnabled = created.guidance;
@@ -176,6 +185,8 @@ export class VoiceConnection {
     };
   }
   clearCustomerContext() {
+    this.observations?.cancel();
+    this.observations = undefined;
     void this.stop({ serverStopped: true });
     for (const caption of this.captions) clearTimeout(caption.timer);
     this.captions = [];
@@ -241,6 +252,10 @@ export class VoiceConnection {
         try {
           if (!serverStopped && sessionId) await this.saveCaptions(sessionId);
         } finally {
+          const observations = this.observations;
+          this.observations = undefined;
+          if (serverStopped) observations?.cancel();
+          else if (observations) void observations.flush().finally(() => observations.cancel());
           if (!serverStopped && (sessionId || existingSession)) await this.retire(sessionId);
         }
       })(),
@@ -500,6 +515,15 @@ export class VoiceConnection {
   private finishCaption(caption: Caption, interrupted: boolean) {
     clearTimeout(caption.timer);
     caption.message = { ...caption.message, final: true, interrupted };
+    this.observations?.append({
+      eventId: `${caption.message.id}:${caption.message.text.length}:${interrupted}`,
+      kind: "transcript",
+      startedAt: Date.now(),
+      endedAt: Date.now(),
+      content: caption.message.text.slice(0, 16000),
+      role: caption.message.role,
+      status: interrupted ? "interrupted" : "completed",
+    });
     this.pendingCaptions.set(caption.message.id, {
       itemId: caption.message.id,
       locale: caption.message.locale,
@@ -558,7 +582,18 @@ export class VoiceConnection {
         { init: { signal: AbortSignal.timeout(10000) } },
       );
       if (response.status === 204) return undefined;
-      return (await parseResponse(response)).turnId;
+      const turnId = (await parseResponse(response)).turnId;
+      if (id) this.observations?.bindTurn(id, turnId);
+      const now = Date.now();
+      this.observations?.append({
+        eventId: id ?? turnId,
+        kind: "delegation",
+        startedAt: now,
+        endedAt: now,
+        turnId,
+        delegationId: id ?? undefined,
+      });
+      return turnId;
     } catch {
       if (this.current(attempt)) this.onSync();
       return undefined;
@@ -1194,6 +1229,7 @@ export class VoiceConnection {
         return;
       }
       if (!event || typeof event !== "object" || !("type" in event)) return;
+      this.observations?.receive(event);
       if (event.type === "session.started") {
         clearTimeout(this.readyTimer);
         this.ready = true;

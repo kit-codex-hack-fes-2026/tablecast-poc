@@ -78,7 +78,7 @@ CodexのMCP接続を再起動して設定を読み直す。Storybookを起動し
 ### 共通の割当て
 
 ホストではrootのpackage scriptがPortlessからTurboを起動し、名前の衝突を設定生成・Compose起動前に拒否する。Portlessが `PORT` を割り当て、route登録とプロセスの終了を所有する。共有proxyはHTTPの80番を使い、worktree固有のproxy・ポート台帳・予約ロックを作らない。WorkersのInspectorは0番を指定して実行時の割当てを使う。
-LGTM・Mailpitの公開ポートはComposeの `127.0.0.1::コンテナポート` でDockerへ任せる。`services:aliases` が公式の `docker compose port` と `portless alias` でGrafana・Mailpit・Tempo・OTLPの名前を登録する。APIからMailpit・OTLPへの通信もこの名前を使う。
+Mailpitの公開ポートはComposeの `127.0.0.1::コンテナポート` でDockerへ任せ、`services:aliases`でMailpitだけのPortless名を登録する。LGTMとLangfuseはホストで一組を共有し、API/Webのworktree IDと表示名で検索を分ける。初回起動・接続先は[観測手順](observability.md#ローカル起動とmcp)を参照する。共有基盤はworktreeの`services:down`で停止しない。
 `.local/.env` に名前・origin・実Webポートを通常のenvとしてまとめる。Portlessが渡したWebポートを `dev:prepare` で保存し、起動前の0は未起動を表す。`runtime.json` とローカル用 `TABLECAST_CONFIG` は生成しない。保存先・configパスは実worktreeから決め、seed・demo・pluginは設定の名前と所属を確認する。Cloudflare設定はenvから直接読み、SDK用API設定だけを正本から生成する。
 通常の起動前に [setupのPortless初期設定](setup.md) を済ませる。別のproxyを全消去・停止せず、停止時はこのworktreeのrouteだけを片付ける。[S19](sources.md#s19)
 

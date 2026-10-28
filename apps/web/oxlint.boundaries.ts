@@ -45,7 +45,7 @@ export const boundaryFiles = [
   ["runtime", "src/features/*/*-dom.ts"],
   [
     "runtime",
-    "src/features/*/voice-{connection,runtime,microphone,transcript,delegation,proactive,transport,subscription}.ts",
+    "src/features/*/voice-{connection,runtime,microphone,transcript,delegation,proactive,transport,subscription,observations}.ts",
   ],
   ["feature", "src/features/*/*.tsx"],
 ];

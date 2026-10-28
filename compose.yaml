@@ -1,24 +1,7 @@
 name: ${COMPOSE_PROJECT_NAME:?Run bun run dev:prepare first}
-# Dev ContainerもLGTMをextendsする。ホスト公開ポートはDockerに割当てを任せる。
 services:
-  tablecast-lgtm:
-    image: grafana/otel-lgtm:0.37.0
-    environment:
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
-      GF_SERVER_ROOT_URL: ${TABLECAST_GRAFANA_ORIGIN:-http://localhost:3000}
-      GF_LOG_LEVEL: warn
-    ports:
-      - "127.0.0.1::4318"
-      - "127.0.0.1::3000"
-      - "127.0.0.1::3200"
-    volumes:
-      - tablecast-lgtm:/data
-      - ./infra/grafana/tempo.yaml:/otel-lgtm/tempo-config.yaml:ro
   tablecast-mailpit:
     image: axllent/mailpit:v1.31.6
     ports:
       - "127.0.0.1::8025"
       - "127.0.0.1::1025"
-volumes:
-  tablecast-lgtm:
-    name: ${COMPOSE_PROJECT_NAME}-lgtm
