@@ -214,6 +214,10 @@ Browserの速度は全件の準備・実行・終了を含む経過時間で比�
 
 ## CIのジョブとキャッシュ
 
+通常PRの[種類別行数レポート](static-analysis.md#prの種類別行数レポート)は、他の検証・配備を待たない独立jobで実行する。必須チェックの集約には含めず、失敗を0行で補わない。分類・表生成と実Git snapshot/clocの接続はrootの`scripts/tablecast-cloc.test.ts`が所有し、`scripts-runtime`で実行する。runtime全件を選んだCIとDev Containerには、計測jobと同じcloc 2.10を固定導入する。ローカルの導入は[セットアップ](setup.md#種類別行数のローカル確認)を参照する。
+
+コメントの初回作成・追随commitでの同一コメント更新・古いrun再実行の投稿抑止は、変更したworkflowを持つDraft PRで確認する。比較元/head SHA、run URL、コメントIDを記録し、古いrunの成功だけを現在のheadに対する検証と扱わない。製品Browser/E2Eへ分類規則の保証を重ねない。
+
 静的解析ジョブは依存導入・codegen後にformat・lint・型検査と`bun run fallow`を実行する。fallowは比較元に依存せず全コードの構造errorを必須にし、未変更ファイルに残ったerrorも失敗させる。複雑度・重複は警告として報告する。parse・設定・解析自体が失敗した場合もjobを失敗させる。fallowのbranch・作業ツリー依存の結果はTurbo cacheへ載せない。ローカルのcommit前検査と部分stage時の影響は[静的解析](static-analysis.md#fallow)を参照する。
 
 Issue #272のテスト再配置ではworkflow・差分CIを変更しなかった。Issue #275では、通常PRの既知の変更だけを選択実行する。対象のjobはcheckout直後の共通actionでGitHub Compare APIが返すmerge-baseから最新headまでの差分を調べ、実行計画と対象外の理由を各jobのActions summaryへ記録する。静的検査は分類せず開始する。Containerイメージの検査・artifact生成も差分選択の対象外とし、通常CIで常に実行する。jobごとの比較結果が異なりWorkers buildだけが全件へ戻っても、同じSHAのContainer artifactを取得できるようにする。比較APIの呼出しは重複するが、分類専用のrunner・jobと全job共通の開始待ちを増やさない。集約チェックは従来の各必須jobの成功を要求する。staging/mainへのpushとカタログ以外の手動CIは全件実行する。

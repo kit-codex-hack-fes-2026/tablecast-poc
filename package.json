@@ -23,6 +23,7 @@
     "lint": "oxlint --type-aware --deny-warnings --ignore-pattern 'apps/**' && turbo run lint",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
+    "tablecast:cloc": "bun --no-env-file scripts/tablecast-cloc.ts",
     "fallow": "fallow dead-code && fallow --skip dead-code",
     "fallow:audit": "fallow audit",
     "test": "vitest run --config vitest.config.ts && turbo run test",

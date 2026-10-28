@@ -1,0 +1,12 @@
+name: cloc 2.10の固定導入
+description: 公式配布物のSHA-256を確認して行数計測CLIを導入する
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        mkdir -p "$RUNNER_TEMP/tablecast-cloc"
+        curl --fail --silent --show-error --location https://github.com/AlDanial/cloc/releases/download/v2.10/cloc-2.10.pl --output "$RUNNER_TEMP/tablecast-cloc/cloc"
+        echo 'bf59272455172108072a0a106379f7509fd4349bdcfd85203bac038ccd286d83  '"$RUNNER_TEMP/tablecast-cloc/cloc" | sha256sum --check
+        chmod +x "$RUNNER_TEMP/tablecast-cloc/cloc"
+        echo "$RUNNER_TEMP/tablecast-cloc" >> "$GITHUB_PATH"

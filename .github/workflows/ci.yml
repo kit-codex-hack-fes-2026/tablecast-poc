@@ -37,6 +37,56 @@ env:
   TABLECAST_DEPLOY_ENV: ${{ github.event_name == 'pull_request' && (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'staging' && 'production' || 'preview') || (github.ref_name == 'main' && 'production' || 'staging') }}
 
 jobs:
+  cloc:
+    name: "Report: 種類別の行数差分 (cloc)"
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: tablecast-cloc-${{ github.event.pull_request.number }}
+      queue: max
+      cancel-in-progress: false
+    env:
+      TABLECAST_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      TABLECAST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.3"
+      - uses: ./.github/actions/tablecast-cloc
+      - name: commit snapshotの行数比較
+        run: bun run tablecast:cloc --base "$TABLECAST_BASE_SHA" --head "$TABLECAST_HEAD_SHA" --output "$RUNNER_TEMP/tablecast-cloc.md"
+      - name: 計測結果のSummary
+        run: cat "$RUNNER_TEMP/tablecast-cloc.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: 現在のPRへの専用コメント更新
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const {readFile} = await import('node:fs/promises');
+            const {clocCommentMarker} = await import(`${process.env.GITHUB_WORKSPACE}/scripts/tablecast-cloc.ts`);
+            const pr = context.payload.pull_request.number;
+            const current = async () => {
+              const {data} = await github.rest.pulls.get({...context.repo, pull_number: pr});
+              return data.state === 'open' && data.head.sha === process.env.TABLECAST_HEAD_SHA && data.base.sha === process.env.TABLECAST_BASE_SHA && data.head.repo?.full_name === `${context.repo.owner}/${context.repo.repo}`;
+            };
+            if (!await current()) { core.notice('PRのopen/head/baseが変わったためコメント更新を省略します'); return; }
+            const comments = (await github.paginate(github.rest.issues.listComments, {...context.repo, issue_number: pr}))
+              .filter(comment => comment.user?.login === 'github-actions[bot]' && comment.body?.startsWith(`${clocCommentMarker}\n`));
+            if (comments.length > 1) throw new Error('行数レポートが重複しています');
+            const body = await readFile(`${process.env.RUNNER_TEMP}/tablecast-cloc.md`, 'utf8');
+            if (!await current()) { core.notice('PRのopen/head/baseが変わったためコメント更新を省略します'); return; }
+            if (comments.length) await github.rest.issues.updateComment({...context.repo, comment_id: comments[0].id, body});
+            else await github.rest.issues.createComment({...context.repo, issue_number: pr, body});
+
   static:
     name: "Static Analysis: コード整形・lint・型検査・fallow (Oxfmt, Oxlint, TypeScript, Fallow)"
     if: ${{ !inputs.catalog_pr || github.ref_name == 'staging' || github.ref_name == 'main' }}
@@ -82,6 +132,8 @@ jobs:
         id: plan
       - uses: ./.github/actions/tablecast-setup
         if: steps.plan.outputs.web != 'none' || steps.plan.outputs.runtime != 'none' || steps.plan.outputs.fixtures != 'none' || steps.plan.outputs.presentation != 'none'
+      - uses: ./.github/actions/tablecast-cloc
+        if: steps.plan.outputs.runtime == 'full'
       # 個別CLIの既定枠を合算せず、重いruntimeは2、軽い3組は各1へ制限する。
       - parallel:
           - name: Seed fixtures
