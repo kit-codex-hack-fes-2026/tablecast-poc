@@ -430,6 +430,8 @@ APIの`performance` projectは本番Hono・Cookie・実D1で8操作、8／120商
 
 英語の日付はIntlのformatToPartsから曜日・日・月・年を組み立て、ICUの版で曜日の後のカンマが変わらないようにする。店舗会員の代表E2Eは日英ともreload直後のリンク操作を維持し、hydrationのpageerrorも失敗にする。
 
+会員SSR試験のpageerror監視は、文言不一致によるhydrationの再描画を対象にする。WebKitが再読込中に報告する旧documentの先読み通信の破棄とは区別する。リンク操作を遅らせたり、遷移先の見出し・復帰操作の検証を外したりしない。
+
 カートのDOM応答100msは`browser-performance` projectへ割り当て、`sequence.groupOrder: 1`と1 workerでBrowser・Storybookの終了後に測る。通常の`test:browser`と差分CIに含め、他画面の並列マウント負荷を計測へ混ぜない。実Kiosk・QueryClient・HTTP clientと1.5秒の応答保留、3回の連打・版付き直列送信は維持する。実ネットワークの300ms目標や実機の負荷試験とは区別する。
 
 実R2の4枠試験は最初の4書込みが到達するまでgateで保留し、その後に最初の1枚以外を解放して進行を確認する。ファイルの読込速度から最大並列数を推定しない。finallyで全gateを解放して実R2の終了を待つ。
