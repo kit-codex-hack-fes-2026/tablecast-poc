@@ -372,9 +372,12 @@ it.each(["ja", "en"] as const)(
     await expect
       .poll(() => {
         const element = image.element();
-        return element instanceof HTMLImageElement ? element.naturalWidth : 0;
+        return element instanceof HTMLImageElement && element.complete && element.naturalWidth > 0;
       })
-      .toBe(400);
+      .toBe(true);
+    expect(image.element().getAttribute("src")).toContain(
+      `/images/tablecast/uploads/${"a".repeat(64)}.webp`,
+    );
     const header = document.querySelector("header");
     if (!header) throw new Error("ヘッダーがありません");
     expect(image.element().getBoundingClientRect().height).toBe(40);
@@ -430,9 +433,12 @@ it.each(["ja", "en"] as const)(
     await expect
       .poll(() => {
         const element = image.element();
-        return element instanceof HTMLImageElement ? element.naturalWidth : 0;
+        return element instanceof HTMLImageElement && element.complete && element.naturalWidth > 0;
       })
-      .toBe(400);
+      .toBe(true);
+    expect(image.element().getAttribute("src")).toContain(
+      `/images/tablecast/uploads/${"a".repeat(64)}.webp`,
+    );
     expect(image.element().getBoundingClientRect().height).toBe(40);
   },
 );
