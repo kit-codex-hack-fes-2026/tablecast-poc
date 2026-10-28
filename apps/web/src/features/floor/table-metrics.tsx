@@ -1,20 +1,9 @@
 import type { TableState } from "@tablecast/api/schema";
 import { Bell, ChevronRight, CircleDollarSign, Radio, Users } from "lucide-react";
-import { tv } from "tailwind-variants";
 import type { FloorFilter } from "./floor-model";
 import { Button } from "../../components/ui/button";
 import { Skeleton } from "../../components/ui/skeleton";
 import { useI18n } from "../../i18n/locale";
-
-const callMetric = tv({
-  base: "grid min-h-18 grid-cols-[auto_minmax(0,1fr)] gap-1 px-1 py-2 text-left sm:min-h-28 sm:gap-2 sm:p-3",
-  variants: {
-    called: {
-      true: "border-warning-border bg-warning-selected text-warning shadow-none hover:border-warning-border-hover hover:bg-warning-hover aria-pressed:border-warning-border-hover aria-pressed:bg-warning-selected",
-      false: "aria-pressed:border-control-edge-hover aria-pressed:bg-control-selected",
-    },
-  },
-});
 
 export function TableMetrics({
   tables,
@@ -102,7 +91,7 @@ export function TableMetrics({
             variant="outline"
             aria-pressed={filter === target}
             onClick={() => onFilterChange(target)}
-            className={callMetric({ called: target === "called" && value > 0 })}
+            className="grid min-h-18 grid-cols-[auto_minmax(0,1fr)] gap-1 px-1 py-2 text-left sm:min-h-28 sm:gap-2 sm:p-3 aria-pressed:border-control-edge-hover aria-pressed:bg-control-selected"
           >
             {content}
           </Button>

@@ -4,6 +4,7 @@ import { BellRing, Check, ChevronRight } from "lucide-react";
 import { ErrorNotice } from "../../components/error-notice";
 import { RelativeTime } from "../../components/relative-time";
 import { StaffCallMemo } from "../../components/staff-call-details";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
@@ -41,15 +42,17 @@ export function PendingStaffCall({
   return (
     <article
       aria-label={`${table.tableName} · ${t("assistance_pending")}`}
-      className="overflow-hidden rounded-xl border border-warning-border bg-warning-soft text-warning"
+      className="overflow-hidden rounded-xl border border-border bg-card text-foreground"
     >
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-warning-border bg-warning-selected px-5 py-4">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-accent-soft px-5 py-4">
         <div className="flex min-w-0 items-center gap-3">
-          <BellRing className="size-6 shrink-0" aria-hidden />
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning-soft text-warning">
+            <BellRing className="size-5" aria-hidden />
+          </span>
           <div>
             <h3 className="text-xl font-semibold wrap-anywhere">{table.tableName}</h3>
             <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm">
-              <strong>{t("assistance_pending")}</strong>
+              <Badge variant="warning">{t("assistance_pending")}</Badge>
               {table.staffCall && (
                 <>
                   <span aria-hidden>·</span>
@@ -62,7 +65,7 @@ export function PendingStaffCall({
         {table.status === "open" && (
           <Button
             variant="outline"
-            className="border-warning-border-hover bg-warning-solid text-warning shadow-none hover:border-warning-border-hover hover:bg-warning-solid-hover"
+            className="border-success-border bg-success-soft text-success shadow-none hover:border-success-border-hover hover:bg-success-hover"
             disabled={action.isPending}
             aria-busy={action.isPending}
             onClick={() => action.mutate()}

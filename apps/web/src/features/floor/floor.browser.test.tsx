@@ -424,10 +424,14 @@ it.each(["ja", "en"] as const)(
         .top,
     );
     expect(card.element().querySelector("details,summary,[data-slot=accordion]")).toBeNull();
-    expect(getComputedStyle(card.element()).backgroundColor).toBe(colour("--color-warning-soft"));
+    expect(getComputedStyle(card.element()).backgroundColor).toBe(colour("--color-card"));
     const header = card.element().querySelector("header");
     if (!header) throw new Error("呼び出しの見出しが必要です");
-    expect(getComputedStyle(header).backgroundColor).toBe(colour("--color-warning-selected"));
+    expect(getComputedStyle(header).backgroundColor).toBe(colour("--color-accent-soft"));
+    const resolveButton = card.getByRole("button", { name: labels.admin_acknowledge, exact: true });
+    expect(getComputedStyle(resolveButton.element()).backgroundColor).toBe(
+      colour("--color-success-soft"),
+    );
     expect(requests.filter((request) => request.includes(`/tables/${current.id}`))).toEqual([]);
     await card.getByRole("button", { name: labels.admin_acknowledge, exact: true }).click();
     await expect.element(card.getByRole("alert")).toBeVisible();

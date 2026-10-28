@@ -97,7 +97,7 @@ export function Floor({
         <section aria-label={t("staff_call_queue")} className="space-y-3">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
             {t("staff_call_queue")}
-            <span className="rounded-full bg-warning-selected px-2.5 py-0.5 text-sm text-warning">
+            <span className="rounded-full bg-warning-soft px-2.5 py-0.5 text-sm text-warning">
               {pendingCalls.length}
             </span>
           </h2>
