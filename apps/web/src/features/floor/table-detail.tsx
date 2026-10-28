@@ -18,6 +18,7 @@ import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageLabel } from "../../components/language-label";
 import { PageHeader } from "../../components/page-header";
+import { StaffCallDetails } from "../../components/staff-call-details";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Skeleton } from "../../components/ui/skeleton";
@@ -68,7 +69,12 @@ export function TableDetail({
       if (operation.kind === "close")
         return parseResponse(route.tables[":id"].close.$post({ param }));
       if (operation.kind === "resolve")
-        return parseResponse(route.tables[":id"].call.resolve.$post({ param }));
+        return parseResponse(
+          route.tables[":id"].call.resolve.$post({
+            param,
+            json: { callId: detail.data.staffCall?.id },
+          }),
+        );
       return parseResponse(
         route.orders[":id"].status.$post({
           param: { storeId, id: operation.id },
@@ -194,7 +200,10 @@ export function TableDetail({
               </div>
               {table.staffCalled && (
                 <div className="flex justify-between items-center bg-accent-soft p-3.5 rounded-md mt-5 gap-3.5">
-                  <strong className="text-base">{t("admin_attention")}</strong>
+                  <div className="min-w-0 flex-1">
+                    <strong className="text-base">{t("admin_attention")}</strong>
+                    {table.staffCall && <StaffCallDetails call={table.staffCall} />}
+                  </div>
                   {table.status === "open" && (
                     <Button
                       className="min-h-11 text-sm"

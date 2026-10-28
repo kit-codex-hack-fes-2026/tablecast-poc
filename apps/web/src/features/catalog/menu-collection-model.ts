@@ -23,6 +23,13 @@ export function menuCollectionRows(
 ): ItemRow[] {
   if (!configuration) return [];
   const categories = new Map(configuration.categories.map((category) => [category.id, category]));
+  if (section === "guides")
+    return (configuration.guides ?? []).map((item) => ({
+      id: item.id,
+      name: item.text[locale].displayName,
+      secondary: item.text[locale].description,
+      count: item.productIds.length,
+    }));
   if (section === "products")
     return configuration.products.map((item) => {
       const category = categories.get(item.categoryId);

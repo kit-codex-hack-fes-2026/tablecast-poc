@@ -140,9 +140,11 @@ export const boundaryPolicies = [
     from: file("composition", "store"),
     allow: { to: file("feature", "statistics", ["home-statistics"]) },
   },
+  { from: file("model", "kiosk"), allow: { to: file("model", "configuration", ["guide-model"]) } },
   publicFiles("store", ["admin-shell", "settings-shell", "store-query", "home-query"]),
   publicFiles("catalog", ["catalog-query"]),
   publicFiles("configuration", [
+    "guide-model",
     "menu-query",
     "drafts-query",
     "configuration-fields",

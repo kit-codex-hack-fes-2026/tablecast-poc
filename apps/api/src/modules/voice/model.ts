@@ -12,6 +12,7 @@ export const voiceToolNameSchema = z.enum([
   "getCameraState",
   "endConversation",
   "getCatalog",
+  "getServiceGuidance",
   "getCustomerContext",
   "getCustomerSuggestions",
   "saveCustomerMemory",
@@ -100,7 +101,12 @@ const conversationItemSchema = z
   })
   .strict();
 
-export const voiceStartSchema = z.object({ sdp: z.string().min(1).max(64000) }).strict();
+export const voiceStartSchema = z
+  .object({
+    sdp: z.string().min(1).max(64000),
+    purpose: z.enum(["conversation", "assistance"]).default("conversation"),
+  })
+  .strict();
 
 export const voiceObservationSchema = z
   .object({

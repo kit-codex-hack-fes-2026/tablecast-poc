@@ -34,6 +34,7 @@ const toolLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["
   captureCamera: "kiosk_tool_capture_camera",
   getCameraState: "kiosk_tool_camera_state",
   getCatalog: "kiosk_tool_get_catalog",
+  getServiceGuidance: "assistance_guides",
   getTableState: "kiosk_tool_get_table_state",
   updateCart: "kiosk_tool_update_cart",
   prepareConfirmation: "kiosk_tool_prepare_confirmation",

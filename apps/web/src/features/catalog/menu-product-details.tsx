@@ -145,7 +145,7 @@ export function MenuDescription({
   cast,
 }: {
   cast: Configuration["cast"];
-  item: Configuration[Exclude<MenuSection, "cast">][number] | null | undefined;
+  item: NonNullable<Configuration[Exclude<MenuSection, "cast">]>[number] | null | undefined;
 }) {
   const { t } = useI18n();
   return (

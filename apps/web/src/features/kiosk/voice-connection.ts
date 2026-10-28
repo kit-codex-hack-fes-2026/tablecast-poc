@@ -62,6 +62,7 @@ export class VoiceConnection {
   private inputActivity?: () => void;
   private locale: Locale = "ja";
   private opening?: string;
+  private assistanceContext?: string;
   private openingSent = false;
   private guidanceEnabled = false;
   private guidanceVersion = 0;
@@ -95,12 +96,17 @@ export class VoiceConnection {
       this.listeners.delete(listener);
     };
   };
-  async start(locale: Locale, speechSpeed = 1) {
+  async start(
+    locale: Locale,
+    speechSpeed = 1,
+    purpose: "assistance" | "conversation" = "conversation",
+  ) {
     if (this.desired || this.stopping) return;
     this.desired = true;
     this.ready = false;
     this.locale = locale;
     this.openingSent = false;
+    this.assistanceContext = undefined;
     this.hasUserInput = false;
     this.responseCommands.clear();
     this.clearGuidance();
@@ -124,7 +130,10 @@ export class VoiceConnection {
       const controller = new AbortController();
       this.startingRequest = controller;
       const created = await parseResponse(
-        this.client.voice.start.$post({ json: { sdp } }, { init: { signal: controller.signal } }),
+        this.client.voice.start.$post(
+          { json: { sdp, ...(purpose === "assistance" ? { purpose } : {}) } },
+          { init: { signal: controller.signal } },
+        ),
       );
       if (this.startingRequest === controller) this.startingRequest = undefined;
       if (!this.current(attempt)) {
@@ -160,6 +169,24 @@ export class VoiceConnection {
         this.updateMicrophone({ error: this.microphoneError(error) });
       this.emit({ status: "error", error: reason });
     }
+  }
+  requestAssistance(topic?: string) {
+    if (!this.desired) return;
+    const content = topic
+      ? `利用客が用件ボタンで次の項目を選びました: ${JSON.stringify(topic)}。getServiceGuidanceで登録案内と関連商品を確認し、現在言語で短く説明します。ボタン操作は注文や人の呼び出しの承認ではありません。`
+      : "利用客が店員への用件相談を開きました。用件が不明なら一度だけ尋ね、既に分かっていれば登録案内と関連商品を確認します。今回の操作自体では店員を呼ばず、注文も行いません。";
+    if (!this.ready) {
+      this.assistanceContext = content;
+      return;
+    }
+    this.channel?.send(
+      JSON.stringify({
+        type: "session.commentary.append",
+        event_id: crypto.randomUUID(),
+        delegation_id: null,
+        content,
+      }),
+    );
   }
   synchronise(
     sessionId: null | string,
@@ -1235,14 +1262,16 @@ export class VoiceConnection {
         this.ready = true;
         this.emit({ status: "listening" });
         this.updateSpeechSpeed();
-        if (!this.openingSent && this.opening) {
+        const opening = this.assistanceContext ?? this.opening;
+        this.assistanceContext = undefined;
+        if (!this.openingSent && opening) {
           this.openingSent = true;
           this.channel?.send(
             JSON.stringify({
               type: "session.commentary.append",
               event_id: crypto.randomUUID(),
               delegation_id: null,
-              content: this.opening,
+              content: opening,
             }),
           );
         }

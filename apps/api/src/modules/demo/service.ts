@@ -136,6 +136,7 @@ export async function resetDemo(services: ApiServices, actor: Actor, expectedVer
         voice_version: sql`voice_version+1`,
         active_turn_id: null,
         staff_called: 0,
+        staff_call_json: null,
         ui_section: "menu",
         selected_product_id: null,
         menu_search_json: null,
@@ -147,6 +148,7 @@ export async function resetDemo(services: ApiServices, actor: Actor, expectedVer
         sql`id=${session.id} AND kind='demo' AND cart_version=${session.cart_version} AND voice_version=${session.voice_version} AND EXISTS(SELECT 1 FROM demo_sessions WHERE session_id=${session.id} AND config_version=${expectedVersion})`,
       ),
     ...[
+      business.staffCalls,
       business.gameRuns,
       business.payments,
       business.orders,

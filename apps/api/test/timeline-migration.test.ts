@@ -39,6 +39,12 @@ it.for([false, true])(
       billingCompatibility,
       passwordlessCompatibility,
     ]);
+    // 現行の来店fixtureに必要な呼出し列だけ先行し、検証対象の履歴・索引schemaは旧状態を保つ。
+    const callCompatibility = migrations.find((migration) =>
+      migration.name.includes("0030_tablecast_staff_calls"),
+    );
+    if (!callCompatibility) throw new Error("呼び出しのmigrationが必要です");
+    await applyD1Migrations(env.TABLECAST_DB, [callCompatibility]);
     // 履歴の移行対象と独立したnullable表示列だけを現行fixtureへ揃える。
     const menuSearchCompatibility = migrations.find((migration) =>
       migration.name.includes("0031_tablecast_menu_search"),

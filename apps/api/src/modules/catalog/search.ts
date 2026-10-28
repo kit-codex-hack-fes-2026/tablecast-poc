@@ -1,7 +1,7 @@
 import Fuse from "fuse.js";
 import type { Configuration } from "../configuration/model";
 
-type MenuSection = "categories" | "plans" | "products";
+type MenuSection = "categories" | "guides" | "plans" | "products";
 type SearchDocument = {
   categories: string[];
   categoryId?: string;
@@ -42,8 +42,9 @@ export function createMenuSearch(configuration: Configuration, section: MenuSect
   const categoryFields = new Map(
     configuration.categories.map((category) => [category.id, searchFields(category.text)]),
   );
-  const documents: SearchDocument[] = configuration[section].map((item) => {
-    const categoryId = "categoryId" in item ? item.categoryId : undefined;
+  const documents: SearchDocument[] = (configuration[section] ?? []).map((item) => {
+    const categoryId =
+      "categoryId" in item && typeof item.categoryId === "string" ? item.categoryId : undefined;
     const category = categoryId ? categoryFields.get(categoryId) : undefined;
     const fields = searchFields(item.text);
     return {

@@ -35,6 +35,7 @@ export const voiceRoutes = apiFactory
       c.get("actor"),
       c.req.valid("json").sdp,
       c.req.raw.signal,
+      c.req.valid("json").purpose,
     );
     // 接続元が中断しても、発行済みLive sessionを失効させるまで待つ。
     c.executionCtx.waitUntil(started.catch(() => undefined));

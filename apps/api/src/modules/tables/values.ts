@@ -17,6 +17,7 @@ import {
   type CoreState,
   eventDataSchema,
   savedMenuSearchSchema,
+  staffCallSchema,
   type TableEvent,
   tablePlanSchema,
   type TableState,
@@ -218,6 +219,7 @@ export function coreStateValue(
     billRequested: !!table?.bill_requested,
     plan,
     staffCalled: !!row.staff_called,
+    staffCall: row.staff_call_json ? staffCallSchema.parse(JSON.parse(row.staff_call_json)) : null,
     snapshot:
       confirmation &&
       confirmation.config_version === catalog.version &&

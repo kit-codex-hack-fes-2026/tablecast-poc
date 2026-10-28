@@ -4,6 +4,9 @@ import {
   cartUpdateSchema,
   catalogSchema,
   coreStateSchema,
+  type StaffCall,
+  staffCallInputSchema,
+  staffHandoffSchema,
   submitSchema,
   type TableState,
   uiSectionInputSchema,
@@ -36,6 +39,8 @@ export class TablecastSocket extends EventTarget {
 }
 
 let catalogResponse: Response;
+let staffCalls: StaffCall[];
+let guidanceResponse: Response;
 
 let client: QueryClient;
 
@@ -72,6 +77,13 @@ beforeEach(() => {
   vi.spyOn(navigator.mediaDevices, "enumerateDevices").mockResolvedValue([]);
   TablecastSocket.instances = [];
   catalogResponse = Response.json(catalog);
+  staffCalls = [];
+  guidanceResponse = Response.json({
+    configVersion: table.configVersion,
+    guides: [],
+    products: [],
+    nextOffset: null,
+  });
   current = structuredClone(table);
   current.uiSection = "cart";
   current.voiceState = "stopped";
@@ -161,8 +173,31 @@ beforeEach(() => {
         };
         return stateResponse();
       }
+      if (request.method === "GET" && path === "/api/table/guidance")
+        return guidanceResponse.clone();
+      if (request.method === "GET" && path === "/api/table/calls")
+        return Response.json({ calls: staffCalls, nextCursor: null });
       if (request.method === "POST" && path === "/api/table/call") {
-        current = { ...current, staffCalled: true, cursor: current.cursor + 1 };
+        const { idempotencyKey: _key, ...suppliedHandoff } = staffCallInputSchema.parse(
+          await request.json(),
+        );
+        const handoff = staffHandoffSchema.parse({
+          ...suppliedHandoff,
+          locale: suppliedHandoff.locale ?? current.locale,
+        });
+        current = {
+          ...current,
+          staffCalled: true,
+          staffCall: {
+            id: "tablecast-call",
+            status: "pending",
+            handoff,
+            createdAt: Date.now(),
+            resolvedAt: null,
+          },
+          cursor: current.cursor + 1,
+        };
+        if (current.staffCall) staffCalls.unshift(current.staffCall);
         return stateResponse();
       }
       if (request.method === "POST" && path === "/api/table/bill/request") {
@@ -309,7 +344,9 @@ export async function mountKiosk() {
   );
 }
 
-export function notify(kind: "cart.updated" | "configuration.published" | "table.ui") {
+export function notify(
+  kind: "cart.updated" | "configuration.published" | "staff.resolved" | "table.ui",
+) {
   current.cursor += 1;
   current.events.push({
     cursor: current.cursor,
@@ -332,6 +369,15 @@ export function Subscription({ storeId, onChange }: { onChange: () => void; stor
 }
 
 export const fixture = {
+  get staffCalls() {
+    return staffCalls;
+  },
+  set staffCalls(value: StaffCall[]) {
+    staffCalls = value;
+  },
+  set guidanceResponse(value: Response) {
+    guidanceResponse = value;
+  },
   set beforeRequest(value: typeof beforeRequest) {
     beforeRequest = value;
   },

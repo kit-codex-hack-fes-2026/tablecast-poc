@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { apiFactory } from "../../platform/http";
 import { localeSchema } from "../../platform/model";
-import { validate, validateQuery } from "../../platform/validation";
+import { validate, validateOptionalJson, validateQuery } from "../../platform/validation";
 import { getCatalog } from "../catalog/queries";
 import { instructionResponse } from "../configuration/instruction-response";
 import { initialiseExchangeRates } from "../currency/service";
@@ -18,8 +18,16 @@ import { prepareConfirmation, submitOrder } from "../orders/use-cases/confirmati
 import { getEvents } from "../stores/queries";
 import { speechSpeedInputSchema } from "../voice/model";
 import { setSpeechSpeed } from "../voice/service";
+import { getServiceGuidance, getStaffCalls } from "./assistance-queries";
 import { getCoreState, getOrderPage, getOrderStatus } from "./core-queries";
-import { orderPageQuerySchema, stateViewSchema, uiSectionInputSchema } from "./model";
+import {
+  orderPageQuerySchema,
+  serviceGuidanceQuerySchema,
+  staffCallInputSchema,
+  staffCallPageQuerySchema,
+  stateViewSchema,
+  uiSectionInputSchema,
+} from "./model";
 import { getTableState } from "./queries";
 import { callStaff, changeLocale, requestBill, setUiSection } from "./use-cases/presentation";
 export const orderingOperations = apiFactory
@@ -129,8 +137,26 @@ export const orderingOperations = apiFactory
       200,
     ),
   )
-  .post("/call", validateQuery(stateViewSchema), async (c) =>
-    c.json(await callStaff(c.get("services"), c.get("actor"), c.req.valid("query").view), 200),
+  .get("/calls", validateQuery(staffCallPageQuerySchema), async (c) =>
+    c.json(await getStaffCalls(c.var.services, c.var.actor, c.req.valid("query")), 200),
+  )
+  .get("/guidance", validateQuery(serviceGuidanceQuerySchema), async (c) =>
+    c.json(await getServiceGuidance(c.var.services, c.var.actor, c.req.valid("query")), 200),
+  )
+  .post(
+    "/call",
+    validateQuery(stateViewSchema),
+    validateOptionalJson(staffCallInputSchema),
+    async (c) =>
+      c.json(
+        await callStaff(
+          c.get("services"),
+          c.get("actor"),
+          c.req.valid("query").view,
+          c.req.valid("json"),
+        ),
+        200,
+      ),
   )
   .post("/bill/request", validateQuery(stateViewSchema), async (c) =>
     c.json(await requestBill(c.get("services"), c.get("actor"), c.req.valid("query").view), 200),

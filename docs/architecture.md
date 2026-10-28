@@ -254,3 +254,9 @@ APIのappearance modelが構造化ロゴ・テーマ・チラシと追加CSSの�
 `modules/currency/model.ts`が公開schema・通貨定義、`display.ts`が音声tool用の副作用のない換算、`service.ts`が公開レートの初期取得を所有する。Webの金額・通貨書式は既存の`i18n/format.ts`へ集約する。currencyのmodule公開面はmodel・display・serviceに限定する。
 
 外部レートは既存の課金原価用為替から独立した公開参考データである。初期化APIが取得し、Webの来店ごとのQuery cacheをレート・選択設定の正本とする。1つのContextで表示へ渡し、音声も同じcacheを直接読む。レートのrefへのコピーや言語変更の同期effectは持たない。共有MoneyはProvider外では従来の円表示となる。通貨の手動選択は端末のlocalStorage、レートはページ内メモリーに限定し、D1・注文snapshot・実決済へ追加しない。
+
+## 店舗案内と呼び出し記録
+
+`configuration.guides`は店舗案内の日英本文・別名・関連商品・リンクを所有し、既存の公開設定を通す。`tables/assistance-queries.ts`が案内検索と来店単位の呼び出し履歴、`tables/use-cases/assistance.ts`が呼び出し保存・表示通知・対応済みを所有する。音声はこの公開業務境界を使い、判定をWebへ複製しない。Webの案内ひな形は`configuration/guide-model.ts`を共有する。
+
+`staff_calls`を引き継ぎメモと状態の正本とし、`table_sessions.staff_call_json`は現在の未対応依頼を追加問合せなしで返す表示用snapshotとする。呼び出し・対応済みでは正本、snapshot、既存の注意フラグ、通知用イベントを同じD1 batchで更新する。履歴は認可済みの店舗・来店IDと日時／IDのcursorで取得し、直近100件の会話ログに依存しない。

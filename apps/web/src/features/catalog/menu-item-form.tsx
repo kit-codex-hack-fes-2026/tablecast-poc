@@ -41,6 +41,7 @@ import {
 import { useStore } from "../store/store-context";
 import { catalogOptions } from "./catalog-query";
 import { CategoriesEditor } from "./categories-editor";
+import { GuidesEditor } from "./guides-editor";
 import { focusInvalidCondition } from "./menu-item-dom";
 import { ProductSummary } from "./menu-product-details";
 import { PlansEditor } from "./plans-editor";
@@ -202,7 +203,7 @@ export function ItemForm({
       if (section === "cast") return;
       await save.mutateAsync({
         ...configuration,
-        [section]: configuration[section].filter((item) => item.id !== selectedId),
+        [section]: (configuration[section] ?? []).filter((item) => item.id !== selectedId),
       });
     },
     onSuccess: () => {
@@ -215,7 +216,7 @@ export function ItemForm({
     },
   });
   const item =
-    section === "cast" ? null : initial[section].find((value) => value.id === selectedId);
+    section === "cast" ? null : (initial[section] ?? []).find((value) => value.id === selectedId);
   function renderEditorActions() {
     return (
       <ConfigurationToolbar>
@@ -446,10 +447,12 @@ function ItemFields({
       />
     );
   const Editor =
-    section === "products"
-      ? ProductsEditor
-      : section === "categories"
-        ? CategoriesEditor
-        : PlansEditor;
+    section === "guides"
+      ? GuidesEditor
+      : section === "products"
+        ? ProductsEditor
+        : section === "categories"
+          ? CategoriesEditor
+          : PlansEditor;
   return <Editor {...props} />;
 }

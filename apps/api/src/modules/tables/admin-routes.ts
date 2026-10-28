@@ -1,5 +1,6 @@
+import { z } from "zod";
 import { apiFactory } from "../../platform/http";
-import { validate, validateQuery } from "../../platform/validation";
+import { validate, validateOptionalJson, validateQuery } from "../../platform/validation";
 import { tableScope } from "../auth/middleware";
 import { getHistory, getSessionEvents } from "./history";
 import {
@@ -32,6 +33,10 @@ export const tablesAdminRoutes = apiFactory
   .post("/tables/:id/close", tableScope, async (c) =>
     c.json(await closeTable(c.get("services"), c.get("actor")), 200),
   )
-  .post("/tables/:id/call/resolve", tableScope, async (c) =>
-    c.json(await resolveCall(c.get("services"), c.get("actor")), 200),
+  .post(
+    "/tables/:id/call/resolve",
+    tableScope,
+    validateOptionalJson(z.object({ callId: z.string().optional() }).strict()),
+    async (c) =>
+      c.json(await resolveCall(c.get("services"), c.get("actor"), c.req.valid("json").callId), 200),
   );

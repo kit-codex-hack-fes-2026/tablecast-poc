@@ -19,6 +19,7 @@ const messages = {
 function subject(configuration: Configuration, path: ConfigurationIssue["path"], locale: Locale) {
   const [collection, index, section, groupIndex, options, optionIndex] = path;
   if (typeof index !== "number") return null;
+  if (collection === "guides") return configuration.guides?.[index]?.text[locale].displayName;
   if (collection === "categories") return configuration.categories[index]?.text[locale].displayName;
   if (collection === "plans") return configuration.plans[index]?.text[locale].displayName;
   if (collection !== "products") return null;

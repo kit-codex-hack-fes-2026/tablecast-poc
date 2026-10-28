@@ -136,6 +136,7 @@ export async function openTable(
               menu_search_json: sql<null>`NULL`.as("menu_search_json"),
               speech_speed: sql<number>`1`.as("speech_speed"),
               staff_called: sql<number>`0`.as("staff_called"),
+              staff_call_json: sql<null>`NULL`.as("staff_call_json"),
               plan_json: sql<
                 null | string
               >`${plan ? JSON.stringify({ id: plan.id, startedAt: now, rules: plan }) : null}`.as(

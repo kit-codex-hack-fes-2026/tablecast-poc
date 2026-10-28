@@ -47,6 +47,8 @@ export type {
   ConfigurationIssue,
   ConfigurationRelease,
 } from "./modules/configuration/model";
+export { guideSchema } from "./modules/configuration/model";
+export type { Guide } from "./modules/configuration/model";
 export {
   displayCurrencyActionSchema,
   displayCurrencyCodes,
@@ -123,7 +125,15 @@ export type {
   UiSection,
   UiSectionInput,
 } from "./modules/tables/model";
+export {
+  serviceGuidanceQuerySchema,
+  staffCallInputSchema,
+  staffCallPageSchema,
+  staffCallSchema,
+  staffHandoffSchema,
+} from "./modules/tables/model";
 
+export type { StaffCall, StaffCallInput, StaffCallPage } from "./modules/tables/model";
 export {
   voiceObservationSchema,
   voicePageSchema,

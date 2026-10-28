@@ -36,6 +36,8 @@ const moduleContracts = {
   statistics: ["model", "service"],
   stores: ["queries"],
   tables: [
+    "assistance-queries",
+    "use-cases/assistance",
     "model",
     "mutations",
     "queries",

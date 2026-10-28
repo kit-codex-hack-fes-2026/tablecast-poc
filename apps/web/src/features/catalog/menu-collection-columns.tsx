@@ -16,17 +16,17 @@ export function menuCollectionColumns(
   storeId: string,
   search: MenuListSearch,
 ): DataTableColumn<ItemRow>[] {
+  const labels = {
+    products: "admin_product",
+    categories: "editor_category",
+    plans: "editor_plan",
+    guides: "assistance_guides",
+  } as const;
   return [
     {
       accessorKey: "name",
       meta: { icon: section === "categories" ? Tags : section === "plans" ? Layers : Package },
-      header: t(
-        section === "products"
-          ? "admin_product"
-          : section === "plans"
-            ? "editor_plan"
-            : "editor_category",
-      ),
+      header: t(labels[section]),
       cell: ({ row }) => (
         <div className="flex min-w-56 items-center gap-3">
           {section === "products" &&
