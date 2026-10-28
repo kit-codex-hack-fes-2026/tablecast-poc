@@ -4,6 +4,9 @@ import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import { VoicePanel } from "./voice-panel";
 
+const soldOutProduct = catalog.configuration.products.find((item) => !item.available);
+if (!soldOutProduct) throw new Error("seedの売切商品がありません。");
+
 const meta = {
   title: "客向け/会話",
   component: VoicePanel,
@@ -14,26 +17,17 @@ const meta = {
       </div>
     ),
   ],
-  args: { view: { status: "idle" }, lines: [], onStart: fn() },
+  args: {
+    view: { status: "idle" },
+    lines: [],
+    onStart: fn(),
+    onMicrophoneChange: fn(),
+    onMicrophoneRefresh: fn(),
+    onSpeedChange: fn(),
+  },
 } satisfies Meta<typeof VoicePanel>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const Welcome: Story = {
-  name: "日本語の初回表示",
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
-    const resume = canvas.getByRole("button", { name: "音声を再開" });
-    await expect(resume.closest("footer")).not.toBeNull();
-    await userEvent.click(resume);
-    await expect(args.onStart).toHaveBeenCalledOnce();
-    await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
-  },
-};
-export const English: Story = {
-  name: "英語の初回表示",
-  tags: ["!test"],
-  globals: { locale: "en" },
-};
 export const Paused: Story = {
   name: "停止しても会話を保持",
   args: {
@@ -50,7 +44,7 @@ export const Paused: Story = {
       {
         id: "two",
         role: "assistant",
-        text: "はい、熱燗にできます。容量は九十ミリと百八十ミリ、どちらになさいますか？",
+        text: "はい、熱燗にできます。容量は90mLと180mL、どちらになさいますか？",
         locale: "ja",
         createdAt: 1788645005000,
         interrupted: false,
@@ -60,7 +54,7 @@ export const Paused: Story = {
 };
 export const CompactPaused: Story = {
   ...Paused,
-  name: "iPadの既定240px幅で中央から再開",
+  name: "iPadの既定240px幅で停止中の履歴を表示",
   render: (args) => (
     <div className="h-173 w-60">
       <VoicePanel {...args} />
@@ -69,14 +63,14 @@ export const CompactPaused: Story = {
 };
 export const CompactPausedEnglish: Story = {
   ...CompactPaused,
-  name: "iPadの既定240px幅で中央から再開・英語",
+  name: "iPadの既定240px幅で停止中の履歴を表示・英語",
   globals: { locale: "en" },
   args: {
     ...Paused.args,
     lines: Paused.args?.lines?.slice(1).map((line) => ({
       ...line,
       locale: "en",
-      text: "Would you prefer ninety or one hundred and eighty millilitres?",
+      text: "Would you prefer 90mL or 180mL?",
     })),
   },
 };
@@ -186,7 +180,7 @@ export const ToolAndCards: Story = {
         tableSessionId: "tablecast-session",
         createdAt: 1788645000200,
         kind: "voice.products",
-        data: { turnId: "tablecast-turn", productIds: [product.id, "tablecast-sold-out"] },
+        data: { turnId: "tablecast-turn", productIds: [product.id, soldOutProduct.id] },
       },
     ],
   },
@@ -195,7 +189,9 @@ export const ToolAndCards: Story = {
     await expect(canvas.getByText("完了", { exact: true })).toBeVisible();
     await expect(canvas.getByText("実行中", { exact: true })).toBeVisible();
     await expect(canvasElement.querySelector("figure[data-voice-state=tool]")).toBeVisible();
-    await expect(canvas.getByRole("button", { name: /白霞/ })).toBeDisabled();
+    await expect(
+      canvas.getByRole("button", { name: new RegExp(soldOutProduct.text.ja.displayName) }),
+    ).toBeDisabled();
     await userEvent.click(canvas.getByRole("button", { name: /月凪/ }));
     await expect(args.onChoose).toHaveBeenCalledWith(product);
   },

@@ -10,7 +10,7 @@ import {
   productSchema,
 } from "../catalog/model";
 import { selectionSchema } from "../orders/model";
-import { castInstructionSchema } from "./instruction-model";
+import { castInstructionSchema, instructionLimit } from "./instruction-model";
 export const maxConfigurationProducts = 2000;
 export const configurationSchema = z
   .object({
@@ -31,6 +31,13 @@ export const configurationSchema = z
     plans: z.array(planSchema).max(30),
     cast: z
       .object({
+        systemInstructions: z
+          .object({
+            ja: z.string().trim().min(1).max(instructionLimit).nullable(),
+            en: z.string().trim().min(1).max(instructionLimit).nullable(),
+          })
+          .strict()
+          .optional(),
         instructions: z.object({ ja: castInstructionSchema, en: castInstructionSchema }),
         voice: z.object({
           ja: z.string().min(1).max(100).nullable(),

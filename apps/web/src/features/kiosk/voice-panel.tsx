@@ -5,14 +5,14 @@ import {
   type TableEvent,
   voiceReferenceEventSchema,
 } from "@tablecast/api/schema";
-import { Check, CircleAlert, LoaderCircle, MicOff } from "lucide-react";
 import { AnimatePresence } from "motion/react";
-import { useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
 } from "../../components/ai-elements/conversation";
+import { Tool } from "../../components/ai-elements/tool";
 import { ProductMenu } from "../../components/product-menu";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -23,14 +23,16 @@ import {
 } from "./conversation-model";
 import { LocalCamera, useLocalCamera } from "./local-camera";
 import { type VoiceView } from "./voice-connection";
-import { VoiceAttention, VoiceControls, VoiceStartBanner } from "./voice-controls";
+import { VoiceAttention, VoiceControls } from "./voice-controls";
 import { ConversationEntry, ConversationMessage } from "./voice-conversation-message";
 import { VoiceProgress } from "./voice-progress";
 import { VoiceReferenceCard } from "./voice-reference";
+import { VoiceWelcome } from "./voice-welcome";
 
 const toolLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]>> = {
   showReference: "kiosk_tool_show_reference",
   captureCamera: "kiosk_tool_capture_camera",
+  getCameraState: "kiosk_tool_camera_state",
   getCatalog: "kiosk_tool_get_catalog",
   getTableState: "kiosk_tool_get_table_state",
   updateCart: "kiosk_tool_update_cart",
@@ -113,6 +115,16 @@ export function VoicePanelContent({
   camera,
 }: VoicePanelProps & { camera: ReturnType<typeof useLocalCamera> }) {
   const panel = useRef<HTMLElement>(null);
+  const cameraArea = useRef<HTMLDivElement>(null);
+  const [cameraHeight, setCameraHeight] = useState<number>();
+  useLayoutEffect(() => {
+    const element = cameraArea.current;
+    if (!element) return undefined;
+    const observer = new ResizeObserver(() => setCameraHeight(element.offsetHeight));
+    observer.observe(element);
+    setCameraHeight(element.offsetHeight);
+    return () => observer.disconnect();
+  }, []);
   const { locale, t } = useI18n();
   const merged = mergeConversation(lines, view, locale);
   const { tools, turns, failedTurns, latestBusinessTurn, running } = voiceOperationState(events);
@@ -158,36 +170,24 @@ export function VoicePanelContent({
       else if (event.data.state === "requested") toolStatus = "kiosk_tool_waiting";
       else if (pending) toolStatus = "kiosk_tool_running";
       return [
-        <div
+        <Tool
           key={String(event.data.toolCallId)}
-          className="flex items-start gap-3 rounded-lg border border-border bg-background px-3 py-2 text-xs"
-          data-tool-state={stale ? "interrupted" : failed ? "error" : String(event.data.state)}
+          title={title}
+          statusLabel={t(toolStatus)}
+          state={
+            stale
+              ? "interrupted"
+              : failed
+                ? "error"
+                : pending
+                  ? event.data.state === "requested"
+                    ? "requested"
+                    : "running"
+                  : "completed"
+          }
         >
-          <span key={toolStatus} className="shrink-0 motion-safe:animate-tablecast-confirm">
-            {failed ? (
-              <CircleAlert className="size-4 text-destructive" />
-            ) : pending && !stale ? (
-              <LoaderCircle className="size-4 motion-safe:animate-spin text-primary" />
-            ) : stale ? (
-              <MicOff className="size-4" />
-            ) : (
-              <Check className="size-4 text-success" />
-            )}
-          </span>
-          <span className="min-w-0 flex-1">
-            {title}
-            {name === "getCatalog" && typeof event.data.query === "string" && (
-              <span className="mt-1 block wrap-break-word text-muted-foreground">
-                {t("kiosk_tool_search_label")}
-                {event.data.query}
-              </span>
-            )}
-            {failed && (
-              <span className="mt-1 block text-destructive">{t("kiosk_tool_failed_hint")}</span>
-            )}
-          </span>
-          <span className="shrink-0 text-muted-foreground">{t(toolStatus)}</span>
-        </div>,
+          {failed ? <p className="text-destructive">{t("kiosk_tool_failed_hint")}</p> : undefined}
+        </Tool>,
       ];
     });
   }
@@ -196,9 +196,14 @@ export function VoicePanelContent({
     return events.flatMap((event) =>
       event.kind === "voice.products" && event.data.turnId === turnId
         ? [
-            <div className="mt-3" key={event.cursor}>
+            <div
+              data-ui="voice-products-entry"
+              className="mt-3 min-w-0 max-w-full motion-safe:animate-tablecast-state"
+              key={event.cursor}
+            >
               <ProductMenu
                 catalog={catalog}
+                compact
                 productIds={
                   Array.isArray(event.data.productIds)
                     ? event.data.productIds.filter((id): id is string => typeof id === "string")
@@ -228,20 +233,34 @@ export function VoicePanelContent({
         aria-label={t("kiosk_conversation")}
       >
         <h2 className="sr-only">{t("kiosk_conversation")}</h2>
-        <div className="pointer-events-none absolute inset-x-3 top-3 z-10">
+        <div ref={cameraArea} className="pointer-events-none absolute inset-x-3 top-3 z-10">
           <LocalCamera camera={camera} boundsRef={panel} />
         </div>
         <div
           data-ui="conversation-history"
-          className="flex min-h-0 flex-1 flex-col overflow-hidden"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden @container-size/history"
         >
           <Conversation>
-            <ConversationContent tabIndex={0} className="relative">
+            <ConversationContent
+              tabIndex={0}
+              className="relative min-h-full pt-40"
+              style={{ paddingTop: cameraHeight === undefined ? undefined : cameraHeight + 12 }}
+            >
+              <VoiceWelcome
+                view={view}
+                hasContent={Boolean(timeline.length || snapshot)}
+                onStart={onStart}
+                disabled={controlDisabled}
+              />
               <AnimatePresence initial={false} mode="popLayout">
                 {timeline.map((entry) => {
                   const line = entry.line;
                   return line ? (
-                    <ConversationEntry className="space-y-2" key={line.id}>
+                    <ConversationEntry
+                      className="min-w-0 max-w-full space-y-2"
+                      key={line.id}
+                      pinned={line.id === merged.at(-1)?.id}
+                    >
                       <ConversationMessage
                         line={line}
                         status={
@@ -256,7 +275,7 @@ export function VoicePanelContent({
                       />
                     </ConversationEntry>
                   ) : (
-                    <ConversationEntry key={entry.id} className="w-full space-y-2">
+                    <ConversationEntry key={entry.id} className="min-w-0 max-w-full space-y-2">
                       {toolCards(entry.turnId)}
                       {products(entry.turnId)}
                       {events
@@ -302,7 +321,12 @@ export function VoicePanelContent({
                 view={view}
               />
               {active && Boolean(view.suggestions?.length) && (
-                <div className="flex flex-wrap gap-2" aria-label={t("kiosk_suggestions")}>
+                <div
+                  data-ui="voice-suggestions-entry"
+                  key={view.suggestions?.join("\u0000")}
+                  className="flex flex-wrap gap-2 motion-safe:animate-tablecast-state"
+                  aria-label={t("kiosk_suggestions")}
+                >
                   {view.suggestions?.map((text) => (
                     <Button
                       key={text}
@@ -322,14 +346,6 @@ export function VoicePanelContent({
             <ConversationScrollButton label={t("kiosk_latest")} />
           </Conversation>
         </div>
-        {!active && (
-          <div
-            data-ui="voice-start-overlay"
-            className="pointer-events-none absolute inset-0 z-20 grid place-items-center bg-radial from-inverse/35 via-inverse/15 to-transparent"
-          >
-            <VoiceStartBanner view={view} onStart={onStart} controlDisabled={controlDisabled} />
-          </div>
-        )}
         <VoiceControls
           view={view}
           active={active}

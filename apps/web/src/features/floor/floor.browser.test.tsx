@@ -11,10 +11,9 @@ import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import { z } from "zod";
 import type * as StoreShellModule from "../store/store-shell";
-import { catalog, table } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
-import "../../styles.css";
 import { LocaleProvider } from "../../i18n/locale";
+import { catalog, table } from "../../test-support/tablecast-fixtures";
 import { catalogOptions } from "../catalog/catalog-query";
 import { storesOptions } from "../store/store-query";
 import { StoreShell } from "../store/store-shell";
@@ -22,6 +21,7 @@ import { Floor } from "./floor";
 import { floorSearchSchema } from "./floor-model";
 import { floorOptions, tableDetailOptions } from "./floor-query";
 import { TableDetail } from "./table-detail";
+import "../../styles.css";
 
 // 店舗選択は認証済みfixtureとし、Query・Router・通知hook・卓表示は実物を使う。
 vi.mock("../store/store-context", async (importOriginal) => ({

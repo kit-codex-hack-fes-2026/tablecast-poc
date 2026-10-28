@@ -132,9 +132,14 @@ export function ItemForm({
       configuration: typeof update === "function" ? update(current.configuration) : update,
     }));
   const dirty = configuration !== initial;
-  const invalidInstructions = Object.values(configuration.cast.instructions).some(
-    (instruction) => instructionText(instruction).length > instructionLimit,
-  );
+  const invalidInstructions =
+    Object.values(configuration.cast.instructions).some(
+      (instruction) => instructionText(instruction).length > instructionLimit,
+    ) ||
+    Object.values(configuration.cast.systemInstructions ?? {}).some(
+      (instruction) =>
+        instruction !== null && (!instruction.trim() || instruction.length > instructionLimit),
+    );
   async function submitConfiguration(form: HTMLFormElement) {
     if (!editable || invalidInstructions || uploadingNow() || pending) return;
     const failure = conditionValidationMessage(configuration);

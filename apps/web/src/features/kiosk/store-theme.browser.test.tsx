@@ -2,7 +2,6 @@ import type { ThemeImage } from "@tablecast/api/schema";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import { MenuBanners } from "../../components/menu-banners";
 import { ProductMenu } from "../../components/product-menu";
 import { StoreLogo } from "../../components/store-logo";
@@ -10,6 +9,7 @@ import { StoreTheme } from "../../components/store-theme";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
 import { LocaleProvider } from "../../i18n/locale";
+import { catalog, product } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 const image: ThemeImage = {
   imageKey: `tablecast/uploads/${"a".repeat(64)}.webp`,

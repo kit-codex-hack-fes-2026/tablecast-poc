@@ -56,6 +56,7 @@ function Surface() {
         >
           画像を読み取る
         </button>
+        <button onClick={() => setResult(JSON.stringify(camera.getState()))}>状態を確認</button>
         <button onClick={camera.complete}>読取を完了</button>
         <p>{result}</p>
       </MotionProvider>
@@ -84,6 +85,7 @@ it("ON中の1枚をJPEGで取得し、読取状態を示して完了・OFFで解
   await screen.getByRole("button", { name: "画像を読み取る" }).click();
   await expect.element(screen.getByText("CAMERA_OFF")).toBeVisible();
   expect(capture).not.toHaveBeenCalled();
+  expect(document.querySelector('[data-ui="camera-shutter"]')).toBeNull();
   await screen.getByRole("button", { name: ja.kiosk_camera_start }).click();
   await expect
     .poll(() => {
@@ -98,7 +100,23 @@ it("ON中の1枚をJPEGで取得し、読取状態を示して完了・OFFで解
   await expect.element(screen.getByText("取得成功")).toBeVisible();
   expect(imageUrl).toMatch(/^data:image\/jpeg;base64,/);
   expect(new TextEncoder().encode(imageUrl).byteLength).toBeLessThanOrEqual(60000);
-  await expect.element(screen.getByText(ja.kiosk_camera_reading)).toBeVisible();
+  await expect.element(screen.getByRole("status")).toHaveTextContent(ja.kiosk_camera_reading);
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  await expect
+    .poll(() =>
+      document.querySelector('[data-ui="camera-shutter"]')?.getAttribute("data-capture-count"),
+    )
+    .toBe("1");
+  const firstShutter = document.querySelector('[data-ui="camera-shutter"]');
+  if (!(firstShutter instanceof HTMLElement)) throw new Error("取得成功時の表現がありません");
+  expect(getComputedStyle(firstShutter).display === "none").toBe(reduced);
+  await screen.getByRole("button", { name: "画像を読み取る" }).click();
+  await expect
+    .poll(() =>
+      document.querySelector('[data-ui="camera-shutter"]')?.getAttribute("data-capture-count"),
+    )
+    .toBe("2");
+  expect(document.querySelector('[data-ui="camera-shutter"]')).not.toBe(firstShutter);
   const image = new Image();
   image.src = imageUrl ?? "";
   await image.decode();
@@ -108,6 +126,18 @@ it("ON中の1枚をJPEGで取得し、読取状態を示して完了・OFFで解
   await screen.getByRole("button", { name: ja.kiosk_camera_stop }).click();
   expect(capture).toHaveBeenCalledOnce();
   expect(streams[0]?.getTracks()[0]?.readyState).toBe("ended");
+  await screen.getByRole("button", { name: ja.kiosk_camera_start }).click();
+  await expect
+    .poll(() => document.querySelector("video")?.readyState ?? 0)
+    .toBeGreaterThanOrEqual(2);
+  expect(document.querySelector('[data-ui="camera-shutter"]')).toBeNull();
+  await screen.getByRole("button", { name: "画像を読み取る" }).click();
+  await expect
+    .poll(() =>
+      document.querySelector('[data-ui="camera-shutter"]')?.getAttribute("data-capture-count"),
+    )
+    .toBe("1");
+  expect(capture).toHaveBeenCalledTimes(2);
 });
 
 it("外側へ切り替えると旧映像を解放し、外側のプレビューを鏡像にしない", async () => {
@@ -173,4 +203,37 @@ it("外側へ切り替えると旧映像を解放し、外側のプレビュー�
       return video ? getComputedStyle(video).scale : "";
     })
     .toBe("none");
+});
+
+it("端末のOFFと撮影許可の拒否を状態照会で区別し、照会だけでは撮影を始めない", async () => {
+  const media = vi
+    .spyOn(navigator.mediaDevices, "getUserMedia")
+    .mockRejectedValue(new DOMException("Permission denied", "NotAllowedError"));
+  const screen = await render(<Surface />);
+  await screen.getByRole("button", { name: "状態を確認", exact: true }).click();
+  await expect.element(screen.getByText(/"status":"off"/)).toBeVisible();
+  expect(media).not.toHaveBeenCalled();
+  await screen.getByRole("button", { name: ja.kiosk_camera_start, exact: true }).click();
+  await expect.element(screen.getByRole("alert")).toHaveTextContent(ja.kiosk_camera_permission);
+  await screen.getByRole("button", { name: "状態を確認", exact: true }).click();
+  await expect.element(screen.getByText(/"status":"permission-denied"/)).toBeVisible();
+  expect(media).toHaveBeenCalledOnce();
+});
+
+it("撮影せず現在のカメラ許可を照会し、ブラウザーの許可変更を追従する", async () => {
+  const native: { name: string; onchange: PermissionStatus["onchange"]; state: PermissionState } = {
+    state: "denied",
+    onchange: null,
+    name: "camera",
+  };
+  const permission = Object.assign(new EventTarget(), native);
+  vi.spyOn(navigator.permissions, "query").mockResolvedValue(permission);
+  const media = vi.spyOn(navigator.mediaDevices, "getUserMedia");
+  const screen = await render(<Surface />);
+  await screen.getByRole("button", { name: "状態を確認", exact: true }).click();
+  await expect.element(screen.getByText(/"permission":"denied"/)).toBeVisible();
+  permission.state = "granted";
+  await screen.getByRole("button", { name: "状態を確認", exact: true }).click();
+  await expect.element(screen.getByText(/"permission":"granted"/)).toBeVisible();
+  expect(media).not.toHaveBeenCalled();
 });

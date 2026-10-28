@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { table as tablecastTableState } from "../../../.storybook/tablecast-fixtures";
+import { table as tablecastTableState } from "../../test-support/tablecast-fixtures";
 import { affectedTableQueries, latestTable } from "./table-cache";
 
 describe("卓の画面状態の応答順序", () => {

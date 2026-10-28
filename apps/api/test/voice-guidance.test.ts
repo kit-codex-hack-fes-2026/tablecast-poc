@@ -30,7 +30,7 @@ async function setup() {
     ...env,
     TABLECAST_VOICE_ENABLED: "true",
     TABLECAST_MODEL_API_KEY: "tablecast-test-key",
-    TABLECAST_MODEL: "gpt-6-luna",
+    TABLECAST_MODEL: "gpt-6.1-terra",
   });
   await setVoiceSession(services, device, source.voiceSessionId);
   await recordConversationItems(services, device, {
@@ -124,6 +124,16 @@ it("同じ字幕の並行要求では一度だけ候補を生成し、予約で�
     results.map((result) => result.suggestions.length).toSorted((left, right) => left - right),
   ).toEqual([0, 3]);
   expect(fetch).toHaveBeenCalledOnce();
+  const request = fetch.mock.calls[0]?.[1]?.body;
+  if (typeof request !== "string") throw new Error("候補生成の本文がありません");
+  expect(JSON.parse(request)).toMatchObject({
+    model: "gpt-6.1-terra",
+    reasoning: { effort: "low" },
+  });
+  expect(JSON.parse(request)).toHaveProperty(
+    "instructions",
+    expect.stringContaining("客がIDを伝える候補を作らない"),
+  );
   const state = await getTableState(services, device);
   expect(state.events.some((event) => event.kind === "voice.suggestions")).toBe(false);
   expect(state.orders).toHaveLength(0);

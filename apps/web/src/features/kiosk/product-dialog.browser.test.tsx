@@ -2,11 +2,11 @@ import { type CartLine, productSchema } from "@tablecast/api/schema";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { product } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
 import { money } from "../../i18n/format";
 import { LocaleProvider } from "../../i18n/locale";
 import { fixtureValue } from "../../test-support/fixture-value";
+import { product } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 import { ProductPage } from "./product-dialog";
 

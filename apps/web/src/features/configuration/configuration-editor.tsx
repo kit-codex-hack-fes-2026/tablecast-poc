@@ -3,6 +3,7 @@ import { AudioLines, MessageSquare } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { CastTarget } from "./menu-model";
 import { useI18n } from "../../i18n/locale";
+import { CastSystemSettings } from "./cast-system-settings";
 import { BooleanField, ConfigurationSection } from "./configuration-fields";
 import { LanguageFields } from "./language-fields";
 import { PromptEditor } from "./prompt-editor";
@@ -48,6 +49,14 @@ export function CastEditor({
       >
         {(itemLanguage, languageLabelId) => (
           <>
+            <CastSystemSettings
+              value={value}
+              language={itemLanguage}
+              onChange={onChange}
+              disabled={disabled}
+              inputId={`${id}-system-${itemLanguage}`}
+            />
+            <h2 className="text-lg font-semibold">{t("cast_store_layer")}</h2>
             <ConfigurationSection
               title={t("editor_cast_instructions")}
               icon={MessageSquare}

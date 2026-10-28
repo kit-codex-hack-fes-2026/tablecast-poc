@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import type { ConfigurationIssue } from "@tablecast/api/schema";
 import { expect, within } from "storybook/test";
-import { catalog } from "../../../.storybook/tablecast-fixtures";
+import { catalog } from "../../test-support/tablecast-fixtures";
 import { ConfigurationErrors } from "./configuration-errors";
 
 const errors: ConfigurationIssue[] = [

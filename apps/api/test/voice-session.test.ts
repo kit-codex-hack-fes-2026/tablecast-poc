@@ -2,6 +2,7 @@ import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test"
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
+import { z } from "zod";
 import app from "../src/app";
 import * as business from "../src/db/business-schema";
 import { updateCart } from "../src/modules/orders/use-cases/cart";
@@ -9,6 +10,7 @@ import { getEvents } from "../src/modules/stores/queries";
 import { getTableState } from "../src/modules/tables/queries";
 import { changeLocale } from "../src/modules/tables/use-cases/presentation";
 import { recordConversationItems } from "../src/modules/voice/conversation";
+import { defaultCastInstructions } from "../src/modules/voice/prompt";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { startVoiceSession } from "../src/modules/voice/session";
 import { finishVoiceTurn } from "../src/modules/voice/turns";
@@ -21,7 +23,7 @@ const configured = () => ({
   ...env,
   TABLECAST_VOICE_ENABLED: "true",
   TABLECAST_MODEL_API_KEY: "tablecast-private-model-key",
-  TABLECAST_MODEL: "gpt-6-luna",
+  TABLECAST_MODEL: "gpt-6.1-terra",
 });
 const startRequest = () =>
   new Request("http://localhost:3000/api/table/voice/start", {
@@ -173,8 +175,8 @@ it("同じ音声session・他卓・切替後の新turnを古い停止要求で�
 });
 
 it.each([
-  { locale: "ja", rich: false, model: "gpt-6-luna" },
-  { locale: "en", rich: false, model: "gpt-6-luna" },
+  { locale: "ja", rich: false, model: "gpt-6.1-terra" },
+  { locale: "en", rich: false, model: "gpt-6.1-terra" },
   { locale: "ja", rich: true, model: "tablecast-configured-model" },
   { locale: "en", rich: true, model: "tablecast-configured-model" },
 ] satisfies { locale: Locale; model: string; rich: boolean }[])(
@@ -183,6 +185,11 @@ it.each([
     await setupFixture();
     const selected: Configuration = structuredClone(configuration);
     if (rich) {
+      selected.cast.systemInstructions = {
+        ja: null,
+        en: null,
+        [locale]: `TableCast system override (${locale}). Use Arabic digits.`,
+      };
       selected.cast.instructions[locale] = {
         format: "tiptap-json",
         version: 1,
@@ -222,7 +229,7 @@ it.each([
             type: "responses",
             responses: {
               model,
-              reasoning: { effort: "medium" },
+              reasoning: { effort: "low" },
               service_tier: "priority",
               max_output_tokens: 4096,
               parallel_tool_calls: true,
@@ -232,6 +239,43 @@ it.each([
         transport: { type: "webrtc", sdp: "tablecast-sdp-offer" },
       });
       for (const path of ["session.instructions", "session.delegation.responses.instructions"]) {
+        const instructions =
+          selected.cast.systemInstructions?.[locale] ?? defaultCastInstructions[locale];
+        expect(JSON.parse(init.body)).toHaveProperty(path, expect.stringContaining(instructions));
+        expect(JSON.parse(init.body)).toHaveProperty(
+          path,
+          expect.stringContaining("客にIDの存在を説明せず"),
+        );
+        expect(JSON.parse(init.body)).toHaveProperty(
+          path,
+          expect.stringContaining("商品名・特徴・表示順で対象を確認"),
+        );
+        const tools = z
+          .object({
+            session: z.object({
+              delegation: z.object({
+                responses: z.object({
+                  tools: z.array(
+                    z.looseObject({
+                      type: z.string(),
+                      name: z.string().optional(),
+                      description: z.string().optional(),
+                    }),
+                  ),
+                }),
+              }),
+            }),
+          })
+          .parse(JSON.parse(init.body)).session.delegation.responses.tools;
+        expect(tools.map((item) => item.name)).toEqual(
+          expect.arrayContaining(["captureCamera", "showReference", "endConversation"]),
+        );
+        for (const registeredTool of tools.filter((item) => item.type === "function")) {
+          expect(JSON.parse(init.body)).toHaveProperty(
+            path,
+            expect.stringContaining(`${registeredTool.name}: ${registeredTool.description}`),
+          );
+        }
         expect(JSON.parse(init.body)).toHaveProperty(
           path,
           expect.stringContaining(

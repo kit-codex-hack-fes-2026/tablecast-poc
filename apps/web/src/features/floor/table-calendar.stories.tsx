@@ -8,6 +8,8 @@ const hour = 3_600_000;
 const current = {
   ...table,
   tableId: "tablecast-t03",
+  tableName: "T03",
+  bill: { ...table.bill, orderedTotal: table.cart.total, due: table.cart.total },
   openedAt: startAt + 11 * hour,
   billRequested: true,
   voiceState: "error" as const,

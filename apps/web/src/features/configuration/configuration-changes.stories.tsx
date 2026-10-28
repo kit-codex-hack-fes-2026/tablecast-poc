@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { expect } from "storybook/test";
-import { catalog } from "../../../.storybook/tablecast-fixtures";
+import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import { ConfigurationChanges } from "./configuration-changes";
 
 const meta = {
@@ -9,7 +9,12 @@ const meta = {
   args: {
     configuration: catalog.configuration,
     changes: [
-      { path: "products.0.price", before: 650, after: 750, sensitive: true },
+      {
+        path: "products.0.price",
+        before: product.price,
+        after: product.price + 100,
+        sensitive: true,
+      },
       { path: "products.0.allergens.vegan", before: "unknown", after: "no", sensitive: true },
       {
         path: "products.0.modifiers.0.options.0",
@@ -21,7 +26,7 @@ const meta = {
         },
         sensitive: true,
       },
-      { path: "plans.0.productIds.0", before: null, after: "tablecast-sake", sensitive: true },
+      { path: "plans.0.productIds.0", before: null, after: product.id, sensitive: true },
       { path: "cast.instructions.en", before: "unknown", after: "Be welcoming.", sensitive: false },
       { path: "cast.proactive", before: true, after: false, sensitive: false },
       { path: "storeName", before: "TableCast", after: "麺屋 マシの頂", sensitive: false },
@@ -45,7 +50,7 @@ export const Japanese: Story = {
     );
     await expect(rows).toHaveLength(8);
     await expect(rows[0]).toHaveTextContent("単価（税込・円）");
-    await expect(rows[0]).toHaveTextContent("¥750");
+    await expect(rows[0]).toHaveTextContent(`¥${product.price + 100}`);
     await expect(rows[1]).toHaveTextContent("未確認");
     await expect(rows[1]).not.toHaveTextContent("unknown");
     await expect(rows[2]).toHaveTextContent("小盛");

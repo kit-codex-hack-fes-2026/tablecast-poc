@@ -11,8 +11,8 @@ import {
 import { afterEach, beforeEach, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { catalog } from "../../../../.storybook/tablecast-fixtures";
 import { LocaleProvider } from "../../../i18n/locale";
+import { catalog } from "../../../test-support/tablecast-fixtures";
 import "../../../styles.css";
 import { DraftPage } from "../../configuration/configuration-draft-page";
 import { ConfigurationHeader } from "../../configuration/configuration-header";

@@ -1,8 +1,12 @@
 import type { BillingRates } from "./model";
 import { ensure } from "../../platform/errors";
 
-export const billingPricingVersion = "openai-2026-10-21";
-export const billingPricingVersions = ["openai-2026-10-18", billingPricingVersion];
+export const billingPricingVersion = "openai-2026-10-28";
+export const billingPricingVersions = [
+  "openai-2026-10-18",
+  "openai-2026-10-21",
+  billingPricingVersion,
+];
 export const billingUsdJpy = 160;
 // 百万分の一円で保存する。整数の有理数計算で、累積値の差分を料金にする。
 export function usageCharge(
@@ -36,26 +40,29 @@ export function usageCharge(
   let numerator = BigInt(secondsMicros) * 50_000n;
   if (input.model) {
     const luna6 =
-      pricingVersion === billingPricingVersion &&
+      pricingVersion !== "openai-2026-10-18" &&
       /^gpt-6-luna(?:-\d{4}-\d{2}-\d{2})?$/.test(input.model);
+    const terra =
+      pricingVersion === billingPricingVersion &&
+      /^gpt-6\.1-terra(?:-\d{4}-\d{2}-\d{2})?$/.test(input.model);
     ensure(
-      luna6 || /^gpt-5\.6-luna(?:-\d{4}-\d{2}-\d{2})?$/.test(input.model),
+      terra || luna6 || /^gpt-5\.6-luna(?:-\d{4}-\d{2}-\d{2})?$/.test(input.model),
       "BILLING_MODEL_UNPRICED",
       422,
     );
     ensure(
       input.serviceTier === "default" ||
         input.serviceTier === "priority" ||
-        (luna6 && input.serviceTier === "fast"),
+        ((luna6 || terra) && input.serviceTier === "fast"),
       "BILLING_TIER_UNPRICED",
       422,
     );
     const longContext = inputTokens > 272000;
     const priority = input.serviceTier === "default" ? 1n : 2n;
     // 百分の一USD / 百万token。旧料金版と旧モデルの単価は維持する。
-    const inputRate = luna6 ? 10n : 20n;
-    const cachedRate = luna6 ? 1n : 2n;
-    const outputRate = luna6 ? 25n : 60n;
+    const inputRate = terra ? 100n : luna6 ? 10n : 20n;
+    const cachedRate = terra ? 5n : luna6 ? 1n : 2n;
+    const outputRate = terra ? 250n : luna6 ? 25n : 60n;
     const tokenHundredths =
       (BigInt(inputTokens - cachedTokens) * inputRate + BigInt(cachedTokens) * cachedRate) *
         priority *

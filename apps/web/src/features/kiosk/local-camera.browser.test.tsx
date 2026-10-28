@@ -110,6 +110,14 @@ it("常設枠はオフでも同寸法を保ち、明示操作だけで撮影す�
     .element()
     .getBoundingClientRect();
   expect(capture).not.toHaveBeenCalled();
+  const offMessage = page
+    .getByRole("img", { name: ja.kiosk_camera_off })
+    .element()
+    .querySelector("span");
+  if (!offMessage) throw new Error("カメラの支援技術向け状態がありません");
+  expect(offMessage.getBoundingClientRect().width).toBeLessThanOrEqual(1);
+  expect(toggleBefore.top).toBeGreaterThanOrEqual(before.bottom);
+  expect(toggleBefore.left).toBe(before.left);
   expect(document.querySelector('[role="dialog"]')).toBeNull();
   await page.getByRole("button", { name: ja.kiosk_camera_start }).click();
   await expect.poll(() => document.querySelector("video")?.srcObject).toBe(stream);
@@ -194,13 +202,13 @@ it("権限拒否を表示し、自動再試行せず明示操作で再開でき�
   await screen.getByRole("button", { name: ja.kiosk_camera_start }).click();
   await expect.element(screen.getByRole("alert")).toHaveTextContent(ja.kiosk_camera_permission);
   expect(screen.getByRole("alert").element().closest("[data-ui=camera-frame]")).not.toBeNull();
-  expect(screen.getByRole("alert").element().getBoundingClientRect().left).toBeGreaterThanOrEqual(
-    screen.getByRole("button", { name: ja.kiosk_camera_start }).element().getBoundingClientRect()
-      .right,
-  );
+  const message = screen.getByRole("alert").element().querySelector("span");
+  if (!message) throw new Error("カメラの支援技術向けエラーがありません");
+  expect(message.getBoundingClientRect().width).toBeLessThanOrEqual(1);
+  expect(message.getBoundingClientRect().height).toBeLessThanOrEqual(1);
   await page.screenshot({ path: "../../../test-results/tablecast-camera-permission.png" });
   expect(capture).toHaveBeenCalledTimes(1);
-  await screen.getByRole("button", { name: ja.kiosk_camera_start }).click();
+  await screen.getByRole("button", { name: new RegExp(ja.kiosk_camera_start) }).click();
   await expect.element(screen.getByRole("button", { name: ja.kiosk_camera_stop })).toBeVisible();
   expect(capture).toHaveBeenCalledTimes(2);
 });
@@ -238,7 +246,8 @@ it("カメラ切替の取得待ちも選択入口とfocusを保ち、旧トラ�
   const video = document.querySelector("video");
   const cameraSelect = page.getByRole("combobox", { name: ja.kiosk_camera_device });
   await expect.element(cameraSelect).toBeVisible();
-  expect(cameraSelect.element().closest("[data-ui=camera-frame]")).not.toBeNull();
+  expect(cameraSelect.element().closest("[data-ui=camera-frame]")).toBeNull();
+  expect(cameraSelect.element().closest("[data-ui=camera-controls]")).not.toBeNull();
   const selectBounds = cameraSelect.element().getBoundingClientRect();
   const toggleBounds = screen
     .getByRole("button", { name: ja.kiosk_camera_stop })
@@ -302,11 +311,20 @@ it.each([
     await render(<BoundedMirror width={216} height={344} />);
     await page.getByRole("button", { name: ja.kiosk_camera_start }).click();
     await expect.poll(() => document.querySelector("video")?.videoWidth).toBe(sourceWidth);
+    await expect
+      .poll(() => {
+        const frame = cameraFrame().getBoundingClientRect();
+        return frame.width / frame.height;
+      })
+      .toBeCloseTo(sourceWidth / sourceHeight, 2);
     const resize = page.getByRole("separator", { name: ja.kiosk_camera_resize });
     await resize.click();
     await userEvent.keyboard("{Home}");
     const frame = cameraFrame();
     const before = frame.getBoundingClientRect();
+    const cameraWindow = frame.parentElement;
+    if (!cameraWindow) throw new Error("カメラの操作列がありません");
+    const windowBounds = cameraWindow.getBoundingClientRect();
     expect(before.width / before.height).toBeCloseTo(sourceWidth / sourceHeight, 2);
     expect(before.width).toBeLessThanOrEqual(216);
     expect(before.height).toBeLessThanOrEqual(144);
@@ -322,7 +340,7 @@ it.each([
       expect(rect.left).toBeGreaterThanOrEqual(before.left);
       expect(rect.right).toBeLessThanOrEqual(before.right + 0.1);
       expect(rect.top).toBeGreaterThanOrEqual(before.top);
-      expect(rect.bottom).toBeLessThanOrEqual(before.bottom + 0.1);
+      expect(rect.bottom).toBeLessThanOrEqual(windowBounds.bottom + 0.1);
       for (const other of controls.filter((item) => item !== control)) {
         const second = other.getBoundingClientRect();
         expect(
@@ -333,6 +351,9 @@ it.each([
         ).toBe(true);
       }
     }
+    const toggle = page.getByRole("button", { name: ja.kiosk_camera_stop }).element();
+    expect(toggle.getBoundingClientRect().top).toBeGreaterThanOrEqual(before.bottom);
+    expect(toggle.getBoundingClientRect().left).toBe(before.left);
     await page.screenshot({
       path: `../../../test-results/tablecast-camera-${sourceWidth}-${sourceHeight}.png`,
     });
@@ -420,7 +441,7 @@ it("ドラッグ中のキャンセルは元の寸法に戻し、次の操作を�
 });
 
 it.each(["NotAllowedError", "NotFoundError"])(
-  "英語の%sは縦映像の枠内で操作と重ならない",
+  "英語の%sは枠内で記号を示し、下側の操作列と重ならない",
   async (errorName) => {
     twoCameras();
     const capture = vi
@@ -437,7 +458,10 @@ it.each(["NotAllowedError", "NotFoundError"])(
     const error = page.getByRole("button", { name: `${en.kiosk_camera_start}: ${message}` });
     await expect.element(error).toBeVisible();
     await expect.element(error).toHaveAttribute("title", `${en.kiosk_camera_start}: ${message}`);
-    const frame = cameraFrame().getBoundingClientRect();
+    const frameElement = cameraFrame();
+    const frame = frameElement.getBoundingClientRect();
+    const cameraWindow = frameElement.parentElement;
+    if (!cameraWindow) throw new Error("カメラの操作領域がありません");
     const controls = [
       error.element(),
       page.getByRole("combobox", { name: en.kiosk_camera_device }).element(),
@@ -448,7 +472,7 @@ it.each(["NotAllowedError", "NotFoundError"])(
       expect(rect.width).toBeGreaterThanOrEqual(44);
       expect(rect.height).toBeGreaterThanOrEqual(44);
       expect(rect.top).toBeGreaterThanOrEqual(frame.top);
-      expect(rect.bottom).toBeLessThanOrEqual(frame.bottom);
+      expect(rect.bottom).toBeLessThanOrEqual(cameraWindow.getBoundingClientRect().bottom);
       expect(rect.right).toBeLessThanOrEqual(frame.right);
       for (const other of controls.filter((item) => item !== control)) {
         const second = other.getBoundingClientRect();

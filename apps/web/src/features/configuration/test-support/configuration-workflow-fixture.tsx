@@ -11,9 +11,9 @@ import {
 import { afterEach, beforeEach, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { z } from "zod";
-import { catalog } from "../../../../.storybook/tablecast-fixtures";
 import { MotionProvider } from "../../../components/motion-provider";
 import { LocaleProvider } from "../../../i18n/locale";
+import { catalog } from "../../../test-support/tablecast-fixtures";
 import "../../../styles.css";
 import { MenuCollection } from "../../catalog/menu-collection";
 import { MenuItem } from "../../catalog/menu-item";

@@ -33,7 +33,7 @@ TypeScriptを中心に、WebとAPIをCloudflare Workersで動かす構成です�
 | 多言語               | Paraglide JS                                                    | 来店客・スタッフそれぞれの日本語・英語表示                              |
 | API・入力検証        | Hono、Hono Client、Zod                                          | 型を共有するHTTP API、店舗・卓の認可、共通業務操作                      |
 | 音声会話             | OpenAI GPT-Live 1、WebRTC                                       | ブラウザーとモデルを直接接続する音声理解・応答・再生                    |
-| 業務の委任           | OpenAI Responses delegation、gpt-6-luna                         | 音声会話中の業務判断とtool呼出し。Fast mode、reasoning medium           |
+| 業務の委任           | OpenAI Responses delegation、gpt-6.1-terra                      | 音声会話中の業務判断とtool呼出し。Fast mode、reasoning low              |
 | 認証・利用契約       | Better Auth、Stripe                                             | スタッフ・組織・会員の認証、OAuth、店舗のサブスクリプション・AI従量課金 |
 | データベース         | Cloudflare D1、Drizzle ORM                                      | 店舗設定、カート、注文、会計、永続イベントの保存                        |
 | リアルタイム通知     | Cloudflare Durable Objects、WebSocket                           | 店舗・卓の変更通知と再接続時の同期                                      |
@@ -56,7 +56,7 @@ flowchart LR
     API <--> DO["Durable Objects"]
     API --> Media["R2 / Images"]
     Guest <-->|WebRTC| Live["GPT-Live 1"]
-    Live <-->|Responses delegation| Luna["gpt-6-luna"]
+    Live <-->|Responses delegation| Terra["gpt-6.1-terra"]
 ```
 
 GUI・音声の業務tool・MCPは、API内の同じ業務操作を呼び出します。価格・販売可否・プラン・権限はAPIで判断し、注文は版付きの確認スナップショットと明示承認を経て確定します。

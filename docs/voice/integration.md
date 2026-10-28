@@ -2,20 +2,20 @@
 
 ## 採用構成
 
-ブラウザーからGPT-Live 1へ標準WebRTCで接続する。GPT-Liveの標準Responses delegationにgpt-6-lunaを設定し、接続・会話文脈・推論の継続をOpenAIへ任せる。Mastra、LiveKit、hosted Agents API、独自STTは利用しない。
+ブラウザーからGPT-Live 1へ標準WebRTCで接続する。GPT-Liveの標準Responses delegationにgpt-6.1-terraを設定し、接続・会話文脈・推論の継続をOpenAIへ任せる。Mastra、LiveKit、hosted Agents API、独自STTは利用しない。
 
 ```mermaid
 flowchart LR
     B[ブラウザー] <-->|WebRTC 音声・字幕| L[GPT-Live 1]
-    L <-->|標準Responses delegation| R[Luna]
+    L <-->|標準Responses delegation| R[Terra]
     B <-->|認証済みtool HTTP| H[Hono]
     H <--> D[D1]
     H --> N[通知DO]
 ```
 
-公式OpenAI SDKのLive session作成をHonoが行い、SDPだけをブラウザーへ返す。APIキーはサーバーだけが持つ。backendはTABLECAST_MODELのLuna、reasoning medium、verbosity low、Fast mode（service_tier: priority）、最大4096出力tokenとする。出力上限は推論tokenも含むため、従来の800から推論用の余地を増やす。独立したtoolはparallel_tool_callsを許可し、書込みや版に依存する操作は順序を保つ。
+公式OpenAI SDKのLive session作成をHonoが行い、SDPだけをブラウザーへ返す。APIキーはサーバーだけが持つ。backendはTABLECAST_MODELのTerra、reasoning low、verbosity low、Fast mode（service_tier: priority）、最大4096出力tokenとする。出力上限は推論tokenも含むため、従来の800から推論用の余地を増やす。独立したtoolはparallel_tool_callsを許可し、書込みや版に依存する操作は順序を保つ。
 
-[公式Delegation仕様](https://developers.openai.com/api/docs/guides/live-delegation)、[GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna)
+[公式Delegation仕様](https://developers.openai.com/api/docs/guides/live-delegation)、[GPT-6.1 Terra](https://developers.openai.com/api/docs/models/gpt-6.1-terra)
 
 ## ツールと出力
 
@@ -23,7 +23,7 @@ Liveのresponse.event内のresponse.createdでresponse IDを記録し、response
 
 ブラウザーはHonoの認証済みtool経路へ転送する。価格計算、認可、注文・カート操作をブラウザーへ複製しない。業務の失敗はtool結果へ返し、音声接続を維持する。古い委任の遅着結果で次の委任を継続しない。
 
-商品検索は最大8件とtotal/moreを返し、offsetで続きへ進む。商品紹介はgetCatalog(show=true)で検索と最大4枚のカード表示をまとめる。注文する商品を特定したら必要な詳細を取得する。ツール結果からGUIのイベント履歴・二言語の注文snapshotの重複を除き、価格・版・必須選択・認可の検査は維持する。
+商品検索は最大8件とtotal/moreを返し、offsetで続きへ進む。商品紹介はgetCatalog(show=true)で検索と最大4枚のカード表示をまとめる。概要にもrequiredSelectionsを返し、注文する商品を特定したらgetCatalogのproductIdsへ最大8件まとめて指定して必須・任意の選択肢、追加料金、条件を含む詳細を取得する。検索語の一致度によらず詳細を取得でき、画面での選択を依頼しない。getTableStateは最後に会話へ表示したdisplayedProductIdsも画面と同じ順で返す。setUiSectionはメニューペインの一覧・商品詳細・カート・履歴・会計への遷移を担当する。代表発話と失敗時の契約は[接客シナリオ](scenarios.md)を参照する。ツール結果からGUIのイベント履歴・二言語の注文snapshotの重複を除き、価格・版・必須選択・認可の検査は維持する。
 
 ### 外貨参考額と端末の表示設定
 
@@ -51,7 +51,7 @@ HonoのHTTP、tablecast.voice.tool、D1と通知をGrafanaで追う。tool span�
 
 実D1テストは認可・価格・版・同時実行・停止・別卓拒否を検証する。voice-performance.test.tsは商品数を増やし、実D1のSQL実行と保存されたカード表示を確認しながらbinding往復と出力サイズの予算を検証する。上限超過時は原因を調べ、閾値の緩和で成功扱いにしない。
 
-Webの固定イベント試験は全tool結果の返却・一回の継続・エラー・新委任による取消・字幕・停止を検証する。実GPT-LiveとLunaは有料試験で、Inworld生成音声を使いlocalと同一SHAのPR previewで確認する。通常CIの固定イベントだけで実API・音声・1秒達成を証明した扱いにしない。
+Webの固定イベント試験は全tool結果の返却・一回の継続・エラー・新委任による取消・字幕・停止を検証する。実GPT-LiveとTerraは有料試験で、Inworld生成音声を使いlocalと同一SHAのPR previewで確認する。通常CIの固定イベントだけで実API・音声・1秒達成を証明した扱いにしない。
 
 ## 言語変更と接客終了
 
@@ -61,12 +61,19 @@ Webの固定イベント試験は全tool結果の返却・一回の継続・エ�
 
 ## カメラ画像
 
-カメラは利用客のON操作で有効になる。captureCameraはAPIで卓・session・turnを認可してから現在映像を1枚だけ取得する。圧縮JPEGはWebRTCの転送上限内で標準Responsesのinput_imageへ送り、DB・R2・ログへ保存しない。OFF・取消・取得失敗はtool結果として返し、音声を維持する。
+カメラは利用客のON操作で有効になる。captureCameraはAPIで卓・session・turnを認可してから現在映像を1枚だけ取得する。圧縮JPEGはWebRTCの転送上限内で標準Responsesのinput_imageへ送り、DB・R2・ログへ保存しない。getCameraStateは同じAPI認可を通し、画像取得や許可要求をせず、端末のoff・starting・ready・capturing・reading・permission-denied・unavailableを返す。APIがsessionAuthorizedを返し、Webがデバイス識別情報を含まない現在のcamera状態とpermission（granted・denied・prompt・unknown）を付加する。対応ブラウザーではPermissions APIを照会し、PermissionStatus.stateの現在値を都度参照して変更を追従する。照会未対応はunknownとする。端末の自己申告をAPI認可の根拠にはせず、認可やON/OFFを客に調べさせない。OFF・取消・取得失敗は状態付きのtool結果として返し、音声を維持する。
 
 内側・外側の切替はカメラだけを更新し、旧トラックを解放する。内側プレビューだけ鏡像とし、取得画像はソースの向きを保つ。非表示・停止・言語変更後の未送信画像は破棄する。取得中はカメラ枠、読取中はspinnerと日英の状態文で示す。Browserのlocal-camera-reading試験はChromium/WebKitの実MediaStreamとJPEG decodeを使う。
 
 ## Web検索と参考情報
 
-Responses delegationは標準の`web_search`と`reasoning: { effort: "medium", summary: "auto" }`を使う。Webは検索イベント・公開された推論要約・URL出典だけを表示し、要約が返らない場合も応答待ちをspinnerで示す。言語変更・発話・停止後の古い表示は破棄する。検索は一般知識や参考案内に使い、価格・在庫・原材料・アレルギー・注文判断は既存業務APIを根拠とする。
+Responses delegationは標準の`web_search`と`reasoning: { effort: "low", summary: "auto" }`を使う。Webは検索イベント・公開された推論要約・URL出典だけを表示し、要約が返らない場合も応答待ちをspinnerで示す。言語変更・発話・停止後の古い表示は破棄する。検索は一般知識や参考案内に使い、価格・在庫・原材料・アレルギー・注文判断は既存業務APIを根拠とする。
 
 `showReference`は現在の卓・音声session・turnを認可して会話へ参考カードを追加する。URL、タイトル、説明、OGP画像、中央favicon付きのQRを表示し、画像取得に失敗してもURLとQRを残す。ページHTMLは描画しない。メタデータ取得は公開HTTPSだけとし、DNSのprivate address、認証情報、非標準portを拒否する。転送先も再検査し、全体3秒、HTML 256 KiB、redirect 3回で打ち切る。一つのturnの参考カードは3件まで、QRへ渡すURLはUTF-8で1000 byteまでとする。画像検索専用の非公開パラメーターは使わず、検索した参照ページのOGPを画像の表示経路とする。
+
+## 接客プロンプトの2層
+
+1. TableCastシステムは日英の標準方針を持ち、通常は編集しない。`cast.systemInstructions`は任意の日英上書きで、それぞれ本文またはnullとする。未設定とnullは標準へ戻す。上書きは非推奨の明示操作で有効化し、本文の上限は各5,000文字。
+2. 店舗の`cast.instructions`は従来どおり話し方・キャラクター・接客方針の参照データとして扱う。開始案内・音声・自発接客の設定も店舗側に置く。
+
+利用可能な業務ツールの名前と用途は実際の登録情報から生成し、標準web_searchの説明とともにLiveと委任先のsystem instructionsへ追加する。Liveは業務ツールを直接実行せず標準delegationへ委任する。モデルごとの役割・言語・画像の扱い・注文手順は実行時に追加し、店舗や標準本文の編集でAPIの認可・明示承認・版照合は変更しない。開始時とsidebandの言語更新は同じ日英上書きの解決方法を使い、既存の下書き・差分・公開・履歴・MCPで同じ設定を扱う。

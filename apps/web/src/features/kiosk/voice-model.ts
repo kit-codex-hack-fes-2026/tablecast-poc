@@ -47,10 +47,29 @@ export type VoiceView = {
   suggestions?: string[];
 };
 
+export type VoiceCameraState = {
+  facing?: "environment" | "user";
+  permission?: "unknown" | PermissionState;
+  status:
+    | "capturing"
+    | "off"
+    | "permission-denied"
+    | "reading"
+    | "ready"
+    | "starting"
+    | "unavailable";
+};
+
 export type VoiceCamera = {
   capture: (
     signal: AbortSignal,
     maxBytes: number,
-  ) => Promise<{ error: "CAMERA_OFF" | "CAMERA_UNAVAILABLE" } | { imageUrl: string }>;
+  ) => Promise<
+    | {
+        error: "CAMERA_OFF" | "CAMERA_PERMISSION_DENIED" | "CAMERA_STARTING" | "CAMERA_UNAVAILABLE";
+      }
+    | { imageUrl: string }
+  >;
   complete: () => void;
+  getState?: () => VoiceCameraState;
 };

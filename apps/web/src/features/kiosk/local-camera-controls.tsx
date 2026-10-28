@@ -23,37 +23,34 @@ function LocalCameraStatus({ camera }: { camera: ReturnType<typeof useLocalCamer
     : camera.pending
       ? "common_loading"
       : "kiosk_camera_off";
+  const Icon = camera.error ? CircleAlert : camera.pending ? LoaderCircle : CameraOff;
   return (
-    <div className="absolute inset-y-1 right-1 left-13 flex items-start pt-1 text-left">
-      <p
-        role={camera.error ? "alert" : undefined}
-        className={`wrap-anywhere text-xs leading-4 ${camera.error ? "text-destructive" : "text-muted-foreground"}`}
-      >
-        {t(message)}
-      </p>
+    <div
+      className={`absolute inset-0 flex items-center justify-center ${camera.error ? "text-destructive" : "text-muted-foreground/60"}`}
+      role={camera.error ? "alert" : "img"}
+      aria-label={t(message)}
+    >
+      <Icon
+        className={`size-6 ${camera.pending ? "motion-safe:animate-spin" : ""}`}
+        aria-hidden="true"
+      />
+      <span className="sr-only">{t(message)}</span>
     </div>
   );
 }
 
-function LocalCameraToggle({
-  camera,
-  compactStatus,
-}: {
-  camera: ReturnType<typeof useLocalCamera>;
-  compactStatus: boolean;
-}) {
+function LocalCameraToggle({ camera }: { camera: ReturnType<typeof useLocalCamera> }) {
   const { t } = useI18n();
   const enabled = Boolean(camera.stream || camera.pending);
   const label = t(enabled ? "kiosk_camera_stop" : "kiosk_camera_start");
-  const compactError = compactStatus ? camera.error : undefined;
   const errorMessages = {
     permission: "kiosk_camera_permission",
     unavailable: "kiosk_camera_unavailable",
   } as const;
-  const accessibleLabel = compactError ? `${label}: ${t(errorMessages[compactError])}` : label;
+  const accessibleLabel = camera.error ? `${label}: ${t(errorMessages[camera.error])}` : label;
   return (
     <Button
-      variant={compactError ? "destructive" : camera.stream ? "secondary" : "outline"}
+      variant={camera.error ? "destructive" : camera.stream ? "secondary" : "outline"}
       size="icon"
       className={cameraControl}
       aria-label={accessibleLabel}
@@ -63,7 +60,7 @@ function LocalCameraToggle({
     >
       {camera.pending ? (
         <LoaderCircle className="motion-safe:animate-spin" />
-      ) : compactError ? (
+      ) : camera.error ? (
         <CircleAlert />
       ) : camera.stream ? (
         <CameraOff />
@@ -130,31 +127,35 @@ function CameraFacingToggle({ camera }: { camera: ReturnType<typeof useLocalCame
   );
 }
 
-// 小さい縦枠では既存のデバイス選択を使い、操作同士を重ねない。
-export function LocalCameraOverlay({
-  camera,
-  width,
-  aspectRatio,
-}: {
-  aspectRatio: number;
-  camera: ReturnType<typeof useLocalCamera>;
-  width: number;
-}) {
-  const narrow = width < 100;
-  const showFlip = camera.canFlip && width >= 96;
-  const compactStatus = width / aspectRatio < 80 || narrow || camera.devices.length > 1;
+export function LocalCameraOverlay({ camera }: { camera: ReturnType<typeof useLocalCamera> }) {
+  const reduced = useReducedMotion();
   return (
     <>
+      {camera.stream && camera.captureCount > 0 && (
+        <m.div
+          key={camera.captureCount}
+          data-ui="camera-shutter"
+          data-capture-count={camera.captureCount}
+          className="pointer-events-none absolute inset-0 z-10 bg-on-inverse motion-reduce:hidden"
+          initial={reduced ? false : { opacity: 0.85 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
+          aria-hidden="true"
+        />
+      )}
       <LocalCameraCaptureStatus phase={camera.phase} />
-      {!camera.stream && !compactStatus && <LocalCameraStatus camera={camera} />}
-      <div
-        className={`absolute top-1 left-1 grid gap-1 ${width >= 148 ? "grid-cols-3" : narrow ? "grid-cols-1" : "grid-cols-2"}`}
-      >
-        <LocalCameraToggle camera={camera} compactStatus={compactStatus} />
-        <CameraDeviceSetting camera={camera} />
-        {showFlip && <CameraFacingToggle camera={camera} />}
-      </div>
+      {!camera.stream && <LocalCameraStatus camera={camera} />}
     </>
+  );
+}
+
+export function LocalCameraControls({ camera }: { camera: ReturnType<typeof useLocalCamera> }) {
+  return (
+    <div data-ui="camera-controls" className="flex flex-wrap items-center justify-start gap-1">
+      <LocalCameraToggle camera={camera} />
+      <CameraDeviceSetting camera={camera} />
+      <CameraFacingToggle camera={camera} />
+    </div>
   );
 }
 
@@ -183,9 +184,11 @@ function LocalCameraCaptureStatus({
           aria-hidden="true"
         />
       )}
-      <span className="absolute inset-x-1 bottom-1 flex items-center justify-center gap-1 rounded-lg bg-card/60 p-1 text-xs text-foreground backdrop-blur-sm">
-        <LoaderCircle className="size-3 shrink-0 motion-safe:animate-spin" />
-        {t(phase === "capturing" ? "kiosk_camera_capturing" : "kiosk_camera_reading")}
+      <span className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-card/60 text-foreground backdrop-blur-sm">
+        <LoaderCircle className="size-4 shrink-0 motion-safe:animate-spin" aria-hidden="true" />
+        <span className="sr-only">
+          {t(phase === "capturing" ? "kiosk_camera_capturing" : "kiosk_camera_reading")}
+        </span>
       </span>
     </div>
   );

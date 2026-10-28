@@ -200,6 +200,11 @@ it("音声toolはORとNOTを保って返し、参照先全件を必須にせず�
     .where(eq(business.stores.id, device.storeId));
   const catalog = await tool("getCatalog", { query: "coffee" });
   expect(JSON.stringify(catalog.result)).toContain(JSON.stringify(owner.conditions));
+  const searches = (await getTableState(services(), device)).events.filter(
+    (event) => event.kind === "voice.tool" && event.data.toolName === "getCatalog",
+  );
+  expect(searches).toHaveLength(2);
+  expect(searches.every((event) => !("query" in event.data))).toBe(true);
   // 常に真のORでも参照を全件必須へ平坦化しない。
   const result = await tool("updateCart", {
     expectedVersion: 0,

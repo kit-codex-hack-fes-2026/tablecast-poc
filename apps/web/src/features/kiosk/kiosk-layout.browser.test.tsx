@@ -1,13 +1,13 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import { page, userEvent } from "vitest/browser";
-import { catalog } from "../../../.storybook/tablecast-fixtures";
+import { page, server, userEvent } from "vitest/browser";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import { fixtureValue } from "../../test-support/fixture-value";
+import { catalog } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 import { Kiosk } from "./kiosk";
 import {
@@ -19,6 +19,9 @@ import {
   targetWrites,
 } from "./test-support/kiosk-fixture";
 import { VoiceConnection } from "./voice-connection";
+
+beforeEach(() => server.commands.tablecastLogoFixture(true));
+afterEach(() => server.commands.tablecastLogoFixture(false));
 
 it.each(["ja", "en"] as const)(
   "%sの補助入口と縦横の切替は接客対象・会話・カートを保持する",
@@ -180,7 +183,7 @@ it.each(["ja", "en"] as const)(
         expect(bounds.bottom).toBeLessThanOrEqual(height);
       }
       await page.screenshot({
-        path: `../../../test-results/tablecast-guest-compact-${locale}-${width}.png`,
+        path: `../../../test-results/tablecast-test-only-layout-${locale}-${width}.png`,
       });
       expect(tools.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
@@ -293,3 +296,143 @@ it("店舗テーマでもヘッダーと音声・カート操作を縦横で維�
   await page.getByRole("button", { name: ja.kiosk_call_staff }).click();
   await expect.element(page.getByRole("button", { name: ja.kiosk_called_staff })).toBeDisabled();
 });
+
+it.each(["ja", "en"] as const)(
+  "%sの横長バナー未設定時は店舗ロゴを表示し、画像失敗でも店舗名とヘッダーの高さを保つ",
+  async (locale) => {
+    vi.spyOn(navigator.mediaDevices, "enumerateDevices").mockResolvedValue([
+      {
+        deviceId: "default",
+        groupId: "tablecast-ipad",
+        kind: "audioinput",
+        label: "iPad microphone",
+        toJSON: () => ({}),
+      },
+    ]);
+    fixture.current.locale = locale;
+    fixture.catalogResponse = Response.json({
+      ...catalog,
+      configuration: {
+        ...catalog.configuration,
+        products: catalog.configuration.products.map((product) => ({
+          ...product,
+          available: true,
+        })),
+        branding: {
+          banner: null,
+          logo: {
+            imageKey: `tablecast/uploads/${"a".repeat(64)}.webp`,
+            alt: { ja: "店舗ロゴ", en: "Restaurant logo" },
+            imageKind: "illustration",
+            imageSource: { generated: true, description: "店舗の横長ロゴの配置試験用" },
+          },
+        },
+      },
+    });
+    await page.viewport(1180, 820);
+    fixture.current.uiSection = "menu";
+    fixture.current.cursor = 2;
+    fixture.current.events = [
+      {
+        cursor: 1,
+        kind: "voice.products",
+        storeId: fixture.current.storeId,
+        tableSessionId: fixture.current.id,
+        createdAt: 1788645000000,
+        data: {
+          turnId: "tablecast-test-only-fallback-offers",
+          productIds: catalog.configuration.products
+            .toReversed()
+            .slice(0, 4)
+            .map(({ id }) => id),
+        },
+      },
+      {
+        cursor: 2,
+        kind: "voice.assistant",
+        storeId: fixture.current.storeId,
+        tableSessionId: fixture.current.id,
+        createdAt: 1788645001000,
+        data: {
+          role: "assistant",
+          locale,
+          text:
+            locale === "ja"
+              ? "こちらがおすすめです。気になる料理はありますか？"
+              : "Here are our recommendations. Which would you like to hear about?",
+        },
+      },
+    ];
+    await mountKiosk();
+    const image = page.getByRole("img", {
+      name: locale === "ja" ? "店舗ロゴ" : "Restaurant logo",
+      exact: true,
+    });
+    await expect.element(image).toBeVisible();
+    await expect
+      .poll(() => {
+        const element = image.element();
+        return element instanceof HTMLImageElement ? element.naturalWidth : 0;
+      })
+      .toBe(400);
+    const header = document.querySelector("header");
+    if (!header) throw new Error("ヘッダーがありません");
+    expect(image.element().getBoundingClientRect().height).toBe(40);
+    expect(header.getBoundingClientRect().height).toBe(64);
+    await Promise.all(
+      [
+        ...document.querySelectorAll(
+          '[data-ui="voice-products-entry"], [data-ui="conversation-entry"]',
+        ),
+      ].flatMap((element) => element.getAnimations().map((animation) => animation.finished)),
+    );
+    await page.screenshot({
+      path: `../../../test-results/tablecast-test-only-fallback-${locale}-ipad.png`,
+    });
+    image.element().dispatchEvent(new Event("error"));
+    await expect.element(image).not.toBeInTheDocument();
+    expect(header.getBoundingClientRect().height).toBe(64);
+    expect(header.textContent).toContain(fixture.current.storeName);
+  },
+);
+
+it.each(["ja", "en"] as const)(
+  "%sの横長バナー取得が失敗しても設定済み店舗ロゴへ切り替える",
+  async (locale) => {
+    fixture.current.locale = locale;
+    fixture.catalogResponse = Response.json({
+      ...catalog,
+      configuration: {
+        ...catalog.configuration,
+        branding: {
+          banner: {
+            imageKey: `tablecast/uploads/${"b".repeat(64)}.webp`,
+            alt: { ja: "取得できないバナー", en: "Unavailable banner" },
+            imageKind: "illustration",
+            imageSource: { generated: true, description: "取得失敗の確認用" },
+          },
+          logo: {
+            imageKey: `tablecast/uploads/${"a".repeat(64)}.webp`,
+            alt: { ja: "店舗ロゴ", en: "Restaurant logo" },
+            imageKind: "illustration",
+            imageSource: { generated: true, description: "代わりに表示するロゴ" },
+          },
+        },
+      },
+    });
+    await page.viewport(1180, 820);
+    await mountKiosk();
+    const image = page.getByRole("img", {
+      name: locale === "ja" ? "店舗ロゴ" : "Restaurant logo",
+      exact: true,
+    });
+    await expect.element(image).toBeVisible();
+    await expect
+      .poll(() => {
+        const element = image.element();
+        return element instanceof HTMLImageElement ? element.naturalWidth : 0;
+      })
+      .toBe(400);
+    expect(image.element().getBoundingClientRect().height).toBe(40);
+  },
+);

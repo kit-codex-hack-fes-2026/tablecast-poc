@@ -156,7 +156,7 @@ APIの最重要条件は、未承認送信、古いsnapshot、同時変更、二
 D1 batchの途中失敗、条件不成立で更新件数0、古いturnの後続書込み、成功後レスポンス消失、同じidempotency keyを必ず含める。
 カート・注文・会計・table eventが整合し、DO通知失敗後にもDBから再同期できることを検査する。
 
-UIは状態をprops/既存query fixtureで再現し、Storybookから実OpenAIや本番APIへ接続しない。
+UIは状態をprops/既存query fixtureで再現し、Storybookから実OpenAIや本番APIへ接続しない。通常のStoryはdemo seedと同じ生成関数から店舗設定・商品・価格・選択肢・画像キーを取得する。画像はassets/demoの同じ素材をseedと同じidentityの/mediaへ配信し、画像なし・失敗・長文等の専用ケースだけ小さいtest-supportのfixtureを使う。通常StoryとPRの代表画面を画像なしの試験fixtureで代用しない。
 外部I/Oと表示を分ける必要があるComponentだけ薄い境界を作り、単純なComponentを必ずcontroller/viewの二枚にしない。
 VoicePanel、言語切替、音声停止再開、会話履歴、商品選択、確認、卓タイムライン、会計のStoryをWebに併置する。
 StorybookとCloudflareのVite設定は丸ごと共有せず、React・CSS・i18n等の必要部分だけ共用する。Storybook起動だけでWorkersを起動させない。[S14](sources.md#s14)

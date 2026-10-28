@@ -13,17 +13,17 @@ import {
 import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { table } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
 import { calendarInputValue } from "../../lib/calendar-input";
-import "../../styles.css";
 import { fixtureValue } from "../../test-support/fixture-value";
+import { table } from "../../test-support/tablecast-fixtures";
 import { Floor, FloorPending } from "./floor";
 import { floorSearchSchema, moveDate, storeDate } from "./floor-model";
 import { floorOptions } from "./floor-query";
 import { fixture, hour, initial, startAt } from "./test-support/floor-timeline-fixture";
 import { timelineOptions } from "./timeline-query";
+import "../../styles.css";
 
 it("日本語で初回HTTP待機中も本番のフロア見出しと卓カードの枠を表示し、取得後も見出しの位置を保つ", async () => {
   const locale = "ja";

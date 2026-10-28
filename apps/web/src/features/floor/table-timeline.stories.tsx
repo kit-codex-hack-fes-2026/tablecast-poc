@@ -1,7 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { expect, fn, userEvent, within } from "storybook/test";
-import { table } from "../../../.storybook/tablecast-fixtures";
+import { table as seedTable } from "../../../.storybook/tablecast-fixtures";
 import { TableTimeline } from "./table-timeline";
+
+// 呼出・未精算の比較状態だけを、seedの卓データから再現する。
+const table = {
+  ...seedTable,
+  tableName: "T03",
+  staffCalled: true,
+  bill: { ...seedTable.bill, orderedTotal: seedTable.cart.total, due: seedTable.cart.total },
+};
 
 const meta = {
   title: "店舗/卓タイムライン",
@@ -87,7 +95,7 @@ export const BeyondRecentEvents: Story = {
         id: "tablecast-paid",
         tableName: "T04",
         billRequested: true,
-        bill: { ...table.bill, paidTotal: 1500, due: 0 },
+        bill: { ...table.bill, paidTotal: table.bill.orderedTotal, due: 0 },
       },
     ],
   },

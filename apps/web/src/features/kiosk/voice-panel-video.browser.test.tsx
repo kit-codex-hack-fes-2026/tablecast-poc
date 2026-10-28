@@ -101,7 +101,7 @@ it.each(["ja", "en"] as const)(
 );
 
 it.each(["ja", "en"] as const)(
-  "%sの狭い会話欄で候補と推論要約を開いても履歴と停止操作の領域を保つ",
+  "%sの狭い会話欄で候補と推論要約を常時表示しても履歴と停止操作の領域を保つ",
   async (locale) => {
     await page.viewport(402, 874);
     const labels = locale === "ja" ? ja : en;
@@ -128,7 +128,6 @@ it.each(["ja", "en"] as const)(
         </div>
       </Surface>,
     );
-    await screen.getByText(labels.kiosk_reasoning_summary).click();
     const panel = screen.getByRole("region", { name: labels.kiosk_conversation }).element();
     const history = panel.querySelector('[data-ui="conversation-history"]');
     const controls = panel.querySelector('[data-theme-part="voice-controls"]');
@@ -147,7 +146,7 @@ it.each(["ja", "en"] as const)(
   },
 );
 
-it("映像枠内のカメラ操作で左上の映像だけを切り替え、会話と音声停止を保つ", async () => {
+it("映像枠の下のカメラ操作で左上の映像だけを切り替え、会話と音声停止を保つ", async () => {
   await page.viewport(402, 874);
   const source = document.createElement("canvas");
   source.width = 640;
@@ -181,7 +180,7 @@ it("映像枠内のカメラ操作で左上の映像だけを切り替え、会�
     expect(capture).not.toHaveBeenCalled();
     expect(
       frame.contains(screen.getByRole("button", { name: ja.kiosk_camera_start }).element()),
-    ).toBe(true);
+    ).toBe(false);
     await screen.getByRole("button", { name: ja.kiosk_camera_start }).click();
     await expect.poll(() => document.querySelector("video")?.srcObject).toBe(stream);
     context.fillRect(100, 100, 180, 240);

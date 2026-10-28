@@ -44,6 +44,7 @@ import { LoadingState } from "../../components/loading-state";
 import { Money } from "../../components/money";
 import { ProductImage } from "../../components/product-image";
 import { ProductMenu } from "../../components/product-menu";
+import { StoreLogo } from "../../components/store-logo";
 import { StoreTheme } from "../../components/store-theme";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -567,13 +568,12 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   }
   function renderHeader() {
     const { storeName, branding } = catalog.data?.configuration ?? {};
-    const banner = branding?.banner;
     return (
       <header
         data-theme-part="header"
         className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-card px-3"
       >
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1 scrollbar-thin">
+        <div className="relative flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1 scrollbar-thin">
           <div
             data-ui="header-branding"
             className="flex shrink-0 items-center gap-3 max-[70rem]:gap-1.5"
@@ -590,13 +590,12 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
               data-ui="store-logo-banner"
               className="flex shrink-0 flex-nowrap items-center gap-2 max-[70rem]:gap-1"
             >
-              {banner && (
-                <img
-                  src={`/media/${banner.imageKey}?width=480`}
-                  alt={banner.alt[locale]}
-                  className="h-10 w-auto shrink-0 object-contain object-left"
-                />
-              )}
+              <StoreLogo
+                logo={branding?.banner}
+                fallbackLogo={branding?.logo}
+                width={160}
+                height={40}
+              />
               <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm max-xl:text-xs">
                 <span className="font-medium">{storeName ?? data.storeName}</span>
                 <strong className="text-muted-foreground">{data.tableName}</strong>

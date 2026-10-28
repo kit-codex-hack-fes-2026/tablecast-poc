@@ -48,7 +48,7 @@ export const files = [
   ["query", "src/modules/orders/prerequisites.ts"],
   ["query", "src/modules/billing/reports.ts"],
   ["service", "src/modules/customer-memory/context.ts"],
-  ["pure", "src/modules/voice/{tool,tool-state}.ts"],
+  ["pure", "src/modules/voice/{tool,tool-state,tool-descriptions,system-instructions}.ts"],
   ["pure", "src/modules/auth/token.ts"],
   [
     "pure",

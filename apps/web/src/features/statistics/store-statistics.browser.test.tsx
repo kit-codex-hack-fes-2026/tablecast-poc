@@ -10,11 +10,11 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { catalog, statisticsFixture, table } from "../../../.storybook/tablecast-fixtures";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import { calendarInputValue } from "../../lib/calendar-input";
 import { PanelLayoutProvider } from "../../lib/panel-layout";
+import { catalog, statisticsFixture, table } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
 import { StoreHome } from "../store/store-home";
 import { StoreShell } from "../store/store-shell";

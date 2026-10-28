@@ -1,12 +1,11 @@
+import type { z } from "zod";
 import { sql } from "drizzle-orm";
-import { z } from "zod";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { CoreState, StateView, TableState } from "../tables/model";
 import * as business from "../../db/business-schema";
 import { ensure } from "../../platform/errors";
 import { recordD1Update } from "../../platform/telemetry";
-import { telemetryContent } from "../../platform/telemetry-content";
 import {
   eventStatement,
   interruptVoiceTurns,
@@ -16,13 +15,6 @@ import {
 import { getSession, getTableState } from "../tables/queries";
 import { withStateRead } from "../tables/state-read";
 import { speechSpeedInputSchema, voiceToolEventSchema } from "./model";
-
-// 会話画面へ公開する引数はメニュー検索語だけに限る。
-export function voiceToolQuery(toolName: string, argumentsValue: unknown) {
-  if (toolName !== "getCatalog") return undefined;
-  const parsed = z.object({ query: voiceToolEventSchema.shape.query }).safeParse(argumentsValue);
-  return parsed.success ? parsed.data.query : undefined;
-}
 export function setSpeechSpeed(
   services: ApiServices,
   actor: Actor,
@@ -88,12 +80,6 @@ export async function recordVoiceEvent(
     ...event.data,
     turnId: actor.turnId,
   });
-  if (data.query !== undefined) {
-    const query = voiceToolEventSchema.shape.query.safeParse(
-      telemetryContent(data.query, services.env),
-    );
-    data.query = query.success ? query.data : undefined;
-  }
   const gate = voiceCondition(actor);
   const result = await db
     .insert(business.tableEvents)

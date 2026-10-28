@@ -11,10 +11,10 @@ import {
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { catalog, table } from "../../.storybook/tablecast-fixtures";
 import ja from "../../messages/ja.json";
 import { Kiosk } from "../features/kiosk/kiosk";
 import { LocaleProvider } from "../i18n/locale";
+import { catalog, table } from "../test-support/tablecast-fixtures";
 import "../styles.css";
 import { Pwa, PwaInstallHelp } from "./pwa";
 

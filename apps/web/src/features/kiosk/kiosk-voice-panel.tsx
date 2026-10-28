@@ -11,8 +11,11 @@ export function KioskVoicePanel({
 }: Omit<ComponentProps<typeof VoicePanel>, "view"> & { voice: VoiceConnection }) {
   const view = useVoiceView(voice);
   const camera = useLocalCamera();
-  const { capture, complete } = camera;
-  useEffect(() => voice.connectCamera({ capture, complete }), [voice, capture, complete]);
+  const { capture, complete, getState } = camera;
+  useEffect(
+    () => voice.connectCamera({ capture, complete, getState }),
+    [voice, capture, complete, getState],
+  );
   return (
     <VoicePanelContent
       {...props}

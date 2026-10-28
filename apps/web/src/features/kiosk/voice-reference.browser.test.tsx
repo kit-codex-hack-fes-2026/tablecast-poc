@@ -65,7 +65,7 @@ it.each([
     .element(screen.getByRole("button", { name: ja.kiosk_reference_expand }))
     .toHaveFocus();
 });
-it("画像取得失敗でもタイトル・QRを残し、処理状態と推論要約を展開できる", async () => {
+it("画像取得失敗でもQRを残し、推論要約を操作なしで表示して完了後も保つ", async () => {
   const screen = await render(
     <Surface>
       <VoiceReferenceCard
@@ -79,16 +79,40 @@ it("画像取得失敗でもタイトル・QRを残し、処理状態と推論�
       <VoiceProgress
         view={{
           status: "thinking",
-          progress: { stage: "searching", summary: "公開資料を確認しています。" },
+          progress: {
+            stage: "searching",
+            summary: "**公開資料**を確認しています。\n\n- 出典を確認\n- 価格は店舗情報で確認",
+          },
           citations: [{ url: "https://example.com/tea", title: "Tea source" }],
         }}
       />
     </Surface>,
   );
   await expect.element(screen.getByRole("status")).toHaveTextContent(ja.kiosk_searching);
-  await expect.element(screen.getByText("公開資料を確認しています。")).toBeVisible();
+  await expect.element(screen.getByText("公開資料", { exact: true })).toBeVisible();
+  expect(
+    Number(getComputedStyle(screen.getByText("公開資料", { exact: true }).element()).fontWeight),
+  ).toBeGreaterThanOrEqual(600);
+  expect(screen.getByText("出典を確認", { exact: true }).element().closest("li")).not.toBeNull();
+  await expect
+    .element(screen.getByRole("region", { name: ja.kiosk_reasoning_summary }))
+    .toBeVisible();
+  await expect.element(screen.getByText("公開資料", { exact: true })).toBeVisible();
   await expect.element(screen.getByRole("link", { name: "Tea source" })).toBeVisible();
   await expect.element(screen.getByRole("link", { name: "Tea guide" })).toBeVisible();
   await expect.poll(() => document.querySelector('[data-ui="voice-reference"] > img')).toBeNull();
   expect(document.querySelector('[data-ui="voice-reference"] svg:has(title)')).not.toBeNull();
+  await screen.rerender(
+    <Surface>
+      <VoiceProgress
+        view={{
+          status: "listening",
+          progress: { stage: "searching", summary: "**公開資料**を確認しました。" },
+        }}
+      />
+    </Surface>,
+  );
+  await expect.element(screen.getByText("公開資料", { exact: true })).toBeVisible();
+  await expect.element(screen.getByRole("status")).not.toBeInTheDocument();
+  await expect.element(screen.getByRole("button")).not.toBeInTheDocument();
 });

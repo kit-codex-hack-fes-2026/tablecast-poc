@@ -1,8 +1,12 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { prepareTablecastSeedPreview } from "./tablecast-seed-config.ts";
+
+const seedPreview = prepareTablecastSeedPreview();
 
 export default defineConfig({
+  define: { TABLECAST_SEED_PREVIEW: seedPreview.data },
   resolve: { dedupe: ["react", "react-dom"] },
   plugins: [tailwindcss(), react()],
   optimizeDeps: {

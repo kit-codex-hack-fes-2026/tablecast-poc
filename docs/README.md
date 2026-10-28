@@ -30,6 +30,7 @@ Web/APIを2 Workersに保ち、音声はブラウザーからGPT-Liveへ直接�
 | [画面と国際化](ui.md)                                | 大きな会話領域、停止再開、日英キオスク・管理画面      |
 | [構成とディレクトリ](architecture.md)                | 2 Workers、依存方向、最小のファイル配置、公開契約     |
 | [音声接続](voice/integration.md)                     | GPT-Live・Hono・Agents API、履歴、中断                |
+| [音声接客の代表シナリオ](voice/scenarios.md)         | 音声での選択・注文、画面誘導、カメラ状態、検証の分担  |
 | [発話と標準音声](voice/speech.md)                    | ペルソナ、読み、つなぎ言葉、感情・非言語音・間        |
 | [上流パッチ](voice/upstream-patch.md)                | 公式plugin、fork、commit固定、PR、削除条件            |
 | [店舗ChatGPTとMCP](mcp.md)                           | メニュー・翻訳・接客設定、下書きと公開                |

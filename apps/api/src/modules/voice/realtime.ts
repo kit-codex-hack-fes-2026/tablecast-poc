@@ -9,7 +9,7 @@ import { displayCurrencyActionSchema } from "../currency/model";
 import { createCastTools } from "./agent";
 import { type toolSchema, voiceToolEventSchema } from "./model";
 import { currentVoiceTurn, voiceContext } from "./queries";
-import { recordVoiceEvent, voiceToolQuery } from "./service";
+import { recordVoiceEvent } from "./service";
 import { finishVoiceTurn } from "./turns";
 export async function conversationHistory(
   services: ApiServices,
@@ -98,7 +98,6 @@ export async function invokeVoiceTool(
               toolName: input.toolName,
               toolCallId: input.toolCallId,
               state,
-              query: voiceToolQuery(input.toolName, input.arguments),
               ...(errorCode ? { errorCode } : {}),
             },
           },

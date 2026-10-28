@@ -2,11 +2,11 @@ import type { TableEvent } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
 import { afterEach, vi } from "vitest";
 import { cleanup } from "vitest-browser-react";
-import { catalog } from "../../../../.storybook/tablecast-fixtures";
 import { MotionProvider } from "../../../components/motion-provider";
-import "../../../styles.css";
 import { LocaleProvider } from "../../../i18n/locale";
+import { catalog } from "../../../test-support/tablecast-fixtures";
 import { type ConversationLine } from "../conversation-model";
+import "../../../styles.css";
 
 export const startedAt = 1788645000000;
 

@@ -1,8 +1,8 @@
 import { MoveDiagonal2 } from "lucide-react";
-import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
-import type { VoiceCamera } from "./voice-model";
+import { type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { VoiceCamera, VoiceCameraState } from "./voice-model";
 import { useI18n } from "../../i18n/locale";
-import { LocalCameraOverlay } from "./local-camera-controls";
+import { LocalCameraControls, LocalCameraOverlay } from "./local-camera-controls";
 import { captureCameraFrame } from "./local-camera-dom";
 
 export function LocalCameraFrame() {
@@ -15,6 +15,18 @@ export function useLocalCamera() {
   const streamRef = useRef<MediaStream | undefined>(undefined);
   const video = useRef<HTMLVideoElement>(null);
   const generation = useRef(0);
+  const state = useRef<VoiceCameraState>({ status: "off" });
+  const permission = useRef<PermissionStatus | undefined>(undefined);
+  const getState = useCallback((): VoiceCameraState => {
+    const access = { permission: permission.current?.state ?? ("unknown" as const) };
+    if (permission.current?.state === "denied") return { ...access, status: "permission-denied" };
+    if (document.hidden) return { ...access, status: "unavailable" };
+    if (!streamRef.current && ["ready", "capturing", "reading"].includes(state.current.status))
+      return { ...access, status: "off" };
+    if (streamRef.current && (!video.current || video.current.readyState < 2))
+      return { ...access, status: "starting" };
+    return { ...state.current, ...access };
+  }, []);
   const attachVideo = useCallback((element: HTMLVideoElement | null) => {
     video.current = element;
   }, []);
@@ -22,37 +34,79 @@ export function useLocalCamera() {
   const [hasFacing, setHasFacing] = useState(false);
   const [facing, setFacing] = useState<"environment" | "user">("user");
   const [phase, setPhase] = useState<"capturing" | "idle" | "reading">("idle");
-  const complete = useCallback(() => setPhase("idle"), []);
-  const capture = useCallback<VoiceCamera["capture"]>(async (signal, maxBytes) => {
-    const source = streamRef.current;
-    const element = video.current;
-    const request = generation.current;
-    if (!source) return { error: "CAMERA_OFF" };
-    if (!element || document.hidden) return { error: "CAMERA_UNAVAILABLE" };
-    setPhase("capturing");
-    try {
-      const imageUrl = await captureCameraFrame(element, signal, maxBytes);
-      if (generation.current !== request || source !== streamRef.current || document.hidden)
-        return { error: "CAMERA_UNAVAILABLE" };
-      setPhase("reading");
-      return { imageUrl };
-    } catch {
-      if (generation.current === request) setPhase("idle");
-      return { error: "CAMERA_UNAVAILABLE" };
-    }
+  const [captureCount, setCaptureCount] = useState(0);
+  const complete = useCallback(() => {
+    if (streamRef.current) state.current = { ...state.current, status: "ready" };
+    setPhase("idle");
   }, []);
+  const capture = useCallback<VoiceCamera["capture"]>(
+    async (signal, maxBytes) => {
+      if (getState().permission === "denied") return { error: "CAMERA_PERMISSION_DENIED" };
+      const source = streamRef.current;
+      const element = video.current;
+      const request = generation.current;
+      if (!source)
+        return {
+          error:
+            state.current.status === "permission-denied"
+              ? "CAMERA_PERMISSION_DENIED"
+              : state.current.status === "starting"
+                ? "CAMERA_STARTING"
+                : state.current.status === "unavailable"
+                  ? "CAMERA_UNAVAILABLE"
+                  : "CAMERA_OFF",
+        };
+      if (!element || document.hidden) return { error: "CAMERA_UNAVAILABLE" };
+      if (element.readyState < 2) return { error: "CAMERA_STARTING" };
+      state.current = { ...state.current, status: "capturing" };
+      setPhase("capturing");
+      try {
+        const imageUrl = await captureCameraFrame(element, signal, maxBytes);
+        if (getState().permission === "denied") {
+          setPhase("idle");
+          return { error: "CAMERA_PERMISSION_DENIED" };
+        }
+        if (generation.current !== request || source !== streamRef.current || document.hidden)
+          return { error: "CAMERA_UNAVAILABLE" };
+        state.current = { ...state.current, status: "reading" };
+        setPhase("reading");
+        setCaptureCount((count) => count + 1);
+        return { imageUrl };
+      } catch {
+        if (generation.current === request) setPhase("idle");
+        return { error: "CAMERA_UNAVAILABLE" };
+      }
+    },
+    [getState],
+  );
   const [stream, setStream] = useState<MediaStream>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<"permission" | "unavailable">();
+  useEffect(() => {
+    let disposed = false;
+    // 許可ダイアログを開かず、照会したPermissionStatusの現在値をツール実行時に読む。
+    void navigator.permissions
+      ?.query({ name: "camera" })
+      .then((access) => {
+        if (!disposed) permission.current = access;
+      })
+      .catch(() => {});
+    return () => {
+      disposed = true;
+      permission.current = undefined;
+    };
+  }, []);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState("");
   const stop = useCallback(() => {
     generation.current += 1;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = undefined;
+    state.current = { status: "off" };
     setStream(undefined);
     setPending(false);
     setPhase("idle");
+    setCaptureCount(0);
   }, []);
   const playbackFailed = useCallback(
     (failedStream: MediaStream) => {
@@ -67,6 +121,7 @@ export function useLocalCamera() {
       stop();
       const request = generation.current;
       const preferredFacing = requestedFacing ?? facingRef.current;
+      state.current = { status: "starting" };
       setError(undefined);
       setPending(true);
       setDeviceId(requestedDeviceId ?? "");
@@ -95,6 +150,12 @@ export function useLocalCamera() {
             ? actualFacing
             : preferredFacing;
         setFacing(facingRef.current);
+        state.current = {
+          status: "ready",
+          ...(actualFacing === "environment" || actualFacing === "user"
+            ? { facing: actualFacing }
+            : {}),
+        };
         setDeviceId(next.getVideoTracks()[0]?.getSettings().deviceId ?? requestedDeviceId ?? "");
         setPending(false);
         next
@@ -106,6 +167,13 @@ export function useLocalCamera() {
       } catch (cause) {
         if (generation.current !== request) return;
         setPending(false);
+        state.current = {
+          status:
+            cause instanceof DOMException &&
+            ["NotAllowedError", "SecurityError"].includes(cause.name)
+              ? "permission-denied"
+              : "unavailable",
+        };
         setError(
           cause instanceof DOMException && ["NotAllowedError", "SecurityError"].includes(cause.name)
             ? "permission"
@@ -136,6 +204,22 @@ export function useLocalCamera() {
     hasFacing &&
     devices.length > 1 &&
     Boolean(navigator.mediaDevices?.getSupportedConstraints?.().facingMode);
+  useLayoutEffect(() => {
+    state.current = {
+      status: pending
+        ? "starting"
+        : error === "permission"
+          ? "permission-denied"
+          : error
+            ? "unavailable"
+            : stream
+              ? phase === "idle"
+                ? "ready"
+                : phase
+              : "off",
+      ...(stream && hasFacing ? { facing } : {}),
+    };
+  }, [pending, error, stream, phase, facing, hasFacing]);
   return {
     stream,
     pending,
@@ -151,8 +235,10 @@ export function useLocalCamera() {
     flip,
     canFlip,
     phase,
+    captureCount,
     capture,
     complete,
+    getState,
   };
 }
 
@@ -165,7 +251,7 @@ export function LocalCamera({
 }) {
   const { t } = useI18n();
   const video = useRef<HTMLVideoElement>(null);
-  const frame = useRef<HTMLElement>(null);
+  const cameraWindow = useRef<HTMLDivElement>(null);
   const [aspectRatio, setAspectRatio] = useState(4 / 3);
   const [preferredWidth, setPreferredWidth] = useState(128);
   const [bounds, setBounds] = useState({ width: 320, height: 240 });
@@ -184,7 +270,7 @@ export function LocalCamera({
       setAspectRatio(source.videoWidth / source.videoHeight);
   };
   useEffect(() => {
-    const parent = frame.current?.parentElement;
+    const parent = cameraWindow.current?.parentElement;
     if (!parent) return undefined;
     const container = boundsRef?.current;
     const update = () => {
@@ -229,90 +315,102 @@ export function LocalCamera({
     };
   }, [camera.stream, playbackFailed, attachVideo]);
   return (
-    <figure
-      ref={frame}
-      className="pointer-events-auto relative min-w-0 shrink-0 self-start overflow-hidden rounded-2xl bg-control shadow-surface"
-      style={{ width, aspectRatio }}
-      data-ui="camera-frame"
-      data-camera-state={camera.pending ? "pending" : camera.stream ? "on" : "off"}
-      data-capture-state={camera.phase}
+    <div
+      ref={cameraWindow}
+      className="pointer-events-auto flex min-w-0 shrink-0 self-start flex-col gap-1.5"
+      style={{ width }}
+      data-ui="camera-window"
     >
-      <video
-        ref={video}
-        autoPlay
-        muted
-        playsInline
-        className={`absolute inset-0 size-full object-contain ${camera.mirrored ? "-scale-x-100" : ""}`}
-        aria-label={t("kiosk_camera_mirror")}
-        hidden={!camera.stream}
-        onLoadedMetadata={readAspectRatio}
-        onResize={readAspectRatio}
-      />
-      <LocalCameraOverlay camera={camera} width={width} aspectRatio={aspectRatio} />
-      <div
-        role="separator"
-        tabIndex={0}
-        aria-label={t("kiosk_camera_resize")}
-        aria-orientation="vertical"
-        aria-valuemin={Math.round(minWidth)}
-        aria-valuemax={Math.round(maxWidth)}
-        aria-valuenow={Math.round(width)}
-        title={t("kiosk_camera_resize")}
-        className="group absolute right-0 bottom-0 flex size-11 touch-none cursor-nwse-resize items-end justify-end p-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-        onPointerDown={(event) => {
-          if (drag.current || !event.isPrimary || event.button !== 0) return;
-          event.preventDefault();
-          event.currentTarget.focus();
-          event.currentTarget.setPointerCapture(event.pointerId);
-          drag.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, width };
-        }}
-        onPointerMove={(event) => {
-          const start = drag.current;
-          if (!start || event.pointerId !== start.pointerId) return;
-          const x = event.clientX - start.x;
-          const y = (event.clientY - start.y) * aspectRatio;
-          resize(start.width + (Math.abs(x) >= Math.abs(y) ? x : y));
-        }}
-        onPointerUp={(event) => {
-          if (drag.current?.pointerId !== event.pointerId) return;
-          drag.current = null;
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        }}
-        onPointerCancel={(event) => {
-          if (drag.current?.pointerId !== event.pointerId) return;
-          resize(drag.current.width);
-          drag.current = null;
-        }}
-        onLostPointerCapture={() => {
-          drag.current = null;
-        }}
-        onKeyDown={(event) => {
-          const step = event.shiftKey ? 32 : 16;
-          const next = {
-            ArrowRight: width + step,
-            ArrowDown: width + step,
-            ArrowLeft: width - step,
-            ArrowUp: width - step,
-            Home: minWidth,
-            End: maxWidth,
-          }[event.key];
-          if (next !== undefined) {
-            event.preventDefault();
-            resize(next);
-          } else if (event.key === "Escape" && drag.current) {
-            event.preventDefault();
-            const start = drag.current;
-            resize(start.width);
-            drag.current = null;
-            event.currentTarget.releasePointerCapture(start.pointerId);
-          }
-        }}
+      <figure
+        className="relative w-full overflow-hidden rounded-2xl bg-control shadow-surface"
+        style={{ aspectRatio }}
+        data-ui="camera-frame"
+        data-camera-state={camera.pending ? "pending" : camera.stream ? "on" : "off"}
+        data-capture-state={camera.phase}
       >
-        <MoveDiagonal2
-          className="size-4 rounded-sm bg-control/90 group-hover:bg-control-hover"
-          aria-hidden="true"
+        <video
+          ref={video}
+          autoPlay
+          muted
+          playsInline
+          className={`absolute inset-0 size-full object-contain ${camera.mirrored ? "-scale-x-100" : ""}`}
+          aria-label={t("kiosk_camera_mirror")}
+          hidden={!camera.stream}
+          onLoadedMetadata={readAspectRatio}
+          onResize={readAspectRatio}
         />
-      </div>
-    </figure>
+        <LocalCameraOverlay camera={camera} />
+        <div
+          role="separator"
+          tabIndex={0}
+          aria-label={t("kiosk_camera_resize")}
+          aria-orientation="vertical"
+          aria-valuemin={Math.round(minWidth)}
+          aria-valuemax={Math.round(maxWidth)}
+          aria-valuenow={Math.round(width)}
+          title={t("kiosk_camera_resize")}
+          className="group absolute right-0 bottom-0 flex size-11 touch-none cursor-nwse-resize items-end justify-end p-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          onPointerDown={(event) => {
+            if (drag.current || !event.isPrimary || event.button !== 0) return;
+            event.preventDefault();
+            event.currentTarget.focus();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            drag.current = {
+              pointerId: event.pointerId,
+              x: event.clientX,
+              y: event.clientY,
+              width,
+            };
+          }}
+          onPointerMove={(event) => {
+            const start = drag.current;
+            if (!start || event.pointerId !== start.pointerId) return;
+            const x = event.clientX - start.x;
+            const y = (event.clientY - start.y) * aspectRatio;
+            resize(start.width + (Math.abs(x) >= Math.abs(y) ? x : y));
+          }}
+          onPointerUp={(event) => {
+            if (drag.current?.pointerId !== event.pointerId) return;
+            drag.current = null;
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }}
+          onPointerCancel={(event) => {
+            if (drag.current?.pointerId !== event.pointerId) return;
+            resize(drag.current.width);
+            drag.current = null;
+          }}
+          onLostPointerCapture={() => {
+            drag.current = null;
+          }}
+          onKeyDown={(event) => {
+            const step = event.shiftKey ? 32 : 16;
+            const next = {
+              ArrowRight: width + step,
+              ArrowDown: width + step,
+              ArrowLeft: width - step,
+              ArrowUp: width - step,
+              Home: minWidth,
+              End: maxWidth,
+            }[event.key];
+            if (next !== undefined) {
+              event.preventDefault();
+              resize(next);
+            } else if (event.key === "Escape" && drag.current) {
+              event.preventDefault();
+              const start = drag.current;
+              resize(start.width);
+              drag.current = null;
+              event.currentTarget.releasePointerCapture(start.pointerId);
+            }
+          }}
+        >
+          <MoveDiagonal2
+            className="size-4 rounded-sm bg-control/90 group-hover:bg-control-hover"
+            aria-hidden="true"
+          />
+        </div>
+      </figure>
+      <LocalCameraControls camera={camera} />
+    </div>
   );
 }

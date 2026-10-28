@@ -3,7 +3,8 @@ import { useIsPresent, useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 import { forwardRef, type ReactNode } from "react";
 import { Streamdown } from "streamdown";
-import { tv, type VariantProps } from "tailwind-variants";
+import { cn, tv, type VariantProps } from "tailwind-variants";
+import { useStickToBottomContext } from "use-stick-to-bottom";
 import { time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { type ConversationLine } from "./conversation-model";
@@ -48,27 +49,35 @@ const transcriptAnimation = {
 } as const;
 
 export // 行のIDと本文DOMを保ち、追加された発話だけを短く表示する。
-const ConversationEntry = forwardRef<HTMLDivElement, { children: ReactNode; className?: string }>(
-  function ConversationEntry({ children, className }, ref) {
-    const present = useIsPresent();
-    const reduced = useReducedMotion();
-    return (
-      <m.div
-        ref={ref}
-        data-ui="conversation-entry"
-        className={className}
-        inert={!present}
-        aria-hidden={!present || undefined}
-        initial={reduced ? false : { opacity: 0, transform: "translateY(6px)" }}
-        animate={{ opacity: 1, transform: "none" }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
-      >
-        {children}
-      </m.div>
-    );
-  },
-);
+const ConversationEntry = forwardRef<
+  HTMLDivElement,
+  { children: ReactNode; className?: string; pinned?: boolean }
+>(function ConversationEntry({ children, className, pinned }, ref) {
+  const present = useIsPresent();
+  const reduced = useReducedMotion();
+  const { escapedFromLock, isAtBottom } = useStickToBottomContext();
+  const following = isAtBottom && !escapedFromLock;
+  return (
+    <m.div
+      ref={ref}
+      data-ui="conversation-entry"
+      data-pinned={Boolean(pinned && following)}
+      className={cn(
+        className,
+        pinned && "order-last py-2",
+        pinned && following && "sticky bottom-0 z-10 rounded-xl bg-card",
+      )}
+      inert={!present}
+      aria-hidden={!present || undefined}
+      initial={reduced ? false : { opacity: 0, transform: "translateY(6px)" }}
+      animate={{ opacity: 1, transform: "none" }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
+    >
+      {children}
+    </m.div>
+  );
+});
 
 export function ConversationMessage({
   line,

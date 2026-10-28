@@ -17,11 +17,11 @@ flowchart LR
     API --> R2[R2・Images]
     Customer <-->|WebRTC| Voice[OpenAI GPT-Live 1]
     Customer -->|tool HTTP| Web
-    Voice <--> Agent[Luna / Responses delegation]
+    Voice <--> Agent[Terra / Responses delegation]
 ```
 
 Web/APIの2 Workersをアプリの実行単位にする。DOのclassはAPI Workerに置き、PRのOAuth emulatorだけをContainerに置く。音声サーバーやPython runtimeは運用しない。
-業務の正本はD1。GPT-Liveは音声理解・会話・音声生成、LunaはGPT-Liveの標準Responses delegationによる業務判断、Honoは共通業務ツールの認可・実行、DOは通知とサーバー側の音声利用量収集を担当する。
+業務の正本はD1。GPT-Liveは音声理解・会話・音声生成、TerraはGPT-Liveの標準Responses delegationによる業務判断、Honoは共通業務ツールの認可・実行、DOは通知とサーバー側の音声利用量収集を担当する。
 
 カメラの取得・切替・圧縮と表示はWebが所有する。認可した`captureCamera`の結果を受けたときだけ現在の1枚をResponsesへ直接入力し、API・D1・R2へ画像を複製しない。Responsesの標準Web検索は参考情報へ使い、業務判断の根拠は共通APIに保つ。参考ページの取得制限と表示イベントはAPIのvoice module、QR・OGP・公開推論要約の描画はWebのkiosk featureが所有する。
 

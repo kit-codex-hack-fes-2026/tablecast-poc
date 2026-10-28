@@ -27,9 +27,16 @@ it("認可したカメラtoolは取得要求だけを返し、画像を履歴へ
   });
   await turn.finish();
   expect(await invokeVoiceTool(services, input, new AbortController().signal)).toEqual({
-    result: input.arguments,
+    result: { ...input.arguments, sessionAuthorized: true },
     cameraAction: "capture",
   });
+  expect(
+    await invokeVoiceTool(
+      services,
+      { ...input, toolName: "getCameraState", toolCallId: "tablecast-camera-state", arguments: {} },
+      new AbortController().signal,
+    ),
+  ).toEqual({ result: { sessionAuthorized: true } });
   const state = await getTableState(services, device);
   expect(JSON.stringify(state.events)).not.toContain("data:image");
   expect(state.orders).toHaveLength(0);

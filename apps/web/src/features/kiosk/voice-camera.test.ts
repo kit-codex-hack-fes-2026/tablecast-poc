@@ -30,7 +30,7 @@ const receive = (event: unknown) =>
     event,
   });
 
-async function start() {
+async function start(toolName: "captureCamera" | "getCameraState" = "captureCamera") {
   const value = new VoiceConnection(
     () => {},
     () => {},
@@ -47,8 +47,8 @@ async function start() {
     item: {
       type: "function_call",
       call_id: "tablecast-camera-call",
-      name: "captureCamera",
-      arguments: '{"question":"何が見えますか？"}',
+      name: toolName,
+      arguments: toolName === "getCameraState" ? "{}" : '{"question":"何が見えますか？"}',
     },
   });
   return {
@@ -76,7 +76,12 @@ it("認可された取得で画像をResponsesへ送り、API・会話履歴へ�
 });
 
 it("カメラOFFでもtool結果を返し、接続を閉じずに継続する", async () => {
-  const { finish } = await start();
+  const { value, finish } = await start();
+  value.connectCamera({
+    getState: () => ({ status: "off" }),
+    capture: async () => ({ error: "CAMERA_OFF" }),
+    complete: () => {},
+  });
   finish();
   await vi.waitFor(() =>
     expect(peer().channel.send.mock.calls.some(([event]) => event.includes("CAMERA_OFF"))).toBe(
@@ -108,5 +113,76 @@ it("認可待ちに停止した場合は遅着結果で撮影を始めない", a
     Response.json({ result: { question: "何が見えますか？" }, cameraAction: "capture" }),
   );
   await vi.waitFor(() => expect(peer().connectionState).toBe("closed"));
+  expect(capture).not.toHaveBeenCalled();
+});
+
+it("カメラ状態の照会は認可後に端末の許可拒否を返し、撮影や許可ダイアログを始めない", async () => {
+  toolReply = Promise.resolve(Response.json({ result: { sessionAuthorized: true } }));
+  const { value, finish } = await start("getCameraState");
+  const capture = vi.fn<() => Promise<{ error: "CAMERA_UNAVAILABLE" }>>(async () => ({
+    error: "CAMERA_UNAVAILABLE",
+  }));
+  value.connectCamera({
+    getState: () => ({ status: "permission-denied" }),
+    capture,
+    complete: () => {},
+  });
+  finish();
+  await vi.waitFor(() =>
+    expect(
+      peer().channel.send.mock.calls.some(([event]) => event.includes("permission-denied")),
+    ).toBe(true),
+  );
+  const output = peer()
+    .channel.send.mock.calls.map(([event]) =>
+      z
+        .looseObject({
+          item: z.looseObject({ type: z.string(), output: z.string().optional() }).optional(),
+        })
+        .parse(JSON.parse(event)),
+    )
+    .find((event) => event.item?.type === "function_call_output");
+  expect(JSON.parse(z.string().parse(output?.item?.output))).toEqual({
+    sessionAuthorized: true,
+    camera: { status: "permission-denied" },
+  });
+  expect(capture).not.toHaveBeenCalled();
+  expect(peer().connectionState).toBe("connected");
+});
+it("認可失敗を端末の撮影許可と区別し、未認可では撮影しない", async () => {
+  toolReply = Promise.resolve(
+    Response.json(
+      { error: { code: "VOICE_SESSION_STALE", message: "Session expired" } },
+      { status: 409 },
+    ),
+  );
+  const { value, finish } = await start();
+  const capture = vi.fn<() => Promise<{ imageUrl: string }>>(async () => ({
+    imageUrl: "data:image/jpeg;base64,dGFibGVjYXN0",
+  }));
+  value.connectCamera({
+    getState: () => ({ status: "ready", facing: "environment" }),
+    capture,
+    complete: () => {},
+  });
+  finish();
+  await vi.waitFor(() =>
+    expect(
+      peer().channel.send.mock.calls.some(([event]) => event.includes("VOICE_SESSION_STALE")),
+    ).toBe(true),
+  );
+  const output = peer()
+    .channel.send.mock.calls.map(([event]) =>
+      z
+        .looseObject({
+          item: z.looseObject({ type: z.string(), output: z.string().optional() }).optional(),
+        })
+        .parse(JSON.parse(event)),
+    )
+    .find((event) => event.item?.type === "function_call_output");
+  expect(JSON.parse(z.string().parse(output?.item?.output))).toMatchObject({
+    sessionAuthorized: false,
+    camera: { status: "ready" },
+  });
   expect(capture).not.toHaveBeenCalled();
 });

@@ -194,7 +194,7 @@ JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/en
 
 `.env.local` に `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を設定して `bun run dev` を起動する。別の音声プロセスは不要である。APIが公式SDKでGPT-LiveのResponses delegationを設定し、ブラウザーはSDP answerを使ってGPT-Liveと直接WebRTC接続する。
 
-OpenAI projectにはGPT-Live 1の利用権限に加え、Responses delegationの `api.responses.write` が必要である。`TABLECAST_MODEL` は業務委任モデルで、雛形は `gpt-6-luna`。音声モデルは `gpt-live-1` に固定し、委譲先はFast mode（`service_tier: "priority"`）と `reasoning.effort: "medium"` を使う。既存の `.env.local` に旧モデルを指定している場合は `TABLECAST_MODEL=gpt-6-luna` へ更新し、音声を停止・再開して新しいsessionへ反映する。モデルが利用できない場合の自動切替は行わない。
+OpenAI projectにはGPT-Live 1の利用権限に加え、Responses delegationの `api.responses.write` が必要である。`TABLECAST_MODEL` は業務委任モデルで、雛形は `gpt-6.1-terra`。音声モデルは `gpt-live-1` に固定し、委譲先はFast mode（`service_tier: "priority"`）と `reasoning.effort: "low"` を使う。既存の `.env.local` に旧モデルを指定している場合は `TABLECAST_MODEL=gpt-6.1-terra` へ更新し、音声を停止・再開して新しいsessionへ反映する。モデルが利用できない場合の自動切替は行わない。
 
 業務応答はSSEで本文差分と完了・失敗を分ける。Webの解析には `eventsource-parser` 3.1.1を使い、`bun run setup` で導入する。途中の切断を正常完了として扱わず、失敗時は音声を停止してGUIを維持する。
 
@@ -232,6 +232,8 @@ OpenAI projectにはGPT-Live 1の利用権限に加え、Responses delegationの
 | `bun run demo:audio --verify`               | 保存済みデモ音声の台本・声・SHAと音声形式を無料で検査する     |
 
 デモ音声の作成にはホストの`ffmpeg`・`ffprobe`とInworldキーを使う。`bun run demo:audio`は生成予定の表示だけで、`bun --env-file=.env.local run demo:audio --generate`を明示した場合に有料TTSを呼ぶ。同じ台本・声・音声SHAの素材は再利用し、通常CIでは合成しない。台本、US/UK/India/Chinaを含む声の指定と実有料E2Eの判定方法は[合成音声素材](demo/audio.md)を参照する。
+
+StorybookとVitest Browserは設定読込時にBunでdemo seedと同じ公開設定・商品・画像を準備し、`apps/web/.local/tablecast-storybook-public`へ生成する。通常のStoryはseedの3店舗を共用するため、DB・R2の起動や手動画像コピーは不要。画像なし・失敗専用のfixtureは通常のPR画像へ使わない。
 
 Storybookは標準の6006番を使う。他worktreeが使用中なら `bun run storybook --port 6007` と指定する。コンテナ内では公開済みの6006番を使う。
 Storybookは公式の`@storybook/tanstack-react`でStart・Routerを扱い、WorkersやDBを起動せずに利用する。環境分岐とテストの責務は [テスト戦略](testing.md) を参照する。
