@@ -120,7 +120,7 @@ export function KnowledgeMarkdownEditor({
         "aria-label": t("knowledge_visual_body"),
         "aria-multiline": "true",
         class:
-          "min-h-64 min-w-0 space-y-2 p-3 text-base leading-7 outline-none wrap-anywhere [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_pre]:overflow-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:p-3 [&_pre]:font-mono [&_blockquote]:border-l-4 [&_blockquote]:border-info-border [&_blockquote]:pl-3 [&_table]:w-full [&_th]:border [&_th]:p-2 [&_td]:border [&_td]:p-2 [&_a]:text-info-text [&_a]:underline [&_ul[data-type=taskList]]:list-none [&_li[data-type=taskItem]]:flex [&_li[data-type=taskItem]]:gap-2",
+          "min-h-64 min-w-0 space-y-2 p-3 text-base leading-7 outline-none wrap-anywhere [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_pre]:overflow-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:p-3 [&_pre]:font-mono [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_table]:w-full [&_th]:border [&_th]:p-2 [&_td]:border [&_td]:p-2 [&_a]:text-info-text [&_a]:underline [&_ul[data-type=taskList]]:list-none [&_li[data-type=taskItem]]:flex [&_li[data-type=taskItem]]:gap-2",
       },
     },
     onUpdate: ({ editor: current }) => {
@@ -227,7 +227,7 @@ export function KnowledgeMarkdownEditor({
       <div className="space-y-2">
         {parts.header && (
           <details className="rounded-md border border-border px-3 py-2">
-            <summary className="cursor-pointer text-sm font-medium text-nav-menu">
+            <summary className="cursor-pointer text-sm font-medium">
               {t("knowledge_frontmatter")}
             </summary>
             <textarea
@@ -257,7 +257,7 @@ export function KnowledgeMarkdownEditor({
                 aria-pressed={active}
                 disabled={disabled}
                 onClick={run}
-                className="text-info-text aria-pressed:bg-info-selected"
+                className="aria-pressed:bg-info-selected aria-pressed:text-info-text"
               >
                 <Icon />
               </Button>

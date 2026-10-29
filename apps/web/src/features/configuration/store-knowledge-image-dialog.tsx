@@ -17,11 +17,13 @@ import { ConfigurationImageField } from "./configuration-image-field";
 type KnowledgeFile = StoreSkill["files"][number];
 export function KnowledgeImageDialog({
   skill,
+  directory = "assets",
   storeId,
   disabled,
   onOpenChange,
   onAdd,
 }: {
+  directory?: string;
   disabled: boolean;
   onAdd: (file: KnowledgeFile) => void;
   onOpenChange: (open: boolean) => void;
@@ -29,7 +31,7 @@ export function KnowledgeImageDialog({
   storeId: string;
 }) {
   const { t } = useI18n();
-  const [path, setPath] = useState(`assets/image-${skill.files.length}.webp`);
+  const [path, setPath] = useState(`${directory}/image-${skill.files.length}.webp`);
   const [alt, setAlt] = useState("");
   const [image, setImage] = useState<ImageValue>({ imageKey: null, imageKind: "photograph" });
   const candidate =

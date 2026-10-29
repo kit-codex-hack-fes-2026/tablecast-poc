@@ -1833,5 +1833,17 @@
   "knowledge_archive_path": "The ZIP contains invalid or duplicate file paths.",
   "knowledge_archive_source_required": "Image sources are missing. Include them in the ZIP manifest or specify them in the import form.",
   "knowledge_skill_exists": "A Skill with this ID already exists. Select replacement to overwrite it.",
-  "knowledge_lint_failed": "Skill validation failed. Check the name, description and referenced files in SKILL.md."
+  "knowledge_lint_failed": "Skill validation failed. Check the name, description and referenced files in SKILL.md.",
+  "knowledge_actions": "File actions",
+  "knowledge_file_name_hint": "Use a path relative to this Skill. Folders are created from the path. Check reference links after renaming.",
+  "knowledge_name_invalid": "The name or path is invalid or already exists. Use letters, numbers and hyphens, and give files an extension.",
+  "knowledge_expand_folder": "Expand folder",
+  "knowledge_collapse_folder": "Collapse folder",
+  "knowledge_setup_title": "Give your materials to AI to set up your store",
+  "knowledge_setup_hint": "Connect the TableCast plugin through MCP and provide materials or a ZIP to update your draft. Review the changes before publishing.",
+  "knowledge_setup_connect": "Connect MCP",
+  "knowledge_setup_copy": "Copy setup request",
+  "knowledge_setup_store": "Store ID",
+  "knowledge_setup_draft": "Current draft ID",
+  "knowledge_setup_request": "Set up this TableCast store and its store materials. Check existing settings and gaps, then use the supplied documents, images and ZIP files to update the same draft. If a draft ID is supplied, retrieve its latest version and reuse it. Do not invent unconfirmed opening hours, prices or dietary information; ask only for missing facts. Check Skills, validate the configuration and review the changes. Report the saved version and outstanding checks. Do not publish yet."
 }

@@ -402,6 +402,7 @@ export function ItemForm({
               className="min-w-0 space-y-8 [&_input:disabled]:opacity-100 [&_textarea:disabled]:opacity-100 [&_select:disabled]:opacity-100"
             >
               <ItemFields
+                draftId={draft.id}
                 key={section === "cast" ? "cast" : fieldKey}
                 onImageStagedChange={onStagedChange}
                 section={section}
@@ -439,6 +440,7 @@ function ItemFields({
   ...props
 }: {
   disabled: boolean;
+  draftId?: string;
   onChange: React.Dispatch<React.SetStateAction<Configuration>>;
   onImageStagedChange?: ImageStagedChange;
   retainedVoice: Configuration["cast"]["voice"];
@@ -453,6 +455,7 @@ function ItemFields({
       <CastEditor
         focusTarget={parseCastTarget(hash)}
         storeId={props.storeId}
+        draftId={props.draftId}
         value={props.value.cast}
         voices={[retainedVoice]}
         onChange={(cast) => props.onChange({ ...props.value, cast })}

@@ -66,8 +66,25 @@ test("実店舗DBの資料をツリーで開き、画像とコードを表示し
   await page.mouse.move(0, 0);
   await expect(knowledge.getByRole("tabpanel")).toHaveCSS("opacity", "1");
   await page.screenshot({ path: testInfo.outputPath("tablecast-knowledge-code.png") });
-  await knowledge.getByRole("treeitem", { name: "visit.md", exact: true }).click();
-  await knowledge.getByRole("tab", { name: ja.knowledge_edit_file, exact: true }).click();
+  await expect(
+    knowledge.getByRole("complementary", { name: ja.knowledge_setup_title, exact: true }),
+  ).toBeVisible();
+  await expect(
+    knowledge.getByRole("link", { name: ja.knowledge_setup_connect, exact: true }),
+  ).toHaveAttribute("href", "/account/integrations/plugins");
+  await knowledge
+    .getByRole("treeitem", { name: "visit.md", exact: true })
+    .click({ button: "right" });
+  const fileMenu = page.getByRole("menu", {
+    name: `${ja.knowledge_actions}: references/visit.md`,
+    exact: true,
+  });
+  await expect(
+    fileMenu.getByRole("menuitem", { name: ja.knowledge_rename, exact: true }),
+  ).toBeEnabled();
+  await page.mouse.move(0, 0);
+  await page.screenshot({ path: testInfo.outputPath("tablecast-knowledge-context-menu.png") });
+  await fileMenu.getByRole("menuitem", { name: ja.knowledge_edit_file, exact: true }).click();
   const visual = knowledge.getByRole("textbox", { name: ja.knowledge_visual_body, exact: true });
   await visual.click();
   await visual.evaluate((element) => {

@@ -27,7 +27,7 @@ export function KnowledgeLint({
       className="space-y-1 rounded-md border border-border p-2"
     >
       <h3 className="flex items-center gap-2 text-sm font-semibold">
-        <ShieldCheck className="size-4 text-info-text" />
+        <ShieldCheck className="size-4 text-muted-foreground" />
         {t("knowledge_lint")}
       </h3>
       {issues.length ? (

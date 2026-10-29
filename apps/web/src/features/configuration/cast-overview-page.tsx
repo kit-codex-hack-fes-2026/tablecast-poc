@@ -65,6 +65,7 @@ export function CastOverviewPage({ draftId }: { draftId?: string }) {
           <CastOverview
             key={`${storeId}:${draftId ?? "published"}`}
             storeId={storeId}
+            draftId={draftId}
             value={configuration.cast}
             renderEdit={
               manager && editable

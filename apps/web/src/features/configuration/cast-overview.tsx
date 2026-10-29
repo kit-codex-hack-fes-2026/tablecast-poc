@@ -18,8 +18,10 @@ import { StoreKnowledge } from "./store-knowledge";
 export function CastOverview({
   storeId,
   value,
+  draftId,
   renderEdit,
 }: {
+  draftId?: string;
   renderEdit?: (target: CastTarget) => ReactNode;
   storeId: string;
   value: Configuration["cast"];
@@ -64,6 +66,7 @@ export function CastOverview({
         )}
       </LanguageFields>
       <StoreKnowledge
+        draftId={draftId}
         storeId={storeId}
         value={value.skills ?? []}
         action={renderEdit?.("knowledge")}

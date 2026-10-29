@@ -98,7 +98,6 @@ export function KnowledgeArchiveControls({
             size="sm"
             disabled={pending}
             onClick={() => setOpen(true)}
-            className="text-info-text"
           >
             <Upload />
             {t("knowledge_import_zip")}
@@ -110,7 +109,6 @@ export function KnowledgeArchiveControls({
           size="sm"
           disabled={pending || !value.length}
           onClick={() => exportArchive.mutate()}
-          className="text-nav-menu"
         >
           <ArrowDownToLine />
           {t("knowledge_export_zip")}
@@ -126,7 +124,7 @@ export function KnowledgeArchiveControls({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              <Archive className="mr-2 inline size-5 text-info-text" />
+              <Archive className="mr-2 inline size-5" />
               {t("knowledge_import_zip")}
             </DialogTitle>
             <DialogDescription>{t("knowledge_archive_hint")}</DialogDescription>

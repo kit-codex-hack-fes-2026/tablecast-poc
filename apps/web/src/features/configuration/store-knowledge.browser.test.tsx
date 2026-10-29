@@ -1,7 +1,7 @@
 import type { Locale } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 import { catalog } from "../../../.storybook/tablecast-fixtures";
@@ -13,9 +13,18 @@ import { StoreKnowledge } from "./store-knowledge";
 
 afterEach(async () => {
   await cleanup();
+  vi.restoreAllMocks();
   await page.viewport(1280, 720);
 });
-function Fixture({ locale, editable = true }: { editable?: boolean; locale: Locale }) {
+function Fixture({
+  locale,
+  editable = true,
+  disabled = false,
+}: {
+  disabled?: boolean;
+  editable?: boolean;
+  locale: Locale;
+}) {
   const [client] = useState(
     () =>
       new QueryClient({
@@ -32,6 +41,8 @@ function Fixture({ locale, editable = true }: { editable?: boolean; locale: Loca
         >
           <main className="mx-auto max-w-5xl p-4">
             <StoreKnowledge
+              draftId="tablecast-existing-draft"
+              disabled={disabled}
               storeId={catalog.storeId}
               value={skills}
               onChange={editable ? setSkills : undefined}
@@ -216,4 +227,120 @@ it("Skill検査から不備のあるファイルを選択し、改名時はmetad
   await expect
     .poll(() => page.getByRole("region", { name: "Skill検査", exact: true }).element().textContent)
     .toContain("nameとSkillのIDを一致させてください。");
+});
+
+it("フォルダーの操作メニューで作成し、右クリックから編集・改名・削除して他の未保存本文を保つ", async () => {
+  await page.viewport(1512, 1000);
+  await render(<Fixture locale="ja" />);
+  await page.getByRole("treeitem", { name: "visit.md", exact: true }).click();
+  await page.getByRole("tab", { name: ja.knowledge_source, exact: true }).click();
+  await page
+    .getByRole("textbox", { name: ja.knowledge_content, exact: true })
+    .fill("# 未保存の営業時間\n17時開店");
+  const folder = page.getByRole("treeitem", { name: "references", exact: true });
+  await folder.click();
+  await folder
+    .getByRole("button", { name: `${ja.knowledge_actions}: references`, exact: true })
+    .click();
+  await page.getByRole("menuitem", { name: ja.knowledge_add_file, exact: true }).click();
+  const create = page.getByRole("dialog", { name: ja.knowledge_add_file, exact: true });
+  await expect
+    .element(create.getByRole("textbox", { name: ja.knowledge_path, exact: true }))
+    .toHaveValue("references/guide-1.md");
+  await create
+    .getByRole("textbox", { name: ja.knowledge_path, exact: true })
+    .fill("references/nested/policy.md");
+  await create.getByRole("button", { name: ja.knowledge_add_file, exact: true }).click();
+  const file = page.getByRole("treeitem", { name: "policy.md", exact: true });
+  await expect.element(file).toHaveAttribute("aria-level", "4");
+  await expect.element(file).toHaveAttribute("aria-selected", "true");
+  await expect.element(file).toHaveFocus();
+  await file.click({ button: "right" });
+  await page.getByRole("menuitem", { name: ja.knowledge_edit_file, exact: true }).click();
+  await page
+    .getByRole("textbox", { name: ja.knowledge_visual_body, exact: true })
+    .fill("追加した店舗案内");
+  await file.click({ button: "right" });
+  await page.getByRole("menuitem", { name: ja.knowledge_rename, exact: true }).click();
+  const rename = page.getByRole("dialog", { name: ja.knowledge_rename, exact: true });
+  await rename
+    .getByRole("textbox", { name: ja.knowledge_path, exact: true })
+    .fill("references/nested/arrival.md");
+  await rename.getByRole("button", { name: ja.common_save, exact: true }).click();
+  const renamed = page.getByRole("treeitem", { name: "arrival.md", exact: true });
+  await expect.element(renamed).toHaveFocus();
+  await renamed.click({ button: "right" });
+  await page.getByRole("menuitem", { name: ja.knowledge_source, exact: true }).click();
+  await expect
+    .element(page.getByRole("textbox", { name: ja.knowledge_content, exact: true }))
+    .toHaveValue("追加した店舗案内");
+  await renamed.click({ button: "right" });
+  await page.getByRole("menuitem", { name: ja.knowledge_remove_file, exact: true }).click();
+  await expect.element(renamed).not.toBeInTheDocument();
+  await expect.element(page.getByRole("treeitem", { name: "SKILL.md", exact: true })).toHaveFocus();
+  await page.getByRole("treeitem", { name: "visit.md", exact: true }).click();
+  await expect
+    .element(page.getByRole("textbox", { name: ja.knowledge_content, exact: true }))
+    .toHaveValue("# 未保存の営業時間\n17時開店");
+});
+
+it("キーボードでメニューを開閉し、SKILL.mdの単独改名・削除を防ぐ", async () => {
+  await render(<Fixture locale="ja" />);
+  const file = page.getByRole("treeitem", { name: "SKILL.md", exact: true });
+  await file.click();
+  await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+  await expect.element(page.getByRole("menu")).toBeVisible();
+  await expect
+    .element(page.getByRole("menuitem", { name: ja.knowledge_rename, exact: true }))
+    .toHaveAttribute("aria-disabled", "true");
+  await expect
+    .element(page.getByRole("menuitem", { name: ja.knowledge_remove_file, exact: true }))
+    .toHaveAttribute("aria-disabled", "true");
+  await userEvent.keyboard("{Escape}");
+  await expect.element(file).toHaveFocus();
+  expect(file.element().getBoundingClientRect().height).toBeLessThanOrEqual(40);
+  expect(Number.parseFloat(getComputedStyle(file.element()).fontSize)).toBeGreaterThanOrEqual(16);
+});
+
+it("読取専用の右クリックには閲覧だけを表示する", async () => {
+  await render(<Fixture locale="en" editable={false} />);
+  await page.getByRole("treeitem", { name: "visit.md", exact: true }).click({ button: "right" });
+  await expect.element(page.getByRole("menuitem", { name: "Preview", exact: true })).toBeVisible();
+  await expect
+    .element(page.getByRole("menuitem", { name: "Delete file", exact: true }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("menuitem", { name: "Edit", exact: true }))
+    .not.toBeInTheDocument();
+});
+it("処理中の右クリックでも編集・削除を無効にする", async () => {
+  await render(<Fixture locale="en" disabled />);
+  await page.getByRole("treeitem", { name: "visit.md", exact: true }).click({ button: "right" });
+  await expect.element(page.getByRole("menuitem", { name: "Preview", exact: true })).toBeVisible();
+  await expect
+    .element(page.getByRole("menuitem", { name: "Delete file", exact: true }))
+    .toHaveAttribute("aria-disabled", "true");
+  await expect
+    .element(page.getByRole("menuitem", { name: "Edit", exact: true }))
+    .toHaveAttribute("aria-disabled", "true");
+});
+
+it("MCPの設定依頼へ現在の店舗と下書きを含め、接続案内とコピーの成否を示す", async () => {
+  const clipboard = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+  await render(<Fixture locale="ja" />);
+  await expect
+    .element(page.getByRole("link", { name: ja.knowledge_setup_connect, exact: true }))
+    .toHaveAttribute("href", "/account/integrations/plugins");
+  await page.getByRole("button", { name: ja.knowledge_setup_copy, exact: true }).click();
+  expect(clipboard.mock.calls[0]?.[0]).toContain(catalog.storeId);
+  expect(clipboard.mock.calls[0]?.[0]).toContain("tablecast-existing-draft");
+  expect(clipboard.mock.calls[0]?.[0]).toContain(ja.knowledge_setup_request);
+  await expect
+    .element(page.getByRole("status").filter({ hasText: ja.common_copied }))
+    .toBeVisible();
+  clipboard.mockRejectedValueOnce(new Error("コピーできない環境"));
+  await page.getByRole("button", { name: ja.knowledge_setup_copy, exact: true }).click();
+  await expect
+    .element(page.getByRole("alert").filter({ hasText: ja.common_copy_failed }))
+    .toBeVisible();
 });

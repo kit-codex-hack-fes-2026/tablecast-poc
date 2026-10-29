@@ -12,6 +12,7 @@ import { StoreKnowledge } from "./store-knowledge";
 
 export function CastEditor({
   storeId,
+  draftId,
   value,
   voices,
   onChange,
@@ -19,6 +20,7 @@ export function CastEditor({
   focusTarget,
 }: {
   disabled: boolean;
+  draftId?: string;
   focusTarget?: CastTarget;
   onChange: (value: Configuration["cast"]) => void;
   storeId: string;
@@ -126,6 +128,7 @@ export function CastEditor({
       </LanguageFields>
       <div id={`${id}-knowledge`} tabIndex={-1}>
         <StoreKnowledge
+          draftId={draftId}
           storeId={storeId}
           value={value.skills ?? []}
           onChange={(skills) => onChange({ ...value, skills })}
