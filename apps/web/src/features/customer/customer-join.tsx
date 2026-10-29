@@ -78,9 +78,6 @@ export function CustomerJoin({ code }: { code: string }) {
         <p className="mb-2 text-sm text-muted-foreground">{t("customer_join_destination")}</p>
         <h1 className="text-2xl font-semibold">{destination.data.storeName}</h1>
         <p className="mt-2 text-muted-foreground">{destination.data.tableName}</p>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {t("customer_join_after_consent")}
-        </p>
       </div>
       {destination.data.membership?.active ? (
         <>
@@ -93,12 +90,22 @@ export function CustomerJoin({ code }: { code: string }) {
           )}
         </>
       ) : (
-        <CustomerConsent
-          storeId={destination.data.storeId}
-          onEnrolled={() => {
-            void destination.refetch();
-          }}
-        />
+        <>
+          <ol
+            aria-label={t("customer_join_flow")}
+            className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-muted-foreground"
+          >
+            <li>{t("customer_join_register_step")}</li>
+            <li>{t("customer_join_table_step")}</li>
+            <li>{t("customer_join_coupon_step")}</li>
+          </ol>
+          <CustomerConsent
+            storeId={destination.data.storeId}
+            onEnrolled={() => {
+              void destination.refetch();
+            }}
+          />
+        </>
       )}
     </section>
   );

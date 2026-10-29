@@ -69,6 +69,13 @@ function listVisitParticipants(
       name: sql<
         null | string
       >`CASE WHEN ${customerMemberships.active} AND ${customerMemberships.shareCompanions} THEN ${user.name} ELSE NULL END`,
+      ...(activeOnly
+        ? {
+            image: sql<
+              null | string
+            >`CASE WHEN ${customerMemberships.active} AND ${customerMemberships.shareCompanions} THEN ${user.image} ELSE NULL END`,
+          }
+        : {}),
       joinedAt: customerVisitParticipants.joinedAt,
       leftAt: customerVisitParticipants.leftAt,
     })

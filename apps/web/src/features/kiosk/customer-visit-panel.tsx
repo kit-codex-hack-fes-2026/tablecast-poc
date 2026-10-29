@@ -1,45 +1,45 @@
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import { Popover } from "@base-ui/react/popover";
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
-import { Check, LoaderCircle, QrCode } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, LoaderCircle, QrCode, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "../../components/ui/dialog";
-import { ParticipantIdentity } from "../../components/user-identity";
+import { ParticipantAvatar } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { type InferResponseType, parseResponse, type TableEndpoint } from "../../lib/api";
+import { useMediaQuery } from "../../lib/use-media-query";
+import {
+  customerParticipantsKey,
+  customerParticipantsOptions,
+  customerTargetKey,
+} from "./customer-participants-query";
 
 export function CustomerVisitPanel({
   endpoint,
   sessionId,
   cursor,
-  tableName,
-  onResume,
-  voicePaused,
 }: {
   cursor: number;
   endpoint: TableEndpoint;
-  onResume: () => void;
   sessionId: string;
-  tableName: string;
-  voicePaused: boolean;
 }) {
   const { t } = useI18n();
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
-  const participantsKey = ["tablecast-participants", sessionId, endpoint.key];
+  const trigger = useRef<HTMLButtonElement>(null);
+  const short = useMediaQuery("(max-height: 36rem) and (min-width: 40rem)");
+  const participants = useQuery({
+    ...customerParticipantsOptions(endpoint, sessionId, cursor),
+    refetchInterval: open ? 10_000 : false,
+  });
   const code = useMutation({
     mutationFn: () => parseResponse(endpoint.client["customer-code"].$post()),
     onSuccess: () =>
-      client.invalidateQueries({ queryKey: participantsKey }, { cancelRefetch: false }),
+      client.invalidateQueries(
+        { queryKey: customerParticipantsKey(endpoint, sessionId) },
+        { cancelRefetch: false },
+      ),
   });
   const { mutate: createCode } = code;
   useEffect(() => {
@@ -50,167 +50,163 @@ export function CustomerVisitPanel({
     );
     return () => clearTimeout(timer);
   }, [open, code.data, createCode]);
-  const participants = useQuery({
-    queryKey: [...participantsKey, cursor],
-    enabled: open || cursor > 0,
-    staleTime: 30_000,
-    gcTime: 30_000,
-    queryFn: ({ signal }) =>
-      parseResponse(endpoint.client.participants.$get({}, { init: { signal } })),
-    refetchInterval: open ? 10_000 : false,
-  });
   const people = participants.data?.participants ?? [];
   return (
-    <Dialog
+    <Popover.Root
       open={open}
-      onOpenChange={(next) => {
+      modal={false}
+      onOpenChange={(next, details) => {
+        if (!next && (details.reason === "outside-press" || details.reason === "focus-out")) {
+          details.cancel();
+          return;
+        }
         setOpen(next);
         if (next && (!code.data || code.data.expiresAt <= Date.now())) createCode();
+        if (!next) trigger.current?.focus({ preventScroll: true });
       }}
     >
-      <DialogPrimitive.Trigger
-        render={<Button className="h-13.5 shrink-0 gap-2 px-3 text-sm" variant="outline" />}
+      <Popover.Trigger
+        ref={trigger}
+        render={
+          <Button
+            className="h-13.5 min-w-13.5 shrink-0 gap-2 px-3"
+            variant="ghost"
+            title={t("kiosk_visit_tools")}
+            aria-label={t("kiosk_visit_tools")}
+          />
+        }
       >
-        <QrCode aria-hidden="true" className="size-5 shrink-0" />
-        <span className="max-w-28 whitespace-normal text-start leading-tight">
-          {t("kiosk_visit_tools")}
-        </span>
-        {!!people.length && <span className="tabular-nums">{people.length}</span>}
-      </DialogPrimitive.Trigger>
-      <DialogContent className="max-w-3xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t("kiosk_visit_tools")}</DialogTitle>
-          <DialogClose aria-label={t("common_close")}>×</DialogClose>
-        </DialogHeader>
-        <DialogDescription>{t("customer_ipad_intro")}</DialogDescription>
-        <section
-          aria-label={t("customer_join_visit")}
-          className="mt-6 grid gap-6 sm:grid-cols-[auto_1fr]"
+        <MemberAvatarStack people={people} />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner
+          side="bottom"
+          align="start"
+          sideOffset={12}
+          collisionPadding={8}
+          className="z-50 max-w-[calc(100vw-1rem)]"
         >
-          <div className="space-y-3 text-center">
-            <p className="font-semibold">{tableName}</p>
-            <VisitQr
-              url={code.error ? undefined : code.data?.url}
-              pending={code.isPending}
-              onRetry={createCode}
-            />
-            <p className="mx-auto max-w-60 text-sm text-muted-foreground">
-              {t("customer_scan_hint")}
-            </p>
-            <ErrorNotice error={code.error} />
-          </div>
-          <ol className="space-y-5">
-            {(
-              [
-                ["customer_step_scan", "customer_step_scan_hint"],
-                ["customer_step_register", "customer_step_register_hint"],
-                ["customer_step_join", "customer_step_join_hint"],
-                ["customer_step_coupon", "customer_step_coupon_hint"],
-              ] as const
-            ).map(([title, hint], index) => (
-              <li key={title} className="flex gap-3">
-                <span className="grid size-7 shrink-0 place-items-center rounded-full border border-border text-sm font-semibold">
-                  {index + 1}
-                </span>
-                <div className="space-y-1">
-                  <p className="font-semibold">{t(title)}</p>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{t(hint)}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-        <VisitParticipants
-          endpoint={endpoint}
-          sessionId={sessionId}
-          participants={participants}
-          voicePaused={voicePaused}
-          onResume={() => {
-            setOpen(false);
-            onResume();
-          }}
-        />
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function VisitQr({
-  url,
-  pending,
-  onRetry,
-}: {
-  onRetry: () => void;
-  pending: boolean;
-  url?: string;
-}) {
-  const { t } = useI18n();
-  return (
-    <div className="mx-auto grid size-56 place-items-center rounded-xl bg-card">
-      {url ? (
-        <QRCodeSVG
-          value={url}
-          size={224}
-          marginSize={3}
-          title={t("customer_join_visit")}
-          bgColor="#ffffff"
-          fgColor="#000000"
-        />
-      ) : pending ? (
-        <LoaderCircle
-          aria-label={t("customer_connecting")}
-          className="size-8 text-muted-foreground motion-safe:animate-spin"
-        />
-      ) : (
-        <Button className="h-auto min-h-12 whitespace-normal" variant="outline" onClick={onRetry}>
-          {t("customer_show_qr")}
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function ServiceTarget({
-  pending,
-  person,
-}: {
-  pending: boolean;
-  person?: { name: null | string };
-}) {
-  const { t } = useI18n();
-  return (
-    <p className="text-sm text-muted-foreground">
-      {t("kiosk_service_target")}{" "}
-      <strong className="font-medium text-foreground">
-        {pending ? (
-          t("kiosk_service_unknown")
-        ) : person ? (
-          <ParticipantIdentity name={person.name} />
-        ) : (
-          t("kiosk_service_group")
-        )}
-      </strong>
-    </p>
+          <Popover.Popup
+            initialFocus={false}
+            finalFocus={trigger}
+            aria-label={t("kiosk_visit_tools")}
+            data-ui="customer-visit-popover"
+            className={`relative rounded-2xl border border-border bg-popover p-3 text-popover-foreground shadow-xl origin-(--transform-origin) transition-[opacity,transform] duration-180 ease-(--motion-ease-out) data-starting-style:scale-97 data-starting-style:opacity-0 data-ending-style:scale-97 data-ending-style:opacity-0 motion-reduce:transform-none motion-reduce:transition-none ${short ? "w-[min(34rem,calc(100vw-1rem))] pt-12" : "w-[min(22rem,calc(100vw-1rem))]"}`}
+          >
+            <Popover.Arrow className="size-3 rotate-45 border-l border-t border-border bg-popover" />
+            <Popover.Title className="sr-only">{t("kiosk_visit_tools")}</Popover.Title>
+            <Popover.Close
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute right-2 top-2"
+                  aria-label={t("common_close")}
+                />
+              }
+            >
+              <X aria-hidden />
+            </Popover.Close>
+            <div className={short ? "grid grid-cols-[auto_1fr] items-start gap-3" : "space-y-3"}>
+              <VisitQr
+                short={short}
+                url={code.error ? undefined : code.data?.url}
+                pending={code.isPending}
+                error={code.error}
+                onRetry={createCode}
+              />
+              <VisitParticipants
+                participants={participants}
+                endpoint={endpoint}
+                sessionId={sessionId}
+              />
+            </div>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
 type ParticipantResponse = InferResponseType<TableEndpoint["client"]["participants"]["$get"], 200>;
+type Participant = ParticipantResponse["participants"][number];
+
+function MemberAvatarStack({ people }: { people: Participant[] }) {
+  return people.length ? (
+    <span className="flex -space-x-3" aria-hidden data-ui="member-avatar-stack">
+      {people.slice(0, 3).map((person) => (
+        <ParticipantAvatar key={person.id} image={person.image} />
+      ))}
+      {people.length > 3 && (
+        <span className="relative grid size-9 place-items-center rounded-full bg-card text-xs font-medium ring-1 ring-border">
+          +{people.length - 3}
+        </span>
+      )}
+    </span>
+  ) : (
+    <QrCode aria-hidden className="size-5" />
+  );
+}
+
+function VisitQr({
+  short,
+  url,
+  pending,
+  error,
+  onRetry,
+}: {
+  error: unknown;
+  onRetry: () => void;
+  pending: boolean;
+  short: boolean;
+  url?: string;
+}) {
+  const { t } = useI18n();
+  return (
+    <section aria-label={t("customer_join_visit")}>
+      <div
+        className={`mx-auto grid place-items-center rounded-xl bg-card ${short ? "size-40" : "size-52"}`}
+      >
+        {url ? (
+          <QRCodeSVG
+            value={url}
+            size={208}
+            marginSize={3}
+            className="size-full"
+            title={t("customer_join_visit")}
+            bgColor="#ffffff"
+            fgColor="#000000"
+          />
+        ) : pending ? (
+          <LoaderCircle
+            aria-label={t("common_loading")}
+            className="size-6 motion-safe:animate-spin"
+          />
+        ) : (
+          <Button variant="outline" disabled={pending} onClick={onRetry}>
+            {t("customer_show_qr")}
+          </Button>
+        )}
+      </div>
+      <ErrorNotice error={error} />
+    </section>
+  );
+}
+
 function VisitParticipants({
+  participants,
   endpoint,
   sessionId,
-  participants,
-  voicePaused,
-  onResume,
 }: {
   endpoint: TableEndpoint;
-  onResume: () => void;
   participants: UseQueryResult<ParticipantResponse>;
   sessionId: string;
-  voicePaused: boolean;
 }) {
   const { t } = useI18n();
   const client = useQueryClient();
+  const [page, setPage] = useState(0);
   const selectTarget = useMutation({
+    mutationKey: customerTargetKey(endpoint, sessionId),
     mutationFn: (participantId: null | string) =>
       parseResponse(
         endpoint.client["customer-target"].$post({
@@ -218,97 +214,89 @@ function VisitParticipants({
         }),
       ),
     onSettled: () =>
-      client.resetQueries({ queryKey: ["tablecast-participants", sessionId, endpoint.key] }),
+      client.resetQueries({ queryKey: customerParticipantsKey(endpoint, sessionId) }),
   });
   const people = participants.data?.participants ?? [];
   const target =
     participants.data?.context?.selectedParticipantId ??
     (people.length === 1 ? people[0]?.id : null);
-  const selectedPerson = people.find((participant) => participant.id === target);
+  const pages = Math.ceil(people.length / 4);
+  const currentPage = Math.min(page, Math.max(0, pages - 1));
+  const shown = people.slice(currentPage * 4, (currentPage + 1) * 4);
   return (
-    <section
-      aria-label={t("customer_joined_guests")}
-      className="mt-7 space-y-4 border-t border-border pt-5"
-    >
-      <h3 className="font-semibold">{t("customer_joined_guests")}</h3>
-      <ParticipationStatus
-        pending={participants.isPending}
-        failed={participants.isError}
-        count={people.length}
-      />
-      <ul className="flex flex-wrap gap-2">
-        {people.map((person) => (
-          <li key={person.id}>
+    <section aria-label={t("customer_joined_guests")} className="space-y-2">
+      {participants.isPending && (
+        <LoaderCircle
+          aria-label={t("common_loading")}
+          className="mx-auto size-5 motion-safe:animate-spin"
+        />
+      )}
+      <ul className="grid grid-cols-2 gap-2">
+        {shown.map((person) => (
+          <li key={person.id} className="min-w-0">
             <Button
-              size="sm"
-              className="h-auto min-h-11 whitespace-normal px-3 py-2 text-sm"
-              variant={target === person.id ? "default" : "outline"}
+              variant={target === person.id ? "outline" : "ghost"}
+              className="h-14 w-full min-w-0 justify-start gap-2 px-2"
+              title={person.name ?? t("customer_anonymous")}
               aria-pressed={target === person.id}
-              disabled={selectTarget.isPending}
-              onClick={() => selectTarget.mutate(person.id)}
+              disabled={selectTarget.isPending || participants.isFetching}
+              onClick={() =>
+                selectTarget.mutate(target === person.id && people.length > 1 ? null : person.id)
+              }
             >
-              <ParticipantIdentity name={person.name} />
+              <ParticipantAvatar image={person.image} />
+              <span className="line-clamp-2 min-w-0 text-left text-sm leading-tight wrap-anywhere">
+                {person.name ?? t("customer_anonymous")}
+              </span>
+              {target === person.id && <Check aria-hidden className="size-3 shrink-0" />}
             </Button>
           </li>
         ))}
       </ul>
-      {!!people.length && (
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <span>{t("customer_target_hint")}</span>
-          {people.length > 1 && (
-            <Button
-              size="sm"
-              className="h-auto min-h-11 whitespace-normal px-3 py-2 text-sm"
-              variant={!target ? "default" : "outline"}
-              disabled={selectTarget.isPending}
-              onClick={() => selectTarget.mutate(null)}
-            >
-              {t("customer_shared_service")}
-            </Button>
-          )}
-        </div>
-      )}
-      <ErrorNotice error={selectTarget.error} />
+      <ParticipantPagination current={currentPage} total={pages} onChange={setPage} />
       <ErrorNotice query={participants} />
-      <ServiceTarget
-        pending={participants.isPending || participants.isError}
-        person={selectedPerson}
-      />
-      {!!people.length && voicePaused && (
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            className="min-h-14"
-            disabled={selectTarget.isPending || participants.isFetching || participants.isError}
-            onClick={() => {
-              onResume();
-            }}
-          >
-            {t("customer_resume_service")}
-          </Button>
-          <p className="text-sm text-muted-foreground">{t("customer_resume_service_hint")}</p>
-        </div>
-      )}
+      <ErrorNotice error={selectTarget.error} />
     </section>
   );
 }
 
-function ParticipationStatus({
-  pending,
-  failed,
-  count,
+function ParticipantPagination({
+  current,
+  total,
+  onChange,
 }: {
-  count: number;
-  failed: boolean;
-  pending: boolean;
+  current: number;
+  onChange: (page: number) => void;
+  total: number;
 }) {
   const { t } = useI18n();
-  if (pending || failed) return null;
-  return count > 0 ? (
-    <p role="status" className="flex items-center gap-2 text-sm font-medium text-success">
-      <Check aria-hidden className="size-4" />
-      {t("customer_table_joined")}
-    </p>
-  ) : (
-    <p className="text-sm text-muted-foreground">{t("customer_waiting_phone")}</p>
+  if (total < 2) return null;
+  return (
+    <nav
+      aria-label={t("customer_joined_guests")}
+      className="flex items-center justify-center gap-2"
+    >
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t("common_previous_page")}
+        disabled={current === 0}
+        onClick={() => onChange(current - 1)}
+      >
+        <ChevronLeft aria-hidden />
+      </Button>
+      <span className="text-xs tabular-nums">
+        {current + 1} / {total}
+      </span>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t("common_next_page")}
+        disabled={current + 1 >= total}
+        onClick={() => onChange(current + 1)}
+      >
+        <ChevronRight aria-hidden />
+      </Button>
+    </nav>
   );
 }

@@ -14,6 +14,7 @@ import { type ReactNode, Suspense } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
+import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
@@ -67,6 +68,47 @@ async function show(view: ReactNode, locale: "en" | "ja" = "ja") {
 }
 
 const base = "/api/customer/stores/tablecast-store";
+it.each(["ja", "en"] as const)(
+  "%sのスマホQR遷移先で店舗・卓と登録から券利用までを案内し、同意前は来店へ参加しない",
+  async (locale) => {
+    const labels = locale === "ja" ? ja : en;
+    const paths: string[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      const path = new URL(request.url).pathname;
+      paths.push(path);
+      if (path !== "/api/customer/visits/resolve") throw new Error(`未定義の要求: ${path}`);
+      return Response.json({
+        storeId: "tablecast-store",
+        storeName: "卓上喫茶",
+        tableName: "T03",
+        membership: null,
+      });
+    });
+    await page.viewport(390, 844);
+    await show(<CustomerJoin code={"0".repeat(64)} />, locale);
+    await expect
+      .element(page.getByRole("heading", { name: "卓上喫茶", exact: true }))
+      .toBeVisible();
+    await expect.element(page.getByText("T03", { exact: true })).toBeVisible();
+    const flow = page.getByRole("list", { name: labels.customer_join_flow });
+    await expect
+      .element(flow.getByText(labels.customer_join_register_step, { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(flow.getByText(labels.customer_join_table_step, { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(flow.getByText(labels.customer_join_coupon_step, { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: labels.customer_enrol, exact: true }))
+      .toBeEnabled();
+    expect(paths).toEqual(["/api/customer/visits/resolve"]);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+  },
+);
+
 it("日本語で初回同意後の設定を保存し、新しい画面でも撤回済み設定を表示する", async () => {
   const locale = "ja";
   const labels = ja;

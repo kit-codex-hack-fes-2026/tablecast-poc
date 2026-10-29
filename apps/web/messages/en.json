@@ -1605,7 +1605,7 @@
   "customer_card_tone_violet": "Violet",
   "customer_member_icon_size_error": "Choose a square image of at least 512px for the membership app icon.",
   "customer_login_title": "Membership and joining this visit",
-  "customer_login_hint": "New and existing members can sign in below. You will then return to your visit. If this is your first time, we will ask you to join the restaurant.",
+  "customer_login_hint": "New and existing members can sign in below. You will return to your visit and join this table automatically after registration. You can then choose a coupon.",
   "coupon_face_preview": "Coupon preview",
   "coupon_acquisition_conditions": "Conditions for receiving this coupon",
   "coupon_acquisition_all": "Meet all of these",
@@ -1613,5 +1613,9 @@
   "coupon_acquisition_gte": "at least",
   "coupon_acquisition_lte": "at most",
   "coupon_acquisition_after": "on or after",
-  "coupon_acquisition_before": "on or before"
+  "coupon_acquisition_before": "on or before",
+  "customer_join_flow": "From membership to using a coupon",
+  "customer_join_register_step": "Join the restaurant and agree to the permissions on your first visit",
+  "customer_join_table_step": "Join this table automatically",
+  "customer_join_coupon_step": "Choose and request a coupon from your connected visit"
 }

@@ -1605,7 +1605,7 @@
   "customer_card_tone_violet": "バイオレット",
   "customer_member_icon_size_error": "会員アプリのアイコンには512px以上の正方形画像を選んでください。",
   "customer_login_title": "会員登録・この来店への参加",
-  "customer_login_hint": "初めての方も、会員の方も、以下の方法でログインしてください。ログイン後は元の来店画面に戻り、初回だけ店舗への入会を確認します。",
+  "customer_login_hint": "初めての方も会員の方もログインできます。元の来店画面に戻り、初回登録後はこの卓に自動参加します。参加後にクーポンを選べます。",
   "coupon_face_preview": "券面プレビュー",
   "coupon_acquisition_conditions": "この券を受け取る条件",
   "coupon_acquisition_all": "すべて満たす",
@@ -1613,5 +1613,9 @@
   "coupon_acquisition_gte": "以上",
   "coupon_acquisition_lte": "以下",
   "coupon_acquisition_after": "以降",
-  "coupon_acquisition_before": "以前"
+  "coupon_acquisition_before": "以前",
+  "customer_join_flow": "会員登録からクーポン利用まで",
+  "customer_join_register_step": "初回だけ会員登録と利用設定に同意",
+  "customer_join_table_step": "この卓に自動で参加",
+  "customer_join_coupon_step": "参加完了画面からクーポンを選んで申請"
 }

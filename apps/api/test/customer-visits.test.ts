@@ -40,6 +40,7 @@ async function setupCustomers() {
     id: other.userId,
     email: "tablecast-customer-other@example.test",
     name: "同行者",
+    image: "/api/avatars/11111111-1111-4111-8111-111111111111",
     updatedAt: new Date(),
   });
   await enrolCustomer(services, customer);
@@ -60,6 +61,9 @@ it("二人が同じQRで参加でき、再読取りと同時送信で人数が�
   const participants = await getDeviceParticipants(services, tablet);
   expect(JSON.stringify(participants)).not.toContain("@example.test");
   expect(participants.participants.every((person) => !("email" in person))).toBe(true);
+  expect(participants.participants.find((person) => person.name === "同行者")).toMatchObject({
+    image: "/api/avatars/11111111-1111-4111-8111-111111111111",
+  });
   expect(await fixtureDb.select().from(customerVisitParticipants)).toHaveLength(2);
   expect(
     (await getDeviceParticipants(services, tablet)).participants
@@ -87,10 +91,16 @@ it("退出後も同行履歴を残し、共有撤回を他会員の履歴へ反�
   const history = await getCustomerVisit(services, customer, device.tableSessionId);
   expect(history.participants).toHaveLength(2);
   expect(history.participants.every((person) => !("email" in person))).toBe(true);
+  expect(history.participants.every((person) => !("image" in person))).toBe(true);
   expect(
     history.participants.find((person) => person.id === result.participantId)?.name,
   ).toBeNull();
   expect((await joinCustomerVisit(services, other.userId, code)).connected).toBe(true);
+  expect(
+    (await getDeviceParticipants(services, tablet)).participants.find(
+      (person) => person.id === result.participantId,
+    ),
+  ).toMatchObject({ name: null, image: null });
   expect(await fixtureDb.select().from(customerVisitParticipants)).toHaveLength(2);
 });
 

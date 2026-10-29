@@ -159,7 +159,12 @@ function AssistanceContent({ model }: { model: ReturnType<typeof useStaffAssista
   }
   return (
     <>
-      <Button variant="ghost" className="w-full justify-start" onClick={model.begin}>
+      <Button
+        variant="ghost"
+        className="w-full justify-start"
+        disabled={model.voiceBlocked}
+        onClick={model.begin}
+      >
         <Mic aria-hidden />
         {t("assistance_advice")}
       </Button>
@@ -208,6 +213,7 @@ function AssistanceVoice({ model }: { model: ReturnType<typeof useStaffAssistanc
             variant="ghost"
             size="icon-sm"
             aria-label={t("assistance_advice")}
+            disabled={model.voiceBlocked}
             onClick={model.begin}
           >
             <Mic aria-hidden />

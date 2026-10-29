@@ -57,3 +57,15 @@ export function ParticipantIdentity({ name }: { name: null | string }) {
     </span>
   );
 }
+
+/** 現在の卓で共有を許可された会員画像だけを表示し、非共有・未設定は人物アイコンにする。 */
+export function ParticipantAvatar({ image }: { image?: null | string }) {
+  return (
+    <Avatar.Root className={userAvatar({ compact: true })} aria-hidden="true">
+      <Avatar.Image src={image ?? undefined} alt="" className="size-full object-cover" />
+      <Avatar.Fallback>
+        <UserRound className="size-5" />
+      </Avatar.Fallback>
+    </Avatar.Root>
+  );
+}
