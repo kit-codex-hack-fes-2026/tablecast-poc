@@ -27,8 +27,8 @@ describe("初期seedの固定テンプレート", () => {
     await writeSeedTemplate(second);
     expect(await readFile(first, "utf8")).toBe(await readFile(second, "utf8"));
     expect(await readSeedTemplate(first)).toEqual(template);
-    expect(template.payload.stores).toHaveLength(3);
-    expect(template.payload.staff).toHaveLength(8);
+    expect(template.payload.stores).toHaveLength(4);
+    expect(template.payload.staff).toHaveLength(10);
     expect(template.payloadHash).toBe(
       createHash("sha256").update(JSON.stringify(template.payload)).digest("hex"),
     );

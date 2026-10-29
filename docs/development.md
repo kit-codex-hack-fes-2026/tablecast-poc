@@ -86,7 +86,7 @@ cf・SDKの接続台帳は`CLOUDFLARE_REGISTRY_PATH`・`MINIFLARE_REGISTRY_PATH`
 
 公式pluginはpreview用dotenvを成果物へコピーするため、local buildのumaskは077とし、Turbo cacheへの書込みを無効にする。E2Eは成果物を実行固有の`build/.cloudflare`へ複製する。公開buildは各workspaceのtaskが終了する前にdotenvを除外し、公式Build Output全体をcache・CI artifactへ保存する。環境・PR・SHA・DB・Container参照を配備前に再検査し、local preview成果物を公開配備しない。[公式Build Output](https://developers.cloudflare.com/cf/ci/)
 
-StorybookとVitest Browserの設定読込時には、Bunでdemo seedの公開データと画像を準備する。生成先はWeb内の`.local/tablecast-storybook-public`で、DB・R2・本番APIへの接続は不要。通常Storyはseedの3店舗の設定・商品・画像を共用し、元データを変更して起動・buildすると同じ画像キーへ反映される。NodeのVite設定には生成JSONだけを渡し、seedのDB・認証実装をブラウザーへ含めない。
+StorybookとVitest Browserの設定読込時には、Bunでdemo seedの公開データと画像を準備する。生成先はWeb内の`.local/tablecast-storybook-public`で、DB・R2・本番APIへの接続は不要。通常Storyはseedの4店舗の設定・商品・画像を共用し、元データを変更して起動・buildすると同じ画像キーへ反映される。NodeのVite設定には生成JSONだけを渡し、seedのDB・認証実装をブラウザーへ含めない。
 
 ## Service BindingとCookie
 

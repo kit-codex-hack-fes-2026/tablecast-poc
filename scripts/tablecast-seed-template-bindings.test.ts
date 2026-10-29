@@ -211,17 +211,17 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
     expect(await seedPreviewDatabase(second.env, otherCredentials, template)).toBe(true);
     const firstBase = await stableSeed(first.db, credentials.baseTime);
     expect(await stableSeed(second.db, otherCredentials.baseTime)).toEqual(firstBase);
-    expect(firstBase.users).toHaveLength(8);
-    expect(firstBase.organisations).toHaveLength(3);
-    expect(firstBase.members).toHaveLength(9);
-    expect(firstBase.stores).toHaveLength(3);
-    expect(firstBase.releases).toHaveLength(3);
-    expect(firstBase.tables).toHaveLength(36);
+    expect(firstBase.users).toHaveLength(10);
+    expect(firstBase.organisations).toHaveLength(4);
+    expect(firstBase.members).toHaveLength(12);
+    expect(firstBase.stores).toHaveLength(4);
+    expect(firstBase.releases).toHaveLength(4);
+    expect(firstBase.tables).toHaveLength(46);
 
     const firstTimes = await currentTimes(first.db, credentials.baseTime);
     expect(await currentTimes(second.db, otherCredentials.baseTime)).toEqual(firstTimes);
-    expect(firstTimes.sessions).toHaveLength(33);
-    expect(firstTimes.orders).toHaveLength(15);
+    expect(firstTimes.sessions).toHaveLength(42);
+    expect(firstTimes.orders).toHaveLength(19);
     expect(
       firstTimes.sessions.find((session) => session.id === "tablecast-komorebi-table-01-session"),
     ).toMatchObject({ openedAt: -180_000 });

@@ -5,8 +5,8 @@ export const tablecastDemoIdentities = [
     legacyEmails: ["tablecast-owner@example.test", "owner@tablecast.example"],
     name: "佐藤 晴香",
     role: "owner",
-    stores: ["tablecast-komorebi", "tablecast-hanul"],
-    label: "京料理こもれび四条店・韓国食堂ハヌル三条店 / オーナー (owner)",
+    stores: ["tablecast-komorebi", "tablecast-hanul", "tablecast-gomen"],
+    label: "京料理こもれび・韓国食堂ハヌル・剛麺研究所 / オーナー (owner)",
     imageFile: "haruka-sato.webp",
   },
   {
@@ -72,12 +72,31 @@ export const tablecastDemoIdentities = [
     label: "Westward Burgers Kyoto / スタッフ (member)",
     imageFile: "alex-morgan.webp",
   },
+  {
+    email: "daichi.kanda@gomen.example.test",
+    legacyEmails: [],
+    name: "神田 大地",
+    role: "admin",
+    stores: ["tablecast-gomen"],
+    label: "剛麺研究所 一乗寺店 / 店長 (admin)",
+    imageFile: "gomen-logo.webp",
+  },
+  {
+    email: "minori.aoki@gomen.example.test",
+    legacyEmails: [],
+    name: "青木 実里",
+    role: "member",
+    stores: ["tablecast-gomen"],
+    label: "剛麺研究所 一乗寺店 / スタッフ (member)",
+    imageFile: "gomen-logo.webp",
+  },
 ] as const;
 
 export const tablecastDemoStoreIcons: Record<string, string> = {
   "tablecast-komorebi": "komorebi-logo.webp",
   "tablecast-koharu": "westward-logo.webp",
   "tablecast-hanul": "hanul-logo.webp",
+  "tablecast-gomen": "gomen-logo.webp",
 };
 
 export const tablecastDemoLinkIdentity = {

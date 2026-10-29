@@ -19,7 +19,7 @@ const { deploymentOwner, stores, tableSessions } = business;
 
 const execute = promisify(execFile);
 
-it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行しても営業中の卓と残額を変えない", async () => {
+it("隔離した実D1へ30日の800履歴と3200注文を投入し、再実行しても営業中の卓と残額を変えない", async () => {
   // Given: 現在のworktreeのDBを使わない独立したWorkers binding。
   const directory = await mkdtemp(join(tmpdir(), "tablecast-seed-test-"));
   const configPath = join(directory, "wrangler.json");
@@ -427,13 +427,18 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         await db.get(
           sql`SELECT COUNT(*) count FROM stores s JOIN organization o ON o.id=s.organization_id AND o.name=s.name`,
         ),
-      ).toEqual({ count: 3 });
+      ).toEqual({ count: 4 });
       const memberships = await db
         .select({ storeId: stores.id, role: member.role })
         .from(member)
         .innerJoin(stores, eq(stores.organization_id, member.organizationId));
-      expect(memberships).toHaveLength(10);
-      for (const storeId of ["tablecast-komorebi", "tablecast-hanul", "tablecast-koharu"])
+      expect(memberships).toHaveLength(13);
+      for (const storeId of [
+        "tablecast-komorebi",
+        "tablecast-hanul",
+        "tablecast-koharu",
+        "tablecast-gomen",
+      ])
         expect(
           memberships
             .filter((membership) => membership.storeId === storeId)

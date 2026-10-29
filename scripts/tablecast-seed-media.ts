@@ -21,6 +21,38 @@ export function demoImageKey(file: string) {
   }
   return key;
 }
+const themeFiles: Record<string, { description: string; storeId: string }> = {
+  "gomen-background.webp": {
+    storeId: "tablecast-gomen",
+    description: "架空の剛麺研究所の墨と和紙の生成背景。docs/design/themes/gomen/SOURCES.md参照",
+  },
+  "gomen-flyer.webp": {
+    storeId: "tablecast-gomen",
+    description:
+      "架空の剛麺研究所の生成料理チラシ。実店舗の写真ではない。docs/design/themes/gomen/SOURCES.md参照",
+  },
+};
+
+function ownedDemoAsset(storeId: string, file: string, description: string) {
+  const metadata = {
+    imageKind: "illustration" as const,
+    imageSource: { generated: true, description },
+  };
+  const bytes = readFileSync(resolve(directory, file));
+  const hash = createHash("sha256")
+    .update(JSON.stringify({ storeId, ...metadata }))
+    .update(bytes)
+    .digest("hex");
+  return { imageKey: `tablecast/uploads/${hash}.webp`, metadata };
+}
+
+export function demoThemeImage(file: string, alt: ThemeImage["alt"]): ThemeImage {
+  const entry = themeFiles[file];
+  if (!entry) throw new Error("テーマ素材がありません。");
+  const asset = ownedDemoAsset(entry.storeId, file, entry.description);
+  return { ...asset.metadata, imageKey: asset.imageKey, alt };
+}
+
 function storeLogoAsset(storeId: string, kind: "banner" | "logo" = "logo") {
   const icon = tablecastDemoStoreIcons[storeId];
   const file = kind === "banner" ? icon?.replace("-logo.webp", "-banner.webp") : icon;
@@ -35,13 +67,8 @@ function storeLogoAsset(storeId: string, kind: "banner" | "logo" = "logo") {
           : "架空店舗のデモ用に生成したロゴ",
     },
   };
-  const bytes = readFileSync(resolve(directory, "identities", file));
   // 通常の画像取込と同じく、店舗・出所・画像内容を一つのidentityにする。
-  const hash = createHash("sha256")
-    .update(JSON.stringify({ storeId, ...metadata }))
-    .update(bytes)
-    .digest("hex");
-  return { imageKey: `tablecast/uploads/${hash}.webp`, metadata };
+  return ownedDemoAsset(storeId, `identities/${file}`, metadata.imageSource.description);
 }
 
 export function demoStoreLogo(storeId: string, name: string): ThemeImage {
@@ -64,6 +91,14 @@ export function demoStoreBanner(storeId: string, name: string): ThemeImage {
 
 // seedと静的プレビューで同じ画像identityを使う。
 export function demoMediaAsset(file: string, bytes: Uint8Array) {
+  const theme = themeFiles[file];
+  if (theme) {
+    const asset = ownedDemoAsset(theme.storeId, file, theme.description);
+    return {
+      key: asset.imageKey,
+      metadata: { storeId: theme.storeId, metadata: JSON.stringify(asset.metadata) },
+    };
+  }
   const storeId = Object.entries(tablecastDemoStoreIcons).find(
     ([, icon]) =>
       file === `identities/${icon}` ||
@@ -96,6 +131,8 @@ export async function seedMenuImages(
             [
               config.branding?.logo?.imageKey,
               config.branding?.banner?.imageKey,
+              ...Object.values(config.appearance?.assets ?? {}).map((asset) => asset.imageKey),
+              ...(config.banners ?? []).map((banner) => banner.image.imageKey),
               ...config.products.flatMap((product) => [
                 product.imageKey,
                 ...product.modifiers.flatMap((modifier) =>

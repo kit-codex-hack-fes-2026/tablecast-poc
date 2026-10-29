@@ -84,7 +84,12 @@ it("実R2で遅い画像を待たず4枠を使い、再配備・欠損復旧・�
     expect(first.uploaded).toBeGreaterThan(100);
     expect(first.confirmed).toBe(0);
     for (const configuration of configurations) {
-      for (const logo of [configuration.branding?.logo, configuration.branding?.banner]) {
+      for (const logo of [
+        configuration.branding?.logo,
+        configuration.branding?.banner,
+        ...Object.values(configuration.appearance?.assets ?? {}),
+        ...(configuration.banners ?? []).map((banner) => banner.image),
+      ]) {
         if (!logo) throw new Error("seedの店舗ロゴが必要です。");
         const image = await real.get(logo.imageKey);
         expect(image?.httpMetadata?.contentType).toBe("image/webp");

@@ -5,6 +5,7 @@ import { demoOptionImageKey } from "../tablecast-demo-option-images.ts";
 import { koreanDemoStore } from "../tablecast-korean-demo.ts";
 import { demoImageKey, demoStoreBanner, demoStoreLogo } from "../tablecast-seed-media.ts";
 import { withDemoFoodChanges } from "./food.ts";
+import { gomenDemoStore } from "./gomen.ts";
 import { komorebiSkills } from "./komorebi-knowledge.ts";
 import { localizeSeedConfiguration } from "./localize.ts";
 import { groupDefinitions } from "./modifiers.ts";
@@ -210,26 +211,29 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
       tableCount: profile === "smoke" ? 2 : 12,
     };
   });
-  return seededStores.map((store) => ({
-    ...store,
-    configuration: configurationSchema.parse({
-      ...localizeSeedConfiguration(store.configuration, store.id),
-      branding: {
-        logo: (() => {
-          const image = demoStoreLogo(store.id, store.name);
-          return {
-            ...image,
-            alt: { ...image.alt, "zh-Hans": `${store.name} 标志`, ko: `${store.name} 로고` },
-          };
-        })(),
-        banner: (() => {
-          const image = demoStoreBanner(store.id, store.name);
-          return {
-            ...image,
-            alt: { ...image.alt, "zh-Hans": `${store.name} 横幅`, ko: `${store.name} 배너` },
-          };
-        })(),
-      },
-    }),
-  }));
+  return [
+    ...seededStores.map((store) => ({
+      ...store,
+      configuration: configurationSchema.parse({
+        ...localizeSeedConfiguration(store.configuration, store.id),
+        branding: {
+          logo: (() => {
+            const image = demoStoreLogo(store.id, store.name);
+            return {
+              ...image,
+              alt: { ...image.alt, "zh-Hans": `${store.name} 标志`, ko: `${store.name} 로고` },
+            };
+          })(),
+          banner: (() => {
+            const image = demoStoreBanner(store.id, store.name);
+            return {
+              ...image,
+              alt: { ...image.alt, "zh-Hans": `${store.name} 横幅`, ko: `${store.name} 배너` },
+            };
+          })(),
+        },
+      }),
+    })),
+    gomenDemoStore(profile),
+  ];
 }
