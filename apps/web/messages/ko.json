@@ -445,5 +445,15 @@
   "kiosk_order_failed_items": "상품 {count}개의 주문을 전송하지 못했습니다",
   "kiosk_review_failed": "장바구니의 상품을 확인하지 못했습니다",
   "kiosk_staff_request_failed": "직원 호출을 전송하지 못했습니다",
-  "kiosk_bill_request_failed": "계산 요청을 전송하지 못했습니다"
+  "kiosk_bill_request_failed": "계산 요청을 전송하지 못했습니다",
+  "kiosk_standby_enable": "음성·동작 호출 켜기 (시험)",
+  "kiosk_standby_disable": "음성·동작 호출 끄기",
+  "kiosk_standby_off": "호출 대기 꺼짐",
+  "kiosk_standby_preparing": "기기 내 감지를 준비하고 있습니다…",
+  "kiosk_standby_armed": "음성·동작 호출 대기 중",
+  "kiosk_standby_conversation": "60초 동안 조용하면 호출 대기로 돌아갑니다",
+  "kiosk_standby_suspended": "화면이 숨겨져 중지되었습니다. 다시 켜 주세요.",
+  "kiosk_standby_error": "호출 대기를 시작할 수 없습니다. 카메라·마이크 권한을 확인하거나 음성 시작 버튼을 이용해 주세요.",
+  "kiosk_standby_note": "이 기기의 카메라와 마이크를 사용합니다. 저기요, 손들기, 화면 보기로 호출하고 검지를 교차해 계산을 문의할 수 있습니다. 감지 정확도는 평가 중입니다.",
+  "kiosk_standby_language": "이 호출 언어는 매장에서 활성화되지 않았습니다. 직원에게 문의해 주세요."
 }

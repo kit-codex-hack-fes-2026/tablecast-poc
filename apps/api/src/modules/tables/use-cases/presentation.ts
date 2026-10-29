@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { sql } from "drizzle-orm";
+import { and, eq, notExists, or, sql } from "drizzle-orm";
 import type { TableRecord } from "../../../db/records";
 import type { ApiServices } from "../../../platform/context";
 import type { Locale } from "../../../platform/model";
@@ -172,7 +172,31 @@ async function requestStaffAssistance(
           db
             .update(business.tableSessions)
             .set({ staff_called: 1, mutation_id: mutation })
-            .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
+            .where(
+              and(
+                eq(business.tableSessions.id, row.id),
+                eq(business.tableSessions.store_id, actor.storeId),
+                eq(business.tableSessions.status, "open"),
+                sql`1=1${gate}`,
+                kind === "bill.requested"
+                  ? or(
+                      eq(business.tableSessions.staff_called, 0),
+                      notExists(
+                        db
+                          .select({ cursor: business.tableEvents.cursor })
+                          .from(business.tableEvents)
+                          .where(
+                            and(
+                              eq(business.tableEvents.store_id, actor.storeId),
+                              eq(business.tableEvents.table_session_id, row.id),
+                              eq(business.tableEvents.kind, "bill.requested"),
+                            ),
+                          ),
+                      ),
+                    )
+                  : undefined,
+              ),
+            ),
           eventStatement(
             services,
             actor,
@@ -182,13 +206,20 @@ async function requestStaffAssistance(
           ),
           ...queries,
         ] as const);
-        ensure(updated.meta.changes === 1, "SESSION_STALE");
+        const decoded = await decode(state);
+        if (!updated.meta.changes) await getSession(services, actor);
+        ensure(
+          updated.meta.changes === 1 ||
+            (kind === "bill.requested" && decoded.billRequested && decoded.staffCalled),
+          "SESSION_STALE",
+        );
         recordD1Update(updated.meta);
-        await notifyStore(services, actor.storeId, actor.tableSessionId, {
-          cursor: event.meta.last_row_id,
-          demoId: row.kind === "demo" ? row.id : undefined,
-        });
-        return decode(state);
+        if (updated.meta.changes)
+          await notifyStore(services, actor.storeId, actor.tableSessionId, {
+            cursor: event.meta.last_row_id,
+            demoId: row.kind === "demo" ? row.id : undefined,
+          });
+        return decoded;
       });
     },
     { env: services.env, input: { actor } },

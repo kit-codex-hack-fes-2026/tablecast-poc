@@ -36,6 +36,7 @@ export const boundaryFiles = [
   ["generated", "src/routeTree.gen.ts"],
   ["asset", "src/*.css"],
   ["declaration", "src/env.d.ts"],
+  ["declaration", "src/features/*/standby-landmarks.d.ts"],
   ["context", "src/features/store/store-context.tsx"],
   ["context", "src/features/configuration/configuration-languages-context.ts"],
   ["composition", "src/features/(store)/{admin-shell,store-shell,settings-shell,store-home}.tsx"],
@@ -44,6 +45,10 @@ export const boundaryFiles = [
   ["model", "src/features/*/device-qr-code.ts"],
   ["query", "src/features/*/*-query.ts"],
   ["runtime", "src/features/*/*-dom.ts"],
+  [
+    "runtime",
+    "src/features/*/{standby-capture,standby-inference.worker,standby-landmarks.worker,use-standby}.ts",
+  ],
   [
     "runtime",
     "src/features/*/voice-{connection,runtime,microphone,transcript,delegation,proactive,transport,subscription,observations}.ts",
@@ -67,6 +72,10 @@ const publicFiles = (feature: string, module: string[]) => ({
   allow: { to: file(["feature", "composition", "query", "model", "context"], feature, module) },
 });
 export const boundaryPolicies = [
+  {
+    from: { file: { path: "**/src/features/kiosk/standby-landmarks.d.ts" } },
+    allow: { to: file("model", "kiosk") },
+  },
   {
     from: { file: { path: "**/src/ssr.ts" } },
     allow: { to: { file: { path: "**/src/i18n/runtime-default.ts" } } },

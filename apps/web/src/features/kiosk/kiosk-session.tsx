@@ -844,6 +844,8 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                   <ErrorNotice query={eventQuery} />
                   <KioskVoicePanel
                     voice={voice}
+                    standbyBlocked={customerTargetUnconfirmed}
+                    onWakeLanguage={(next) => language.mutateAsync(next)}
                     lines={conversationLines(events)}
                     events={events}
                     catalog={catalog.data}

@@ -7,6 +7,7 @@ import {
 } from "@tablecast/api/schema";
 import { AnimatePresence } from "motion/react";
 import { useLayoutEffect, useRef, useState } from "react";
+import type { StandbyControlProps } from "./standby-control";
 import {
   Conversation,
   ConversationContent,
@@ -64,6 +65,7 @@ export type VoicePanelProps = {
   reviewPending?: boolean;
   snapshot?: null | Snapshot;
   speechSpeed?: number;
+  standby?: StandbyControlProps;
   view: VoiceView;
 };
 
@@ -116,6 +118,7 @@ export function VoicePanelContent({
   onMicrophoneChange,
   onMicrophoneRefresh,
   onSuggestion,
+  standby,
   camera,
 }: VoicePanelProps & { camera: ReturnType<typeof useLocalCamera> }) {
   const panel = useRef<HTMLElement>(null);
@@ -347,6 +350,7 @@ export function VoicePanelContent({
           </Conversation>
         </div>
         <VoiceControls
+          standby={standby}
           view={view}
           active={active}
           phase={phase}

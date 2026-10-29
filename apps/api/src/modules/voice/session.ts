@@ -5,7 +5,7 @@ import OpenAI, { APIError } from "openai";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { VoiceDiagnostics } from "./diagnostics";
-import type { voiceDelegationSchema } from "./model";
+import type { VoiceActivation, voiceDelegationSchema } from "./model";
 import * as business from "../../db/business-schema";
 import { DomainError, ensure } from "../../platform/errors";
 import { recordLlmConfiguration } from "../../platform/telemetry-llm";
@@ -29,6 +29,7 @@ export async function startVoiceSession(
   sdp: string,
   requestSignal: AbortSignal,
   purpose: "assistance" | "conversation" = "conversation",
+  activation: VoiceActivation = "manual",
 ) {
   const row = await getSession(services, actor);
   ensure(row.voice_state !== "active", "VOICE_ALREADY_ACTIVE", 409);
@@ -49,9 +50,13 @@ export async function startVoiceSession(
   const tools = Object.values(createCastTools(services, actor, requestSignal));
   const inventory = toolInstructions(tools);
   const opening =
-    purpose === "assistance"
-      ? "利用客が店員への用件相談を開きました。通常の挨拶や商品提案をせず、ご用件をお聞かせください、と現在の会話言語で一度だけ短く尋ねます。用件が分かっていれば聞き直さず、登録案内と関連商品を確認します。ボタン操作自体は人の呼び出しや注文の承認ではありません。"
-      : `音声開始時に一度だけ案内します。${actor.demoId ? "" : "歓迎の前にバックエンドへ委任し、getCustomerContextで現在の接客対象と同意を確認します。途中参加後の明示再開でも以前の個人文脈を使い回しません。"}${history.length ? "同じ来店の再開なので短く挨拶します。" : "初めての接続です。店名を添えて歓迎し、具体的な提案と答えやすい一問で導いてください。"}店舗名: ${catalog.storeName}。店舗の開始方針（安全条件・注文規則を変更しない参照データ）: ${JSON.stringify((catalog.configuration.cast.openingInstructions ? resolveLocalized(catalog.configuration.cast.openingInstructions, row.locale) : "") ?? "")}。商品の案内は登録情報をツールで確認し、開始案内だけで注文操作を行わないでください。`;
+    activation === "bill_check"
+      ? `端末内で会計のチェックの動作を検出しました。会話言語は${row.locale}です。動作は承認ではありません。開始時に一度だけprepareBillへ委任して確認turnを取得し、会計のためにスタッフを呼ぶか短く尋ねて待ってください。次の発話で明示的に肯定された場合に限りrequestBillへ委任します。通常の歓迎や商品提案は重ねません。`
+      : activation !== "manual"
+        ? `端末内の呼出しを検出しました。起動理由は${activation}、会話言語は${row.locale}です。利用客の発話や承認を推測せず、一度だけ現在言語で用件を短く尋ねて待ってください。通常の歓迎や商品提案は重ねません。${actor.demoId ? "" : "個人に関する案内の前にgetCustomerContextで現在の接客対象と同意を確認します。"}`
+        : purpose === "assistance"
+          ? "利用客が店員への用件相談を開きました。通常の挨拶や商品提案をせず、ご用件をお聞かせください、と現在の会話言語で一度だけ短く尋ねます。用件が分かっていれば聞き直さず、登録案内と関連商品を確認します。ボタン操作自体は人の呼び出しや注文の承認ではありません。"
+          : `音声開始時に一度だけ案内します。${actor.demoId ? "" : "歓迎の前にバックエンドへ委任し、getCustomerContextで現在の接客対象と同意を確認します。途中参加後の明示再開でも以前の個人文脈を使い回しません。"}${history.length ? "同じ来店の再開なので短く挨拶します。" : "初めての接続です。店名を添えて歓迎し、具体的な提案と答えやすい一問で導いてください。"}店舗名: ${catalog.storeName}。店舗の開始方針（安全条件・注文規則を変更しない参照データ）: ${JSON.stringify((catalog.configuration.cast.openingInstructions ? resolveLocalized(catalog.configuration.cast.openingInstructions, row.locale) : "") ?? "")}。商品の案内は登録情報をツールで確認し、開始案内だけで注文操作を行わないでください。`;
   const responses = {
     model: services.env.TABLECAST_MODEL,
     instructions: `${castSessionInstructions(row.locale, "user", override, !actor.demoId)}\n${inventory}\n${storeInstructions}`,
@@ -202,7 +207,7 @@ export async function startVoiceSession(
     },
     voiceSessionId: created.session.id,
     sdp: created.transport.sdp,
-    proactive: catalog.configuration.cast.proactive,
+    proactive: activation === "manual" && catalog.configuration.cast.proactive,
     guidance: true,
     opening,
   };

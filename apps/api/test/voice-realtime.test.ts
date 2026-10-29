@@ -219,3 +219,65 @@ it("音声toolはORとNOTを保って返し、参照先全件を必須にせず�
   });
   expect(result.result).toMatchObject({ cart: { complete: true } });
 });
+
+it("チェックは承認にせず、同じsessionの次turnの明示承認でだけ会計を呼ぶ", async () => {
+  await setup();
+  await expect(
+    tool("requestBill", { approved: true, confirmationTurnId: "tablecast-turn" }),
+  ).rejects.toMatchObject({ code: "APPROVAL_REQUIRED" });
+  expect((await getTableState(services(), device)).billRequested).toBe(false);
+  await tool("prepareBill");
+  await expect(
+    tool("requestBill", { approved: true, confirmationTurnId: "tablecast-turn" }),
+  ).rejects.toMatchObject({ code: "APPROVAL_REQUIRED" });
+  await services().db.batch([
+    services()
+      .db.insert(business.voiceTurns)
+      .values({
+        id: "tablecast-confirm-bill",
+        voice_session_id: voiceId,
+        table_session_id: device.tableSessionId ?? "",
+        store_id: device.storeId,
+        status: "started",
+        started_at: Date.now(),
+        locale: "ja",
+      }),
+    services()
+      .db.update(business.tableSessions)
+      .set({ active_turn_id: "tablecast-confirm-bill" })
+      .where(eq(business.tableSessions.id, device.tableSessionId ?? "")),
+  ]);
+  const invoke = (args: Record<string, unknown>) =>
+    invokeVoiceTool(
+      services(),
+      {
+        voiceSessionId: voiceId,
+        turnId: "tablecast-confirm-bill",
+        toolCallId: crypto.randomUUID(),
+        toolName: "requestBill",
+        arguments: args,
+      },
+      new AbortController().signal,
+    );
+  await expect(
+    invoke({ approved: false, confirmationTurnId: "tablecast-turn" }),
+  ).rejects.toMatchObject({ code: "INVALID_INPUT" });
+  await expect(
+    invoke({ approved: true, confirmationTurnId: "tablecast-other-table" }),
+  ).rejects.toMatchObject({ code: "APPROVAL_REQUIRED" });
+  await invoke({ approved: true, confirmationTurnId: "tablecast-turn" });
+  const after = await getTableState(services(), device);
+  expect(after.billRequested).toBe(true);
+  await expect(
+    invoke({ approved: true, confirmationTurnId: "tablecast-turn" }),
+  ).rejects.toMatchObject({ code: "APPROVAL_REQUIRED" });
+  expect(
+    (await getTableState(services(), device)).events.filter(
+      (event) => event.kind === "bill.requested",
+    ),
+  ).toHaveLength(1);
+  await setVoiceSession(services(), device, null);
+  await expect(
+    invoke({ approved: true, confirmationTurnId: "tablecast-turn" }),
+  ).rejects.toMatchObject({ code: "VOICE_SESSION_STALE" });
+});

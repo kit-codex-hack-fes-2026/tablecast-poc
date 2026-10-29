@@ -50,6 +50,9 @@ function Panel({ voice, events }: { events: TableEvent[]; voice: VoiceConnection
         English
       </button>
       <KioskVoicePanel
+        onWakeLanguage={async (next) => {
+          setLocale(next);
+        }}
         voice={voice}
         lines={[]}
         events={events}

@@ -7,6 +7,7 @@ import type { VoicePanelProps } from "./voice-panel";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { MicrophoneNotice, MicrophoneSettings } from "./microphone-settings";
+import { StandbyControl } from "./standby-control";
 
 const AudioWaveform = lazy(() =>
   import("./audio-waveform").then((module) => ({ default: module.AudioWaveform })),
@@ -131,6 +132,7 @@ function VoiceIdle({
 }
 
 export function VoiceControls({
+  standby,
   view,
   active,
   phase,
@@ -150,6 +152,7 @@ export function VoiceControls({
   | "onSpeedChange"
   | "onStart"
   | "speechSpeed"
+  | "standby"
   | "view"
 > & {
   active: boolean;
@@ -189,6 +192,7 @@ export function VoiceControls({
           />
         )}
       </div>
+      {standby && <StandbyControl {...standby} />}
     </footer>
   );
 }

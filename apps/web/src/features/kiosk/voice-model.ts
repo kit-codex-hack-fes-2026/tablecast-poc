@@ -54,6 +54,7 @@ export type VoiceView = {
   microphone?: MicrophoneView;
   outputTrack?: MediaStreamTrack;
   progress?: { stage: "reading" | "searching" | "thinking"; summary: string };
+  returnToStandby?: boolean;
   status: VoiceStatus;
   suggestions?: string[];
 };
