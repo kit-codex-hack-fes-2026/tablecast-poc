@@ -148,7 +148,7 @@ export function FoodInformationView({
                 : foodStatusLabels[assessment.status],
             );
             return (
-              <li key={key} className="min-w-0">
+              <li key={key} className="flex min-w-0 items-start">
                 <FoodDetailsBadge
                   label={`${label}: ${statusLabel}`}
                   title={label}
@@ -180,7 +180,7 @@ export function FoodInformationView({
               </li>
             );
           })}
-          <li className="min-w-0">
+          <li className="flex min-w-0 items-start">
             <FoodDetailsBadge
               label={`${t("editor_cross_contact")}: ${t(foodStatusLabels[value.crossContact])}`}
               title={t("food_preparation")}
@@ -225,7 +225,7 @@ export function FoodInformationSkeleton({ caption }: { caption?: ReactNode }) {
         {dietaryKeys.map((key) => {
           const Icon = dietaryIcons[key];
           return (
-            <li key={key} className="min-w-0">
+            <li key={key} className="flex min-w-0 items-start">
               <FoodBadgeSkeleton>
                 <Icon />
                 {t(key === "vegetarian" ? "food_vegetarian_short" : dietaryLabels[key])}
@@ -234,7 +234,7 @@ export function FoodInformationSkeleton({ caption }: { caption?: ReactNode }) {
             </li>
           );
         })}
-        <li className="min-w-0">
+        <li className="flex min-w-0 items-start">
           <FoodBadgeSkeleton>
             <CircleHelp />
             {t("food_preparation")}

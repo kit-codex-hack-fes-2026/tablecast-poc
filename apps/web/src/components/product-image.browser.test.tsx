@@ -40,6 +40,8 @@ const menu = (imageKey: null | string) => (
 
 it("商品画像の未登録・取得待ち・失敗で商品名と次の行の位置を変えない", async () => {
   const view = await render(menu(null));
+  // content-visibilityの描画フレームを待ってから画像欄の寸法を比較する。
+  await new Promise(requestAnimationFrame);
   const title = () => view.getByText(product.text.ja.displayName, { exact: true }).element();
   const next = () => view.getByRole("button", { name: /こもれび 白霞 にごり酒/ }).element();
   const titleTop = title().getBoundingClientRect().top;
@@ -64,6 +66,7 @@ it("読込待ちのぼかしと寸法を保ち、透過画像のdecode後に共�
     </div>,
   );
   const image = view.getByRole("img", { name: "商品" }).element();
+  if (!(image instanceof HTMLImageElement)) throw new Error("商品画像がありません");
   expect(image.getBoundingClientRect().width).toBe(192);
   expect(image.getBoundingClientRect().height).toBe(192);
   const layer = image.parentElement?.querySelector('[data-ui="image-placeholder"]');
@@ -81,6 +84,9 @@ it("読込待ちのぼかしと寸法を保ち、透過画像のdecode後に共�
   });
   try {
     image.scrollIntoView();
+    // native lazy loadingへ画面内に入った描画フレームを渡す。
+    await new Promise(requestAnimationFrame);
+    await expect.poll(() => image.complete && image.naturalWidth > 0).toBe(true);
     await expect.poll(() => placeholderBackground(image)).toBe("none");
     const expected = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? [] : ["0.2s"];
     expect(transitions).toEqual(expected);
@@ -89,6 +95,38 @@ it("読込待ちのぼかしと寸法を保ち、透過画像のdecode後に共�
   }
   expect(image.getBoundingClientRect().height).toBe(192);
   await expect.element(view.getByRole("img", { name: "商品" })).toBeVisible();
+});
+
+it("フェードを中止しても読込済み画像の待機背景を残さない", async () => {
+  const view = await render(
+    <div style={{ marginTop: 20000 }}>
+      <ProductImage src={transparent} alt="商品" width={192} height={192} blurhash={blurhash} />
+    </div>,
+  );
+  const image = view.getByRole("img", { name: "商品" }).element();
+  const frame = image.parentElement;
+  if (!frame) throw new Error("画像の待機層がありません");
+  let cancelled = 0;
+  const observer = new MutationObserver(() => {
+    if (frame.dataset.imageState === "loaded")
+      frame
+        .querySelector('[data-ui="image-placeholder"]')
+        ?.getAnimations()
+        .forEach((animation) => {
+          animation.cancel();
+          cancelled += 1;
+        });
+  });
+  observer.observe(frame, { attributes: true, attributeFilter: ["data-image-state"] });
+  try {
+    image.scrollIntoView();
+    await new Promise(requestAnimationFrame);
+    await expect.poll(() => placeholderBackground(image)).toBe("none");
+    await expect.element(view.getByRole("img", { name: "商品" })).toBeVisible();
+    expect(cancelled > 0).toBe(!window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  } finally {
+    observer.disconnect();
+  }
 });
 
 it("読込失敗で背景を消して通知し、画像差替え後は再び読込待ちを表示する", async () => {

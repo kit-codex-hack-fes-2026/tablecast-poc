@@ -1,7 +1,7 @@
 import { imageDeliveryVersion } from "@tablecast/api/schema";
 import { blurhashToDataUri } from "@unpic/placeholder";
 import { Image } from "@unpic/react/base";
-import { type CSSProperties, useCallback, useMemo, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "tailwind-variants";
 import { useMediaImage } from "./image-provider";
 
@@ -38,7 +38,7 @@ function useImagePlaceholder(
   }, [hash, width, height]);
   const [settled, setSettled] = useState<{ src: string; state: "finished" | "loaded" }>();
   const state = settled?.src === src ? settled.state : "pending";
-  const finish = () => setSettled({ src, state: "finished" });
+  const finish = useCallback(() => setSettled({ src, state: "finished" }), [src]);
   const fail = () => {
     finish();
     onError?.();
@@ -120,6 +120,19 @@ export function ProductImage({
     asset?.height ?? height,
     onError,
   );
+  const placeholderRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (state !== "loaded") return undefined;
+    let cancelled = false;
+    // 初回描画前の完了やtransitionの中止でも、待機背景を残さない。
+    const animations = placeholderRef.current?.getAnimations() ?? [];
+    void Promise.allSettled(animations.map((animation) => animation.finished)).then(() => {
+      if (!cancelled) finish();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [finish, state]);
   if (natural && asset) {
     width = asset.width;
     height = asset.height;
@@ -161,6 +174,7 @@ export function ProductImage({
       />
       {hasPlaceholder && (
         <span
+          ref={placeholderRef}
           aria-hidden="true"
           data-ui="image-placeholder"
           className={cn(
@@ -169,9 +183,6 @@ export function ProductImage({
             state === "loaded" &&
               "transition-opacity duration-(--motion-state) ease-(--motion-ease-out) motion-reduce:transition-none",
           )}
-          onTransitionEnd={(event) => {
-            if (event.target === event.currentTarget && event.propertyName === "opacity") finish();
-          }}
         />
       )}
     </span>
