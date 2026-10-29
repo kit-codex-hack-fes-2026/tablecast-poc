@@ -82,6 +82,6 @@ upload_image応答のimageKey・imageKind・imageSourceを対象商品へ設定�
 
 get_configurationのlocales・uiLocales・fallbackと入力schemaを確認する。対応言語を増やす依頼ではconfiguration.languagesに正規BCP 47コードを追加し、ja・enを残す。初期の中国語はzh-Hans、韓国語はko。価格・画像・他言語を保持した全configurationで既存の下書き操作を使い、専用toolがあると説明しない。
 
-商品textの各言語はdisplayNameを意味訳、transliterationを音の転写として同時に設定する。日本語も原名と読みを持たせる。未翻訳の外国語はキー全体を省略し、片方だけ・空文字・空白だけを保存しない。画面で上下に表示するため、転写を括弧でdisplayNameへ連結しない。英語はイギリス英語で、転写は長音記号付きヘボン式にする。例はdisplayName: Japanese soy sauce fried chicken、transliteration: Karaage。銘柄は固有名を残し、純米吟醸等の種別は意味を説明する。中国語・韓国語の転写は各言語の文字を使う。
+商品textの各言語はdisplayNameを意味訳、transliterationを音の転写として同時に設定する。日本語も原名と読みを持たせる。未翻訳の外国語はキー全体を省略し、片方だけ・空文字・空白だけを保存しない。画面で上下に表示するため、転写を括弧でdisplayNameへ連結しない。英語はイギリス英語で、転写は長音記号付きヘボン式にする。例はdisplayName: Japanese soy sauce fried chicken、transliteration: Karaage。銘柄は固有名を残し、純米吟醸等の種別は短い名詞句で意味訳する。純米吟醸はpremium pure rice sake、転写はJunmai Ginjōとし、精米歩合や製法をdisplayNameへ詰め込まずdescriptionへ分ける。中国語・韓国語の転写は各言語の文字を使う。
 
 カテゴリ・選択肢・プラン・ガイド・説明・castの指示とvoice・画像altも必要な言語を揃える。未翻訳は英語→日本語へ戻るが会話言語は変更されない。無効化した言語の既存データを勝手に削除しない。update_draft→validate_draft→get_draft_diffを実行し、依頼された言語と実際に保存した文言・不足を示す。公開の承認手順は通常どおり人が行う。
