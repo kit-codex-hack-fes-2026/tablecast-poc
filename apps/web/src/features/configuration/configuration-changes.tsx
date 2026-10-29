@@ -12,15 +12,18 @@ import {
 import { Badge } from "../../components/ui/badge";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
+import { PosConfigurationChanges } from "../pos/pos-configuration-changes";
 import { labels } from "./configuration-change-labels-model";
 import { InstructionView } from "./instruction-view";
 
 export function ConfigurationChanges({
   changes,
   configuration,
+  storeId,
 }: {
   changes: ConfigDraft["changes"];
   configuration: Configuration;
+  storeId?: string;
 }) {
   const { t, locale } = useI18n();
   const names = new Map(
@@ -181,14 +184,27 @@ export function ConfigurationChanges({
       );
     return JSON.stringify(value) ?? "—";
   }
-  const groups = Map.groupBy(changes, (change) => {
-    const [collection, index] = change.path.split(".");
-    return ["products", "categories", "plans"].includes(collection ?? "")
-      ? `${collection}.${index}`
-      : (collection ?? change.path);
-  });
+  const groups = Map.groupBy(
+    changes.filter((change) => change.path !== "pos"),
+    (change) => {
+      const [collection, index] = change.path.split(".");
+      return ["products", "categories", "plans"].includes(collection ?? "")
+        ? `${collection}.${index}`
+        : (collection ?? change.path);
+    },
+  );
   return (
     <div className="space-y-6">
+      {changes
+        .filter((change) => change.path === "pos")
+        .map((change) => (
+          <PosConfigurationChanges
+            key={change.path}
+            change={change}
+            configuration={configuration}
+            storeId={storeId}
+          />
+        ))}
       {[...groups].map(([path, grouped]) => (
         <section
           key={path}

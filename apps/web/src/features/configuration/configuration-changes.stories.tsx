@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { expect } from "storybook/test";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { expect, within } from "storybook/test";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
+import { posCatalogOptions, posSettingsOptions } from "../pos/pos-query";
+import { posSeedCatalog, posSeedSettings } from "../pos/test-support/pos-seed-fixture";
 import { ConfigurationChanges } from "./configuration-changes";
 
 const meta = {
@@ -89,5 +93,107 @@ export const English: Story = {
     await expect(rows[6]).toHaveTextContent("Restaurant name");
     await expect(rows[7]).toHaveTextContent("Image source");
     await expect(rows[7]).toHaveTextContent("Generated image");
+  },
+};
+
+const mappedProduct = posSeedSettings.products.find((item) => item.options.length);
+const mappedOption = mappedProduct?.options[0];
+const originalProduct = posSeedCatalog.items.find(
+  (item) => item.id === `square-${mappedProduct?.id}`,
+);
+const originalOption = originalProduct?.options.find(
+  (item) => item.id === `square-${mappedOption?.id}`,
+);
+if (!mappedProduct || !mappedOption || !originalProduct || !originalOption)
+  throw new Error("商品とカスタマイズの差分fixtureがありません");
+const original = { product: originalProduct, option: originalOption };
+const posChange = {
+  path: "pos",
+  before: {
+    provider: "square",
+    connectionId: "tablecast-pos-connection",
+    mappings: [
+      { kind: "product", localId: mappedProduct.id, externalId: originalProduct.id },
+      { kind: "option", localId: mappedOption.id, externalId: originalOption.id },
+    ],
+  },
+  after: {
+    provider: "square",
+    connectionId: "tablecast-pos-connection",
+    mappings: [
+      { kind: "product", localId: mappedProduct.id, externalId: "tablecast-square-product-next" },
+      { kind: "option", localId: mappedOption.id, externalId: "tablecast-square-option-next" },
+    ],
+  },
+  sensitive: true,
+};
+
+function createPosDiffClient() {
+  const next = new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity, retry: false } },
+  });
+  next.setQueryData(posSettingsOptions("tablecast-store").queryKey, posSeedSettings);
+  next.setQueryData(posCatalogOptions("tablecast-store", "tablecast-location").queryKey, {
+    ...posSeedCatalog,
+    items: [
+      ...posSeedCatalog.items,
+      {
+        ...original.product,
+        id: "tablecast-square-product-next",
+        name: "変更先の商品（店内）",
+        options: [
+          {
+            ...original.option,
+            id: "tablecast-square-option-next",
+            name: "変更先のカスタマイズ",
+          },
+        ],
+      },
+    ],
+  });
+  return next;
+}
+
+export const PosMapping: Story = {
+  name: "商品・カスタマイズのSquare対応前後を原文名で確認",
+  args: { storeId: "tablecast-store", changes: [posChange] },
+  decorators: [
+    function WithQueries(Story) {
+      const [client] = useState(createPosDiffClient);
+      useEffect(() => () => client.clear(), [client]);
+      return (
+        <QueryClientProvider client={client}>
+          <Story />
+        </QueryClientProvider>
+      );
+    },
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const row = canvas.getByRole("row", {
+      name: new RegExp(`商品対応 · ${mappedProduct.name.ja}`),
+    });
+    await expect(row).toHaveTextContent(originalProduct.name);
+    await expect(row).toHaveTextContent("変更先の商品（店内）");
+    const option = canvas.getByRole("row", {
+      name: new RegExp(`カスタマイズ対応 · ${mappedOption.name.ja}`),
+    });
+    await expect(option).toHaveTextContent(mappedOption.name.ja);
+    await expect(option).toHaveTextContent(originalOption.name);
+    await expect(option).toHaveTextContent("変更先のカスタマイズ");
+    await expect(canvas.queryByText("tablecast-square-product-next")).not.toBeInTheDocument();
+  },
+};
+
+export const PosMappingEnglish: Story = {
+  ...PosMapping,
+  name: "英語の差分でもSquare登録名は原文を保持",
+  globals: { locale: "en" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("columnheader", { name: "Before" })).toBeVisible();
+    await expect(canvas.getByRole("columnheader", { name: "After" })).toBeVisible();
+    await expect(canvas.getByText("変更先の商品（店内）", { exact: true })).toBeVisible();
+    await expect(canvas.getByText("変更先のカスタマイズ", { exact: true })).toBeVisible();
   },
 };

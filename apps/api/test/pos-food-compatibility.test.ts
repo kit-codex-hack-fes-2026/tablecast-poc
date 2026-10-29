@@ -4,14 +4,20 @@ import { configReleases, payments, stores } from "../src/db/table-schema";
 import { posCheckoutViewSchema } from "../src/modules/pos/model";
 import { fixtureDb } from "./database-fixture";
 import { configuration } from "./fixture";
-import { checkoutPath, request, setupPosFixture, squareHttp } from "./pos-fixture";
+import {
+  checkoutPath,
+  posConfiguration,
+  request,
+  setupPosFixture,
+  squareHttp,
+} from "./pos-fixture";
 
 afterEach(() => vi.restoreAllMocks());
 
 it("旧allergens形式の注文版を共通互換読取で保持し、現行版の値上げを既存請求へ混ぜない", async () => {
   const { cookie, table } = await setupPosFixture();
   const legacy = {
-    ...configuration,
+    ...posConfiguration,
     products: configuration.products.map(({ foodInfo: _foodInfo, ...product }) => ({
       ...product,
       allergens: {

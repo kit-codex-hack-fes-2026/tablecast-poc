@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { posSettingsSchema } from "@tablecast/api/schema";
+import { configDraftSchema, posSettingsSchema } from "@tablecast/api/schema";
 import ja from "../messages/ja.json" with { type: "json" };
 import { signInStaff } from "./support/session";
 import { test } from "./support/test";
@@ -46,12 +46,61 @@ test("所有者のCookieでPOS設定と商品対応一覧をSSRし匿名へ漏�
     ).toBeVisible();
     await expect(productGroup).toContainText(new Intl.NumberFormat("ja-JP").format(product.price));
 
+    const createdResponse = await page.request.post("/api/admin/stores/tablecast-komorebi/drafts", {
+      headers: { "X-Tablecast-Instructions": "1" },
+    });
+    expect(createdResponse.status()).toBe(200);
+    const created = configDraftSchema.parse(await createdResponse.json());
+    const draftName = `${product.name.ja}（下書き確認）`;
+    const updatedResponse = await page.request.put(
+      `/api/admin/stores/tablecast-komorebi/drafts/${created.id}`,
+      {
+        headers: { "X-Tablecast-Instructions": "1" },
+        data: {
+          expectedVersion: created.version,
+          instructionFormatVersion: 1,
+          configuration: {
+            ...created.configuration,
+            products: created.configuration.products.map((item) =>
+              item.id === product.id
+                ? {
+                    ...item,
+                    text: { ...item.text, ja: { ...item.text.ja, displayName: draftName } },
+                  }
+                : item,
+            ),
+          },
+        },
+      },
+    );
+    expect(updatedResponse.status()).toBe(200);
+    const updated = configDraftSchema.parse(await updatedResponse.json());
+    const draftPath = `${path}?draftId=${encodeURIComponent(created.id)}`;
+    const selectedResponse = await page.request.get(
+      `/api/admin/stores/tablecast-komorebi/pos?draftId=${encodeURIComponent(created.id)}`,
+    );
+    expect(selectedResponse.status()).toBe(200);
+    const selected = posSettingsSchema.parse(await selectedResponse.json());
+    expect(selected.draft).toMatchObject({ id: created.id, version: updated.version });
+    expect(selected.publishedVersion).toBe(settings.publishedVersion);
+    expect(selected.products.find((item) => item.id === product.id)?.name.ja).toBe(draftName);
+    const draftSsr = await ssrPage.goto(draftPath);
+    expect(draftSsr?.status()).toBe(200);
+    expect(draftSsr?.headers()["cache-control"]).toBe("private, no-store");
+    await expect(ssrPage.getByRole("article", { name: draftName, exact: true })).toHaveCount(1);
+    const publishedResponse = await page.request.get("/api/admin/stores/tablecast-komorebi/pos");
+    const published = posSettingsSchema.parse(await publishedResponse.json());
+    expect(published.draft).toBeNull();
+    expect(published.products.find((item) => item.id === product.id)?.name.ja).toBe(
+      product.name.ja,
+    );
+
     const pageErrors: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
-    await page.goto(path);
+    await page.goto(draftPath);
     await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
     await expect(
-      page.getByRole("combobox", { name: `${product.name.ja} · ${ja.pos_mapping_product}` }),
+      page.getByRole("combobox", { name: `${draftName} · ${ja.pos_mapping_product}` }),
     ).toBeVisible();
     expect(pageErrors).toEqual([]);
     await page.screenshot({ path: testInfo.outputPath("tablecast-pos-owner.png") });

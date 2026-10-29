@@ -5,9 +5,11 @@ type PreviewEnv = Partial<Pick<TablecastEnv, "TABLECAST_EMULATE">> &
 export function isHostedEmulator(env: { TABLECAST_ENV?: string; TABLECAST_PUBLIC_ORIGIN: string }) {
   return (
     (env.TABLECAST_ENV === "preview" &&
-      /^https:\/\/tablecast-pr-[1-9][0-9]*\.kit-codex\.workers\.dev$/.test(
+      (/^https:\/\/tablecast-pr-[1-9][0-9]*\.kit-codex\.workers\.dev$/.test(
         env.TABLECAST_PUBLIC_ORIGIN,
-      )) ||
+      ) ||
+        env.TABLECAST_PUBLIC_ORIGIN ===
+          "https://tablecast-square-sandbox.kit-codex.workers.dev")) ||
     (env.TABLECAST_ENV === "staging" &&
       env.TABLECAST_PUBLIC_ORIGIN === "https://tablecast-staging.kit-codex.workers.dev")
   );

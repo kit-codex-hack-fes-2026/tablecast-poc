@@ -2,13 +2,20 @@ import type { z } from "zod";
 import { and, eq, inArray, lt, notExists } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
-import type { posConfigurationSchema, PosConnection, PosSettings } from "./model";
+import type {
+  posConfigurationSchema,
+  PosConnection,
+  posMappingsUpdateSchema,
+  PosSettings,
+} from "./model";
 import { posCheckouts, posConnections, posOauthStates } from "../../db/pos-schema";
 import { ensure } from "../../platform/errors";
 import { requireManager, requireManagerRead } from "../auth/policy";
 import { findStoreMembership } from "../auth/queries";
 import { mapLocalized } from "../catalog/localization";
 import { getCatalog } from "../catalog/queries";
+import { getDraft } from "../configuration/queries";
+import { updateDraft } from "../configuration/use-cases/drafts";
 import {
   connectedAdapter,
   posConfigured,
@@ -62,19 +69,40 @@ export function activeConnectionCheckout(services: ApiServices, connectionId: st
       ),
     );
 }
-export async function getPosSettings(services: ApiServices, actor: Actor): Promise<PosSettings> {
-  if (actor.kind === "mcp") requireManagerRead(actor);
+export async function getPosSettings(
+  services: ApiServices,
+  actor: Actor,
+  draftId?: string,
+): Promise<PosSettings> {
+  if (actor.kind === "mcp" || draftId) requireManagerRead(actor);
   else requirePosStaff(actor);
   const [connection, catalog] = await Promise.all([
     findPosConnection(services, actor.storeId),
     getCatalog(services, actor.storeId),
   ]);
+  const draft = draftId ? await getDraft(services, actor, draftId, catalog) : null;
+  const configuration = draft?.configuration ?? catalog.configuration;
+  const legacy = posMappingSchema.array().parse(JSON.parse(connection?.mappingsJson ?? "[]"));
   return {
     configured: posConfigured(services.env),
     connection: publicPosConnection(connection),
     capabilities: squareCapabilities,
-    mappings: posMappingSchema.array().parse(JSON.parse(connection?.mappingsJson ?? "[]")),
-    products: catalog.configuration.products.map((product) => ({
+    mappings: configuration.pos?.mappings ?? [],
+    mappingConnectionId: configuration.pos?.connectionId ?? null,
+    publishedVersion: catalog.version,
+    draft: draft
+      ? {
+          id: draft.id,
+          version: draft.version,
+          baseVersion: draft.baseVersion,
+          status: draft.status,
+        }
+      : null,
+    legacyMappings:
+      !catalog.configuration.pos && !configuration.pos && connection && legacy.length
+        ? { connectionId: connection.id, mappings: legacy }
+        : null,
+    products: configuration.products.map((product) => ({
       id: product.id,
       name: mapLocalized(product.text, (value) => value.displayName),
       price: product.price,
@@ -114,20 +142,6 @@ export async function savePosSettings(
   requireManager(actor);
   const connection = await findPosConnection(services, actor.storeId);
   ensure(connection?.status === "connected", "POS_CONNECTION_REQUIRED", 422);
-  const settings = await getPosSettings(services, actor);
-  const locals = new Set(
-    settings.products.flatMap((product) => [
-      "product:" + product.id,
-      ...product.options.map((option) => "option:" + option.id),
-    ]),
-  );
-  const unique = new Set(input.mappings.map((mapping) => mapping.kind + ":" + mapping.localId));
-  ensure(
-    unique.size === input.mappings.length &&
-      input.mappings.every((mapping) => locals.has(mapping.kind + ":" + mapping.localId)),
-    "POS_INVALID_INPUT",
-    422,
-  );
   const adapter = await connectedAdapter(services, connection);
   ensure(
     adapter.capabilities.catalog && typeof adapter.catalog === "function",
@@ -147,23 +161,11 @@ export async function savePosSettings(
     "POS_LOCATION_REQUIRED",
     422,
   );
-  for (const mapping of input.mappings) {
-    ensure(
-      mapping.kind === "product"
-        ? catalog.items.some((item) => item.id === mapping.externalId)
-        : catalog.items.some((item) =>
-            item.options.some((option) => option.id === mapping.externalId),
-          ),
-      "POS_MAPPING_REQUIRED",
-      422,
-    );
-  }
   const result = await services.db
     .update(posConnections)
     .set({
       locationId: input.locationId,
       deviceId: input.deviceId,
-      mappingsJson: JSON.stringify(input.mappings),
       revision: connection.revision + 1,
       updatedAt: Date.now(),
     })
@@ -177,6 +179,64 @@ export async function savePosSettings(
     );
   ensure(result.meta.changes === 1, "POS_VERSION_CONFLICT");
   return getPosSettings(services, actor);
+}
+export async function savePosMappings(
+  services: ApiServices,
+  actor: Actor,
+  input: z.infer<typeof posMappingsUpdateSchema>,
+) {
+  requireManager(actor);
+  const [connection, draft] = await Promise.all([
+    findPosConnection(services, actor.storeId),
+    getDraft(services, actor, input.draftId),
+  ]);
+  ensure(
+    connection?.id === input.connectionId && connection.status === "connected",
+    "POS_CONNECTION_REQUIRED",
+    422,
+  );
+  ensure(draft.version === input.expectedVersion, "DRAFT_CONFLICT");
+  ensure(draft.status === "draft" || draft.status === "ready", "DRAFT_CONFLICT");
+  const locals = new Set(
+    draft.configuration.products.flatMap((product) => [
+      "product:" + product.id,
+      ...product.modifiers.flatMap((group) => group.options.map((option) => "option:" + option.id)),
+    ]),
+  );
+  ensure(
+    new Set(input.mappings.map((mapping) => mapping.kind + ":" + mapping.localId)).size ===
+      input.mappings.length &&
+      input.mappings.every((mapping) => locals.has(mapping.kind + ":" + mapping.localId)),
+    "POS_INVALID_INPUT",
+    422,
+  );
+  const adapter = await connectedAdapter(services, connection);
+  ensure(
+    adapter.capabilities.catalog && typeof adapter.catalog === "function",
+    "POS_UNSUPPORTED",
+    422,
+  );
+  ensure(connection.locationId, "POS_LOCATION_REQUIRED", 422);
+  const catalog = await adapter.catalog(connection.locationId);
+  for (const mapping of input.mappings)
+    ensure(
+      mapping.kind === "product"
+        ? catalog.items.some((item) => item.id === mapping.externalId)
+        : catalog.items.some((item) =>
+            item.options.some((option) => option.id === mapping.externalId),
+          ),
+      "POS_MAPPING_REQUIRED",
+      422,
+    );
+  await updateDraft(services, actor, draft.id, {
+    expectedVersion: input.expectedVersion,
+    instructionFormatVersion: 1,
+    configuration: {
+      ...draft.configuration,
+      pos: { provider: connection.provider, connectionId: connection.id, mappings: input.mappings },
+    },
+  });
+  return getPosSettings(services, actor, draft.id);
 }
 export async function startPosOAuth(services: ApiServices, actor: Actor) {
   requirePosStaff(actor, true);

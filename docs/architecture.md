@@ -149,9 +149,11 @@ flowchart TD
 
 ### POS adapter
 
-`apps/api/src/modules/pos`が接続・対応付け・固定した会計試行を所有し、`adapter.ts`の共通`PosAdapter`から外部I/Oを呼ぶ。`model.ts`が公開契約、`routes.ts`がHTTP、`connections.ts`・`checkout.ts`・`devices.ts`が業務、`queries.ts`が読取、`invoice.ts`がsnapshotからの明細構築、`square.ts`がSquareへのI/Oを所有する。店舗・来店の認可、承認済みsnapshot、価格・プラン・クーポン、会計中の競合制御、支払記録・監査・永続イベント・通知は共通業務側に保つ。adapterへDB更新や業務判断を移さない。
+商品対応の正本は任意の`Configuration.pos`（provider・connectionId・mappings）とし、既存のConfigurationの下書き・検証・公開版へ含める。`apps/api/src/modules/pos`が営業時の接続・店舗・端末と固定した会計試行を所有し、`adapter.ts`の共通`PosAdapter`から外部I/Oを呼ぶ。`model.ts`が公開契約、`routes.ts`がHTTP、`connections.ts`・`checkout.ts`・`devices.ts`が業務、`queries.ts`が読取、`invoice.ts`がsnapshotからの明細構築、`square.ts`がSquareへのI/Oを所有する。店舗・来店の認可、承認済みsnapshot、価格・プラン・クーポン、会計中の競合制御、支払記録・監査・永続イベント・通知は共通業務側に保つ。adapterへDB更新や業務判断を移さない。
 
 共通契約は商品・オプション候補、円単位の明細・数量・割引・調整、見積・注文出力、外部状態の取得と対応capabilityに限定する。接続・外部参照は`provider`と`connectionId`を組にして識別し、接続したSquare環境を保持する。必要なcapabilityがない操作や環境の異なる接続は理由付きで拒否し、未知の状態は要確認にする。Square SDKの型・生response・固有の状態や認証情報を公開API・Webへ渡さない。
+
+会計の対応付けは各注文の`configVersion`が参照するarchiveから取得する。対応のない旧版へ現行設定や旧接続のmappingsを補わず、既存の手動会計へ戻せる理由付きの停止にする。旧接続の対応は明示的な下書き取込候補だけに使い、進行中の会計は凍結済みinvoiceを維持する。客向けConfigurationの投影から`pos`を除く。
 
 外部注文の初回作成はD1のclaimで同時送信を抑え、15秒のSDK timeoutより長い30秒を経過してから引き継ぐ。初回要求が明確に拒否され、先行する結果不明の要求がない場合だけ、そのclaimの所有者が会計を解除できる。応答喪失・期限後の引継ぎ・冪等キー競合は結果不明を維持し、同じキーの照合で回復する。
 

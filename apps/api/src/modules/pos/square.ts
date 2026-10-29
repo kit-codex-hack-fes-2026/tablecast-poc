@@ -19,7 +19,14 @@ export const squareCapabilities: PosCapabilities = {
   cancel: true,
 };
 
-const squareSandboxDeviceId = "9fa747a2-25ff-48ee-b078-04381f7c828f";
+// Square公式のTerminal checkout用IDだけをSandbox端末として受け付ける。
+// https://developer.squareup.com/docs/devtools/sandbox/testing
+const squareSandboxDevices = [
+  { id: "9fa747a2-25ff-48ee-b078-04381f7c828f", scenario: "success" },
+  { id: "841100b9-ee60-4537-9bcf-e30b2ba5e215", scenario: "cancel" },
+  { id: "0a956d49-619a-4530-8e5e-8eac603ffc5e", scenario: "timeout" },
+  { id: "da40d603-c2ea-4a65-8cfd-f42e36dab0c7", scenario: "offline" },
+] as const;
 
 const squareScopes = [
   "DEVICE_CREDENTIAL_MANAGEMENT",
@@ -542,7 +549,11 @@ export function createSquareAdapter(
       list: (locationId) =>
         request(async () => {
           if (options?.environment === "sandbox")
-            return [{ id: squareSandboxDeviceId, name: "レジ端末", locationId }];
+            return squareSandboxDevices.map(({ id }) => ({
+              id,
+              name: `Square Terminal (${id.slice(0, 8)})`,
+              locationId,
+            }));
           const codes = await square.devices.codes.list({
             locationId,
             productType: "TERMINAL_API",
@@ -588,7 +599,7 @@ export function createSquareAdapter(
         const order = squareOrder(invoice, locationId);
         const catalog = await loadCatalog(locationId);
         validateCatalog(invoice, catalog.view);
-        if (options?.environment !== "sandbox") validateTaxes(invoice, catalog.byId, locationId);
+        validateTaxes(invoice, catalog.byId, locationId);
         const result = await square.orders.calculate({ order });
         return {
           amount: amount(result.order?.totalMoney),
@@ -687,6 +698,12 @@ export function createSquareAdapter(
       start: (order, deviceId, key) =>
         request(async () => {
           ensure(order.amount > 0 && order.currency === "JPY", "POS_UNSUPPORTED", 422);
+          if (options?.environment === "sandbox")
+            ensure(
+              squareSandboxDevices.some((device) => device.id === deviceId),
+              "POS_DEVICE_REQUIRED",
+              422,
+            );
           return remoteCheckout(
             (
               await square.terminal.checkouts.create({

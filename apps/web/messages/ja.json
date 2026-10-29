@@ -1804,5 +1804,16 @@
   "food_reason_pork_ingredients": "豚由来原料を使用",
   "food_reason_alcohol": "アルコール含有",
   "food_reason_origin_unknown": "原材料の由来が未確認",
-  "food_reason_previous_record": "保存された判定"
+  "food_reason_previous_record": "保存された判定",
+  "pos_connection_settings": "接続設定",
+  "pos_mapping_saved": "下書きに保存しました",
+  "pos_mapping_draft_note": "公開すると会計に適用されます。",
+  "pos_mapping_legacy_import": "以前の対応を取り込む",
+  "pos_restore_mapping_choice": "この旧版に商品対応はありません。",
+  "pos_restore_mapping_keep": "現在の対応を引き継ぐ",
+  "pos_restore_mapping_clear": "対応を解除する",
+  "pos_change_product": "商品対応",
+  "pos_change_option": "カスタマイズ対応",
+  "pos_change_target": "Squareの対応先",
+  "pos_change_connection": "Square接続"
 }

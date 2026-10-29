@@ -52,7 +52,7 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
     "get_configuration",
     {
       description:
-        "対象店舗・現在の公開設定・登録言語・意味訳と転写・入力schemaを取得する。資料の取り込み、設定提案、下書き作成の前に確認する。設定は変更しない。",
+        "対象店舗・現在の公開設定・登録言語・意味訳と転写・入力schemaを取得する。configuration.posは公開版のPOS対応で、下書き編集でも保持し、省略して消さない。資料の取り込み、設定提案、下書き作成の前に確認する。設定は変更しない。",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },

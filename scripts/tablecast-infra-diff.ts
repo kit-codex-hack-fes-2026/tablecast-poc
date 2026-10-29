@@ -24,7 +24,12 @@ export function assertWorkerOwner(
   const text = (name: string) => bindings.find((binding) => binding.name === name)?.text;
   if (
     text("TABLECAST_ENV") !== target.environment ||
-    text("TABLECAST_PR_NUMBER") !== (target.pr ?? "")
+    (target.squareSandbox
+      ? api
+        ? text("TABLECAST_PUBLIC_ORIGIN") !== target.origin ||
+          text("TABLECAST_SQUARE_ENVIRONMENT") !== "sandbox"
+        : bindings.find((binding) => binding.name === "TABLECAST_API")?.service !== target.api
+      : text("TABLECAST_PR_NUMBER") !== (target.pr ?? ""))
   )
     throw new Error(
       "Workerの所有環境・PR番号が一致しません。対象外のWorkerは変更・削除できません。",

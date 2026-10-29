@@ -1,7 +1,7 @@
 import type { Configuration } from "../configuration/model";
 import type { Order } from "../orders/model";
 import type { TableState } from "../tables/model";
-import type { PosInvoice, PosIssue, PosMapping } from "./model";
+import type { PosConnection, PosInvoice, PosIssue } from "./model";
 import { ensure } from "../../platform/errors";
 import { mapLocalized, resolveLocalized } from "../catalog/localization";
 
@@ -13,17 +13,12 @@ type InvoiceTable = Pick<
 export function buildPosInvoice(input: {
   adjustments: { amount: number; id: string; reason: string }[];
   configurations: Map<number, Configuration>;
-  mappings: PosMapping[];
+  connection?: Pick<PosConnection, "id" | "provider">;
   orders: Order[];
   table: InvoiceTable;
 }): { invoice: PosInvoice; issues: PosIssue[] } {
-  const { table, orders, configurations, mappings, adjustments } = input;
+  const { table, orders, configurations, connection, adjustments } = input;
   const issues: PosIssue[] = [];
-  const mappingIds = { product: new Map<string, string>(), option: new Map<string, string>() };
-  for (const mapping of mappings) {
-    ensure(!mappingIds[mapping.kind].has(mapping.localId), "POS_INVALID_INPUT", 422);
-    mappingIds[mapping.kind].set(mapping.localId, mapping.externalId);
-  }
   ensure(new Set(orders.map((order) => order.id)).size === orders.length, "POS_INVALID_INPUT", 422);
   ensure(
     new Set(adjustments.map((row) => row.id)).size === adjustments.length,
@@ -34,7 +29,13 @@ export function buildPosInvoice(input: {
   if (table.bill.paidTotal !== 0) issues.push({ code: "POS_ALREADY_PAID" });
   if (table.status === "closed") issues.push({ code: "POS_SESSION_CLOSED" });
 
-  const catalogs = new Map<number, Map<string, Configuration["products"][number]>>();
+  const catalogs = new Map<
+    number,
+    {
+      mappingIds: { option: Map<string, string>; product: Map<string, string> };
+      products: Map<string, Configuration["products"][number]>;
+    }
+  >();
   const lines: PosInvoice["lines"] = [];
   let amountsMatch = true;
   for (const order of orders) {
@@ -47,14 +48,29 @@ export function buildPosInvoice(input: {
     if (order.status !== "served" && !issues.some((issue) => issue.code === "POS_ORDERS_PENDING"))
       issues.push({ code: "POS_ORDERS_PENDING" });
     const snapshot = order.snapshot;
-    let products = catalogs.get(snapshot.configVersion);
-    if (!products) {
+    let catalog = catalogs.get(snapshot.configVersion);
+    if (!catalog) {
       const configuration = configurations.get(snapshot.configVersion);
       ensure(configuration, "POS_INVALID_INPUT", 422);
-      products = new Map(configuration.products.map((product) => [product.id, product]));
+      const mappingIds = { product: new Map<string, string>(), option: new Map<string, string>() };
+      const binding = configuration.pos;
+      if (
+        binding &&
+        (binding.connectionId !== connection?.id || binding.provider !== connection?.provider)
+      ) {
+        if (!issues.some((issue) => issue.code === "POS_CONNECTION_CONFLICT"))
+          issues.push({ code: "POS_CONNECTION_CONFLICT" });
+      } else
+        for (const mapping of binding?.mappings ?? []) {
+          ensure(!mappingIds[mapping.kind].has(mapping.localId), "POS_INVALID_INPUT", 422);
+          mappingIds[mapping.kind].set(mapping.localId, mapping.externalId);
+        }
+      const products = new Map(configuration.products.map((product) => [product.id, product]));
       ensure(products.size === configuration.products.length, "POS_INVALID_INPUT", 422);
-      catalogs.set(snapshot.configVersion, products);
+      catalog = { products, mappingIds };
+      catalogs.set(snapshot.configVersion, catalog);
     }
+    const { products, mappingIds } = catalog;
     ensure(
       new Set(snapshot.lines.map((line) => line.id)).size === snapshot.lines.length,
       "POS_INVALID_INPUT",

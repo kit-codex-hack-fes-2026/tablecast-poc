@@ -1,109 +1,10 @@
 import { expect, it } from "vitest";
-import type { Configuration } from "../src/modules/configuration/model";
-import type { Order, PricedLine } from "../src/modules/orders/model";
-import { type PlanContext, priceCart } from "../src/modules/catalog/pricing";
+import type { Order } from "../src/modules/orders/model";
+import { priceCart } from "../src/modules/catalog/pricing";
 import { buildPosInvoice } from "../src/modules/pos/invoice";
 import { posInvoiceSchema } from "../src/modules/pos/model";
 import { configuration, text } from "./configuration-fixture";
-
-const now = 1_800_000_000_000;
-const tea = [{ id: "tea-line", productId: "tea", quantity: 1, selections: [] }];
-const coffee = [
-  {
-    id: "coffee-line",
-    productId: "coffee",
-    quantity: 1,
-    selections: [{ optionId: "oat", quantity: 1 }],
-  },
-];
-const plan: PlanContext = {
-  id: "tablecast-plan",
-  guestCount: 2,
-  startedAt: now - 60_000,
-  orderedQuantity: 0,
-  lastOrderAt: null,
-  rules: {
-    id: "tablecast-plan",
-    text: text("飲み放題", "Drinks plan"),
-    pricePerPerson: 3000,
-    durationMinutes: 90,
-    lastOrderMinutesBeforeEnd: 10,
-    productIds: ["coffee"],
-    categoryIds: [],
-    tags: [],
-    maxPerOrder: 4,
-    maxTotalPerPerson: 10,
-    intervalSeconds: 0,
-    excludedOptionIds: [],
-    includedOptionSurcharge: true,
-  },
-};
-
-function servedOrder(lines: PricedLine[], id = "tablecast-order"): Order {
-  const snapshotId = `${id}-snapshot`;
-  const total = lines.reduce((sum, line) => sum + line.total, 0);
-  return {
-    id,
-    tableSessionId: "tablecast-session",
-    snapshotId,
-    idempotencyKey: `${id}-key`,
-    status: "served",
-    total,
-    createdAt: now,
-    snapshot: {
-      id: snapshotId,
-      tableSessionId: "tablecast-session",
-      cartVersion: 1,
-      configVersion: 1,
-      lines,
-      total,
-      locale: "ja",
-      text: "承認済みの注文",
-      expiresAt: now + 60_000,
-      channel: "gui",
-      status: "submitted",
-      createdTurnId: null,
-      plan: null,
-    },
-  };
-}
-
-function invoiceInput(
-  orders: Order[],
-  config: Configuration = configuration,
-): Parameters<typeof buildPosInvoice>[0] {
-  const orderedTotal = orders
-    .filter((order) => order.status !== "cancelled" && order.status !== "rejected")
-    .reduce((sum, order) => sum + order.total, 0);
-  return {
-    table: {
-      id: "tablecast-session",
-      storeId: "tablecast-store",
-      cart: { version: 7, lines: [], total: 0, complete: false },
-      bill: {
-        orderedTotal,
-        adjustmentTotal: 0,
-        paidTotal: 0,
-        due: orderedTotal,
-        cartTotal: 0,
-        planTotal: 0,
-      },
-      plan: null,
-      guestCount: 2,
-      locale: "ja",
-      status: "open",
-    },
-    orders,
-    configurations: new Map([[1, structuredClone(config)]]),
-    mappings: [
-      { kind: "product", localId: "tea", externalId: "square-tea" },
-      { kind: "product", localId: "coffee", externalId: "square-coffee" },
-      { kind: "option", localId: "oat", externalId: "square-oat" },
-      { kind: "option", localId: "dairy", externalId: "square-dairy" },
-    ],
-    adjustments: [],
-  };
-}
+import { coffee, invoiceInput, now, plan, servedOrder, tea } from "./pos-invoice-fixture";
 
 it("人数料金・プラン内商品・有料オプション・対象外商品と割引調整を6,600円にまとめる", () => {
   const cart = priceCart(
@@ -414,7 +315,9 @@ it("支払済み・閉卓を理由付きで止める", () => {
 
 it("商品とオプションの対応付け不足を元のIDと名前付きで返す", () => {
   const input = invoiceInput([servedOrder(priceCart(configuration, coffee, 1).lines)]);
-  input.mappings = [];
+  const config = input.configurations.get(1);
+  if (!config?.pos) throw new Error("対応fixtureがありません");
+  config.pos.mappings = [];
 
   const result = buildPosInvoice(input);
 
@@ -425,6 +328,35 @@ it("商品とオプションの対応付け不足を元のIDと名前付きで�
   expect(result.invoice.lines).toMatchObject([
     { externalId: null, options: [{ externalId: null }] },
   ]);
+});
+
+it("同じlocal商品でも注文の公開版ごとの対応と価格を使い、旧版へ最新対応を補わない", () => {
+  const first = servedOrder(priceCart(configuration, tea, 1).lines, "old-order");
+  const second = servedOrder(priceCart(configuration, tea, 1).lines, "new-order");
+  second.snapshot.configVersion = 2;
+  const input = invoiceInput([first, second]);
+  const old = input.configurations.get(1);
+  if (!old?.pos) throw new Error("対応fixtureがありません");
+  const next = structuredClone(old);
+  if (!next.pos) throw new Error("対応fixtureがありません");
+  next.pos.mappings = [{ kind: "product", localId: "tea", externalId: "new-square-tea" }];
+  input.configurations.set(2, next);
+  expect(buildPosInvoice(input)).toMatchObject({
+    issues: [],
+    invoice: {
+      lines: [
+        { id: "old-order:tea-line", externalId: "square-tea", referencePrice: 400 },
+        { id: "new-order:tea-line", externalId: "new-square-tea", referencePrice: 400 },
+      ],
+    },
+  });
+  delete old.pos;
+  expect(buildPosInvoice(input)).toMatchObject({
+    issues: [{ code: "POS_MAPPING_REQUIRED", localId: "tea" }],
+    invoice: { lines: [{ externalId: null }, { externalId: "new-square-tea" }] },
+  });
+  next.pos.connectionId = "other-connection";
+  expect(buildPosInvoice(input).issues).toContainEqual({ code: "POS_CONNECTION_CONFLICT" });
 });
 
 it("既存会計と明細総和が1円違っても不一致として止める", () => {
@@ -455,7 +387,9 @@ it.each([500, 501])("%i明細を切り捨てず上限500件を判定する", (co
 
 it("同じローカルIDの二重対応付けを選択せず拒否する", () => {
   const input = invoiceInput([servedOrder(priceCart(configuration, tea, 1).lines)]);
-  input.mappings.push({ kind: "product", localId: "tea", externalId: "square-another-tea" });
+  const config = input.configurations.get(1);
+  if (!config?.pos) throw new Error("対応fixtureがありません");
+  config.pos.mappings.push({ kind: "product", localId: "tea", externalId: "square-another-tea" });
 
   expect(() => buildPosInvoice(input)).toThrow("POS_INVALID_INPUT");
 });

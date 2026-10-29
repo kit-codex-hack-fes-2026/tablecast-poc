@@ -1,16 +1,25 @@
 import type { PosCatalog, PosSettings } from "@tablecast/api/schema";
+import type { ReactNode } from "react";
 import { resolveLocalized } from "@tablecast/api/localization";
 import { useStore as useFormStore } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useHydrated } from "@tanstack/react-router";
+import { useHotkey } from "@tanstack/react-hotkeys";
+import {
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import { Link, useBlocker, useHydrated, useNavigate } from "@tanstack/react-router";
 import { Link2, Link2Off, RefreshCw, Save } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
 import { useAppForm } from "../../components/form";
 import { SubmitButton } from "../../components/form/fields";
 import { PageHeader } from "../../components/page-header";
+import { SquareLogo } from "../../components/square-logo";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
@@ -18,6 +27,9 @@ import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { apiError } from "../../lib/api-error";
+import { SaveStatus } from "../configuration/configuration-status";
+import { ConfigurationToolbar } from "../configuration/configuration-toolbar";
+import { StartConfigurationEditing } from "../configuration/configuration-workflow";
 import { useStore } from "../store/store-context";
 import { PosDevicePicker } from "./pos-devices";
 import { PosIssues } from "./pos-issues";
@@ -25,24 +37,43 @@ import { type PosMappingRow, posMappingValues } from "./pos-mapping-model";
 import { PosMappingTable } from "./pos-mapping-table";
 import { posCatalogOptions, posSettingsOptions } from "./pos-query";
 
-const formValues = (settings: PosSettings) => ({
+const liveValues = (settings: PosSettings) => ({
   expectedRevision: settings.connection?.revision ?? 0,
   locationId: settings.connection?.locationId ?? "",
   deviceId: settings.connection?.deviceId ?? "",
+});
+const mappingValues = (settings: PosSettings) => ({
+  connectionId: settings.mappingConnectionId ?? settings.connection?.id ?? "",
   mappings: posMappingValues(settings),
 });
 
-export function StorePos() {
+export function StorePos({ draftId }: { draftId?: string }) {
   const store = useStore();
-  const query = useSuspenseQuery(posSettingsOptions(store.id));
+  const navigate = useNavigate();
+  const query = useSuspenseQuery(posSettingsOptions(store.id, draftId));
+  const canEdit = store.role === "owner" || store.role === "admin";
   return (
     <>
       <ErrorNotice query={query} retrying={query.isFetching} />
       <StorePosSettings
-        key={query.data.connection?.id ?? "disconnected"}
+        key={`${query.data.connection?.id ?? "disconnected"}:${draftId ?? "published"}`}
         storeId={store.id}
         settings={query.data}
-        canEdit={store.role === "owner" || store.role === "admin"}
+        canEdit={canEdit}
+        actions={
+          !draftId && canEdit ? (
+            <StartConfigurationEditing
+              section="products"
+              onSelect={(id) =>
+                void navigate({
+                  to: "/admin/stores/$storeId/pos",
+                  params: { storeId: store.id },
+                  search: { draftId: id },
+                })
+              }
+            />
+          ) : undefined
+        }
       />
     </>
   );
@@ -52,83 +83,341 @@ export function StorePosSettings({
   storeId,
   settings,
   canEdit,
+  actions,
 }: {
+  actions?: ReactNode;
   canEdit: boolean;
   settings: PosSettings;
   storeId: string;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const hydrated = useHydrated();
   const client = useQueryClient();
   const endpoint = rpc.api.admin.stores[":storeId"].pos;
-  // oxlint-disable-next-line react-doctor/no-derived-useState -- 保存失敗と背景更新では入力を保持し、保存成功か明示再読込だけで基準版を更新する。
-  const [defaults, setDefaults] = useState(settings);
-  const refreshSettings = () =>
-    client.invalidateQueries({ queryKey: posSettingsOptions(storeId).queryKey });
-  const connected = settings.connection?.status === "connected";
-  const update = (next: PosSettings) => {
-    setDefaults(next);
-    form.reset(formValues(next));
-    client.setQueryData(posSettingsOptions(storeId).queryKey, next);
-  };
-  const save = useMutation({
-    mutationFn: (value: ReturnType<typeof formValues>) =>
-      parseResponse(
-        endpoint.$put({
-          param: { storeId },
-          json: { ...value, mappings: value.mappings.filter((mapping) => mapping.externalId) },
-        }),
-      ),
-    onSuccess: update,
-    onError: refreshSettings,
-  });
+  const mutationKey = ["tablecast-pos-live", storeId];
+  const pending = useIsMutating({ mutationKey }) > 0;
+  const refresh = () => client.invalidateQueries({ queryKey: ["tablecast-pos-settings", storeId] });
+  function receiveLive(next: PosSettings) {
+    client.setQueriesData<PosSettings>(
+      { queryKey: ["tablecast-pos-settings", storeId] },
+      (previous) =>
+        previous
+          ? {
+              ...previous,
+              connection: next.connection,
+              configured: next.configured,
+              legacyMappings: next.legacyMappings,
+            }
+          : previous,
+    );
+    void refresh();
+  }
   const connect = useMutation({
+    mutationKey,
     mutationFn: () => parseResponse(endpoint.oauth.$post({ param: { storeId } })),
     onSuccess: ({ url }) => window.location.assign(url),
-    onError: refreshSettings,
+    onError: refresh,
   });
   const disconnect = useMutation({
+    mutationKey,
     mutationFn: () => parseResponse(endpoint.$delete({ param: { storeId } })),
-    onSuccess: update,
-    onError: refreshSettings,
+    onSuccess: receiveLive,
+    onError: refresh,
   });
-  // oxlint-disable-next-line react-doctor/query-mutation-missing-invalidation -- fetchQueryが同じ設定cacheを更新する。
-  const reload = useMutation({
-    mutationFn: () => client.fetchQuery({ ...posSettingsOptions(storeId), staleTime: 0 }),
+  const connected = settings.connection?.status === "connected";
+  const catalog = useQuery({
+    ...posCatalogOptions(storeId, settings.connection?.locationId ?? ""),
+    enabled: canEdit && connected,
+  });
+  return (
+    <section className="@container space-y-6">
+      <PageHeader title={t("pos_title")} actions={actions} />
+      <PosConnectionSettings
+        settings={settings}
+        canEdit={canEdit}
+        pending={pending || !hydrated}
+        connect={connect}
+        disconnect={disconnect}
+      />
+      {!canEdit && <p className="text-sm text-muted-foreground">{t("pos_permission")}</p>}
+      {settings.connection && (
+        <PosLiveSettings
+          storeId={storeId}
+          settings={settings}
+          canEdit={canEdit}
+          pending={pending}
+          catalog={catalog.data}
+          onSaved={receiveLive}
+        />
+      )}
+      <section aria-label={t("pos_mapping")} className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-semibold">{t("pos_mapping")}</h2>
+          {connected && canEdit && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!hydrated || catalog.isFetching}
+              onClick={() => void catalog.refetch()}
+            >
+              <RefreshCw aria-hidden="true" />
+              {t("pos_catalog_refresh")}
+            </Button>
+          )}
+        </div>
+        <PosCatalogStatus
+          query={catalog}
+          connected={connected && canEdit}
+          hasProducts={settings.products.length > 0}
+        />
+        <PosMappingsForm
+          key={settings.draft?.id ?? "published"}
+          settings={settings}
+          storeId={storeId}
+          canEdit={canEdit}
+          livePending={pending}
+          catalog={catalog.data}
+        />
+      </section>
+    </section>
+  );
+}
+
+function PosLiveSettings({
+  storeId,
+  settings,
+  canEdit,
+  pending,
+  catalog,
+  onSaved,
+}: {
+  canEdit: boolean;
+  catalog?: PosCatalog;
+  onSaved: (next: PosSettings) => void;
+  pending: boolean;
+  settings: PosSettings;
+  storeId: string;
+}) {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  // oxlint-disable-next-line react-doctor/no-derived-useState -- 背景更新と409では入力と基準版を保持し、保存成功か明示再読込でだけ更新する。
+  const [baseline, setBaseline] = useState(settings);
+  const save = useMutation({
+    mutationKey: ["tablecast-pos-live", storeId],
+    mutationFn: (value: ReturnType<typeof liveValues>) =>
+      parseResponse(rpc.api.admin.stores[":storeId"].pos.$put({ param: { storeId }, json: value })),
     onSuccess: (next) => {
-      update(next);
-      save.reset();
+      setBaseline(next);
+      form.reset(liveValues(next));
+      onSaved(next);
     },
+    onError: () => client.invalidateQueries({ queryKey: ["tablecast-pos-settings", storeId] }),
   });
-  const pending = save.isPending || connect.isPending || disconnect.isPending || reload.isPending;
+  const editable = canEdit && settings.connection?.status === "connected" && !pending;
   const form = useAppForm({
-    defaultValues: formValues(defaults),
+    defaultValues: liveValues(baseline),
     onSubmit: async ({ value }) => {
-      if (!canEdit || pending || !connected) return;
-      await save.mutateAsync(value).catch(() => undefined);
+      if (editable) await save.mutateAsync(value).catch(() => undefined);
     },
   });
   const locationId = useFormStore(form.store, (state) => state.values.locationId);
-  const mappings = useFormStore(form.store, (state) => state.values.mappings);
-  const catalog = useQuery({
-    ...posCatalogOptions(storeId, locationId),
-    enabled: canEdit && connected,
+  return (
+    <details className="space-y-3">
+      <summary className="cursor-pointer text-sm font-medium">
+        {t("pos_connection_settings")}
+      </summary>
+      <form.AppForm>
+        <form.Form className="space-y-3">
+          <PosSettingsConflict settings={settings} baseline={baseline} error={save.error} />
+          <fieldset disabled={!editable} className="grid gap-4 @xl:grid-cols-2">
+            <form.Field name="locationId">
+              {(field) => (
+                <PosLocationSelect
+                  value={field.state.value}
+                  locations={catalog?.locations ?? []}
+                  onChange={(value) => {
+                    field.handleChange(value);
+                    form.setFieldValue("deviceId", "");
+                  }}
+                />
+              )}
+            </form.Field>
+            <form.Field name="deviceId">
+              {(field) => (
+                <PosDevicePicker
+                  storeId={storeId}
+                  locationId={locationId}
+                  enabled={editable}
+                  value={field.state.value}
+                  onChange={field.handleChange}
+                />
+              )}
+            </form.Field>
+          </fieldset>
+          {canEdit && (
+            <SubmitButton disabled={!editable || !catalog}>
+              <Save aria-hidden="true" />
+              {t("common_save")}
+            </SubmitButton>
+          )}
+          <ActionFeedback mutation={save} successMessage={t("pos_saved")} />
+        </form.Form>
+      </form.AppForm>
+    </details>
+  );
+}
+
+type PosMappingsFormProps = {
+  canEdit: boolean;
+  catalog?: PosCatalog;
+  livePending: boolean;
+  settings: PosSettings;
+  storeId: string;
+};
+
+function usePosMappingEditor({
+  storeId,
+  settings,
+  canEdit,
+  livePending,
+  catalog,
+}: PosMappingsFormProps) {
+  const hydrated = useHydrated();
+  const client = useQueryClient();
+  // oxlint-disable-next-line react-doctor/no-derived-useState -- 背景更新と409では入力と基準版を保持し、保存成功か明示再読込でだけ更新する。
+  const [baseline, setBaseline] = useState(settings);
+  const [sourceChosen, setSourceChosen] = useState(false);
+  const key = posSettingsOptions(storeId, settings.draft?.id).queryKey;
+  const refresh = () => client.invalidateQueries({ queryKey: key });
+  const update = (next: PosSettings) => {
+    setBaseline(next);
+    form.reset(mappingValues(next));
+    client.setQueryData(key, next);
+    void client.invalidateQueries({ queryKey: ["tablecast-draft", storeId, next.draft?.id] });
+    for (const name of [
+      "tablecast-drafts",
+      "tablecast-draft-choices",
+      "tablecast-configuration-history",
+    ])
+      void client.invalidateQueries({ queryKey: [name, storeId] });
+  };
+  const save = useMutation({
+    mutationFn: (value: ReturnType<typeof mappingValues>) => {
+      if (!baseline.draft) throw new Error("DRAFT_REQUIRED");
+      return parseResponse(
+        rpc.api.admin.stores[":storeId"].pos.mappings.$put({
+          param: { storeId },
+          json: {
+            ...value,
+            mappings: value.mappings.filter((mapping) => mapping.externalId),
+            draftId: baseline.draft.id,
+            expectedVersion: baseline.draft.version,
+          },
+        }),
+      );
+    },
+    onSuccess: update,
+    onError: refresh,
   });
-  const editable = canEdit && connected && !pending;
-  const mappingIndexes = new Map(
-    formValues(defaults).mappings.map((mapping, index) => [
+  const reload = useMutation({
+    mutationFn: () =>
+      client.fetchQuery({ ...posSettingsOptions(storeId, settings.draft?.id), staleTime: 0 }),
+    onSuccess: (next) => {
+      update(next);
+      save.reset();
+      setSourceChosen(false);
+    },
+  });
+  const needsPublished = !!baseline.draft && baseline.mappingConnectionId === null;
+  const published = useQuery({
+    ...posSettingsOptions(storeId),
+    enabled: needsPublished,
+  });
+  const needsChoice = needsPublished && !!published.data?.mappingConnectionId;
+  const pending = save.isPending || reload.isPending || livePending;
+  const editable =
+    canEdit &&
+    ["draft", "ready"].includes(baseline.draft?.status ?? "") &&
+    settings.connection?.status === "connected" &&
+    !pending;
+  const blocked =
+    !editable ||
+    !catalog ||
+    !hydrated ||
+    (needsPublished && !published.isSuccess) ||
+    (needsChoice && !sourceChosen);
+  const form = useAppForm({
+    defaultValues: mappingValues(baseline),
+    onSubmit: async ({ value }) => {
+      if (!blocked) await save.mutateAsync(value).catch(() => undefined);
+    },
+  });
+  function copy(source: { connectionId: string; mappings: PosSettings["mappings"] }) {
+    form.setFieldValue("connectionId", source.connectionId);
+    form.setFieldValue("mappings", posMappingValues({ ...baseline, mappings: source.mappings }));
+    setSourceChosen(true);
+  }
+  return {
+    baseline,
+    blocked,
+    copy,
+    editable,
+    form,
+    hydrated,
+    needsChoice,
+    pending,
+    published,
+    reload,
+    save,
+    sourceChosen,
+  };
+}
+
+function PosMappingsForm(props: PosMappingsFormProps) {
+  const { storeId, settings, canEdit, catalog } = props;
+  const { t, locale } = useI18n();
+  const id = useId();
+  const formId = `tablecast-pos-mappings-${id}`;
+  const {
+    baseline,
+    blocked,
+    copy,
+    editable,
+    form,
+    hydrated,
+    needsChoice,
+    pending,
+    published,
+    reload,
+    save,
+    sourceChosen,
+  } = usePosMappingEditor(props);
+  useBlocker({
+    shouldBlockFn: () => editable && form.state.isDirty && !window.confirm(t("menu_leave_unsaved")),
+    enableBeforeUnload: () => editable && form.state.isDirty,
+  });
+  useHotkey(
+    "Mod+S",
+    () => {
+      if (!blocked) void form.handleSubmit();
+    },
+    { enabled: editable, ignoreInputs: false },
+  );
+  const mappings = useFormStore(form.store, (state) => state.values.mappings);
+  const indexes = new Map(
+    mappingValues(baseline).mappings.map((mapping, index) => [
       `${mapping.kind}:${mapping.localId}`,
       index,
     ]),
   );
   function renderMapping(row: PosMappingRow) {
-    const index = mappingIndexes.get(`${row.kind}:${row.localId}`);
+    const index = indexes.get(`${row.kind}:${row.localId}`);
     if (index === undefined) return null;
     return (
       <form.Field name={`mappings[${index}].externalId`}>
         {(field) => (
           <PosMappingSelect
-            disabled={!editable || !catalog.data}
+            disabled={!editable || !catalog}
             parentRequired={!!row.option && !row.parentId}
             kind={row.kind}
             name={
@@ -146,87 +435,135 @@ export function StorePosSettings({
     );
   }
   return (
-    <section className="@container space-y-6">
-      <PageHeader title={t("pos_title")} icon={<Link2 />} />
-      <PosConnectionSettings
-        settings={settings}
-        canEdit={canEdit}
-        pending={pending || !hydrated}
-        connect={connect}
-        disconnect={disconnect}
-      />
-      {!canEdit && <p className="text-sm text-muted-foreground">{t("pos_permission")}</p>}
-      <form.AppForm>
-        <form.Form className="space-y-6">
-          <PosSettingsConflict settings={settings} baseline={defaults} error={save.error} />
-          {settings.connection && (
-            <fieldset disabled={!editable} className="grid gap-4 @xl:grid-cols-2">
-              <form.Field name="locationId">
-                {(field) => (
-                  <PosLocationSelect
-                    value={field.state.value}
-                    locations={catalog.data?.locations ?? []}
-                    onChange={(value) => {
-                      field.handleChange(value);
-                      form.setFieldValue("deviceId", "");
-                    }}
-                  />
+    <form.AppForm>
+      <form.Form id={formId} className="space-y-4">
+        {baseline.draft && (
+          <p className="text-sm text-muted-foreground">{t("pos_mapping_draft_note")}</p>
+        )}
+        <PosSettingsConflict settings={settings} baseline={baseline} error={save.error} mappings />
+        <PosMappingSourceChoices
+          settings={baseline}
+          published={published.data}
+          needsChoice={needsChoice}
+          sourceChosen={sourceChosen}
+          editable={editable}
+          onCopy={copy}
+        />
+        <PosMappingTable
+          products={baseline.products}
+          mappings={mappings}
+          catalog={catalog}
+          renderMapping={renderMapping}
+        />
+        {baseline.draft && canEdit && (
+          <>
+            <ConfigurationToolbar slot="status">
+              <form.Subscribe selector={(state) => state.isDirty}>
+                {(dirty) => (
+                  <SaveStatus dirty={dirty} pending={pending} error={save.error || reload.error} />
                 )}
-              </form.Field>
-              <form.Field name="deviceId">
-                {(field) => (
-                  <PosDevicePicker
-                    storeId={storeId}
-                    locationId={locationId}
-                    enabled={editable}
-                    value={field.state.value}
-                    onChange={field.handleChange}
-                  />
+              </form.Subscribe>
+            </ConfigurationToolbar>
+            <ConfigurationToolbar>
+              <SubmitButton form={formId} disabled={blocked} aria-keyshortcuts="Control+s Meta+s">
+                <Save aria-hidden="true" />
+                {t("common_save")}
+              </SubmitButton>
+              <form.Subscribe selector={(state) => state.isDirty}>
+                {(dirty) => (
+                  <Button
+                    nativeButton={false}
+                    role="link"
+                    variant="outline"
+                    disabled={dirty || pending || !!save.error}
+                    render={
+                      <Link
+                        to="/admin/stores/$storeId/menu/changes/$draftId"
+                        params={{ storeId, draftId: baseline.draft?.id ?? "" }}
+                      />
+                    }
+                  >
+                    {t("workflow_review")}
+                  </Button>
                 )}
-              </form.Field>
-            </fieldset>
-          )}
-          <section aria-label={t("pos_mapping")} className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-semibold">{t("pos_mapping")}</h2>
-              {connected && canEdit && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!hydrated || catalog.isFetching}
-                  onClick={() => void catalog.refetch()}
-                >
-                  <RefreshCw aria-hidden="true" />
-                  {t("pos_catalog_refresh")}
-                </Button>
-              )}
-            </div>
-            <PosCatalogStatus
-              query={catalog}
-              connected={connected && canEdit}
-              hasProducts={defaults.products.length > 0}
-            />
-            <div>
-              <PosMappingTable
-                products={defaults.products}
-                mappings={mappings}
-                catalog={catalog.data}
-                renderMapping={renderMapping}
-              />
-            </div>
-          </section>
-          <PosSettingsActions
-            canEdit={canEdit}
-            editable={editable}
-            pending={pending}
-            hasCatalog={!!catalog.data}
-            onReload={() => reload.mutate()}
-          />
-          <ActionFeedback mutation={save} successMessage={t("pos_saved")} />
-          <ErrorNotice error={reload.error} />
-        </form.Form>
-      </form.AppForm>
-    </section>
+              </form.Subscribe>
+            </ConfigurationToolbar>
+          </>
+        )}
+        <ConfirmAction
+          label={t("pos_reload")}
+          subject={t("pos_reload_note")}
+          disabled={!hydrated || pending}
+          icon={<RefreshCw aria-hidden="true" />}
+          onConfirm={() => reload.mutate()}
+        />
+        <ActionFeedback mutation={save} successMessage={t("pos_mapping_saved")} />
+        <ErrorNotice error={reload.error} />
+        <ErrorNotice query={published} retrying={published.isFetching} />
+      </form.Form>
+    </form.AppForm>
+  );
+}
+
+function PosMappingSourceChoices({
+  settings,
+  published,
+  needsChoice,
+  sourceChosen,
+  editable,
+  onCopy,
+}: {
+  editable: boolean;
+  needsChoice: boolean;
+  onCopy: (source: NonNullable<PosSettings["legacyMappings"]>) => void;
+  published?: PosSettings;
+  settings: PosSettings;
+  sourceChosen: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      {needsChoice && !sourceChosen && published && (
+        <div className="space-y-3 rounded-lg bg-surface-subtle p-3">
+          <p>{t("pos_restore_mapping_choice")}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!editable}
+              onClick={() =>
+                onCopy({
+                  connectionId: published?.mappingConnectionId ?? "",
+                  mappings: published?.mappings ?? [],
+                })
+              }
+            >
+              {t("pos_restore_mapping_keep")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!editable || !settings.connection}
+              onClick={() => onCopy({ connectionId: settings.connection?.id ?? "", mappings: [] })}
+            >
+              {t("pos_restore_mapping_clear")}
+            </Button>
+          </div>
+        </div>
+      )}
+      {settings.draft && settings.legacyMappings && !needsChoice && (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!editable}
+          onClick={() => {
+            if (settings.legacyMappings) onCopy(settings.legacyMappings);
+          }}
+        >
+          {t("pos_mapping_legacy_import")}
+        </Button>
+      )}
+    </>
   );
 }
 
@@ -318,7 +655,9 @@ function PosConnectionSettings({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="font-semibold">Square</span>
+        <span className="p-3">
+          <SquareLogo />
+        </span>
         <Badge
           variant={
             status === "connected" ? "success" : status === "disconnected" ? "inactive" : "warning"
@@ -366,15 +705,19 @@ function PosSettingsConflict({
   settings,
   baseline,
   error,
+  mappings = false,
 }: {
   baseline: PosSettings;
   error: unknown;
+  mappings?: boolean;
   settings: PosSettings;
 }) {
   const { t } = useI18n();
   const conflict =
     apiError(error)?.status === 409 ||
-    (settings.connection?.revision ?? 0) > (baseline.connection?.revision ?? 0);
+    (mappings
+      ? (settings.draft?.version ?? 0) > (baseline.draft?.version ?? 0)
+      : (settings.connection?.revision ?? 0) > (baseline.connection?.revision ?? 0));
   return conflict ? (
     <p role="status" className="text-sm text-warning">
       {t("pos_conflict")}
@@ -440,39 +783,5 @@ function PosLocationSelect({
         ))}
       </NativeSelect>
     </label>
-  );
-}
-
-function PosSettingsActions({
-  canEdit,
-  editable,
-  pending,
-  hasCatalog,
-  onReload,
-}: {
-  canEdit: boolean;
-  editable: boolean;
-  hasCatalog: boolean;
-  onReload: () => void;
-  pending: boolean;
-}) {
-  const { t } = useI18n();
-  const hydrated = useHydrated();
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      {canEdit && (
-        <SubmitButton disabled={!editable || !hasCatalog}>
-          <Save aria-hidden="true" />
-          {t("common_save")}
-        </SubmitButton>
-      )}
-      <ConfirmAction
-        label={t("pos_reload")}
-        subject={t("pos_reload_note")}
-        disabled={!hydrated || pending}
-        icon={<RefreshCw aria-hidden="true" />}
-        onConfirm={onReload}
-      />
-    </div>
   );
 }

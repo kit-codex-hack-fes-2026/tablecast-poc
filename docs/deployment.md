@@ -263,7 +263,17 @@ Squareの接続環境は`TABLECAST_SQUARE_ENVIRONMENT`で選び、未指定は`p
 
 `TABLECAST_POS_ENCRYPTION_SECRET`は保存済みOAuth tokenの復号に使う固定値とし、通常の再配備や認証master変更で再生成しない。値や接続環境を変更するときは既存の会計を照合し、切替先で管理者が接続し直す。`0034_tablecast_pos.sql`でPOSテーブル・会計固定triggerを適用し、同じアプリ・環境・署名鍵に対応する公開HTTPSのcallbackとWebhookをSquare側へ登録する。旧番号`0033_tablecast_pos.sql`を適用済みのPRプレビューは、既存テーブルを再作成せず、既存データを保持して新番号へ追従する。URLと操作は[セットアップ](setup.md#square接続)に従う。
 
-本番接続のコード対応と外部の実施結果は分ける。実資格が未設定の現時点では本番の実決済・実機試験・配備を行わず、実施するときは対象と実行範囲を別途確定する。通常CIは明示的なSandbox設定とHTTP差替えを使い、資格付きSandbox確認も本番受入の証拠へ置き換えない。
+Sandbox実接続用に固定URL `https://tablecast-square-sandbox.kit-codex.workers.dev`の専用Web/API Worker・D1・R2を、既存previewのvariantとして用意する。資源名は`tablecast-square-sandbox`・`tablecast-api-square-sandbox`・`tablecast-db-square-sandbox`・`tablecast-media-square-sandbox`とし、共有staging・productionや通常PRの資源と分ける。このURLは現時点では未配備の予定先であり、配備・接続成功を意味しない。
+
+CIのRun workflowで`square_pr`に配備元の通常PR番号を指定し、その作業branchの最新headを配備する。ブラウザーのGitHub SettingsからEnvironment `tablecast-square-sandbox`へvariable `TABLECAST_SQUARE_APPLICATION_ID`と、secret `TABLECAST_SQUARE_APPLICATION_SECRET`・`TABLECAST_SQUARE_WEBHOOK_SIGNATURE_KEY`・`TABLECAST_POS_ENCRYPTION_SECRET`を個別に登録する。JSONへまとめたり、検証のためにローカルへ資格を保存したりする必要はない。workflowは3つのsecretを配備stepへ明示的に渡し、固定Sandbox variantかつpreview・sandboxの対象だけで既存runtime設定へ重ねる。既存`TABLECAST_RUNTIME_SECRETS`の値とRepository共通varsは変更しない。
+
+配備元PRの最新headと同じSHAの通常CI成功を確認してから、そのCIのContainer成果物を再利用する。WorkersはSandboxの環境・Application IDをbuildと配備で一致させ、固定の`tablecast-deploy-square-sandbox`排他で反映する。アプリ本体のproduction既定と通常CIは維持する。通常PRのclose/merge後のcleanupでは固定Sandboxの資源を削除しない。配備元PRが変わってもcallbackとWebhookの登録先は変わらない。資格を設定しただけで実接続成功とせず、対象PR・SHA・配備版・実施ケースを記録する。
+
+OAuth redirect URLは`https://tablecast-square-sandbox.kit-codex.workers.dev/api/pos/square/callback`、Webhook通知URLは同originの`/api/pos/square/webhook`へ固定する。callbackはブラウザーの認証Cookieで処理する。SquareのWebhookはAccess資格を送らないため、通知の1経路だけを公開到達可能にし、それ以外のroot・設定・APIは従来のAccess保護を維持する。公開経路でもAPIの署名検証と店舗・注文・金額照合は有効とし、不正署名403、他経路のAccess拒否、正規通知と一度だけの支払反映を確認する。例外の所有先・再配備時の維持・失敗時の復旧も固定Sandboxの資源として管理する。通常ローカルoriginを一時tunnelへ変更する経路は追加しない。
+
+設定を戻す前に結果不明の会計を照合し、必要な接続解除を済ませる。OAuth接続をDBへ残す場合は暗号化鍵を保持する。対象SHA、配備版、Squareの注文・checkout・payment参照とWebhook実施範囲を秘密値なしで記録する。アプリ設定・資格注入・外部受入の到達状態を分けて記録する。開発者アカウントの登録や規約同意だけでは、OAuth・会計・Webhookの受入完了としない。
+
+本番接続のコード対応と外部の実施結果は分ける。現時点では本番の読取疎通・実決済・実機試験・配備は未実施であり、実施するときは対象と実行範囲を別途確定する。通常CIは明示的なSandbox設定とHTTP差替えを使い、資格付きSandbox確認も本番受入の証拠へ置き換えない。
 
 ## 開発用Langfuse
 

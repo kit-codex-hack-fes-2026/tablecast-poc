@@ -86,6 +86,8 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
       void client.invalidateQueries({ queryKey: ["tablecast-admin-catalog", storeId] });
       void client.invalidateQueries({ queryKey: ["tablecast-home", storeId] });
       void client.invalidateQueries({ queryKey: ["tablecast-stores"] });
+      void client.invalidateQueries({ queryKey: ["tablecast-pos-settings", storeId] });
+      void client.invalidateQueries({ queryKey: ["tablecast-table-detail", storeId] });
       setConfirmPublish(false);
     },
     onError: async (error) => {
@@ -109,11 +111,8 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
     },
   });
   const busy = [validate.isPending, publish.isPending, discard.isPending].some(Boolean);
-  const { editable, stale, cannotPublish, guidance } = draftPublicationState(
-    draft,
-    role,
-    catalog.data.version,
-  );
+  const publication = draftPublicationState(draft, role, catalog.data.version);
+  const { editable, stale, cannotPublish } = publication;
   const error = validate.error || publish.error || discard.error;
 
   return (
@@ -131,49 +130,14 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
       <PageHeader title={t("admin_review_draft")} />
 
       <ErrorNotice error={query.error || catalog.error || error} />
-      <div className="space-y-2">
-        <p
-          role="status"
-          className={stale || draft.errors.length ? "text-destructive" : "text-muted-foreground"}
-        >
-          <span key={guidance} className="block motion-safe:animate-tablecast-state">
-            {editable ? t(guidance) : t("workflow_terminal_note")}
-          </span>
-        </p>
-        {draft.changes.some((change) => change.sensitive) && (
-          <Badge variant="warning">
-            <TriangleAlert />
-            {t("admin_sensitive")}
-          </Badge>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-2" aria-label={t("workflow_correction_links")}>
-        {menuSectionSchema.options.map((section) => (
-          <Button
-            key={section}
-            nativeButton={false}
-            role="link"
-            variant="outline"
-            render={
-              editable ? (
-                <Link
-                  to="/admin/stores/$storeId/menu/changes/$draftId/$section"
-                  params={{ storeId, draftId, section }}
-                  search={section === returnSection ? listSearch : {}}
-                />
-              ) : (
-                <Link
-                  to="/admin/stores/$storeId/menu/$section"
-                  params={{ storeId, section }}
-                  search={section === returnSection ? listSearch : {}}
-                />
-              )
-            }
-          >
-            {t(menuLabels[section])}
-          </Button>
-        ))}
-      </div>
+      <DraftGuidance draft={draft} publication={publication} />
+      <DraftCorrectionLinks
+        storeId={storeId}
+        draftId={draftId}
+        editable={editable}
+        canManage={["owner", "admin"].includes(role)}
+        search={search}
+      />
       {(!editable || stale) && (
         <Button
           nativeButton={false}
@@ -191,7 +155,14 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
       )}
 
       <ConfigurationErrors errors={draft.errors} configuration={draft.configuration} />
-      <ConfigurationChanges changes={draft.changes} configuration={draft.configuration} />
+      {!draft.configuration.pos && catalog.data.configuration.pos && (
+        <p className="text-sm text-warning">{t("pos_restore_mapping_choice")}</p>
+      )}
+      <ConfigurationChanges
+        changes={draft.changes}
+        configuration={draft.configuration}
+        storeId={storeId}
+      />
       {editable && (
         <ConfigurationToolbar>
           <div className="flex flex-wrap gap-2">
@@ -238,7 +209,11 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
             )}
           </DialogDescription>
           <DialogScroll>
-            <ConfigurationChanges changes={draft.changes} configuration={draft.configuration} />
+            <ConfigurationChanges
+              changes={draft.changes}
+              configuration={draft.configuration}
+              storeId={storeId}
+            />
             <ErrorNotice error={publish.error} />
           </DialogScroll>
           <DialogFooter>
@@ -257,6 +232,93 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function DraftGuidance({
+  draft,
+  publication,
+}: {
+  draft: ConfigDraft;
+  publication: ReturnType<typeof draftPublicationState>;
+}) {
+  const { t } = useI18n();
+  const { editable, stale, guidance } = publication;
+  return (
+    <div className="space-y-2">
+      <p
+        role="status"
+        className={stale || draft.errors.length ? "text-destructive" : "text-muted-foreground"}
+      >
+        <span key={guidance} className="block motion-safe:animate-tablecast-state">
+          {editable ? t(guidance) : t("workflow_terminal_note")}
+        </span>
+      </p>
+      {draft.changes.some((change) => change.sensitive) && (
+        <Badge variant="warning">
+          <TriangleAlert />
+          {t("admin_sensitive")}
+        </Badge>
+      )}
+    </div>
+  );
+}
+
+function DraftCorrectionLinks({
+  storeId,
+  draftId,
+  editable,
+  canManage,
+  search,
+}: {
+  canManage: boolean;
+  draftId: string;
+  editable: boolean;
+  search: MenuReviewSearch;
+  storeId: string;
+}) {
+  const { t } = useI18n();
+  const { returnSection = "products", ...listSearch } = search;
+  return (
+    <div className="flex flex-wrap gap-2" aria-label={t("workflow_correction_links")}>
+      {canManage && (
+        <Button
+          nativeButton={false}
+          role="link"
+          variant="outline"
+          render={
+            <Link to="/admin/stores/$storeId/pos" params={{ storeId }} search={{ draftId }} />
+          }
+        >
+          {t("pos_mapping")}
+        </Button>
+      )}
+      {menuSectionSchema.options.map((section) => (
+        <Button
+          key={section}
+          nativeButton={false}
+          role="link"
+          variant="outline"
+          render={
+            editable ? (
+              <Link
+                to="/admin/stores/$storeId/menu/changes/$draftId/$section"
+                params={{ storeId, draftId, section }}
+                search={section === returnSection ? listSearch : {}}
+              />
+            ) : (
+              <Link
+                to="/admin/stores/$storeId/menu/$section"
+                params={{ storeId, section }}
+                search={section === returnSection ? listSearch : {}}
+              />
+            )
+          }
+        >
+          {t(menuLabels[section])}
+        </Button>
+      ))}
+    </div>
   );
 }
 

@@ -114,6 +114,7 @@ export { maxCartLines } from "./modules/orders/model";
 export type { CartLine, CartUpdate, Order, PricedLine, Snapshot } from "./modules/orders/model";
 // Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
 export {
+  posBindingSchema,
   posCatalogSchema,
   posCheckoutViewSchema,
   posConfigurationSchema,
@@ -122,6 +123,7 @@ export {
   posInvoiceSchema,
   posIssueSchema,
   posMappingSchema,
+  posMappingsUpdateSchema,
   posSettingsSchema,
 } from "./modules/pos/model";
 

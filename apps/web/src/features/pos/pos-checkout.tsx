@@ -8,6 +8,7 @@ import { BillSummary } from "../../components/bill-summary";
 import { CartLines } from "../../components/cart-lines";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
+import { SquareLogo } from "../../components/square-logo";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -152,7 +153,9 @@ export function PosCheckoutSummary({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-semibold">Square</h2>
+        <h2 className="p-3">
+          <SquareLogo />
+        </h2>
         {checkout && (
           <p role="status">
             <Badge

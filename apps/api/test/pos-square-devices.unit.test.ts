@@ -102,11 +102,30 @@ it("本番のpairing codeを正規wireで作り、有効期限とpaired device�
   expect(wire.calls[1]?.url.pathname).toBe("/v2/devices/codes/code");
 });
 
-it("テスト環境では固定端末1台だけを返し、実機pairing codeの作成・照会を拒否する", async () => {
+it("テスト環境は公式の4端末だけを返し、実機pairing codeの作成・照会を拒否する", async () => {
   const wire = transport([]);
   const adapter = createSquareAdapter("token", { environment: "sandbox", fetch: wire.fetch });
   await expect(adapter.devices.list("location")).resolves.toEqual([
-    { id: "9fa747a2-25ff-48ee-b078-04381f7c828f", name: "レジ端末", locationId: "location" },
+    {
+      id: "9fa747a2-25ff-48ee-b078-04381f7c828f",
+      name: "Square Terminal (9fa747a2)",
+      locationId: "location",
+    },
+    {
+      id: "841100b9-ee60-4537-9bcf-e30b2ba5e215",
+      name: "Square Terminal (841100b9)",
+      locationId: "location",
+    },
+    {
+      id: "0a956d49-619a-4530-8e5e-8eac603ffc5e",
+      name: "Square Terminal (0a956d49)",
+      locationId: "location",
+    },
+    {
+      id: "da40d603-c2ea-4a65-8cfd-f42e36dab0c7",
+      name: "Square Terminal (da40d603)",
+      locationId: "location",
+    },
   ]);
   await expect(adapter.devices.createCode("location", "レジ1", "key")).rejects.toMatchObject({
     code: "POS_UNSUPPORTED",
@@ -116,5 +135,19 @@ it("テスト環境では固定端末1台だけを返し、実機pairing codeの
     code: "POS_UNSUPPORTED",
     status: 422,
   });
+  await expect(
+    adapter.checkout.start(
+      {
+        id: "order",
+        locationId: "location",
+        amount: 400,
+        currency: "JPY",
+        status: "open",
+        paymentIds: [],
+      },
+      "invented-device",
+      "key",
+    ),
+  ).rejects.toMatchObject({ code: "POS_DEVICE_REQUIRED" });
   expect(wire.fetch).not.toHaveBeenCalled();
 });

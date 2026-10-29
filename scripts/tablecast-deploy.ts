@@ -14,6 +14,7 @@ import {
   deploymentSecrets,
 } from "./tablecast-deploy-config.ts";
 import { cf } from "./tablecast-deploy/commands.ts";
+import { syncPosWebhookAccess, verifyPosWebhookAccess } from "./tablecast-deploy/pos-access.ts";
 import {
   accessApplication,
   resources,
@@ -30,6 +31,8 @@ async function main(resetFinished = false) {
   if (process.argv.includes("--reset") && process.argv.includes("--cleanup"))
     throw new Error("resetとcleanupは同時に指定できません。");
   const cleanup = process.argv.includes("--cleanup") || reset;
+  if (cleanup && target.squareSandbox)
+    throw new Error("固定Square SandboxはPR終了時のcleanup・resetでは削除できません。");
   if (
     reset &&
     (target.environment !== "staging" ||
@@ -96,6 +99,8 @@ async function main(resetFinished = false) {
   );
   // Accessが使えないPRを先に公開しない。
   const access = await accessApplication(!cleanup);
+  const squareEnabled = !cleanup && Boolean(process.env.TABLECAST_SQUARE_APPLICATION_ID);
+  if (!squareEnabled) await syncPosWebhookAccess(target, false);
   // 同じ配備内で所有確認済みの既存資源を使い、欠落時・削除・resetは従来の経路へ進む。
   const { database, bucketExists, bucketCreated } =
     !cleanup && !resetFinished && existingStorage.database && existingStorage.bucketExists
@@ -253,6 +258,15 @@ async function main(resetFinished = false) {
     }
   }
   await waitForRelease(target.origin, headers, sha);
+  if (target.environment === "preview" && squareEnabled) {
+    await syncPosWebhookAccess(target, true);
+    try {
+      await verifyPosWebhookAccess(target.origin);
+    } catch (error) {
+      await syncPosWebhookAccess(target, false);
+      throw error;
+    }
+  }
   if (target.environment === "staging") await verifyStaging();
   console.info(`配備確認済み: ${target.origin} (${sha})`);
   if (process.env.GITHUB_STEP_SUMMARY)

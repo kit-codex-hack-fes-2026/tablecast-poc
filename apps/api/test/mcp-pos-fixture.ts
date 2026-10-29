@@ -6,6 +6,7 @@ import { expect, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 import app from "../src/app";
 import { createAuth } from "../src/modules/auth/service";
+import { posMappingSchema, posSettingsSchema } from "../src/modules/pos/model";
 
 const origin = "http://localhost:3000";
 
@@ -197,3 +198,34 @@ export function posCatalogHttp() {
   });
   return calls;
 }
+
+export const posLocalPage = z.object({
+  publishedVersion: posSettingsSchema.shape.publishedVersion,
+  draft: posSettingsSchema.shape.draft,
+  mappingConnectionId: posSettingsSchema.shape.mappingConnectionId,
+  connection: posSettingsSchema.shape.connection,
+  configured: z.boolean(),
+  storeId: z.string(),
+  settingsUrl: z.string(),
+  section: z.enum(["items", "mappings", "legacyMappings"]),
+  total: z.number(),
+  nextCursor: z.string().nullable(),
+  items: z.array(
+    z.object({
+      kind: z.enum(["product", "option"]),
+      id: z.string(),
+      productId: z.string().nullable(),
+      name: posSettingsSchema.shape.products.element.shape.name,
+      price: z.number(),
+      available: z.boolean().nullable(),
+    }),
+  ),
+  mappings: z.array(posMappingSchema),
+});
+
+export const posMappings = [
+  { kind: "product", localId: "tea", externalId: "square-tea" },
+  { kind: "product", localId: "coffee", externalId: "square-coffee" },
+  { kind: "option", localId: "dairy", externalId: "square-dairy" },
+  { kind: "option", localId: "oat", externalId: "square-oat" },
+] satisfies z.infer<typeof posMappingSchema>[];

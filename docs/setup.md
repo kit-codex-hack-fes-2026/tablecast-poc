@@ -252,16 +252,16 @@ POS連携はSquareの本番接続を標準とする。公式TypeScript SDK `squa
 
 `bun run dev:config`は接続環境・Application IDを`.local/.env`とAPI varsへ、秘密値3つをAPI専用の`.local/.dev.vars`へ渡す。`.local/.dev.vars.web`へSquare設定を含めない。公開環境では接続環境・Application IDをGitHub Repository variables、秘密値3つを既存の`TABLECAST_RUNTIME_SECRETS`のJSONへ設定する。[POSの配備設定](deployment.md#squareの配備設定)に従い、同じ暗号化secretを再配備でも維持する。
 
-1. Square Developer Consoleでアプリと接続環境を選び、その環境のApplication ID・application secretを取得する。本番とSandboxの資格・店舗・端末は混用しない。
+1. Square Developerアカウントを用意する。新規作成時の本人情報・パスワード・確認コードの入力は利用者が行う。Developer Consoleでアプリと接続環境を選び、その環境のApplication ID・application secretを取得する。Sandbox確認には日本の専用テストアカウントを作る。本番とSandboxの資格・店舗・端末は混用しない。
 2. TableCastの公開HTTPS originを用意して`TABLECAST_PUBLIC_ORIGIN`へ設定し、OAuth redirect URLに同originの`/api/pos/square/callback`、Webhook通知URLに`/api/pos/square/webhook`を登録する。TableCastはcallback・Webhookとも公開HTTPSを使う。[OAuthの要件](https://developer.squareup.com/docs/oauth-api/overview)、[Webhookの要件](https://developer.squareup.com/docs/webhooks/overview)を参照する。
 3. API専用設定へ値を入れて再起動する。実値をGit・Issue・PR・画像へ含めず、暗号化secretは保存済み接続がある間維持する。
-4. 管理者が既存の店舗設定からOAuthを承認し、Square店舗・端末と商品・オプションの対応付けを保存する。会計は既存の卓詳細からプレビュー・開始・照会・取消を操作する。
+4. 管理者が既存の店舗設定からOAuthを承認し、営業時のSquare店舗・端末を保存する。商品・カスタマイズの対応はメニューと同じ下書きへ保存・検証し、人が公開を承認する。旧接続にある対応は明示的に下書きへ取り込める。会計は各注文の公開版の対応を使い、既存の卓詳細からプレビュー・開始・照会・取消を操作する。対応のない過去注文は現在の対応で補わず、手動会計で扱う。
 
 認証失効や権限取消は管理者が再認証する。接続解除は対象access tokenだけを失効させ、他の独立した接続は維持する。本番とSandboxは別のTableCast環境・DBを使い、保存済み接続の環境やSquare加盟店を変更しない。結果不明の会計は取消や支払の照合が済むまで再決済しない。支払の反映と提供・閉卓は別の状態として確認する。
 
 税対応はJPYの税込10%に限定する。本番catalogの税設定を照合し、税率や内税・外税の構造が対応範囲外なら会計を開始しない。
 
-Sandboxの実接続検証だけは、専用の日本・JPY・税込10%のテストアカウントと公式Terminalテストdevice IDを使い、成功・取消・タイムアウト・0円・再照会を直列実行する。Sandboxに実TerminalやSquare POSアプリの画面はない。[Sandboxの制限](https://developer.squareup.com/docs/devtools/sandbox/overview)を参照する。本番の実決済・実機試験・配備は対象と実行範囲を別途確定する。現在は実資格未設定のため未実施であり、各環境の結果を[受入条件](acceptance.md#squareのpos連携)へ分けて記録する。
+Sandboxの実接続検証では、専用の日本・JPY・税込10%のテストアカウントを使う。専用の固定URL `https://tablecast-square-sandbox.kit-codex.workers.dev`を検証先とする予定で、現時点では未配備である。CIのRun workflowの`square_pr`は配備元PRを指定し、固定Environment `tablecast-square-sandbox`からSandbox設定を渡す。公開Webhook経路だけAccess認証から除外する手順と、GitHub EnvironmentへのApplication ID・既存名の秘密値3つの個別登録は[配備設定](deployment.md#squareの配備設定)を参照する。Sandbox端末候補には公式の成功・購入者取消・タイムアウト・オフライン用device IDだけを使い、金銭が発生しない会計完了・取消・再照会を確認する。0円を含め実施できたケースを分けて記録し、候補の実装だけで外部試験済みとしない。Sandboxに実TerminalやSquare POSアプリの画面はない。[Sandboxの制限](https://developer.squareup.com/docs/devtools/sandbox/overview)を参照する。本番の実決済・実機試験・配備は対象と実行範囲を別途確定する。現時点では開発者アカウントの作成・ログイン・規約同意とアプリ作成が済み、固定URLの登録・資格注入・配備を準備している。外部受入は未実施であり、各環境の結果を[受入条件](acceptance.md#squareのpos連携)へ分けて記録する。
 
 ## 5. 日常の操作
 

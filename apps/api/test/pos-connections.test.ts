@@ -6,7 +6,7 @@ import { connectedAdapter, posStateHash, readPosCredentials } from "../src/modul
 import { createApiServices } from "../src/platform/context";
 import { fixtureDb } from "./database-fixture";
 import { setupFixture } from "./fixture";
-import { base, configured, deviceId, mappings, posConnection, request } from "./pos-fixture";
+import { base, configured, deviceId, posConnection, request } from "./pos-fixture";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -86,7 +86,6 @@ it("切断claim後に古いrefreshが成功しても接続を復活させず、�
           expectedRevision: 1,
           locationId: "square-location",
           deviceId,
-          mappings,
         })
       ).status,
     ).toBe(422);
@@ -309,7 +308,6 @@ it("設定検証中の切断完了を古い設定保存で上書きしない", a
     expectedRevision: 1,
     locationId: "square-location",
     deviceId,
-    mappings: [...mappings],
   }).catch((error: unknown) => error);
   try {
     await entered.promise;

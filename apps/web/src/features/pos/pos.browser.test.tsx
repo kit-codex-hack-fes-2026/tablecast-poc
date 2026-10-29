@@ -2,7 +2,7 @@ import type { PosCheckoutView, PosSettings } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render } from "vitest-browser-react";
+import { cleanup } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
@@ -24,6 +24,7 @@ import {
   posDevicesFixture,
   posSettingsFixture,
 } from "./test-support/pos-fixture";
+import { renderPos as render } from "./test-support/pos-render";
 
 let client: QueryClient;
 let unexpected: string[];
@@ -62,38 +63,35 @@ const providers = (children: ReactNode, locale: "en" | "ja" = "ja") => (
 );
 const checkoutPath = "/api/admin/stores/tablecast-store/tables/tablecast-session/pos";
 
-it("設定保存が競合しても選択を保持し、修正した対応付けと決済端末を再送できる", async () => {
+it("対応の下書き保存が競合しても入力を保持し、最新の下書き版で再送する", async () => {
   await page.viewport(1180, 820);
   let attempts = 0;
-  const latest = {
+  const latest: PosSettings = {
     ...posSettingsFixture,
-    connection: { ...posSettingsFixture.connection, revision: 3 },
+    draft: { id: "tablecast-pos-draft", version: 5, baseVersion: 3, status: "draft" },
   };
   const saved: unknown[] = [];
+  const readDraftIds: string[] = [];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
-    if (
-      request.method === "GET" &&
-      new URL(request.url).pathname === "/api/admin/stores/tablecast-store/pos"
-    )
+    const url = new URL(request.url);
+    if (request.method === "GET" && url.pathname === "/api/admin/stores/tablecast-store/pos") {
+      readDraftIds.push(url.searchParams.get("draftId") ?? "");
       return Response.json(latest);
+    }
     if (
       request.method === "PUT" &&
-      new URL(request.url).pathname === "/api/admin/stores/tablecast-store/pos"
+      url.pathname === "/api/admin/stores/tablecast-store/pos/mappings"
     ) {
       saved.push(await request.json());
       if (++attempts === 1)
         return Response.json(
-          { error: { code: "POS_VERSION_CONFLICT", message: "conflict" } },
+          { error: { code: "DRAFT_CONFLICT", message: "conflict" } },
           { status: 409 },
         );
       return Response.json({
-        ...posSettingsFixture,
-        connection: {
-          ...posSettingsFixture.connection,
-          deviceId: "tablecast-terminal-2",
-          revision: 4,
-        },
+        ...latest,
+        draft: { id: "tablecast-pos-draft", version: 6, baseVersion: 3, status: "draft" },
         mappings: [
           { kind: "product", localId: "tablecast-tea", externalId: "tablecast-square-tea" },
           { kind: "option", localId: "tablecast-large", externalId: "tablecast-square-large" },
@@ -106,7 +104,6 @@ it("設定保存が競合しても選択を保持し、修正した対応付け�
   await render(
     providers(<StorePosSettings storeId="tablecast-store" canEdit settings={posSettingsFixture} />),
   );
-  await page.getByRole("combobox", { name: ja.pos_device }).selectOptions("tablecast-terminal-2");
   const option = page.getByRole("combobox", { name: `煎茶 · 大きめ · ${ja.pos_mapping_option}` });
   await option.selectOptions("tablecast-square-large");
   const search = page.getByRole("searchbox", { name: ja.pos_mapping_search });
@@ -116,25 +113,23 @@ it("設定保存が競合しても選択を保持し、修正した対応付け�
   await expect.element(page.getByText(ja.pos_conflict)).toBeVisible();
   await search.fill("");
   await expect.element(option).toHaveValue("tablecast-square-large");
-  await expect
-    .element(page.getByRole("combobox", { name: ja.pos_device }))
-    .toHaveValue("tablecast-terminal-2");
   await page.getByRole("button", { name: ja.pos_reload, exact: true }).click();
   await page
     .getByRole("alertdialog")
     .getByRole("button", { name: ja.pos_reload, exact: true })
     .click();
   await expect.element(option).toHaveValue("");
-  await page.getByRole("combobox", { name: ja.pos_device }).selectOptions("tablecast-terminal-2");
   await option.selectOptions("tablecast-square-large");
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
-  await expect.element(page.getByText(ja.pos_saved)).toBeVisible();
+  await expect.element(page.getByText(ja.pos_mapping_saved)).toBeVisible();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+  expect(readDraftIds).toContain("tablecast-pos-draft");
+  expect(readDraftIds.every((id) => id === "tablecast-pos-draft")).toBe(true);
   expect(saved).toHaveLength(2);
   expect(saved[1]).toEqual({
-    expectedRevision: 3,
-    locationId: "tablecast-location",
-    deviceId: "tablecast-terminal-2",
+    draftId: "tablecast-pos-draft",
+    expectedVersion: 5,
+    connectionId: "tablecast-pos-connection",
     mappings: [
       { kind: "product", localId: "tablecast-tea", externalId: "tablecast-square-tea" },
       { kind: "option", localId: "tablecast-large", externalId: "tablecast-square-large" },
@@ -293,6 +288,7 @@ it("店舗メンバーには設定を読取専用で示し、管理者専用のS
     ),
   );
   await expect.element(page.getByText(ja.pos_permission)).toBeVisible();
+  await page.getByText(ja.pos_connection_settings, { exact: true }).click();
   await expect.element(page.getByRole("combobox", { name: ja.pos_location })).toBeDisabled();
   await expect.element(page.getByRole("button", { name: ja.pos_connect })).not.toBeInTheDocument();
   await expect
@@ -308,11 +304,12 @@ it("店舗メンバーには設定を読取専用で示し、管理者専用のS
 });
 
 it("解除要求が失敗しても解除処理中を再取得し、再接続と保存を止めながら解除を再試行できる", async () => {
-  client.setQueryData(posSettingsOptions("tablecast-store").queryKey, posSettingsFixture);
+  const published = { ...posSettingsFixture, draft: null };
+  client.setQueryData(posSettingsOptions("tablecast-store").queryKey, published);
   let deletes = 0;
   let settingsReads = 0;
   const disconnecting: PosSettings = {
-    ...posSettingsFixture,
+    ...published,
     connection: posSettingsFixture.connection
       ? { ...posSettingsFixture.connection, status: "disconnecting", revision: 3 }
       : null,
@@ -324,7 +321,7 @@ it("解除要求が失敗しても解除処理中を再取得し、再接続と�
       deletes++;
       return deletes === 1
         ? Response.json({ error: { code: "POS_DISCONNECT_PENDING" } }, { status: 503 })
-        : Response.json({ ...posSettingsFixture, connection: null, mappings: [] });
+        : Response.json({ ...published, connection: null, mappings: [] });
     }
     if (path === "/api/admin/stores/tablecast-store/pos" && request.method === "GET") {
       settingsReads++;
@@ -348,6 +345,7 @@ it("解除要求が失敗しても解除処理中を再取得し、再接続と�
       </StoreContext.Provider>,
     ),
   );
+  await page.getByText(ja.pos_connection_settings, { exact: true }).click();
   const disconnect = page.getByRole("button", { name: ja.pos_disconnect, exact: true });
   await disconnect.click();
   await page

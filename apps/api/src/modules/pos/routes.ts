@@ -15,11 +15,12 @@ import {
   finishPosOAuth,
   getPosCatalog,
   getPosSettings,
+  savePosMappings,
   savePosSettings,
   startPosOAuth,
 } from "./connections";
 import { createPosDeviceCode, getPosDeviceCode, getPosDevices } from "./devices";
-import { posConfigurationSchema, posStartSchema } from "./model";
+import { posConfigurationSchema, posMappingsUpdateSchema, posStartSchema } from "./model";
 import { verifySquareWebhook } from "./square";
 
 export const posAdminRoutes = apiFactory
@@ -50,7 +51,12 @@ export const posAdminRoutes = apiFactory
   .get("/pos/devices/:deviceCodeId", async (c) =>
     c.json(await getPosDeviceCode(c.var.services, c.var.actor, c.req.param("deviceCodeId")), 200),
   )
-  .get("/pos", async (c) => c.json(await getPosSettings(c.var.services, c.var.actor), 200))
+  .get(
+    "/pos",
+    validateQuery(z.object({ draftId: z.string().min(1).max(200).optional() }).strict()),
+    async (c) =>
+      c.json(await getPosSettings(c.var.services, c.var.actor, c.req.valid("query").draftId), 200),
+  )
   .get(
     "/pos/catalog",
     validateQuery(z.object({ locationId: z.string().min(1).max(200).optional() })),
@@ -62,6 +68,9 @@ export const posAdminRoutes = apiFactory
   )
   .put("/pos", validate(posConfigurationSchema), async (c) =>
     c.json(await savePosSettings(c.var.services, c.var.actor, c.req.valid("json")), 200),
+  )
+  .put("/pos/mappings", validate(posMappingsUpdateSchema), async (c) =>
+    c.json(await savePosMappings(c.var.services, c.var.actor, c.req.valid("json")), 200),
   )
   .delete("/pos", async (c) => c.json(await disconnectPos(c.var.services, c.var.actor), 200))
   .post("/pos/oauth", async (c) => c.json(await startPosOAuth(c.var.services, c.var.actor), 200))

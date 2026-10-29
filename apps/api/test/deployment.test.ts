@@ -70,6 +70,32 @@ test("stagingは固定originだけで模擬OAuthを許可する", async () => {
 });
 
 test.each([
+  {
+    environment: "preview",
+    origin: "https://tablecast-square-sandbox.kit-codex.workers.dev",
+    allowed: true,
+  },
+  {
+    environment: "production",
+    origin: "https://tablecast-square-sandbox.kit-codex.workers.dev",
+    allowed: false,
+  },
+  {
+    environment: "preview",
+    origin: "https://tablecast-square-sandbox.kit-codex.workers.dev.example.com",
+    allowed: false,
+  },
+])(
+  "固定Square検証環境のOAuthは$environment/$originの境界を守る",
+  async ({ environment, origin, allowed }) => {
+    const { isHostedEmulator } = await import("../src/modules/auth/preview");
+    expect(isHostedEmulator({ TABLECAST_ENV: environment, TABLECAST_PUBLIC_ORIGIN: origin })).toBe(
+      allowed,
+    );
+  },
+);
+
+test.each([
   { environment: "development", host: "mailpit.0123456789.tablecast-poc.localhost.example.com" },
   { environment: "production", host: "mailpit.0123456789.tablecast-poc.localhost" },
 ])("$environmentのメール送信で$hostを拒否する", async ({ environment, host }) => {

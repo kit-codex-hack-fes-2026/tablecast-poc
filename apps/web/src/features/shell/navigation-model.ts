@@ -149,7 +149,7 @@ export const navigationPages = {
     to: "/admin/stores/$storeId/devices",
   },
   pos: {
-    group: "store",
+    group: "menu",
     label: "pos_title",
     Icon: Plug,
     to: "/admin/stores/$storeId/pos",

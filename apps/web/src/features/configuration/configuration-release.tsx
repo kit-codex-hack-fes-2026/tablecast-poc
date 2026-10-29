@@ -41,6 +41,10 @@ export function ReleaseContent({ storeId, version }: { storeId: string; version:
     },
   });
   const release = query.data;
+  const needsPosRepair =
+    release?.changes.some(
+      (change) => change.path === "pos" && change.before !== null && change.after === null,
+    ) ?? false;
   return (
     <>
       <DialogScroll className="space-y-5 pb-4">
@@ -106,11 +110,19 @@ export function ReleaseContent({ storeId, version }: { storeId: string; version:
               <Button
                 onClick={() =>
                   restore.mutate(release.publishedVersion, {
-                    onSuccess: (draft) =>
-                      void navigate({
-                        to: "/admin/stores/$storeId/menu/changes/$draftId",
-                        params: { storeId, draftId: draft.id },
-                      }),
+                    onSuccess: (draft) => {
+                      if (!draft.configuration.pos && needsPosRepair)
+                        void navigate({
+                          to: "/admin/stores/$storeId/pos",
+                          params: { storeId },
+                          search: { draftId: draft.id },
+                        });
+                      else
+                        void navigate({
+                          to: "/admin/stores/$storeId/menu/changes/$draftId",
+                          params: { storeId, draftId: draft.id },
+                        });
+                    },
                   })
                 }
                 disabled={
@@ -198,7 +210,11 @@ function ReleaseSummary({ release, storeId }: { release: ConfigurationRelease; s
             )}
           </h2>
           {release.changes.length ? (
-            <ConfigurationChanges changes={release.changes} configuration={release.configuration} />
+            <ConfigurationChanges
+              changes={release.changes}
+              configuration={release.configuration}
+              storeId={storeId}
+            />
           ) : (
             <p>{t("configuration_history_identical")}</p>
           )}

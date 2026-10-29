@@ -179,13 +179,26 @@ describe("Squareの商品候補", () => {
     expect(wire.calls[2]?.url.searchParams.get("cursor")).toBe("next-page");
   });
 
-  it.each(unsupportedTaxes)("本番の$nameは同価格でも送信しない", async ({ taxation }) => {
+  it.each(
+    unsupportedTaxes.flatMap((test) =>
+      (["production", "sandbox"] as const).map((environment) => ({ ...test, environment })),
+    ),
+  )("$environmentの$nameは同価格でも送信しない", async ({ taxation, environment }) => {
     const wire = transport(quoteCatalogResponses(invoice, taxation));
     await expect(
-      createSquareAdapter("token", { fetch: wire.fetch }).quote(invoice, "square-location"),
+      createSquareAdapter("token", { environment, fetch: wire.fetch }).quote(
+        invoice,
+        "square-location",
+      ),
     ).rejects.toMatchObject({ code: "POS_UNSUPPORTED", status: 422 });
     expect(wire.calls).toHaveLength(2);
-    expect(wire.calls.every((call) => call.url.hostname === "connect.squareup.com")).toBe(true);
+    expect(
+      wire.calls.every(
+        (call) =>
+          call.url.hostname ===
+          (environment === "sandbox" ? "connect.squareupsandbox.com" : "connect.squareup.com"),
+      ),
+    ).toBe(true);
   });
 
   it("追加料金の税が商品限定なら本番のad hoc行を送信しない", async () => {

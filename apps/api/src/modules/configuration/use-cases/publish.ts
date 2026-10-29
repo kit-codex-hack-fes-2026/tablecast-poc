@@ -66,6 +66,25 @@ export async function publishDraft(
       ensure(draft.status === "ready", "DRAFT_CONFLICT");
       const catalog = await getCatalog(services, actor.storeId);
       ensure(
+        !catalog.configuration.pos || draft.configuration.pos,
+        "CONFIGURATION_FORMAT_UNSUPPORTED",
+        422,
+      );
+      if (draft.configuration.pos) {
+        const binding = await db
+          .select({ id: business.posConnections.id })
+          .from(business.posConnections)
+          .where(
+            and(
+              eq(business.posConnections.id, draft.configuration.pos.connectionId),
+              eq(business.posConnections.storeId, actor.storeId),
+              eq(business.posConnections.provider, draft.configuration.pos.provider),
+            ),
+          )
+          .get();
+        ensure(binding, "POS_CONNECTION_CONFLICT", 409);
+      }
+      ensure(
         !losesConditions(catalog.configuration, draft.configuration) &&
           !losesFoodChanges(catalog.configuration, draft.configuration),
         "CONFIGURATION_FORMAT_UNSUPPORTED",

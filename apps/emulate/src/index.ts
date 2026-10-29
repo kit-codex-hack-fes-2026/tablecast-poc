@@ -23,7 +23,8 @@ if (
   ) &&
   !(
     process.env.TABLECAST_ENV === "preview" &&
-    /^https:\/\/tablecast-pr-[1-9][0-9]*\.kit-codex\.workers\.dev$/.test(origin)
+    (/^https:\/\/tablecast-pr-[1-9][0-9]*\.kit-codex\.workers\.dev$/.test(origin) ||
+      origin === "https://tablecast-square-sandbox.kit-codex.workers.dev")
   ) &&
   !(
     process.env.TABLECAST_ENV === "staging" &&

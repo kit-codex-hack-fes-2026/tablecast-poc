@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render } from "vitest-browser-react";
+import { cleanup } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
@@ -13,6 +14,7 @@ import { PosCheckout } from "./pos-checkout";
 import { posCatalogOptions, posCheckoutOptions, posDevicesOptions } from "./pos-query";
 import { StorePosSettings } from "./store-pos";
 import { posDevicesFixture } from "./test-support/pos-fixture";
+import { renderPos as render } from "./test-support/pos-render";
 import { posSeedCatalog, posSeedCheckout, posSeedSettings } from "./test-support/pos-seed-fixture";
 
 let client: QueryClient;
@@ -60,85 +62,97 @@ async function capture(name: string) {
   );
   await page.screenshot({ path: `../../../test-results/${name}.png`, fullPage: false });
 }
-it("商品対応はseedの商品とカスタマイズを小さな一覧で示し、iPad・携帯・デスクトップで全体をはみ出さない", async () => {
-  await page.viewport(1180, 820);
-  client.setQueryData(
-    posCatalogOptions("tablecast-store", "tablecast-location").queryKey,
-    posSeedCatalog,
-  );
-  client.setQueryData(
-    posDevicesOptions("tablecast-store", "tablecast-location").queryKey,
-    posDevicesFixture,
-  );
-  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
-    unexpected.push(new Request(input, init).url);
-    return Response.json({}, { status: 500 });
-  });
-  await render(
-    providers(
-      <StorePosSettings storeId="tablecast-store" canEdit settings={posSeedSettings} />,
-      "ja",
-    ),
-  );
-  await expect
-    .element(page.getByRole("heading", { name: ja.pos_title, exact: true }))
-    .toBeVisible();
-  const images = [...document.images].filter(
-    (image) =>
-      image.src.includes("/images/tablecast/") &&
-      image.getBoundingClientRect().top < window.innerHeight,
-  );
-  expect(images.length).toBeGreaterThan(0);
-  await Promise.all(images.map((image) => image.decode()));
-  expect(images.every((image) => image.naturalWidth > 0)).toBe(true);
-  expect(document.querySelectorAll('article[data-theme-part="product-card"]').length).toBe(0);
-  expect(page.getByRole("article").elements()).toHaveLength(posSeedSettings.products.length);
-  for (const product of posSeedSettings.products) {
-    const group = page.getByRole("article", { name: product.name.ja, exact: true });
+it.each(["ja", "en"] as const)(
+  "商品対応はseedの商品とカスタマイズを%sで示し、3画面幅で全体をはみ出さない",
+  async (locale) => {
+    const labels = locale === "ja" ? ja : en;
+    await page.viewport(1180, 820);
+    client.setQueryData(
+      posCatalogOptions("tablecast-store", "tablecast-location").queryKey,
+      posSeedCatalog,
+    );
+    client.setQueryData(
+      posDevicesOptions("tablecast-store", "tablecast-location").queryKey,
+      posDevicesFixture,
+    );
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      unexpected.push(new Request(input, init).url);
+      return Response.json({}, { status: 500 });
+    });
+    await render(
+      providers(
+        <StorePosSettings storeId="tablecast-store" canEdit settings={posSeedSettings} />,
+        locale,
+      ),
+    );
     await expect
-      .element(group.getByRole("heading", { name: product.name.ja, exact: true }))
+      .element(page.getByRole("heading", { name: labels.pos_title, exact: true }))
       .toBeVisible();
-    expect(
-      group
-        .getByRole("list", { name: ja.pos_mapping_customisations })
-        .getByRole("listitem")
-        .elements(),
-    ).toHaveLength(product.options.length);
-  }
-  const rows = posSeedSettings.products.reduce(
-    (count, product) => count + 1 + product.options.length,
-    0,
-  );
-  await expect
-    .element(
-      page.getByRole("button", { name: new RegExp(`^${ja.pos_mapping_filter_all}\\s*${rows}$`) }),
-    )
-    .toBeVisible();
-  expect(document.body.textContent).not.toMatch(/Sandbox|模擬|冪等|SDK/);
-  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
-  await capture("tablecast-pos-settings-ja");
-  const heading = page.getByRole("heading", { name: ja.pos_mapping, exact: true });
-  const search = page.getByRole("searchbox", { name: ja.pos_mapping_search });
-  heading.element().scrollIntoView({ block: "start" });
-  await new Promise(requestAnimationFrame);
-  const product = posSeedSettings.products[0];
-  if (!product) throw new Error("商品fixtureがありません");
-  const entry = document.querySelector(`[data-row-id="${product.id}:product:${product.id}"]`);
-  if (!entry) throw new Error("商品の親行がありません");
-  expect(entry.getBoundingClientRect().height).toBeLessThan(100);
-  await capture("tablecast-pos-mapping-ja");
-  for (const [width, height, suffix] of [
-    [402, 874, "mobile"],
-    [1512, 982, "desktop"],
-  ] as const) {
-    await page.viewport(width, height);
+    const images = [...document.images].filter(
+      (image) =>
+        image.src.includes("/images/tablecast/") &&
+        image.getBoundingClientRect().top < window.innerHeight,
+    );
+    expect(images.length).toBeGreaterThan(0);
+    await expect
+      .poll(() => images.every((image) => image.complete && image.naturalWidth > 0))
+      .toBe(true);
+    expect(document.querySelectorAll('article[data-theme-part="product-card"]').length).toBe(0);
+    expect(page.getByRole("article").elements()).toHaveLength(posSeedSettings.products.length);
+    for (const product of posSeedSettings.products) {
+      const group = page.getByRole("article", {
+        name: resolveLocalized(product.name, locale),
+        exact: true,
+      });
+      await expect
+        .element(
+          group.getByRole("heading", { name: resolveLocalized(product.name, locale), exact: true }),
+        )
+        .toBeVisible();
+      expect(
+        group
+          .getByRole("list", { name: labels.pos_mapping_customisations })
+          .getByRole("listitem")
+          .elements(),
+      ).toHaveLength(product.options.length);
+    }
+    const rows = posSeedSettings.products.reduce(
+      (count, product) => count + 1 + product.options.length,
+      0,
+    );
+    await expect
+      .element(
+        page.getByRole("button", {
+          name: new RegExp(`^${labels.pos_mapping_filter_all}\\s*${rows}$`),
+        }),
+      )
+      .toBeVisible();
+    expect(document.body.textContent).not.toMatch(/Sandbox|模擬|冪等|SDK/);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+    await capture(`tablecast-pos-settings-${locale}`);
+    const heading = page.getByRole("heading", { name: labels.pos_mapping, exact: true });
+    const search = page.getByRole("searchbox", { name: labels.pos_mapping_search });
     heading.element().scrollIntoView({ block: "start" });
     await new Promise(requestAnimationFrame);
-    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
-    await expect.element(search).toBeVisible();
-    await capture(`tablecast-pos-mapping-${suffix}-ja`);
-  }
-});
+    const product = posSeedSettings.products[0];
+    if (!product) throw new Error("商品fixtureがありません");
+    const entry = document.querySelector(`[data-row-id="${product.id}:product:${product.id}"]`);
+    if (!entry) throw new Error("商品の親行がありません");
+    expect(entry.getBoundingClientRect().height).toBeLessThan(100);
+    await capture(`tablecast-pos-mapping-${locale}`);
+    for (const [width, height, suffix] of [
+      [402, 874, "mobile"],
+      [1512, 982, "desktop"],
+    ] as const) {
+      await page.viewport(width, height);
+      heading.element().scrollIntoView({ block: "start" });
+      await new Promise(requestAnimationFrame);
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
+      await expect.element(search).toBeVisible();
+      await capture(`tablecast-pos-mapping-${suffix}-${locale}`);
+    }
+  },
+);
 
 it("画像がない商品とカスタマイズも同じ階層の文字左端を揃え、子だけを字下げする", async () => {
   await page.viewport(1180, 820);

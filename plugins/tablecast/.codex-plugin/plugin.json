@@ -1,6 +1,6 @@
 {
   "name": "tablecast",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "店舗の資料からの多言語メニュー設定、Squareの商品対応、店舗ロゴとテーマ制作、接客の改善提案、営業の統計分析と卓上ゲーム制作を支援します。",
   "author": {
     "name": "TableCast"

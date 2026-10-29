@@ -1,20 +1,22 @@
 import type { Locale } from "@tablecast/api/schema";
+import { posMappingsUpdateSchema } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render } from "vitest-browser-react";
+import { cleanup } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import "../../styles.css";
-import { posCatalogOptions, posDevicesOptions } from "./pos-query";
+import { posCatalogOptions, posDevicesOptions, posSettingsOptions } from "./pos-query";
 import { StorePosSettings } from "./store-pos";
 import {
   posDevicesFixture,
   posMappingCatalogFixture,
   posMappingSettingsFixture,
 } from "./test-support/pos-fixture";
+import { renderPos as render } from "./test-support/pos-render";
 
 let client: QueryClient;
 let viewport: { height: number; width: number };
@@ -154,7 +156,7 @@ it("共有する選択肢は別商品の行でも同じ入力を表示し、重�
     const request = new Request(input, init);
     if (
       request.method === "PUT" &&
-      new URL(request.url).pathname === "/api/admin/stores/tablecast-store/pos"
+      new URL(request.url).pathname === "/api/admin/stores/tablecast-store/pos/mappings"
     ) {
       saved = await request.json();
       return Response.json(posMappingSettingsFixture);
@@ -172,11 +174,11 @@ it("共有する選択肢は別商品の行でも同じ入力を表示し、重�
     .toHaveValue("tablecast-square-shared-next");
   await expect.element(filter(ja.pos_mapping_filter_duplicate, 4)).toBeVisible();
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
-  await expect.element(page.getByText(ja.pos_saved, { exact: true })).toBeVisible();
+  await expect.element(page.getByText(ja.pos_mapping_saved, { exact: true })).toBeVisible();
   expect(saved).toEqual({
-    expectedRevision: 2,
-    locationId: "tablecast-location",
-    deviceId: "tablecast-terminal-1",
+    draftId: "tablecast-pos-draft",
+    expectedVersion: 4,
+    connectionId: "tablecast-pos-connection",
     mappings: [
       { kind: "product", localId: "tablecast-tea", externalId: "tablecast-square-tea" },
       { kind: "option", localId: "tablecast-large", externalId: "tablecast-square-large" },
@@ -217,4 +219,162 @@ it("親商品を未対応にすると既存の選択肢を保持して入力を�
   await expect
     .element(page.getByText(ja.pos_mapping_parent_required, { exact: true }))
     .not.toBeInTheDocument();
+});
+
+it("公開中の商品対応は読取りに留め、検索と絞込みは利用できる", async () => {
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    unexpected.push(new Request(input, init).url);
+    return Response.json({}, { status: 500 });
+  });
+  await renderMappings({ ...posMappingSettingsFixture, draft: null });
+  await expect.element(select("煎茶", "product")).toBeDisabled();
+  await expect
+    .element(page.getByRole("button", { name: ja.common_save, exact: true }))
+    .not.toBeInTheDocument();
+  const search = page.getByRole("searchbox", { name: ja.pos_mapping_search });
+  await expect.element(search).toBeEnabled();
+  await search.fill("氷");
+  await expect.element(select("氷", "option", "ジュース")).toBeVisible();
+  await expect.element(filter(ja.pos_mapping_filter_all, 9)).toBeVisible();
+});
+
+it("旧接続の対応は取込操作まで適用せず、取り込んだ対応を下書きへ保存する", async () => {
+  const settings = {
+    ...posMappingSettingsFixture,
+    mappings: [],
+    mappingConnectionId: null,
+    legacyMappings: {
+      connectionId: "tablecast-pos-connection",
+      mappings: posMappingSettingsFixture.mappings,
+    },
+  };
+  client.setQueryData(posSettingsOptions("tablecast-store").queryKey, { ...settings, draft: null });
+  let saved: unknown;
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (
+      request.method === "PUT" &&
+      new URL(request.url).pathname === "/api/admin/stores/tablecast-store/pos/mappings"
+    ) {
+      saved = await request.json();
+      return Response.json({
+        ...posMappingSettingsFixture,
+        draft: { ...posMappingSettingsFixture.draft, version: 5 },
+      });
+    }
+    unexpected.push(`${request.method} ${request.url}`);
+    return Response.json({}, { status: 500 });
+  });
+  await renderMappings(settings);
+  await expect.element(select("煎茶", "product")).toHaveValue("");
+  await expect.element(filter(ja.pos_mapping_filter_unmapped, 9)).toBeVisible();
+  expect(saved).toBeUndefined();
+  await page.getByRole("button", { name: ja.pos_mapping_legacy_import, exact: true }).click();
+  await expect.element(select("煎茶", "product")).toHaveValue("tablecast-square-tea");
+  await expect.element(filter(ja.pos_mapping_filter_duplicate, 4)).toBeVisible();
+  expect(saved).toBeUndefined();
+  await page.getByRole("button", { name: ja.common_save, exact: true }).click();
+  await expect.element(page.getByText(ja.pos_mapping_saved, { exact: true })).toBeVisible();
+  const value = posMappingsUpdateSchema.parse(saved);
+  expect(value).toMatchObject({
+    draftId: "tablecast-pos-draft",
+    expectedVersion: 4,
+    connectionId: "tablecast-pos-connection",
+  });
+  expect(value.mappings).toEqual(expect.arrayContaining(posMappingSettingsFixture.mappings));
+  expect(value.mappings).toHaveLength(posMappingSettingsFixture.mappings.length);
+});
+
+it.each([
+  ["維持", "pos_restore_mapping_keep", posMappingSettingsFixture.mappings],
+  ["解除", "pos_restore_mapping_clear", []],
+] as const)(
+  "対応がない旧版の下書きでは現在の対応を%sするか選ぶまで保存しない",
+  async (_name, choice, expected) => {
+    client.setQueryData(posSettingsOptions("tablecast-store").queryKey, {
+      ...posMappingSettingsFixture,
+      draft: null,
+    });
+    const settings = {
+      ...posMappingSettingsFixture,
+      mappingConnectionId: null,
+      mappings: [],
+      legacyMappings: null,
+    };
+    let saved: unknown;
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      if (
+        request.method === "PUT" &&
+        new URL(request.url).pathname === "/api/admin/stores/tablecast-store/pos/mappings"
+      ) {
+        saved = await request.json();
+        return Response.json({
+          ...settings,
+          mappingConnectionId: "tablecast-pos-connection",
+          mappings: expected,
+        });
+      }
+      unexpected.push(`${request.method} ${request.url}`);
+      return Response.json({}, { status: 500 });
+    });
+    await renderMappings(settings);
+    await expect
+      .element(page.getByText(ja.pos_restore_mapping_choice, { exact: true }))
+      .toBeVisible();
+    const save = page.getByRole("button", { name: ja.common_save, exact: true });
+    await expect.element(save).toBeDisabled();
+    await page.getByRole("button", { name: ja[choice], exact: true }).click();
+    await expect.element(save).toBeEnabled();
+    expect(saved).toBeUndefined();
+    await save.click();
+    await expect.element(page.getByText(ja.pos_mapping_saved, { exact: true })).toBeVisible();
+    const value = posMappingsUpdateSchema.parse(saved);
+    expect(value).toMatchObject({
+      draftId: "tablecast-pos-draft",
+      expectedVersion: 4,
+      connectionId: "tablecast-pos-connection",
+    });
+    expect(value.mappings).toEqual(expect.arrayContaining([...expected]));
+    expect(value.mappings).toHaveLength(expected.length);
+  },
+);
+
+it("復元元に対応がないとき公開版の取得失敗を示し、再試行と明示選択まで保存を止める", async () => {
+  let reads = 0;
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (
+      request.method === "GET" &&
+      new URL(request.url).pathname === "/api/admin/stores/tablecast-store/pos"
+    ) {
+      reads++;
+      return reads === 1
+        ? Response.json({ error: { code: "UNAVAILABLE" } }, { status: 500 })
+        : Response.json({ ...posMappingSettingsFixture, draft: null });
+    }
+    unexpected.push(`${request.method} ${request.url}`);
+    return Response.json({}, { status: 500 });
+  });
+  await renderMappings({
+    ...posMappingSettingsFixture,
+    mappingConnectionId: null,
+    mappings: [],
+    legacyMappings: null,
+  });
+  const save = page.getByRole("button", { name: ja.common_save, exact: true });
+  await expect.element(page.getByText(ja.common_unavailable, { exact: true })).toBeVisible();
+  await expect.element(save).toBeDisabled();
+  await expect
+    .element(page.getByRole("button", { name: ja.pos_restore_mapping_keep, exact: true }))
+    .not.toBeInTheDocument();
+  await page.getByRole("button", { name: ja.common_retry, exact: true }).click();
+  await expect
+    .element(page.getByText(ja.pos_restore_mapping_choice, { exact: true }))
+    .toBeVisible();
+  await expect.element(save).toBeDisabled();
+  await page.getByRole("button", { name: ja.pos_restore_mapping_keep, exact: true }).click();
+  await expect.element(save).toBeEnabled();
+  await expect.element(select("煎茶", "product")).toHaveValue("tablecast-square-tea");
+  expect(reads).toBe(2);
 });

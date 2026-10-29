@@ -6,7 +6,6 @@ import { configReleases, payments, stores } from "../../db/table-schema";
 import { readConfiguration } from "../configuration/food-compatibility";
 import { getTableState } from "../tables/queries";
 import { buildPosInvoice } from "./invoice";
-import { posMappingSchema } from "./model";
 
 export function findPosConnection(services: ApiServices, storeId: string) {
   return services.db.select().from(posConnections).where(eq(posConnections.storeId, storeId)).get();
@@ -70,7 +69,7 @@ export async function currentPosInvoice(
     table,
     orders: table.orders,
     configurations,
-    mappings: posMappingSchema.array().parse(JSON.parse(connection?.mappingsJson ?? "[]")),
+    connection,
     adjustments: adjustments.map((row) => ({ id: row.id, amount: row.amount, reason: row.reason })),
   });
   return { ...result, table };

@@ -107,6 +107,18 @@ export function configurationErrors(config: Configuration): ConfigurationIssue[]
   const allOptions = new Set(
     config.products.flatMap((p) => p.modifiers.flatMap((m) => m.options.map((o) => o.id))),
   );
+  const mappingIds = new Set<string>();
+  for (const [index, mapping] of (config.pos?.mappings ?? []).entries()) {
+    const key = mapping.kind + ":" + mapping.localId;
+    const path = ["pos", "mappings", index, "localId"];
+    if (mappingIds.has(key))
+      errors.push({ code: "DUPLICATE_ID", path, params: { id: mapping.localId } });
+    mappingIds.add(key);
+    if (mapping.kind === "product" && !products.has(mapping.localId))
+      errors.push({ code: "PRODUCT_NOT_FOUND", path, params: { productId: mapping.localId } });
+    if (mapping.kind === "option" && !allOptions.has(mapping.localId))
+      errors.push({ code: "OPTION_NOT_FOUND", path, params: { optionId: mapping.localId } });
+  }
   for (const [planIndex, plan] of config.plans.entries()) {
     const planPath = ["plans", planIndex];
     if (plan.lastOrderMinutesBeforeEnd >= plan.durationMinutes)

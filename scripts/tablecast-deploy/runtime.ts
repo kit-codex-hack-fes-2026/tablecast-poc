@@ -10,6 +10,7 @@ export const directory = resolve(root, ".local/tablecast-deploy");
 export const target = deploymentTarget(
   process.env.TABLECAST_PR_NUMBER || undefined,
   z.enum(["production", "staging", "preview"]).parse(process.env.TABLECAST_DEPLOY_ENV),
+  z.enum(["0", "1"]).parse(process.env.TABLECAST_SQUARE_SANDBOX_PREVIEW ?? "0") === "1",
 );
 
 export const sha = process.env.TABLECAST_RELEASE_SHA ?? "";

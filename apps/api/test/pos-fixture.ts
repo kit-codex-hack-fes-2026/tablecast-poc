@@ -1,23 +1,33 @@
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { vi } from "vitest";
 import app from "../src/app";
 import { posConnections } from "../src/db/pos-schema";
-import { configReleases } from "../src/db/table-schema";
+import { configReleases, stores } from "../src/db/table-schema";
 import { updateCart } from "../src/modules/orders/use-cases/cart";
 import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
 import { changeOrderStatus } from "../src/modules/orders/use-cases/status";
 import { sealPosCredentials } from "../src/modules/pos/credentials";
 import { getTableState } from "../src/modules/tables/queries";
 import { createApiServices } from "../src/platform/context";
-import { insertFixture } from "./database-fixture";
+import { fixtureDb, insertFixture } from "./database-fixture";
 import { configuration, device, setupFixture } from "./fixture";
+import { catalogTax } from "./pos-square-fixture";
 
 export const origin = "http://localhost:3000";
 export const base = "/api/admin/stores/tablecast-store";
 export const checkoutPath = `${base}/tables/tablecast-session/pos`;
 export const deviceId = "9fa747a2-25ff-48ee-b078-04381f7c828f";
 export const mappings = [{ kind: "product", localId: "tea", externalId: "square-tea" }] as const;
+export const posConfiguration = {
+  ...configuration,
+  pos: {
+    provider: "square" as const,
+    connectionId: "tablecast-pos-connection",
+    mappings: [...mappings],
+  },
+};
 export const configured = () => ({
   ...env,
   TABLECAST_SQUARE_APPLICATION_ID: "sandbox-sq0idb-tablecast-test",
@@ -100,10 +110,13 @@ export function squareHttp(hooks: { createOrder?: () => Promise<Response | void>
     if (outbound.method === "GET" && url.pathname === "/v2/catalog/list")
       return Response.json({
         objects: [
+          catalogTax,
           {
             type: "ITEM",
             id: "square-tea-item",
             item_data: {
+              tax_ids: [catalogTax.id],
+              is_taxable: true,
               name: "お茶",
               variations: [
                 {
@@ -197,7 +210,7 @@ export async function posConnection(userId: string) {
     insertFixture(configReleases, {
       store_id: "tablecast-store",
       version: 1,
-      config_json: JSON.stringify(configuration),
+      config_json: JSON.stringify(posConfiguration),
       published_by: userId,
       created_at: Date.now(),
     }),
@@ -217,6 +230,10 @@ export async function posConnection(userId: string) {
       updatedAt: Date.now(),
     }),
   ]);
+  await fixtureDb
+    .update(stores)
+    .set({ config_json: JSON.stringify(posConfiguration) })
+    .where(eq(stores.id, "tablecast-store"));
 }
 
 export async function servedTea(

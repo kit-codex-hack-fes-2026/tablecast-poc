@@ -177,10 +177,14 @@ describe("Squareの精算状態", () => {
       paymentIds: [],
     } satisfies Parameters<NonNullable<typeof adapter.checkout>["start"]>[0];
     await expect(
-      adapter.checkout?.start(remote, "square-device", "same-key"),
+      adapter.checkout?.start(remote, "9fa747a2-25ff-48ee-b078-04381f7c828f", "same-key"),
     ).rejects.toMatchObject({ code: "POS_UNKNOWN_OUTCOME" });
     await expect(
-      adapter.checkout?.start({ ...remote, status: "completed" }, "square-device", "same-key"),
+      adapter.checkout?.start(
+        { ...remote, status: "completed" },
+        "9fa747a2-25ff-48ee-b078-04381f7c828f",
+        "same-key",
+      ),
     ).resolves.toMatchObject({ status: "completed", paymentIds: ["square-payment"] });
     expect(wire.calls[0]?.body).toEqual(wire.calls[1]?.body);
   });
@@ -265,7 +269,7 @@ describe("Squareの精算状態", () => {
         status: "open",
         paymentIds: [],
       },
-      "square-device",
+      "9fa747a2-25ff-48ee-b078-04381f7c828f",
       "checkout-key",
     );
     expect(wire.calls[0]?.body).toMatchObject({
@@ -276,7 +280,7 @@ describe("Squareの精算状態", () => {
         payment_type: "CARD_PRESENT",
         payment_options: { autocomplete: true },
         device_options: {
-          device_id: "square-device",
+          device_id: "9fa747a2-25ff-48ee-b078-04381f7c828f",
           allow_auto_card_surcharge: false,
           show_itemized_cart: true,
           tip_settings: { allow_tipping: false },

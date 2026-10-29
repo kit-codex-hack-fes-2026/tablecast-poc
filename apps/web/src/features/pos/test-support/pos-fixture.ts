@@ -14,6 +14,10 @@ export const posSettingsFixture: PosSettings = {
     updatedAt: 1_792_800_000_000,
   },
   capabilities: { catalog: true, quote: true, orderExport: true, checkout: true, cancel: true },
+  mappingConnectionId: "tablecast-pos-connection",
+  publishedVersion: 3,
+  draft: { id: "tablecast-pos-draft", version: 4, baseVersion: 3, status: "draft" },
+  legacyMappings: null,
   mappings: [{ kind: "product", localId: "tablecast-tea", externalId: "tablecast-square-tea" }],
   products: [
     {

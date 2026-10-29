@@ -3,13 +3,19 @@ import { z } from "zod";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import { ensure } from "../../platform/errors";
-import { getPosCatalog, getPosSettings, savePosSettings } from "../pos/connections";
+import {
+  getPosCatalog,
+  getPosSettings,
+  savePosMappings,
+  savePosSettings,
+} from "../pos/connections";
 import { getPosDevices } from "../pos/devices";
 import {
   posCatalogSchema,
   posConfigurationSchema,
   posDeviceSchema,
   posMappingSchema,
+  posMappingsUpdateSchema,
   posSettingsSchema,
 } from "../pos/model";
 import { result } from "./result";
@@ -38,6 +44,9 @@ const settingsMetadata = posSettingsSchema.pick({
   configured: true,
   connection: true,
   capabilities: true,
+  mappingConnectionId: true,
+  publishedVersion: true,
+  draft: true,
 });
 const compare = (left: string, right: string) => (left < right ? -1 : left > right ? 1 : 0);
 const entryOrder = (
@@ -99,15 +108,20 @@ export function registerPosTools(server: McpServer, services: ApiServices, actor
     "get_pos_settings",
     {
       description:
-        "店舗のPOS状態・revisionと全商品の対応ID・登録済み各言語名・価格をページ取得する。nameは日本語原文jaと翻訳済みBCP 47言語キーを保持し、未翻訳言語は含まない。owner/adminのtablecast:readで使い、未接続でも読める。OAuth/再認証はsettingsUrlの公開GUIを案内する。section=itemsはproduct/optionの行で、option.productIdが親local商品。section=mappingsで既存対応を全ページ取得し、全置換保存で保持する。limitは既定50、最大100。totalは選択sectionの総件数、nextCursorがnullまで同条件で読む。POS_CURSOR_STALEなら最初から再取得し、版と価格を混在させない。tokenは返さない。",
+        "店舗のPOS状態と商品・対応をページ取得する。draftId省略は公開版、指定時は対象下書きの商品・価格・対応とdraft.version/baseVersionを返す。publishedVersionは現在の公開版。nameは登録済み各言語の原文を保持し未翻訳言語を補わない。owner/adminのtablecast:readで未接続でも読める。OAuthはsettingsUrlのGUIを案内する。section=itemsはproduct/optionの行でoption.productIdは親local商品。section=mappingsで対象版の全対応、legacyMappingsで旧live対応の明示取込候補を読む。legacyは会計に使われず、初回下書きへ取り込む場合だけ利用する。limit既定50、最大100、nextCursorがnullまで同条件で読み、POS_CURSOR_STALEなら再取得する。tokenは返さない。",
       inputSchema: z
-        .object({ section: z.enum(["items", "mappings"]).default("items"), ...pageInput })
+        .object({
+          draftId: z.string().min(1).max(200).optional(),
+          section: z.enum(["items", "mappings", "legacyMappings"]).default("items"),
+          ...pageInput,
+        })
         .strict(),
       outputSchema: {
         ...settingsMetadata.shape,
         ...identitySchema,
         ...pageOutput,
-        section: z.enum(["items", "mappings"]),
+        section: z.enum(["items", "mappings", "legacyMappings"]),
+        legacy: z.object({ connectionId: z.string(), count: z.number().int() }).nullable(),
         items: z.array(localEntry),
         mappings: z.array(posMappingSchema),
       },
@@ -119,11 +133,23 @@ export function registerPosTools(server: McpServer, services: ApiServices, actor
       },
     },
     async (input) => {
-      const settings = await getPosSettings(services, actor);
-      const metadata = settingsMetadata.parse(settings);
+      const settings = await getPosSettings(services, actor, input.draftId);
+      const metadata = {
+        ...settingsMetadata.parse(settings),
+        legacy: settings.legacyMappings
+          ? {
+              connectionId: settings.legacyMappings.connectionId,
+              count: settings.legacyMappings.mappings.length,
+            }
+          : null,
+      };
       const context = { ...identity, ...metadata, section: input.section };
-      if (input.section === "mappings") {
-        const entries = settings.mappings.toSorted(
+      if (input.section !== "items") {
+        const entries = (
+          input.section === "legacyMappings"
+            ? (settings.legacyMappings?.mappings ?? [])
+            : settings.mappings
+        ).toSorted(
           (left, right) =>
             compare(left.kind, right.kind) ||
             compare(left.localId, right.localId) ||
@@ -243,12 +269,14 @@ export function registerPosTools(server: McpServer, services: ApiServices, actor
     "save_pos_mappings",
     {
       description:
-        "依頼されたPOS対応をGUIと同じ店舗認可・候補IDの存在検証・進行中会計lockで保存する。親所属・価格の不一致は会計前照合で拒否されるため、保存成功を精算可能の証明にしない。owner/adminのtablecast:writeと最新expectedRevisionが必要。最大5000対応。locationId/deviceId/mappingsは全置換なので、get_pos_settingsのsection=mappingsを全ページ取得して保持対象を全件含める。分割送信は以前の対応を消すため行わない。共有local optionはkind+localIdで一件だけ渡す。externalIdは取得済みvariationかその親候補modifier IDを使い、言語・同名から推測しない。競合時は再取得して変更を組み直し、成功後も全ページ再取得して照合する。メニュー価格・Square商品・OAuth・決済は変更しない。",
-      inputSchema: posConfigurationSchema,
+        "POS対応をdraftIdの下書きへ保存する。公開設定は変更しない。owner/adminのtablecast:write、最新expectedVersion、接続のconnectionIdが必要。候補IDの存在を検証し、親所属・価格の不一致は会計前照合で拒否する。最大5000対応の全置換。get_pos_settings(draftId,section=mappings)を全ページ取得して保持対象を全件含め、分割保存しない。共有local optionはkind+localIdで一件だけ。対象下書きの親商品候補を使い原文・価格を照合する。競合時は再取得し、保存後も同じdraftIdで全ページ再取得する。次にvalidate_draft/get_draft_diff/request_publicationを使い人のGUI承認で公開する。店舗端末はsave_pos_connection_settingsで別保存。Square商品・OAuth・決済は変更しない。",
+      inputSchema: posMappingsUpdateSchema,
       outputSchema: {
         ...identitySchema,
         connection: posSettingsSchema.shape.connection,
         mappingCount: z.number().int().nonnegative(),
+        draft: posSettingsSchema.shape.draft,
+        publishedVersion: posSettingsSchema.shape.publishedVersion,
       },
       annotations: {
         readOnlyHint: false,
@@ -258,12 +286,33 @@ export function registerPosTools(server: McpServer, services: ApiServices, actor
       },
     },
     async (input) => {
-      const settings = await savePosSettings(services, actor, input);
+      const settings = await savePosMappings(services, actor, input);
       return output({
         ...identity,
         connection: settings.connection,
         mappingCount: settings.mappings.length,
+        draft: settings.draft,
+        publishedVersion: settings.publishedVersion,
       });
+    },
+  );
+  server.registerTool(
+    "save_pos_connection_settings",
+    {
+      description:
+        "接続済みPOSのlive店舗・端末だけを保存する。owner/adminのtablecast:writeと最新expectedRevisionが必要。候補はget_pos_catalog/list_pos_devicesで確認する。会計中の変更と古い版を拒否する。商品対応・下書き・公開メニュー・OAuth・決済は変更しない。",
+      inputSchema: posConfigurationSchema,
+      outputSchema: { ...identitySchema, connection: posSettingsSchema.shape.connection },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      const settings = await savePosSettings(services, actor, input);
+      return output({ ...identity, connection: settings.connection });
     },
   );
 }

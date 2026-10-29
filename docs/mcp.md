@@ -106,20 +106,23 @@ stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、�
 
 ## Squareの商品対応
 
-POS設定はメニューの下書きとは別に保存する。owner/adminが`tablecast:read`で設定・カタログ・端末を取得し、`tablecast:write`で対応を保存する。GUIと同じPOS serviceが店舗境界、接続環境、会計中の固定、設定revisionを検証する。
+商品対応は任意の`Configuration.pos`（provider・connectionId・mappings）として、商品と同じ下書き・検証・公開の承認を使う。owner/adminが`tablecast:read`で設定・カタログ・端末を取得し、`tablecast:write`で保存する。GUIと同じserviceが店舗境界・接続環境・下書きの版を検証する。Square店舗・端末は営業時の接続設定として別に保存する。
 
-| tool                | 入出力                                                                                                                                                                                                     |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_pos_settings`  | sectionはitemsまたはmappings、limitは1〜100（既定50）、cursorで継続する。storeId・settingsUrl・接続・revision・total・nextCursorと、指定sectionのitemsまたはmappingsを返す。未接続でも設定画面を案内できる |
-| `get_pos_catalog`   | 任意のlocationId・limit・cursorを受け取り、kindがlocation/product/optionのentriesとtotal・nextCursor・issuesを返す。optionのproductIdは親variationを示し、原文名・通常価格・販売状態を保持する             |
-| `list_pos_devices`  | 任意のlocationId・limit・cursorを受け取り、端末ID・名前・locationIdとcanPair・total・nextCursorを返す。端末の登録は行わない                                                                                |
-| `save_pos_mappings` | expectedRevision・locationId・deviceId・全mappingsを受け取り、storeId・settingsUrl・保存後connection・mappingCountだけを返す                                                                               |
+| tool                           | 入出力                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_pos_settings`             | 任意のdraftId、section（items/mappings/legacyMappings）、limit（1〜100、既定50）、cursorを受け取る。storeId・settingsUrl・接続・mappingConnectionId・publishedVersion・draft（id/version/baseVersion/status）・legacy（connectionId/count）と、指定sectionのitemsまたはmappings・total・nextCursorを返す。draftId省略時は公開版を読む |
+| `get_pos_catalog`              | 任意のlocationId・limit・cursorを受け取り、kindがlocation/product/optionのentriesとtotal・nextCursor・issuesを返す。optionのproductIdは親variationを示し、原文名・通常価格・販売状態を保持する                                                                                                                                        |
+| `list_pos_devices`             | 任意のlocationId・limit・cursorを受け取り、端末ID・名前・locationIdとcanPair・total・nextCursorを返す。端末の登録は行わない                                                                                                                                                                                                           |
+| `save_pos_mappings`            | draftId・expectedVersion・connectionId・全mappingsを受け取り、対応を下書きへ保存し、draft・publishedVersion・mappingCount・connectionを返す。営業中の公開版は変更しない                                                                                                                                                               |
+| `save_pos_connection_settings` | expectedRevision・locationId・deviceIdを受け取り、営業時のSquare店舗・端末設定を保存し、connectionを返す。商品対応の公開は行わない                                                                                                                                                                                                    |
 
-settingsのitemsはkind・id・productId・登録済み各言語名・価格・販売状態に限定し、画像や全configurationを複製しない。section:mappingsも最後まで取得し、itemsの現存local IDと突合する。limit・section・locationIdを変えずにnextCursorを辿り、POS_CURSOR_STALEなら先頭から再収集してrevisionも読み直す。各pageは共有serviceを再読取するため、ページ化だけでDB処理量が一定になるとは保証しない。
+settingsのitemsはkind・id・productId・登録済み各言語名・価格・販売状態に限定し、画像や全configurationを複製しない。section:mappingsも最後まで取得し、itemsの現存local IDと突合する。draftId・limit・section・locationIdを変えずにnextCursorを辿り、POS_CURSOR_STALEなら先頭から再収集して対象版も読み直す。各pageは共有serviceを再読取するため、ページ化だけでDB処理量が一定になるとは保証しない。
 
-agentはTableCastの登録済み各言語名、Squareの登録名・itemName・variationName、容量、通常価格を照合し、確かめられた商品からvariationへ、その子のカスタマイズからmodifierへ対応付ける。Squareの名前は日本語登録なら英語UIでも原文を維持する。別の親に属するmodifierや不一致の価格を名前だけで対応済みにしない。
+agentは既知の下書きを再利用し、なければ`create_draft`で作成する。TableCastの登録済み各言語名とSquareの原文名・itemName・variationName、容量・通常価格を照合し、商品からvariationへ、その子のカスタマイズからmodifierへ対応付ける。Squareの名前は日本語登録なら英語UIでも原文を維持する。別の親のmodifierや不一致の価格を名前だけで確定しない。
 
-保存は最大5,000件の全置換であり、現存するlocal IDと取得候補IDに一致する既存対応は依頼範囲外も含める。分割保存で追加する方式ではない。廃止local IDや消失したSquare IDは保存時に拒否されるため、該当行を区別し、依頼範囲では修正候補または未対応として明示する。範囲外で維持できない対応を黙って解除しない。親modifierの所属と価格は会計前のquoteで厳密に照合する。共有local optionはkindとlocalIdの組で一件にし、別商品での外部modifier再利用を妨げない。未対応行は配列へ含めず、曖昧な行だけ保留する。競合時は最新revisionを再取得して差分を組み直し、保存後も設定を再取得して確認する。接続・再認証・接続解除・端末登録・会計は設定画面で行い、今回のMCP toolには含めない。対応範囲はJPYの税込10%で、実接続・実決済の確認は設定保存の検証と分ける。
+対応保存は最大5,000件の全置換であり、現存するlocal IDと取得候補IDに一致する既存対応は依頼範囲外も含める。分割保存で追加する方式ではない。廃止local IDや消失したSquare IDの行は区別し、範囲外の対応を黙って解除しない。親modifierの所属と価格は会計前のquoteでも厳密に照合する。共有local optionはkindとlocalIdの組で一件にし、別商品での外部modifier再利用を妨げない。未対応行は配列へ含めず、曖昧な行だけ保留する。
+
+保存後は対象draftIdを指定して再取得し、`validate_draft`と`get_draft_diff`で検証・差分を確認する。競合時は最新の下書きから依頼差分を組み直す。公開を依頼された場合だけ`request_publication`で人の確認画面を案内し、保存や公開申請だけで公開済みとしない。旧接続の対応は`legacy`の件数を確認し、取込を依頼された場合だけsection:legacyMappingsを全page取得する。取得結果はmappings配列へ返り、過去の公開版や注文へ自動適用しない。OAuth・再認証・接続解除・端末登録・会計はMCP toolへ追加しない。対応範囲はJPYの税込10%で、実接続・実決済・実モデルの照合品質は下書き保存の検証と分ける。
 
 ## 店舗統計
 

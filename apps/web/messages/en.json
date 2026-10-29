@@ -1804,5 +1804,16 @@
   "food_reason_pork_ingredients": "Contains pork-derived ingredients",
   "food_reason_alcohol": "Contains alcohol",
   "food_reason_origin_unknown": "Ingredient provenance unverified",
-  "food_reason_previous_record": "Previously recorded assessment"
+  "food_reason_previous_record": "Previously recorded assessment",
+  "pos_connection_settings": "Connection settings",
+  "pos_mapping_saved": "Saved to draft",
+  "pos_mapping_draft_note": "Publish to use these mappings at checkout.",
+  "pos_mapping_legacy_import": "Import previous mappings",
+  "pos_restore_mapping_choice": "This older version has no product mappings.",
+  "pos_restore_mapping_keep": "Keep current mappings",
+  "pos_restore_mapping_clear": "Clear mappings",
+  "pos_change_product": "Product mapping",
+  "pos_change_option": "Customisation mapping",
+  "pos_change_target": "Square mapping",
+  "pos_change_connection": "Square connection"
 }

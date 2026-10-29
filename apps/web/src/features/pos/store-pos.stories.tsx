@@ -1,7 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
-import { expect, within } from "storybook/test";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { expect, waitFor, within } from "storybook/test";
 import { posCatalogOptions, posDevicesOptions } from "./pos-query";
 import { StorePosSettings } from "./store-pos";
 import { posDevicesFixture } from "./test-support/pos-fixture";
@@ -22,12 +28,27 @@ function createFixtureClient() {
   return client;
 }
 
+const ContentContext = createContext<ReactNode>(null);
+const fixtureRoute = createRootRoute({ component: FixtureContent });
+function FixtureContent() {
+  const children = useContext(ContentContext);
+  return <main className="space-y-6 p-6">{children}</main>;
+}
 function Fixture({ children }: { children: ReactNode }) {
   const [client] = useState(createFixtureClient);
+  const [router] = useState(() =>
+    createRouter({
+      routeTree: fixtureRoute,
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    }),
+  );
+  useEffect(() => () => client.clear(), [client]);
   return (
-    <QueryClientProvider client={client}>
-      <main className="space-y-6 p-6">{children}</main>
-    </QueryClientProvider>
+    <ContentContext value={children}>
+      <QueryClientProvider client={client}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </ContentContext>
   );
 }
 const meta = {
@@ -44,7 +65,25 @@ const meta = {
 } satisfies Meta<typeof StorePosSettings>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const Connected: Story = { name: "接続済みの対応付け" };
+export const Connected: Story = {
+  name: "接続済みの対応付け",
+  play: async ({ canvasElement }) => {
+    const logo = within(canvasElement).getByRole("img", { name: "Square" });
+    await waitFor(() => expect(logo).toHaveProperty("naturalWidth", 599));
+    await expect(logo).toHaveStyle({ height: "24px" });
+    await expect(logo).toHaveAttribute("src", "/brand/square-primary-black.svg");
+  },
+};
+export const Published: Story = {
+  name: "公開中の対応付けは閲覧のみ",
+  args: { settings: { ...posSeedSettings, draft: null } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const select of canvas.getAllByRole("combobox", { name: /Squareの商品/ }))
+      await expect(select).toBeDisabled();
+    await expect(canvas.queryByRole("button", { name: "保存" })).not.toBeInTheDocument();
+  },
+};
 export const Disconnected: Story = {
   name: "接続前の案内",
   args: { settings: { ...posSeedSettings, connection: null, mappings: [] } },

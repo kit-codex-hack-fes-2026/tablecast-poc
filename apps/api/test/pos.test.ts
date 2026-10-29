@@ -88,7 +88,6 @@ it.each([
     expectedRevision: 1,
     locationId: "square-location",
     deviceId,
-    mappings,
   });
 
   expect(response.status).toBe(expected);
@@ -168,7 +167,6 @@ it("古い設定版の保存を409にし接続と対応付けを保持する", a
     expectedRevision: 0,
     locationId: "square-location",
     deviceId,
-    mappings: [],
   });
 
   expect(response.status).toBe(409);
@@ -242,7 +240,6 @@ it("処理中のカート・手動入金・設定変更を拒否し業務状態�
     expectedRevision: 1,
     locationId: "square-location",
     deviceId,
-    mappings: [],
   });
 
   expect(cart.status).toBe(409);

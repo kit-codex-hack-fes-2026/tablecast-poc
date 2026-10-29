@@ -15,7 +15,20 @@ export const posConfigurationSchema = z
     expectedRevision: z.number().int().nonnegative(),
     locationId: z.string().min(1).max(200),
     deviceId: z.string().min(1).max(200),
+  })
+  .strict();
+export const posBindingSchema = z
+  .object({
+    provider: posProviderSchema,
+    connectionId: z.string().min(1).max(200),
     mappings: z.array(posMappingSchema).max(5000),
+  })
+  .strict();
+export const posMappingsUpdateSchema = posBindingSchema
+  .omit({ provider: true })
+  .extend({
+    draftId: z.string().min(1).max(200),
+    expectedVersion: z.number().int().nonnegative(),
   })
   .strict();
 export type PosMapping = z.infer<typeof posMappingSchema>;
@@ -89,6 +102,19 @@ export const posSettingsSchema = z.object({
   connection: posConnectionSchema.nullable(),
   capabilities: posCapabilitiesSchema,
   mappings: z.array(posMappingSchema),
+  mappingConnectionId: z.string().nullable(),
+  publishedVersion: z.number().int(),
+  draft: z
+    .object({
+      id: z.string(),
+      version: z.number().int(),
+      baseVersion: z.number().int(),
+      status: z.enum(["draft", "ready", "published", "discarded"]),
+    })
+    .nullable(),
+  legacyMappings: z
+    .object({ connectionId: z.string(), mappings: z.array(posMappingSchema) })
+    .nullable(),
   products: z.array(
     z.object({
       id: z.string(),
