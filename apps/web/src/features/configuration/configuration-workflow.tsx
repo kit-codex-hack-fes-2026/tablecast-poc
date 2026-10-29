@@ -137,7 +137,9 @@ export function StartConfigurationEditing({
                                         target === "appearance" ||
                                         target === "banners"
                                       ? "theme_title"
-                                      : menuLabels[target],
+                                      : target === "pos"
+                                        ? "pos_mapping"
+                                        : menuLabels[target],
                               ),
                             )
                             .join(" · ")}

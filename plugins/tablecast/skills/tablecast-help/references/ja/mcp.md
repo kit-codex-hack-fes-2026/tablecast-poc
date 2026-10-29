@@ -24,6 +24,15 @@ description: 公開MCPへのOAuth接続、店舗・scopeの確認、作業別の
 | 統計を調べる                   | `get_statistics` → [統計と改善](./analytics.md)                    |
 | 店舗デザインを制作する         | `get_configuration`・`get_theme_spec`と同梱`tablecast-theme` skill |
 | 卓上ゲームを制作する           | `get_game_spec`と同梱`tablecast` skill                             |
+| Squareの商品を対応付ける       | `get_pos_settings`・`get_pos_catalog`と同梱`tablecast` skill       |
+
+## Squareの商品対応
+
+管理者がPOS設定画面でSquareへ接続した後、agentへ商品の対応付けを依頼できます。owner/adminと`tablecast:read`で`get_pos_settings`・`get_pos_catalog`・`list_pos_devices`を読み、保存には`tablecast:write`も必要です。各一覧はページ単位なので、続きがある間は同じ条件で取得します。
+
+agentは商品名・バリエーション・容量・価格を照合し、商品の下のカスタマイズも、そのSquare商品に属する候補から対応付けます。Squareの登録名は日本語なら英語UIでも原文です。名前だけで曖昧な対応を確定せず、確認できる行を進めて保留事項を示します。
+
+`save_pos_mappings`は最大5,000件の対応全体を置き換えるため、変更しない現存する有効な対応も取得・保持します。分割保存ではありません。廃止・消失したIDの行は黙って解除せず、修正や解除が必要な行として示します。商品対応はメニューと同じ下書きへ保存し、検証と差分確認の後、人が管理画面で公開を承認します。保存だけでは営業へ反映されません。Square店舗・端末は`save_pos_connection_settings`で営業時の接続設定として分けます。旧接続の対応は明示的な取込候補であり、過去注文へ自動適用しません。OAuth接続や端末登録、会計は管理画面で行い、対応の保存だけを実決済の確認済みとは扱いません。[設定と公開](./configuration.md)も参照してください。
 
 ## agentが作業するとき
 

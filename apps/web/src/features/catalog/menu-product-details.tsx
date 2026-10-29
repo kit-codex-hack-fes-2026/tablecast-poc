@@ -16,7 +16,7 @@ import { menuOverviewColumns } from "./menu-overview-columns";
 
 export function ProductDetails({ product }: { product: Configuration["products"][number] }) {
   const { t, locale } = useI18n();
-  const columns = useMemo(() => menuOverviewColumns(t, locale), [t, locale]);
+  const columns = useMemo(() => menuOverviewColumns(t), [t]);
   const collection = useCollectionSearch({
     prefix: "options",
     sortIds: ["group", "name", "price", "available"],

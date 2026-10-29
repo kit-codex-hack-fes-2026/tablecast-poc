@@ -8,17 +8,32 @@ import * as m from "motion/react-m";
 import { forwardRef, type ReactNode, useId, useState } from "react";
 import { useI18n } from "../i18n/locale";
 import { ConditionSummary } from "./condition-summary";
+import { CustomisationContent, CustomisationPrice } from "./customisation-content";
 import { FoodInformationView } from "./food-information";
 import { IllustrationNotice } from "./illustration-notice";
-import { Money, PriceChange } from "./money";
+import { Money } from "./money";
 import { ProductImage } from "./product-image";
 import { SnapshotProductName } from "./product-name";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { quantityControl } from "./ui/quantity-control-variants";
 
-export type CartDisplayLine = Omit<PricedLine, "planCovered" | "total" | "unitPrice"> &
-  Partial<Pick<PricedLine, "planCovered" | "total" | "unitPrice">>;
+export type CartDisplayLine = Partial<
+  Pick<
+    PricedLine,
+    | "conditionIssues"
+    | "foodInformation"
+    | "missing"
+    | "planCovered"
+    | "total"
+    | "transliteration"
+    | "unitPrice"
+  >
+> &
+  Pick<PricedLine, "id" | "name" | "quantity"> & {
+    options: Pick<PricedLine["options"][number], "id" | "name" | "priceDelta" | "quantity">[];
+    productId: null | string;
+  };
 
 /**
  * 注文かごの行。
@@ -27,7 +42,7 @@ export type CartDisplayLine = Omit<PricedLine, "planCovered" | "total" | "unitPr
  * disabledで更新中の操作を防ぐ。
  * 表示側で価格や必須条件を再計算せず、明示注文確定はfeatureの確認フローへ残す。
  */
-export function CartLines({
+export function CartLines<Line extends CartDisplayLine>({
   lines,
   onEdit,
   onRemove,
@@ -37,10 +52,10 @@ export function CartLines({
   variant = "cards",
 }: {
   disabled?: boolean;
-  lines: CartDisplayLine[];
-  onEdit?: (line: CartDisplayLine) => void;
-  onQuantity?: (line: CartDisplayLine, quantity: number) => void;
-  onRemove?: (line: CartDisplayLine) => void;
+  lines: Line[];
+  onEdit?: (line: Line) => void;
+  onQuantity?: (line: Line, quantity: number) => void;
+  onRemove?: (line: Line) => void;
   products?: Product[];
   variant?: "cards" | "receipt";
 }) {
@@ -66,9 +81,9 @@ export function CartLines({
           </CartLineSurface>
         )}
         {lines.map((line) => {
-          const product = productsById.get(line.productId);
+          const product = line.productId ? productsById.get(line.productId) : undefined;
           const canEdit = Boolean(
-            onEdit && (product?.modifiers.length || line.options.length || line.missing.length),
+            onEdit && (product?.modifiers.length || line.options.length || line.missing?.length),
           );
           const optionsById = new Map(
             product?.modifiers.flatMap((group) =>
@@ -142,36 +157,28 @@ export function CartLines({
                             {line.options.map((option) => {
                               const context = optionsById.get(option.id);
                               return (
-                                <span
+                                <div
                                   key={option.id}
-                                  className="inline-flex min-h-12.5 max-w-full flex-wrap items-center gap-2 rounded-2xl bg-muted p-2 text-sm"
+                                  className="inline-flex min-h-12.5 max-w-full flex-wrap items-center gap-2 rounded-2xl bg-surface-subtle p-2 text-sm"
                                 >
-                                  <span className="font-medium">
-                                    {(context
-                                      ? resolveText(context.group.text, locale).displayName
-                                      : undefined) ?? t("kiosk_customisations")}
-                                    :{" "}
-                                  </span>
-                                  {context?.option.imageKey && (
-                                    <ProductImage
-                                      src={`/media/${context.option.imageKey}`}
-                                      width={32}
-                                      height={32}
-                                      sizes="32px"
-                                      alt=""
-                                      className="size-8 shrink-0 rounded-lg object-contain"
-                                    />
-                                  )}
-                                  <span className="min-w-0 wrap-anywhere">
-                                    {resolveLocalized(option.name, locale)}
-                                    {option.quantity > 1 && ` × ${option.quantity}`}
-                                  </span>
+                                  <CustomisationContent
+                                    group={
+                                      (context
+                                        ? resolveText(context.group.text, locale).displayName
+                                        : undefined) ?? t("kiosk_customisations")
+                                    }
+                                    name={resolveLocalized(option.name, locale)}
+                                    imageKey={context?.option.imageKey}
+                                    imageKind={context?.option.imageKind}
+                                    quantity={option.quantity}
+                                    showIllustration={false}
+                                  />
                                   {option.priceDelta !== 0 && (
                                     <span>
-                                      (<PriceChange value={option.priceDelta} />)
+                                      (<CustomisationPrice value={option.priceDelta} />)
                                     </span>
                                   )}
-                                </span>
+                                </div>
                               );
                             })}
                           </div>
@@ -246,7 +253,7 @@ export function CartLines({
                       </p>
                     );
                   })}
-                  {line.missing.length > 0 && (
+                  {(line.missing?.length ?? 0) > 0 && (
                     <span className="inline-flex text-sm text-destructive">
                       {t("kiosk_missing")}
                     </span>
@@ -285,14 +292,14 @@ const CartLineSurface = forwardRef<HTMLLIElement, { children: ReactNode; framed?
 );
 
 /** 入力中の文字だけを保持し、確定した数量を既存APIへ渡す。応答後はAPIの数量へ同期する。 */
-function LineQuantity({
+function LineQuantity<Line extends CartDisplayLine>({
   line,
   disabled,
   onQuantity,
 }: {
   disabled: boolean;
-  line: CartDisplayLine;
-  onQuantity: (line: CartDisplayLine, quantity: number) => void;
+  line: Line;
+  onQuantity: (line: Line, quantity: number) => void;
 }) {
   const { locale, t } = useI18n();
   const id = useId();

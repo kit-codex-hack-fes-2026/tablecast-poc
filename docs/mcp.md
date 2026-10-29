@@ -104,6 +104,26 @@ stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、�
 
 `cast.instructions.ja/en` は旧文字列と版1の制限されたTiptap文書のunion。文書を保存する `update_draft` 呼出しでは `instructionFormatVersion: 1` を付ける。省略した旧クライアントは文書を含む下書きを更新できず、競合として拒否される。schemaと本文投影・上限はGUIと共通。[保存契約と展開条件](prompt-editor-design.md)を参照する。
 
+## Squareの商品対応
+
+商品対応は任意の`Configuration.pos`（provider・connectionId・mappings）として、商品と同じ下書き・検証・公開の承認を使う。owner/adminが`tablecast:read`で設定・カタログ・端末を取得し、`tablecast:write`で保存する。GUIと同じserviceが店舗境界・接続環境・下書きの版を検証する。Square店舗・端末は営業時の接続設定として別に保存する。
+
+| tool                           | 入出力                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_pos_settings`             | 任意のdraftId、section（items/mappings/legacyMappings）、limit（1〜100、既定50）、cursorを受け取る。storeId・settingsUrl・接続・mappingConnectionId・publishedVersion・draft（id/version/baseVersion/status）・legacy（connectionId/count）と、指定sectionのitemsまたはmappings・total・nextCursorを返す。draftId省略時は公開版を読む |
+| `get_pos_catalog`              | 任意のlocationId・limit・cursorを受け取り、kindがlocation/product/optionのentriesとtotal・nextCursor・issuesを返す。optionのproductIdは親variationを示し、原文名・通常価格・販売状態を保持する                                                                                                                                        |
+| `list_pos_devices`             | 任意のlocationId・limit・cursorを受け取り、端末ID・名前・locationIdとcanPair・total・nextCursorを返す。端末の登録は行わない                                                                                                                                                                                                           |
+| `save_pos_mappings`            | draftId・expectedVersion・connectionId・全mappingsを受け取り、対応を下書きへ保存し、draft・publishedVersion・mappingCount・connectionを返す。営業中の公開版は変更しない                                                                                                                                                               |
+| `save_pos_connection_settings` | expectedRevision・locationId・deviceIdを受け取り、営業時のSquare店舗・端末設定を保存し、connectionを返す。商品対応の公開は行わない                                                                                                                                                                                                    |
+
+settingsのitemsはkind・id・productId・登録済み各言語名・価格・販売状態に限定し、画像や全configurationを複製しない。section:mappingsも最後まで取得し、itemsの現存local IDと突合する。draftId・limit・section・locationIdを変えずにnextCursorを辿り、POS_CURSOR_STALEなら先頭から再収集して対象版も読み直す。各pageは共有serviceを再読取するため、ページ化だけでDB処理量が一定になるとは保証しない。
+
+agentは既知の下書きを再利用し、なければ`create_draft`で作成する。TableCastの登録済み各言語名とSquareの原文名・itemName・variationName、容量・通常価格を照合し、商品からvariationへ、その子のカスタマイズからmodifierへ対応付ける。Squareの名前は日本語登録なら英語UIでも原文を維持する。別の親のmodifierや不一致の価格を名前だけで確定しない。
+
+対応保存は最大5,000件の全置換であり、現存するlocal IDと取得候補IDに一致する既存対応は依頼範囲外も含める。分割保存で追加する方式ではない。廃止local IDや消失したSquare IDの行は区別し、範囲外の対応を黙って解除しない。親modifierの所属と価格は会計前のquoteでも厳密に照合する。共有local optionはkindとlocalIdの組で一件にし、別商品での外部modifier再利用を妨げない。未対応行は配列へ含めず、曖昧な行だけ保留する。
+
+保存後は対象draftIdを指定して再取得し、`validate_draft`と`get_draft_diff`で検証・差分を確認する。競合時は最新の下書きから依頼差分を組み直す。公開を依頼された場合だけ`request_publication`で人の確認画面を案内し、保存や公開申請だけで公開済みとしない。旧接続の対応は`legacy`の件数を確認し、取込を依頼された場合だけsection:legacyMappingsを全page取得する。取得結果はmappings配列へ返り、過去の公開版や注文へ自動適用しない。OAuth・再認証・接続解除・端末登録・会計はMCP toolへ追加しない。対応範囲はJPYの税込10%で、実接続・実決済・実モデルの照合品質は下書き保存の検証と分ける。
+
 ## 店舗統計
 
 `get_statistics` はowner/admin向けの読取りtoolで、`tablecast:read` により概要・商品・カスタマイズの統計を取得する。from/toで指定した期間内に閉卓した通常来店を対象にする。詳細は[指標・期間・ページング](statistics.md)を参照する。分析だけの依頼で下書きを作らず、採用された設定変更に既存の下書きtoolを使う。

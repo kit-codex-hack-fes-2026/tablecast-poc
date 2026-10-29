@@ -11,6 +11,7 @@ description: TableCastの使い方、MCP接続、メニュー設定から公開�
 | -------------------------------------------- | ---------------------------------------------- |
 | 初めて使う、店舗や端末を準備したい           | [はじめに](references/ja/getting-started.md)   |
 | agentを接続したい、権限や接続先を確かめたい  | [MCP接続とagentの使い方](references/ja/mcp.md) |
+| Squareの商品とカスタマイズを対応付けたい     | [MCP接続とagentの使い方](references/ja/mcp.md) |
 | メニュー・接客を設定したい、変更を公開したい | [設定と公開](references/ja/configuration.md)   |
 | 売上や注文を分析したい                       | [統計と改善](references/ja/analytics.md)       |
 | ログイン・接続・保存・音声で困っている       | [困ったとき](references/ja/troubleshooting.md) |

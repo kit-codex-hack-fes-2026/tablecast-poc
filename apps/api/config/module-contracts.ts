@@ -4,7 +4,7 @@ import { dependencies } from "./dependencies.ts";
 const moduleContracts = {
   account: [],
   appearance: ["model"],
-  auth: ["middleware", "model", "policy", "token", "passkey-policy"],
+  auth: ["middleware", "model", "policy", "token", "passkey-policy", "queries"],
   billing: ["credentials", "stripe", "usage"],
   catalog: [
     "localization",
@@ -51,6 +51,7 @@ const moduleContracts = {
   mcp: [],
   media: ["model", "service", "queries"],
   orders: ["queries", "model", "use-cases/cart", "use-cases/confirmation"],
+  pos: ["connections", "devices", "model"],
   statistics: ["model", "service"],
   stores: ["queries"],
   tables: [
@@ -78,6 +79,7 @@ const compositions = {
     "devices/admin-routes",
     "media/admin-routes",
     "orders/routes",
+    "pos/routes",
     "tables/admin-routes",
     "voice/catalog-routes",
   ],

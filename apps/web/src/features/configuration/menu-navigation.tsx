@@ -1,4 +1,5 @@
 import { useParams, useSearch } from "@tanstack/react-router";
+import { SquareLogo } from "../../components/square-logo";
 import { useI18n } from "../../i18n/locale";
 import { menuLabels, menuReviewSearchSchema } from "../configuration/menu-model";
 import { navigationItemClass } from "../shell/navigation-group";
@@ -81,6 +82,20 @@ export function MenuNavigation({
         <Palette className="size-4" />
         {!collapsed && t("theme_title")}
       </Link>
+      {manager && (
+        <Link
+          collapsed={collapsed}
+          title={t("pos_title")}
+          to={navigationPages.pos.to}
+          params={{ storeId }}
+          search={{ ...listSearch, returnSection: currentSection, draftId }}
+          className={className}
+          onClick={onNavigate}
+        >
+          <SquareLogo compact className="size-4" />
+          {!collapsed && t("pos_title")}
+        </Link>
+      )}
       <Link
         collapsed={collapsed}
         title={t("admin_drafts")}

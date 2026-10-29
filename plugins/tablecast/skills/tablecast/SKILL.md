@@ -1,6 +1,6 @@
 ---
 name: tablecast
-description: TableCastのメニュー・接客を資料から設定するとき、価格・売切・画像・翻訳を変更するとき、採用した提案を下書きに反映するとき、卓上ゲームを制作・登録・検証するときに使う。
+description: TableCastのメニュー・接客を資料から設定するとき、価格・売切・画像・翻訳を変更するとき、Squareの商品とカスタマイズを対応付けるとき、採用した提案を下書きに反映するとき、卓上ゲームを制作・登録・検証するときに使う。
 ---
 
 # TableCastを設定する
@@ -21,7 +21,7 @@ validate_gameの結果を確認し、返されたreviewUrlで試遊する。自�
 
 探索前から未接続と決めつけない。実際の認証エラー・tool不在・権限不足を確認した場合だけ必要な接続操作を伝える。利用者が認証したら再探索して同じ依頼を再開する。権限不足を別の認証情報で回避しない。
 
-提案・分析・確認だけの依頼では読み取りに留める。設定して、採用した案を反映してという依頼は下書き作成の許可であり、実行してよいかを繰り返し聞かない。公開申請は明示依頼がある場合だけrequest_publicationで確認画面を案内する。実際の公開は人が管理画面で承認する。
+提案・分析・確認だけの依頼では読み取りに留める。メニュー・接客を設定して、採用した案を反映してという依頼は下書き作成の許可であり、実行してよいかを繰り返し聞かない。Squareの対応付けを設定する依頼も、商品と同じ下書きへ保存・検証する許可として扱う。公開申請は明示依頼がある場合だけrequest_publicationで確認画面を案内する。実際の公開は人が管理画面で承認する。
 
 ## 資料から取り込む
 
@@ -35,7 +35,7 @@ validate_gameの結果を確認し、返されたreviewUrlで試遊する。自�
 
 get_configurationの現行値、またはこの会話で編集中の下書きを基点とする。既知のdraftIdがあればget_draft_diffで最新内容を取得し、別の空の下書きを作って作業を失わない。新しく始める場合はcreate_draftを呼ぶ。
 
-変更箇所を組み込んだ全configurationと最新のexpectedVersionをupdate_draftへ渡す。update_draftは部分patchではない。update_draft → validate_draft → get_draft_diffで保存・検証・差分を確認し、修正可能なエラーはその場で直す。架空のdraftId・画像キー・成功結果を作らない。
+変更箇所を組み込んだ全configurationと最新のexpectedVersionをupdate_draftへ渡す。update_draftは部分patchではない。Square対応を変更しない依頼でも既存のconfiguration.posを保持する。update_draft → validate_draft → get_draft_diffで保存・検証・差分を確認し、修正可能なエラーはその場で直す。架空のdraftId・画像キー・成功結果を作らない。
 
 競合したらget_draft_diffと必要な公開設定を読み直す。自分の変更箇所が競合していなければ最新版へ再適用する。同じ価格等に別の変更があれば選択を確認する。公開版が進み古い下書きを公開できない場合は新しい公開版から下書きを作り、依頼された差分だけ移す。古い下書きを勝手に破棄しない。
 
@@ -50,6 +50,17 @@ get_configurationの現行値、またはこの会話で編集中の下書きを
 - 採用済みの提案は対象と具体文を会話から引き継ぎ、現在設定と照合する。推奨価格を確認済みの事実として扱わない。
 
 接客指示が文書形式なら構造を保持し、update_draftへinstructionFormatVersion: 1を添える。本文だけの変更で書式を落とさず、実際の入力schemaに従う。
+
+## Squareの商品とカスタマイズを対応付ける
+
+この店の商品をSquareに対応付けてという依頼では、対応を商品と同じ下書きへ保存・検証する。公開は人が承認する。提案だけの依頼では保存しない。Square店舗・端末の接続設定は商品対応と分ける。
+
+1. 実際のtool一覧とschemaを確認する。get_configurationで対象店舗と公開版を確かめ、既知のdraftIdがあればget_draft_diffで再利用し、なければcreate_draftで作る。get_pos_settingsへdraftIdを渡し、section:itemsとsection:mappingsをそれぞれnextCursorがなくなるまで同じ条件で取得する。storeId・settingsUrl・接続・mappingConnectionId・publishedVersionとdraftのid・version・baseVersion・statusを確認し、公開済み・破棄済みの下書きを編集しない。owner/adminとtablecast:readが必要で、保存にはtablecast:writeも必要である。未接続ならsettingsUrlで管理者にSquare接続を案内し、接続後に同じ依頼を再開する。
+2. get_pos_catalogで対象locationIdの全entriesを収集し、kindとproductIdからvariationと親ごとのmodifierを組み立てる。必要ならlist_pos_devicesで端末も全page取得する。limit・locationIdを継続取得中に変更しない。POS_CURSOR_STALEなら先頭から再収集して対象版も読み直す。既存の店舗・端末は維持し、変更を依頼された場合だけsave_pos_connection_settingsへexpectedRevision・locationId・deviceIdを渡す。この操作は営業時の接続設定を変えるため、商品対応の下書き保存と区別して報告する。架空のIDやOAuth・接続解除・端末登録・決済toolを作らない。
+3. TableCastの登録済み各言語名とSquareの原文名、itemName・variationName、容量、通常価格、売切状態を照合する。Squareの登録名は表示言語に合わせて翻訳・書換えしない。名前が似ているだけで一致とせず、価格や容量が異なる候補は保留する。APIの対応範囲はJPYの税込10%である。
+4. 商品はvariation IDへ、カスタマイズはそのvariationに属するmodifier IDへ対応付ける。同じlocal optionを複数商品が使う場合は、全ての親に有効な対応一つを共有する。保存配列はkindとlocalIdの組で一意にする。別商品で同じ外部modifierを再利用できる。異なる商品が同じvariationを使う候補や、同じ商品内で異なるoptionが同じmodifierを使う候補は重複として示し、曖昧な行だけ保留する。
+5. items全pageとmappings全pageを突合し、現存するlocal IDで、取得候補に存在する既存対応を依頼範囲外も保持する。廃止local IDや消失したSquare IDは区別し、依頼範囲の行は候補へ修正するか未対応として示す。範囲外で維持できない対応を黙って解除しない。旧接続の対応はlegacyの件数を確認し、取込を依頼された場合だけ同じdraftIdのsection:legacyMappingsを全page取得する。返されたmappingsを現存商品と照合して下書きへ取り込み、過去注文へ適用しない。draftId・最新のexpectedVersion・connectionId・全mappingsをsave_pos_mappingsへ渡す。最大5,000件の全置換なので、変更行だけの送信や分割保存で他の対応を消さない。未対応行は配列へ含めず、競合したら最新の下書きから依頼差分を組み直す。商品・価格・翻訳等の他の設定を保持する。
+6. 対象draftIdのget_pos_settingsを再取得して保存値を照合し、validate_draftとget_draft_diffで検証・差分を確認する。対象店舗、下書きの版、保存した対応、保留・重複・要確認、settingsUrlを短く報告する。公開の明示依頼がある場合だけrequest_publicationの人向け確認画面を案内する。下書き保存や公開申請を公開済みとせず、実決済・実機・実モデルの照合品質を確認済みとして報告しない。対応のない過去注文へ現在の対応を補わない。
 
 ## 商品画像
 
@@ -80,7 +91,7 @@ upload_image応答のimageKey・imageKind・imageSourceを対象商品へ設定�
 
 ## 商品名と追加言語を設定する
 
-get_configurationのlocales・uiLocales・fallbackと入力schemaを確認する。対応言語を増やす依頼ではconfiguration.languagesに正規BCP 47コードを追加し、ja・enを残す。初期の中国語はzh-Hans、韓国語はko。価格・画像・他言語を保持した全configurationで既存の下書き操作を使い、専用toolがあると説明しない。
+get_configurationのlocales・uiLocales・fallbackと入力schemaを確認する。対応言語を増やす依頼ではconfiguration.languagesに正規BCP 47コードを追加し、必須のjaと既存の他言語を保持する。enは任意であり、UIの4言語へ保存言語を限定しない。中国語の例はzh-Hans、韓国語はko。価格・画像・他言語を保持した全configurationで既存の下書き操作を使い、専用toolがあると説明しない。
 
 商品textの各言語はdisplayNameを意味訳、transliterationを音の転写として同時に設定する。日本語も原名と読みを持たせる。未翻訳の外国語はキー全体を省略し、片方だけ・空文字・空白だけを保存しない。画面で上下に表示するため、転写を括弧でdisplayNameへ連結しない。英語はイギリス英語で、転写は長音記号付きヘボン式にする。例はdisplayName: Japanese soy sauce fried chicken、transliteration: Karaage。銘柄は固有名を残し、純米吟醸等の種別は意味を訳す。料理名・材料・調理法・個数等を独断で短縮・省略しない。英語の大文字、料理の説明、通貨の扱いは、翻訳時に[多言語メニューの設定指針](references/localization.md)を読む。中国語・韓国語の転写は各言語の文字を使う。
 

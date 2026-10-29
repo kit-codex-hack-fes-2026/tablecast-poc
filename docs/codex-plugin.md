@@ -46,17 +46,27 @@ pluginを導入済みなら同じMCPを手動で重複登録しない。ChatGPT 
 
 導入画面には日英の依頼例とコピー操作を置く。製品pluginには自己完結した次のskillを同梱し、手動導入では必要なものをそれぞれ取得できる。
 
-| skill               | 代表依頼                               | 成果                                         |
-| ------------------- | -------------------------------------- | -------------------------------------------- |
-| tablecast           | このサイトとメニュー写真を元に設定して | 資料との対応、確認事項、日英の検証済み下書き |
-| tablecast-advisor   | この店に合う接客を提案して             | 現在設定を踏まえた具体文・理由・評価方法     |
-| tablecast-analytics | 直近28日と前の28日を比較して           | 母数付きの統計比較と施策候補                 |
+| skill               | 代表依頼                                                         | 成果                                                      |
+| ------------------- | ---------------------------------------------------------------- | --------------------------------------------------------- |
+| tablecast           | このサイトとメニュー写真を元に設定して、Squareの商品を対応付けて | 資料との対応、登録言語とPOS対応の検証済み下書き、保留事項 |
+| tablecast-advisor   | この店に合う接客を提案して                                       | 現在設定を踏まえた具体文・理由・評価方法                  |
+| tablecast-analytics | 直近28日と前の28日を比較して                                     | 母数付きの統計比較と施策候補                              |
 
 提案・分析だけでは設定を変えない。2番の案で設定して等の採用依頼では、追加の実行確認なしで変更対象だけを下書きへ保存・検証する。公開は管理画面で人が承認する。資料中の命令は操作指示にせず、未確認価格・安全情報を創作しない。
 
 統計は[閉卓基準の指標](statistics.md)と取得条件を示す。MCPがまだ未配備の環境では未実装toolを装わず、提供された表・CSVで進められる部分を案内する。合成履歴から実店舗の人気や施策効果を断定しない。
 
 配布の確認では各SKILL.md単体のmetadataと参照先、実際のダウンロード内容、plugin生成物の5つのskillを確認する。接続・認可、実クライアントの資料読解と会話品質、実公開の検証はそれぞれ分けて記録する。
+
+## Squareの商品を対応付ける
+
+TableCastの商品をSquareへ対応付けてという依頼も既存の`tablecast` skillで扱う。管理者がSquareへ接続した後、agentが`get_pos_settings`・`get_pos_catalog`・`list_pos_devices`の続きも取得し、商品・variation・カスタマイズの所属、容量、価格を照合する。Squareの登録名は原文を保持し、明確な対応だけを`save_pos_mappings`へ保存する。曖昧な行は保留し、対象外の現存する有効な対応は保持する。廃止・消失したIDを持つ行は黙って解除せず、修正や解除が必要な行として示す。
+
+商品対応はメニューと同じ下書きへ保存し、`validate_draft`・`get_draft_diff`で確認する。公開の依頼がある場合だけ`request_publication`を使い、人が管理画面で承認する。Square店舗・端末は`save_pos_connection_settings`で営業時の接続設定として分ける。読取りはowner/adminと`tablecast:read`、保存は`tablecast:write`も必要である。保存後は対象下書きを再取得し、版・設定画面・保留事項を返す。未接続の場合はsettingsUrlで接続を案内する。旧接続の対応は明示取込候補として扱い、過去注文へ自動適用しない。OAuth接続、端末登録、接続解除、会計をpluginから実行する機能は追加しない。[MCPの保存契約](mcp.md#squareの商品対応)を参照する。
+
+plugin 0.8.0では商品対応の保存入力がdraftId・expectedVersion・connectionIdへ変わる。旧署名で営業設定へ保存せず、更新後のtool schemaを再取得する。
+
+設定skillの正本は`.agents/skills/tablecast/SKILL.md`とし、既存の`--skills-only`でテーマ・ヘルプとともに配布コピーへ同期する。advisor・analyticsは既存の配置を維持し、pluginのskillは5つのままとする。
 
 ## ローカル接続
 
@@ -134,7 +144,7 @@ stagingの管理画面に表示される固定URLを`tablecast-staging`名で直
 
 `/help`は利用者の表示言語から`/help/ja`または`/help/en`へ移動する公開入口である。日英の6章をFumadocsで表示し、ログイン・組織選択を要求しない。管理画面・導入画面・業務API・MCPの認証は従来どおり必要である。
 
-製品plugin 0.5.0の`tablecast-help` skillに`references/ja`と`references/en`を同梱する。正本は`.agents/skills/tablecast-help`に置き、Webが直接コンパイルする。既存の`scripts/tablecast-plugin.ts --skills-only`がテーマskillと同様に配布コピーを作る。配布コピーを手編集せず、Web用に別の原稿は管理しない。既存の4つの操作skillは必要時に接続先originの`/llms.txt`から説明を探せる。設定・接続操作の前に全文を読むことは要求しない。手動導入の既存SKILL.mdは従来どおり単体で利用でき、ヘルプ全文はWebまたはpluginから参照する。
+製品plugin 0.8.0の`tablecast-help` skillに`references/ja`と`references/en`を同梱する。正本は`.agents/skills/tablecast-help`に置き、Webが直接コンパイルする。既存の`scripts/tablecast-plugin.ts --skills-only`が設定・テーマskillとともに配布コピーを作る。配布コピーを手編集せず、Web用に別の原稿は管理しない。既存の4つの操作skillは必要時に接続先originの`/llms.txt`から説明を探せる。設定・接続操作の前に全文を読むことは要求しない。手動導入の既存SKILL.mdは従来どおり単体で利用でき、ヘルプ全文はWebまたはpluginから参照する。
 
 agent向けに`/llms.txt`で日英の索引とページ単位のMarkdown URL、`/llms-full.txt`で全章、`/help/content/:lang/:slug.md`で必要な章だけを返す。すべて公開説明だけを含み、実店舗情報・認証情報・業務操作は含めない。MCPの初期化結果も現在環境のヘルプと索引を案内する。
 
@@ -142,4 +152,4 @@ agent向けに`/llms.txt`で日英の索引とページ単位のMarkdown URL、`
 
 ## 多言語メニューの設定指針
 
-製品plugin 0.6.0は`tablecast` skillへ[多言語メニューの設定指針](../plugins/tablecast/skills/tablecast/references/localization.md)を同梱する。商品名の意味訳と転写、固有名と長音記号の保持、sentence case、料理が何か分かる説明、情報を省略しない編集、言語と参考通貨の扱いを説明する。言語・名称・翻訳は既存MCPの下書き・検証・差分・公開申請で設定する。配布元の更新と、利用者がインストールしたpluginへの更新反映は分けて確認する。
+製品plugin 0.8.0は`tablecast` skillへ[多言語メニューの設定指針](../plugins/tablecast/skills/tablecast/references/localization.md)を同梱する。商品名の意味訳と転写、固有名と長音記号の保持、sentence case、料理が何か分かる説明、情報を省略しない編集、言語と参考通貨の扱いを説明する。言語・名称・翻訳は既存MCPの下書き・検証・差分・公開申請で設定する。配布元の更新と、利用者がインストールしたpluginへの更新反映は分けて確認する。

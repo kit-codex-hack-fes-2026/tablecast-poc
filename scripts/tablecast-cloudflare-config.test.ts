@@ -113,6 +113,33 @@ describe("cfの環境解決と実資源の採用", () => {
     ).toBe("false");
   });
 
+  test("ローカルのSquare公開IDだけをAPI varsへ渡し秘密値はAPI secretとして宣言する", () => {
+    const local = {
+      TABLECAST_RESOURCE_NAME: "square-test",
+      TABLECAST_SQUARE_APPLICATION_ID: "sandbox-sq0idb-tablecast-test",
+      TABLECAST_SQUARE_ENVIRONMENT: "sandbox",
+      TABLECAST_SQUARE_APPLICATION_SECRET: "tablecast-private-application-secret",
+      TABLECAST_SQUARE_WEBHOOK_SIGNATURE_KEY: "tablecast-private-signature-key",
+      TABLECAST_POS_ENCRYPTION_SECRET: "tablecast-private-encryption-secret",
+    };
+    const api = modeOptions("api", "development", "", local);
+    const web = modeOptions("web", "development", "", local);
+    expect(api.vars.TABLECAST_SQUARE_APPLICATION_ID).toBe(local.TABLECAST_SQUARE_APPLICATION_ID);
+    expect(api.vars.TABLECAST_SQUARE_ENVIRONMENT).toBe("sandbox");
+    const worker = apiCloudflareConfig(api).worker;
+    for (const key of [
+      "TABLECAST_SQUARE_APPLICATION_SECRET",
+      "TABLECAST_SQUARE_WEBHOOK_SIGNATURE_KEY",
+      "TABLECAST_POS_ENCRYPTION_SECRET",
+    ]) {
+      expect(api.vars).not.toHaveProperty(key);
+      expect(Reflect.get(worker.env, key)).toEqual({ type: "secret" });
+      expect(web.vars).not.toHaveProperty(key);
+    }
+    expect(web.vars).not.toHaveProperty("TABLECAST_SQUARE_APPLICATION_ID");
+    expect(web.vars).not.toHaveProperty("TABLECAST_SQUARE_ENVIRONMENT");
+  });
+
   test("一つの入力から両workspaceを解決し、SDK用JSONなしでmodeの取り違えを拒否する", () => {
     const target = deploymentTarget("267");
     const options = deploymentOptions(
@@ -178,6 +205,7 @@ describe("cfの環境解決と実資源の採用", () => {
   });
 
   test("公式Build Outputを読み、別環境・別SHA・別PR・秘密値の混入を配備前に拒否する", async () => {
+    vi.stubEnv("TABLECAST_SQUARE_APPLICATION_ID", "sq0idp-tablecast-test");
     const root = await mkdtemp(join(tmpdir(), "tablecast-build-output-test-"));
     const target = deploymentTarget("267");
     const sha = "a".repeat(40);
@@ -249,6 +277,17 @@ describe("cfの環境解決と実資源の採用", () => {
       expect(await readdir(bundle)).not.toContain(".env.preview");
       const output = await readBuildOutput(root);
       expect(deploymentBuildOutput(output, target, sha)).toHaveLength(2);
+      vi.stubEnv("TABLECAST_SQUARE_APPLICATION_ID", "sq0idp-other-application");
+      expect(() => deploymentBuildOutput(output, target, sha)).toThrow("Square設定");
+      vi.stubEnv("TABLECAST_SQUARE_APPLICATION_ID", "sq0idp-tablecast-test");
+      const web = output.workers.default;
+      if (!web?.config.env) throw new Error("Webのenvがありません。");
+      web.config.env.TABLECAST_SQUARE_APPLICATION_ID = {
+        type: "text",
+        value: "sq0idp-tablecast-test",
+      };
+      expect(() => deploymentBuildOutput(output, target, sha)).toThrow("Web Worker");
+      delete web.config.env.TABLECAST_SQUARE_APPLICATION_ID;
       expect(() => deploymentBuildOutput(output, target, "b".repeat(40))).toThrow("Invalid input");
       expect(() =>
         deploymentBuildOutput(output, deploymentTarget(undefined, "staging"), sha),
@@ -258,6 +297,9 @@ describe("cfの環境解決と実資源の採用", () => {
       );
       const api = output.workers.tablecast_api;
       if (!api?.config.env) throw new Error("APIのenvがありません。");
+      api.config.env.TABLECAST_SQUARE_ENVIRONMENT = { type: "text", value: "sandbox" };
+      expect(() => deploymentBuildOutput(output, target, sha)).toThrow("Square設定");
+      api.config.env.TABLECAST_SQUARE_ENVIRONMENT = { type: "text", value: "production" };
       api.config.env.TABLECAST_AUTH_SECRET = {
         type: "text",
         value: "tablecast-secret-must-never-enter-artifact",

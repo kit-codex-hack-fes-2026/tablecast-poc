@@ -48,6 +48,3 @@ export function useProductFoodInformation({
 }
 
 export type ProductFoodQuery = ReturnType<typeof useProductFoodInformation>;
-export type ProductOptionAllergens = NonNullable<
-  ProductFoodQuery["data"]
->["optionAllergens"][string];

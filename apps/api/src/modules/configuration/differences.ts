@@ -3,7 +3,7 @@ import { type ConfigDraft } from "./model";
 
 function hasSensitiveField(value: unknown, path: string): boolean {
   return (
-    /price|allergen|vegan|crossContact|plans|foodInfo|foodChanges/.test(path) ||
+    /price|allergen|vegan|crossContact|plans|foodInfo|foodChanges|pos/.test(path) ||
     (value !== null &&
       typeof value === "object" &&
       Object.entries(value).some(([key, child]) => hasSensitiveField(child, key)))
@@ -17,6 +17,7 @@ export function configurationDifferences(
 ): ConfigDraft["changes"] {
   if (JSON.stringify(before) === JSON.stringify(after)) return [];
   if (
+    path !== "pos" &&
     !/^cast\.instructions\.(ja|en)$/.test(path) &&
     before !== null &&
     after !== null &&

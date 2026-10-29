@@ -1,11 +1,13 @@
 import { RotateCcw, Search } from "lucide-react";
 import { type ReactNode, useId } from "react";
+import { cn } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
 /** 検索とリセット、各条件を分け、利用できる幅で条件の列数を切り替える。 */
 export function CollectionToolbar({
+  className,
   search,
   filters,
   sort,
@@ -13,6 +15,7 @@ export function CollectionToolbar({
   resetDisabled,
   disabled = false,
 }: {
+  className?: string;
   disabled?: boolean;
   filters?: ReactNode;
   onReset: () => void;
@@ -46,7 +49,7 @@ export function CollectionToolbar({
     </div>
   );
   return (
-    <div className="@container space-y-4 rounded-2xl bg-surface-subtle p-4">
+    <div className={cn("@container space-y-4 rounded-2xl bg-surface-subtle p-4", className)}>
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
         {search ? (
           <label

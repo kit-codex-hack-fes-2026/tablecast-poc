@@ -8,6 +8,7 @@ import { demoRoutes } from "./modules/demo/routes";
 import { devicesRoutes } from "./modules/devices/routes";
 import { mcpRoutes } from "./modules/mcp/routes";
 import { mediaRoutes } from "./modules/media/routes";
+import { posOperatingRoutes } from "./modules/pos/routes";
 import { storesRoutes } from "./modules/stores/collection-routes";
 import { initialRoutes } from "./modules/stores/initial-routes";
 import { admin } from "./modules/stores/routes";
@@ -30,6 +31,7 @@ const rpcRoutes = apiFactory
   .route("/api/admin/stores/:storeId", admin)
   .route("/api/table", table);
 const app = createHttpApp()
+  .route("/", posOperatingRoutes)
   .route("/", operatingBillingRoutes)
   .route("/", systemRoutes)
   .route("/", authRoutes)

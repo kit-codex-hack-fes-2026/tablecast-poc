@@ -4,8 +4,9 @@ import { detectPlatform } from "@tanstack/react-hotkeys";
 import { Link, useHydrated } from "@tanstack/react-router";
 import { useFetchSearch } from "fumadocs-core/search/client/fetch";
 import { ArrowUpRight, LoaderCircle, Search, X } from "lucide-react";
-import { type RefObject, useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useId, useRef, useState } from "react";
 import { cn } from "tailwind-variants";
+import { SquareLogo } from "../../components/square-logo";
 import { Input } from "../../components/ui/input";
 import { controlMotion, surfaceMotion } from "../../components/ui/motion-variants";
 import { useI18n } from "../../i18n/locale";
@@ -233,6 +234,7 @@ function SearchResults({
             title={title}
             description={description}
             Icon={Icon}
+            logo={id === "pos" ? <SquareLogo compact /> : undefined}
             group={group}
             to={url}
             position={index + 1}
@@ -358,10 +360,12 @@ function SearchResult({
   query,
   tree,
   titleTree,
+  logo,
 }: {
   description: string;
   group: keyof typeof navigationGroups;
   Icon: typeof Search;
+  logo?: ReactNode;
   onNavigate: () => void;
   position: number;
   query: string;
@@ -390,7 +394,7 @@ function SearchResult({
       })}
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--nav-surface)] text-[var(--nav-color)]">
-        <Icon aria-hidden="true" className="size-5" />
+        {logo ?? <Icon aria-hidden="true" className="size-5" />}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium group-hover:text-[var(--nav-color)]">

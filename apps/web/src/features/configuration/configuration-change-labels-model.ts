@@ -1,4 +1,9 @@
 export const labels = {
+  pos: "pos_mapping",
+  mappings: "pos_mapping",
+  connectionId: "pos_change_connection",
+  externalId: "pos_change_target",
+  localId: "theme_product",
   languages: "editor_store_languages",
   transliteration: "admin_transliteration",
   branding: "theme_logo",

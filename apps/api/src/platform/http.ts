@@ -95,6 +95,19 @@ export const requestSecurity = createMiddleware<ApiEnv>(async (c, next) => {
   await next();
 });
 export const handleError: ErrorHandler<ApiEnv> = (error, c) => {
+  // DBの会計lockは全入口で同じ競合応答へ変換する。SQLや値はresponseへ含めない。
+  let databaseCause: unknown = error;
+  for (let depth = 0; depth < 5 && databaseCause instanceof Error; depth++) {
+    if (databaseCause.message.includes("TABLECAST_POS_CHECKOUT_LOCKED"))
+      return c.json(
+        {
+          error: { code: "POS_CHECKOUT_LOCKED", message: "POS_CHECKOUT_LOCKED" },
+          traceId: c.get("traceId"),
+        },
+        409,
+      );
+    databaseCause = databaseCause.cause;
+  }
   if (error instanceof DomainError)
     return c.json(
       {

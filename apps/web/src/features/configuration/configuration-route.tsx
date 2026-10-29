@@ -9,8 +9,14 @@ export function useConfigurationRoute() {
     select: (search) => search.draftId,
   });
   const design = pathname.endsWith("/design");
+  const posDraftId = useSearch({
+    from: "/admin/stores/$storeId/pos",
+    shouldThrow: false,
+    select: (search) => search.draftId,
+  });
+  const pos = pathname.endsWith("/pos");
   return {
-    active: pathname.includes("/menu/") || design,
-    draftId: draftId ?? designDraftId,
+    active: pathname.includes("/menu/") || design || pos,
+    draftId: draftId ?? designDraftId ?? posDraftId,
   };
 }

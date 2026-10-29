@@ -28,6 +28,7 @@ const apply = process.argv.includes("--apply");
 const target = deploymentTarget(
   process.env.TABLECAST_PR_NUMBER || undefined,
   z.enum(["preview", "staging", "production"]).parse(process.env.TABLECAST_DEPLOY_ENV),
+  z.enum(["0", "1"]).parse(process.env.TABLECAST_SQUARE_SANDBOX_PREVIEW ?? "0") === "1",
 );
 const sha = z
   .string()

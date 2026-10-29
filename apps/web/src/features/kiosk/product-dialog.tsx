@@ -4,8 +4,8 @@ import { type CartLine, maxCartLines, type Product } from "@tablecast/api/schema
 import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import { useId, useState } from "react";
 import { ConditionSummary } from "../../components/condition-summary";
+import { CustomisationContent, CustomisationPrice } from "../../components/customisation-content";
 import { ErrorNotice } from "../../components/error-notice";
-import { PriceChange } from "../../components/money";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -16,7 +16,6 @@ import { type TableEndpoint } from "../../lib/api";
 import { m } from "../../paraglide/messages.js";
 import { ProductDetailHeader } from "./product-detail-header";
 import { useProductFoodInformation } from "./product-food-query";
-import { OptionContent } from "./product-option-content";
 import { optionRow } from "./product-option-model";
 
 export function ProductPage({
@@ -138,33 +137,34 @@ export function ProductPage({
                         selected: selections.some((item) => item.optionId === option.id),
                       })}
                       key={option.id}
+                      htmlFor={`${id}-${groupIndex}-${optionIndex}-control`}
                     >
                       <RadioGroupItem
+                        id={`${id}-${groupIndex}-${optionIndex}-control`}
                         value={option.id}
                         disabled={!option.available || busy}
                         aria-labelledby={`${id}-${groupIndex}-${optionIndex}-name`}
                         aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${resolveText(option.text, locale).description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                       ></RadioGroupItem>
-                      <OptionContent
-                        option={option}
+                      <CustomisationContent
+                        name={resolveText(option.text, locale).displayName}
+                        description={resolveText(option.text, locale).description}
+                        imageKey={option.imageKey}
+                        imageKind={option.imageKind}
                         showAllergens={Boolean(endpoint)}
                         allergensPending={food.isPending}
+                        reserveAllergens={option.foodChanges?.add.length !== 0}
                         allergens={food.data?.optionAllergens[option.id]}
-                        locale={locale}
                         id={`${id}-${groupIndex}-${optionIndex}`}
+                        showIllustration={false}
+                        className="flex-1"
                       />
-                      <small
+                      <CustomisationPrice
                         id={`${id}-${groupIndex}-${optionIndex}-price`}
-                        className="ml-auto text-sm whitespace-nowrap text-muted-foreground"
-                      >
-                        {!option.available ? (
-                          t("kiosk_sold_out")
-                        ) : option.priceDelta !== 0 ? (
-                          <PriceChange value={option.priceDelta} />
-                        ) : (
-                          ""
-                        )}
-                      </small>
+                        className="ml-auto"
+                        value={option.priceDelta}
+                        available={option.available}
+                      />
                     </label>
                   ))}
                 </RadioGroup>
@@ -193,37 +193,41 @@ export function ProductPage({
                             aria-labelledby={`${id}-${groupIndex}-${optionIndex}-name`}
                             aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${resolveText(option.text, locale).description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                           ></Checkbox>
-                          <OptionContent
-                            option={option}
+                          <CustomisationContent
+                            name={resolveText(option.text, locale).displayName}
+                            description={resolveText(option.text, locale).description}
+                            imageKey={option.imageKey}
+                            imageKind={option.imageKind}
                             showAllergens={Boolean(endpoint)}
                             allergensPending={food.isPending}
+                            reserveAllergens={option.foodChanges?.add.length !== 0}
                             allergens={food.data?.optionAllergens[option.id]}
-                            locale={locale}
                             id={`${id}-${groupIndex}-${optionIndex}`}
+                            showIllustration={false}
+                            className="flex-1"
                           />
                         </label>
                       ) : (
-                        <OptionContent
-                          option={option}
+                        <CustomisationContent
+                          name={resolveText(option.text, locale).displayName}
+                          description={resolveText(option.text, locale).description}
+                          imageKey={option.imageKey}
+                          imageKind={option.imageKind}
                           showAllergens={Boolean(endpoint)}
                           allergensPending={food.isPending}
+                          reserveAllergens={option.foodChanges?.add.length !== 0}
                           allergens={food.data?.optionAllergens[option.id]}
-                          locale={locale}
                           id={`${id}-${groupIndex}-${optionIndex}`}
+                          showIllustration={false}
+                          className="flex-1"
                         />
                       )}
-                      <small
+                      <CustomisationPrice
                         id={`${id}-${groupIndex}-${optionIndex}-price`}
-                        className="ml-auto text-sm whitespace-nowrap text-muted-foreground"
-                      >
-                        {!option.available ? (
-                          t("kiosk_sold_out")
-                        ) : option.priceDelta !== 0 ? (
-                          <PriceChange value={option.priceDelta} />
-                        ) : (
-                          ""
-                        )}
-                      </small>
+                        className="ml-auto"
+                        value={option.priceDelta}
+                        available={option.available}
+                      />
                       {group.kind === "quantity" && (
                         <div data-ui="quantity-control" className={quantityControl().group()}>
                           <Button
@@ -272,8 +276,11 @@ export function ProductPage({
           group.options.map((option) =>
             option.conditions &&
             selections.some((selection) => selection.optionId === option.id) ? (
-              <div key={option.id} className="my-3 space-y-2 rounded-lg bg-muted p-3 text-sm">
-                <p className="font-semibold">{resolveText(option.text, locale).displayName}</p>
+              <div
+                key={option.id}
+                className="my-3 space-y-2 rounded-lg bg-surface-subtle p-3 text-sm"
+              >
+                <CustomisationContent name={resolveText(option.text, locale).displayName} />
                 {option.conditions?.requires && (
                   <p>
                     {t("condition_requires")}：

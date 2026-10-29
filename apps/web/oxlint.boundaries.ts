@@ -11,6 +11,7 @@ const owners = [
   "games",
   "help",
   "kiosk",
+  "pos",
   "rewards",
   "shell",
   "statistics",
@@ -183,6 +184,20 @@ export const boundaryPolicies = [
     },
   },
   {
+    from: file("feature", "pos"),
+    allow: {
+      to: file("feature", "configuration", [
+        "configuration-status",
+        "configuration-toolbar",
+        "configuration-workflow",
+      ]),
+    },
+  },
+  {
+    from: file("feature", "configuration"),
+    allow: { to: file(["feature", "query"], "pos", ["pos-configuration-changes", "pos-query"]) },
+  },
+  {
     from: file("model", "catalog"),
     allow: { to: file("model", "configuration", ["menu-model", "configuration-defaults"]) },
   },
@@ -199,6 +214,7 @@ export const boundaryPolicies = [
     from: file("feature", "floor"),
     allow: { to: file("feature", "rewards", ["coupon-visit", "point-visit"]) },
   },
+  { from: file("feature", "floor"), allow: { to: file("feature", "pos", ["pos-checkout"]) } },
   {
     from: file("feature", "demo"),
     allow: { to: file("feature", "configuration", ["configuration-errors"]) },

@@ -27,21 +27,23 @@ export async function getDraft(
   services: ApiServices,
   actor: Actor,
   id: string,
+  published?: Catalog,
 ): Promise<ConfigDraft> {
   const db = services.db;
 
-  const [drafts, catalogs] = await db.batch([
-    db
-      .select()
-      .from(business.configDrafts)
-      .where(
-        and(eq(business.configDrafts.id, id), eq(business.configDrafts.store_id, actor.storeId)),
-      ),
-    catalogQuery(db, actor.storeId),
-  ]);
+  const query = db
+    .select()
+    .from(business.configDrafts)
+    .where(
+      and(eq(business.configDrafts.id, id), eq(business.configDrafts.store_id, actor.storeId)),
+    );
+  const [drafts, catalog] = published
+    ? ([await query, published] as const)
+    : await db
+        .batch([query, catalogQuery(db, actor.storeId)])
+        .then(([rows, catalogs]) => [rows, catalogValue(catalogs[0])] as const);
   const row = drafts[0];
   ensure(row, "DRAFT_NOT_FOUND", 404);
-  const catalog = catalogValue(catalogs[0]);
   return draftValue(row, catalog);
 }
 

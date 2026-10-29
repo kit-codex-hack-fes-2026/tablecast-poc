@@ -10,6 +10,7 @@ import { devicesAdminRoutes } from "../devices/admin-routes";
 import { gamesAdminRoutes } from "../games/admin-routes";
 import { mediaAdminRoutes } from "../media/admin-routes";
 import { ordersAdminRoutes } from "../orders/routes";
+import { posAdminRoutes } from "../pos/routes";
 import { statisticsAdminRoutes } from "../statistics/routes";
 import { tablesAdminRoutes } from "../tables/admin-routes";
 import { voiceAdminRoutes } from "../voice/catalog-routes";
@@ -50,6 +51,7 @@ export const admin = apiFactory
   .route("/", voiceAdminRoutes)
   .route("/", tablesAdminRoutes)
   .route("/", ordersAdminRoutes)
+  .route("/", posAdminRoutes)
   .route("/", devicesAdminRoutes)
   .route("/", configurationAdminRoutes)
   .route("/games", gamesAdminRoutes);

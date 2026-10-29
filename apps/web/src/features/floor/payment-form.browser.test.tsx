@@ -10,7 +10,9 @@ import { PaymentForm } from "./payment-form";
 let client: QueryClient;
 let requests: unknown[];
 let unexpected: string[];
+let paymentFailure: null | { code: string; status: number };
 beforeEach(() => {
+  paymentFailure = null;
   requests = [];
   unexpected = [];
   client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
@@ -25,7 +27,9 @@ beforeEach(() => {
       return new Response(null, { status: 500 });
     }
     requests.push(await request.json());
-    return Response.json({});
+    return paymentFailure
+      ? Response.json({ error: { code: paymentFailure.code } }, { status: paymentFailure.status })
+      : Response.json({});
   });
 });
 afterEach(async () => {
@@ -66,6 +70,20 @@ describe("日本語の会計入力", () => {
     await expect.element(page.getByRole("spinbutton")).toHaveValue(null);
     expect(requests).toHaveLength(1);
     expect(requests).toMatchObject([{ amount: 720, kind: "payment", reason: "店頭受領" }]);
+  });
+
+  it("Squareの会計処理中は入力を保持し、取消が必要なことを案内する", async () => {
+    paymentFailure = { code: "POS_CHECKOUT_LOCKED", status: 409 };
+    await page.getByRole("spinbutton", { name: labels.admin_amount }).fill("720");
+    await page.getByRole("textbox", { name: labels.admin_reason }).fill("店頭受領");
+    await page.getByRole("button", { name: labels.admin_payment, exact: true }).click();
+    await expect.element(page.getByRole("alert")).toHaveTextContent(labels.pos_locked);
+    await expect
+      .element(page.getByRole("spinbutton", { name: labels.admin_amount }))
+      .toHaveValue(720);
+    await expect
+      .element(page.getByRole("textbox", { name: labels.admin_reason }))
+      .toHaveValue("店頭受領");
   });
 
   it.each([

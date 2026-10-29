@@ -8,10 +8,16 @@ import {
   requiredApiSecrets,
   tablecastCompatibilityDate,
   type TablecastConfigOptions,
+  tablecastPosSecrets,
+  tablecastSquareVars,
 } from "../../scripts/tablecast-deploy-config.ts";
 
 export function apiCloudflareConfig(input: TablecastConfigOptions = {}) {
   const options = optionsSchema.parse(input);
+  const square = tablecastSquareVars(options.vars);
+  for (const key of tablecastPosSecrets)
+    if (options.vars[key] !== undefined)
+      throw new Error(`${key}はAPI secretとして設定してください。`);
   const hosted = ["preview", "staging", "production"].includes(options.environment);
   const emulate = options.environment === "preview" || options.environment === "staging";
   const emailFrom = options.vars.TABLECAST_EMAIL_FROM;
@@ -60,6 +66,8 @@ export function apiCloudflareConfig(input: TablecastConfigOptions = {}) {
         TABLECAST_BILLING_ENABLED: bindings.text("false"),
         TABLECAST_BILLING_RATES: bindings.text(""),
         TABLECAST_BILLING_OPERATOR_USER_IDS: bindings.text(""),
+        TABLECAST_SQUARE_APPLICATION_ID: bindings.text(square.TABLECAST_SQUARE_APPLICATION_ID),
+        TABLECAST_SQUARE_ENVIRONMENT: bindings.text(square.TABLECAST_SQUARE_ENVIRONMENT),
         TABLECAST_EMAIL_FROM: bindings.text(emailFrom ?? ""),
         ...Object.fromEntries(
           Object.entries(options.vars).map(([key, value]) => [key, bindings.text(value)]),

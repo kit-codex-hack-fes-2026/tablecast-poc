@@ -5,7 +5,7 @@ import { validate, validateOptionalJson, validateQuery } from "../../platform/va
 import { getProductFoodInformation } from "../catalog/food-service";
 import { foodQuerySchema } from "../catalog/model";
 import { getCatalog } from "../catalog/queries";
-import { instructionResponse } from "../configuration/instruction-response";
+import { customerCatalog, instructionResponse } from "../configuration/instruction-response";
 import { initialiseExchangeRates } from "../currency/service";
 import { customerAttributionSchema, customerTargetSchema } from "../customer-memory/model";
 import { attributeCustomerConsumption } from "../customer-memory/use-cases/consumption";
@@ -72,7 +72,9 @@ export const orderingOperations = apiFactory
       instructionResponse(
         await withImageAssets(
           c.var.services,
-          await getCatalog(c.var.services, c.var.actor.storeId, c.var.actor.demoId),
+          customerCatalog(
+            await getCatalog(c.var.services, c.var.actor.storeId, c.var.actor.demoId),
+          ),
         ),
         c.req.header("X-Tablecast-Instructions"),
       ),

@@ -23,7 +23,7 @@ export function StoreShell({ storeId }: { storeId: string }) {
       ? "admin_config"
       : /\/(points|coupons)$/.test(pathname)
         ? "nav_rewards"
-        : /\/(members|devices|profile)$/.test(pathname)
+        : /\/(members|devices|profile|pos)$/.test(pathname)
           ? "nav_store_management"
           : "nav_operations";
   const stores = useQuery(storesOptions);

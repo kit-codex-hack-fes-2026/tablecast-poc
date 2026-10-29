@@ -2,6 +2,12 @@ import type { ConfigDraft, Configuration } from "./model";
 import { mapLocalized } from "../catalog/localization";
 import { castInstructionSchema, instructionText } from "./instruction-model";
 
+/** 客端末へは会計用の外部対応を配信しない。管理用と内部計算では保持する。 */
+export function customerCatalog<T extends { configuration: Configuration }>(value: T) {
+  const { pos: _pos, ...configuration } = value.configuration;
+  return { ...value, configuration };
+}
+
 /** 旧画面には文字列、構造対応を宣言した画面には保存文書を返す。 */
 export function instructionResponse<
   T extends { changes?: ConfigDraft["changes"]; configuration: Configuration },

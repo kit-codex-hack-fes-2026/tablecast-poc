@@ -22,6 +22,32 @@ export const tablecastBillingSecrets = [
   "TABLECAST_STRIPE_WEBHOOK_SECRET",
 ];
 
+export const tablecastPosSecrets = [
+  "TABLECAST_SQUARE_APPLICATION_SECRET",
+  "TABLECAST_SQUARE_WEBHOOK_SIGNATURE_KEY",
+  "TABLECAST_POS_ENCRYPTION_SECRET",
+];
+
+export const tablecastPosVars = ["TABLECAST_SQUARE_APPLICATION_ID", "TABLECAST_SQUARE_ENVIRONMENT"];
+
+export function tablecastSquareVars(input: Record<string, string | undefined> = process.env) {
+  const environment = z
+    .enum(["production", "sandbox"], {
+      error: "TABLECAST_SQUARE_ENVIRONMENTはproductionまたはsandboxを指定してください。",
+    })
+    .parse(input.TABLECAST_SQUARE_ENVIRONMENT ?? "production");
+  const applicationId = input.TABLECAST_SQUARE_APPLICATION_ID ?? "";
+  if (
+    applicationId &&
+    !(environment === "sandbox" ? /^sandbox-sq0id[pb]-/ : /^sq0id[pb]-/).test(applicationId)
+  )
+    throw new Error("TABLECAST_SQUARE_APPLICATION_IDがSquare接続環境と一致しません。");
+  return {
+    TABLECAST_SQUARE_APPLICATION_ID: applicationId,
+    TABLECAST_SQUARE_ENVIRONMENT: environment,
+  };
+}
+
 function billingDeploymentVars(environment: string) {
   const values =
     z
@@ -92,6 +118,7 @@ export function modeOptions(
                           "TABLECAST_MAILPIT_URL",
                           "TABLECAST_EMAIL_FROM",
                           "TABLECAST_VOICE_ENABLED",
+                          ...tablecastPosVars,
                           ...tablecastBillingVars,
                           "TABLECAST_OTEL_CAPTURE_CONTENT",
                           "TABLECAST_LANGFUSE_BASE_URL",
@@ -121,6 +148,7 @@ export function requiredApiSecrets(
     "TABLECAST_AUTH_SECRET",
     ...(vars.TABLECAST_OPENAI_PROJECT_ID ? tablecastBillingSecrets.slice(0, 2) : []),
     ...(vars.TABLECAST_BILLING_ENABLED === "true" ? tablecastBillingSecrets.slice(2) : []),
+    ...(vars.TABLECAST_SQUARE_APPLICATION_ID ? tablecastPosSecrets : []),
     ...(hosted || voiceEnabled ? ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL"] : []),
     ...(hosted ? ["TABLECAST_OTEL_AUTHORIZATION"] : []),
     ...(["preview", "staging"].includes(environment) && vars.TABLECAST_LANGFUSE_BASE_URL
@@ -203,14 +231,27 @@ export const stagingDiscoveryPaths = [
   "/.well-known/openid-configuration/api/auth",
 ];
 
-export function deploymentTarget(pr?: string, environment = pr ? "preview" : "production") {
+export function deploymentTarget(
+  pr?: string,
+  environment = pr ? "preview" : "production",
+  squareSandbox = false,
+) {
   const mode = z.enum(["production", "staging", "preview"]).parse(environment);
   if ((mode === "preview") !== Boolean(pr)) throw new Error("配備環境とPR番号が一致しません。");
   if (pr !== undefined && !/^[1-9][0-9]{0,8}$/.test(pr)) throw new Error("PR番号が不正です。");
-  const suffix = pr ? `-pr-${pr}` : mode === "staging" ? "-staging" : "";
+  if (squareSandbox && mode !== "preview")
+    throw new Error("固定Square Sandboxは通常PRの検証にだけ使えます。");
+  const suffix = squareSandbox
+    ? "-square-sandbox"
+    : pr
+      ? `-pr-${pr}`
+      : mode === "staging"
+        ? "-staging"
+        : "";
   const web = `tablecast${suffix}`;
   return {
     pr,
+    squareSandbox,
     environment: mode,
     branch: mode === "production" ? "main" : mode === "staging" ? "staging" : undefined,
     emulate: mode !== "production",
@@ -244,6 +285,12 @@ export function deploymentOptions(
     TABLECAST_OTEL_ENDPOINT: "https://otlp-gateway-prod-ap-northeast-0.grafana.net/otlp",
   };
   const billingVars = billingDeploymentVars(target.environment);
+  const square = tablecastSquareVars();
+  if (
+    target.squareSandbox &&
+    (square.TABLECAST_SQUARE_ENVIRONMENT !== "sandbox" || !square.TABLECAST_SQUARE_APPLICATION_ID)
+  )
+    throw new Error("固定Square SandboxにはSandboxアプリの設定が必要です。");
   const apiVars = {
     ...Object.fromEntries(
       tablecastBillingVars.flatMap((key) =>
@@ -257,6 +304,7 @@ export function deploymentOptions(
     ),
     TABLECAST_PUBLIC_ORIGIN: target.origin,
     TABLECAST_EMAIL_FROM: emailDeploymentFrom(target.environment),
+    ...square,
     TABLECAST_VOICE_ENABLED: "true",
     ...(["preview", "staging"].includes(target.environment) &&
     process.env.TABLECAST_LANGFUSE_PUBLIC_KEY
@@ -293,9 +341,23 @@ export function deploymentSecrets(
   target: DeploymentTarget,
   input: Record<string, string | undefined>,
 ) {
-  const runtime = z
-    .record(z.string(), z.string())
-    .parse(JSON.parse(input.TABLECAST_RUNTIME_SECRETS ?? "{}"));
+  const secretJson = (name: string): unknown => {
+    try {
+      return JSON.parse(input[name] ?? "{}");
+    } catch {
+      throw new Error(`${name}には正しいJSONを設定してください。`);
+    }
+  };
+  const runtime = z.record(z.string(), z.string()).parse(secretJson("TABLECAST_RUNTIME_SECRETS"));
+  const squareOverrides: Record<string, string> = {};
+  for (const key of tablecastPosSecrets) {
+    if (input[key]) squareOverrides[key] = input[key];
+  }
+  if (Object.keys(squareOverrides).length) {
+    if (!target.squareSandbox || input.TABLECAST_SQUARE_ENVIRONMENT !== "sandbox")
+      throw new Error("Square専用secretの追加は固定Sandboxだけで使えます。");
+    Object.assign(runtime, squareOverrides);
+  }
   const master = z.string().min(32).parse(input.TABLECAST_DEPLOY_SECRET);
   const derive = (purpose: string) =>
     createHmac("sha256", master).update(`${target.api}:${purpose}`).digest("hex");
@@ -312,13 +374,25 @@ export function deploymentSecrets(
     TABLECAST_MODEL_API_KEY: required(runtime.TABLECAST_MODEL_API_KEY, "TABLECAST_MODEL_API_KEY"),
     TABLECAST_MODEL: required(input.TABLECAST_MODEL || runtime.TABLECAST_MODEL, "TABLECAST_MODEL"),
   };
-  const enabledSecrets = requiredApiSecrets(
-    target.environment,
-    true,
-    billingDeploymentVars(target.environment),
-  );
-  for (const key of tablecastBillingSecrets)
-    if (enabledSecrets.includes(key)) secrets[key] = required(runtime[key], key);
+  const square = tablecastSquareVars(input);
+  const enabledSecrets = requiredApiSecrets(target.environment, true, {
+    ...billingDeploymentVars(target.environment),
+    ...square,
+  });
+  for (const key of [...tablecastBillingSecrets, ...tablecastPosSecrets]) {
+    if (!enabledSecrets.includes(key)) continue;
+    const value = required(runtime[key], key);
+    if (
+      key === "TABLECAST_SQUARE_APPLICATION_SECRET" &&
+      !(
+        square.TABLECAST_SQUARE_ENVIRONMENT === "sandbox" ? /^sandbox-sq0cs[pb]-/ : /^sq0cs[pb]-/
+      ).test(value)
+    )
+      throw new Error("TABLECAST_SQUARE_APPLICATION_SECRETがSquare接続環境と一致しません。");
+    if (key === "TABLECAST_POS_ENCRYPTION_SECRET" && value.length < 32)
+      throw new Error("TABLECAST_POS_ENCRYPTION_SECRETは32文字以上にしてください。");
+    secrets[key] = value;
+  }
   if (target.emulate && input.TABLECAST_LANGFUSE_PUBLIC_KEY) {
     secrets.TABLECAST_LANGFUSE_PUBLIC_KEY = input.TABLECAST_LANGFUSE_PUBLIC_KEY;
     secrets.TABLECAST_LANGFUSE_SECRET_KEY = required(
@@ -365,7 +439,10 @@ export function deploymentBuildOutput(output: BuildOutput, target: DeploymentTar
     if (!worker?.bundleDir) throw new Error(`Worker成果物がありません: ${name}`);
     const secrets =
       name === target.api
-        ? requiredApiSecrets(target.environment, true, billingDeploymentVars(target.environment))
+        ? requiredApiSecrets(target.environment, true, {
+            ...billingDeploymentVars(target.environment),
+            ...tablecastSquareVars(),
+          })
         : ["TABLECAST_OTEL_AUTHORIZATION"];
     for (const secret of secrets)
       z.object({ type: z.literal("secret") }).parse(worker.config.env?.[secret]);
@@ -391,6 +468,11 @@ export function deploymentBuildOutput(output: BuildOutput, target: DeploymentTar
         if (binding?.type !== "text" || binding.value !== expected)
           throw new Error("課金設定がbuild成果物と異なります。設定を揃えて再buildしてください。");
       }
+      for (const [key, value] of Object.entries(tablecastSquareVars())) {
+        const binding = worker.config.env?.[key];
+        if (binding?.type !== "text" || binding.value !== value)
+          throw new Error("Square設定がbuild成果物と異なります。設定を揃えて再buildしてください。");
+      }
       z.object({
         TABLECAST_DB: z.object({
           type: z.literal("d1"),
@@ -411,6 +493,8 @@ export function deploymentBuildOutput(output: BuildOutput, target: DeploymentTar
         }),
       }).parse(worker.config.exports);
     } else {
+      if ([...tablecastPosVars, ...tablecastPosSecrets].some((key) => worker.config.env?.[key]))
+        throw new Error("Square設定をWeb Workerへ渡せません。");
       z.object({
         TABLECAST_API: z.object({ type: z.literal("worker"), worker: z.literal(target.api) }),
       }).parse(worker.config.env);

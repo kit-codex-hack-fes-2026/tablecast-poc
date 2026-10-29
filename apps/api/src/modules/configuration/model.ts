@@ -12,6 +12,7 @@ import {
 } from "../catalog/model";
 import { imageAssetsSchema } from "../media/model";
 import { selectionSchema } from "../orders/model";
+import { posBindingSchema } from "../pos/model";
 import { castInstructionSchema, instructionLimit } from "./instruction-model";
 export const guideSchema = z
   .object({
@@ -38,6 +39,7 @@ export type Guide = z.infer<typeof guideSchema>;
 export const maxConfigurationProducts = 2000;
 export const configurationSchema = z
   .object({
+    pos: posBindingSchema.optional(),
     guides: z.array(guideSchema).max(100).optional(),
     languages: z
       .array(localeSchema)
@@ -195,6 +197,7 @@ export const draftChoiceSchema = z.object({
       "branding",
       "appearance",
       "banners",
+      "pos",
     ]),
   ),
 });

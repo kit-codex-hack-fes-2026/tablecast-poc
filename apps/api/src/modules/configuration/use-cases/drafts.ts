@@ -13,11 +13,21 @@ import { requireConfigurationImages } from "../../media/service";
 import { voiceConfigurationErrors } from "../../voice/catalog";
 import { readConfiguration } from "../food-compatibility";
 import {
+  type Configuration,
   type configurationRestoreSchema,
   configurationSchema,
   type draftUpdateSchema,
 } from "../model";
 import { getConfigurationRelease, getDraft } from "../queries";
+
+function configurationLocalIds(configuration: Configuration) {
+  return new Set(
+    configuration.products.flatMap((product) => [
+      "product:" + product.id,
+      ...product.modifiers.flatMap((group) => group.options.map((option) => "option:" + option.id)),
+    ]),
+  );
+}
 
 export async function createDraft(services: ApiServices, actor: Actor) {
   const db = services.db;
@@ -63,6 +73,44 @@ export async function updateDraft(
     .get();
   ensure(previous, "DRAFT_CONFLICT");
   const previousConfiguration = readConfiguration(JSON.parse(previous.configuration));
+  ensure(!previousConfiguration.pos || configuration.pos, "CONFIGURATION_FORMAT_UNSUPPORTED", 422);
+  if (
+    previousConfiguration.pos &&
+    configuration.pos &&
+    previousConfiguration.pos.connectionId === configuration.pos.connectionId &&
+    previousConfiguration.pos.provider === configuration.pos.provider
+  ) {
+    const beforeIds = configurationLocalIds(previousConfiguration);
+    const afterIds = configurationLocalIds(configuration);
+    const previousMappings = new Set(
+      previousConfiguration.pos.mappings.map((mapping) =>
+        JSON.stringify([mapping.kind, mapping.localId, mapping.externalId]),
+      ),
+    );
+    // 今回消したlocalの既存対応だけを連動削除し、新しい不明ID入力は検証へ残す。
+    configuration.pos.mappings = configuration.pos.mappings.filter((mapping) => {
+      const local = mapping.kind + ":" + mapping.localId;
+      return (
+        !beforeIds.has(local) ||
+        afterIds.has(local) ||
+        !previousMappings.has(JSON.stringify([mapping.kind, mapping.localId, mapping.externalId]))
+      );
+    });
+  }
+  if (configuration.pos) {
+    const binding = await db
+      .select({ id: business.posConnections.id })
+      .from(business.posConnections)
+      .where(
+        and(
+          eq(business.posConnections.id, configuration.pos.connectionId),
+          eq(business.posConnections.storeId, actor.storeId),
+          eq(business.posConnections.provider, configuration.pos.provider),
+        ),
+      )
+      .get();
+    ensure(binding, "POS_CONNECTION_CONFLICT", 409);
+  }
   ensure(
     !losesFoodChanges(previousConfiguration, configuration),
     "CONFIGURATION_FORMAT_UNSUPPORTED",

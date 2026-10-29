@@ -64,7 +64,13 @@ export function ConfigurationHeader({ storeId, role }: { role: string; storeId: 
         itemId &&
         itemId !== "new" &&
         (section === "cast" || configuration?.[section]?.some((item) => item.id === itemId));
-      if (pathname.endsWith("/design"))
+      if (pathname.endsWith("/pos"))
+        await navigate({
+          to: "/admin/stores/$storeId/pos",
+          params: { storeId },
+          search: next ? { draftId: next } : {},
+        });
+      else if (pathname.endsWith("/design"))
         await navigate({
           to: "/admin/stores/$storeId/design",
           params: { storeId },
@@ -105,6 +111,7 @@ export function ConfigurationHeader({ storeId, role }: { role: string; storeId: 
       Boolean(draftId) &&
       (/\/changes\/[^/]+$/.test(pathname) ||
         pathname.endsWith("/design") ||
+        pathname.endsWith("/pos") ||
         pathname.endsWith("/cast") ||
         /\/changes\/[^/]+\/[^/]+\/[^/]+$/.test(pathname))
     );
