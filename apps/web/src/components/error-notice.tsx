@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { validationIssuesSchema } from "@tablecast/api/schema";
 import { AlertCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -71,9 +72,11 @@ export function ErrorNotice({
         {validation?.success && validation.data.length > 0 && (
           <ul className="mt-2 list-disc pl-5">
             {validation.data.map((issue) => (
-              <li key={`${issue.path.join(".")}:${issue.code}:${issue.messages[locale]}`}>
+              <li
+                key={`${issue.path.join(".")}:${issue.code}:${resolveLocalized(issue.messages, locale)}`}
+              >
                 {issue.path.length > 0 && `${issue.path.join(" · ")}: `}
-                {issue.messages[locale]}
+                {resolveLocalized(issue.messages, locale)}
               </li>
             ))}
           </ul>

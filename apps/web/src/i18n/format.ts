@@ -1,9 +1,10 @@
 import type { DisplayCurrencyCode, Locale } from "@tablecast/api/schema";
+import { resolveLocalized, uiLocale } from "@tablecast/api/localization";
 import { displayCurrencyCodes, storeTimeZone } from "@tablecast/api/schema";
-const locales = { ja: "ja-JP", en: "en-GB" };
+const locales = { ja: "ja-JP", en: "en-GB", "zh-Hans": "zh-Hans", ko: "ko-KR" };
 const currencies = ["JPY", ...displayCurrencyCodes] as const;
 const moneyFormat = new Map<string, Intl.NumberFormat>();
-for (const locale of ["ja", "en"] as const) {
+for (const locale of ["ja", "en", "zh-Hans", "ko"] as const) {
   for (const currency of currencies) {
     moneyFormat.set(
       `${locale}:${currency}`,
@@ -11,12 +12,13 @@ for (const locale of ["ja", "en"] as const) {
     );
   }
 }
-const currencyNames = {
+const currencyNames: { [language: string]: Intl.DisplayNames; ja: Intl.DisplayNames } = {
   ja: new Intl.DisplayNames([locales.ja], { type: "currency" }),
-  en: new Intl.DisplayNames([locales.en], { type: "currency" }),
 };
+for (const language of ["en", "zh-Hans", "ko"] as const)
+  currencyNames[language] = new Intl.DisplayNames([locales[language]], { type: "currency" });
 export const currencyName = (currency: DisplayCurrencyCode, locale: Locale) =>
-  currencyNames[locale].of(currency) ?? currency;
+  resolveLocalized(currencyNames, uiLocale(locale)).of(currency) ?? currency;
 export const currencySymbol = (currency: "JPY" | DisplayCurrencyCode) =>
   currency === "JPY"
     ? "¥"
@@ -29,42 +31,48 @@ export const yenRate = new Intl.NumberFormat(locales.en, {
   currency: "JPY",
   maximumFractionDigits: 4,
 });
-const timeFormat = {
-  ja: new Intl.DateTimeFormat("ja-JP", {
+const timeFormat: { [language: string]: Intl.DateTimeFormat; ja: Intl.DateTimeFormat } = {
+  ja: new Intl.DateTimeFormat(locales.ja, {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: storeTimeZone,
-  }),
-  en: new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
+    hourCycle: "h23",
     timeZone: storeTimeZone,
   }),
 };
-const calendarFormat = {
-  ja: new Intl.DateTimeFormat("ja-JP", {
+const calendarFormat: { [language: string]: Intl.DateTimeFormat; ja: Intl.DateTimeFormat } = {
+  ja: new Intl.DateTimeFormat(locales.ja, {
     year: "numeric",
     month: "numeric",
     day: "numeric",
     weekday: "short",
     timeZone: storeTimeZone,
   }),
-  en: new Intl.DateTimeFormat("en-GB", {
+};
+for (const language of ["en", "zh-Hans", "ko"] as const) {
+  timeFormat[language] = new Intl.DateTimeFormat(locales[language], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: storeTimeZone,
+  });
+  calendarFormat[language] = new Intl.DateTimeFormat(locales[language], {
     year: "numeric",
     month: "long",
     day: "numeric",
     weekday: "long",
     timeZone: storeTimeZone,
-  }),
-};
+  });
+}
 /** ISOの日付キーは機械用のまま保持し、利用者には言語に沿った日付を表示する。 */
 export function calendarDate(value: Date | number | string, locale: Locale) {
   const date = new Date(value);
   // ICUの版による曜日後の読点の差を持ち込まず、SSRとブラウザーで同じ書式を使う。
-  const parts = calendarFormat[locale].formatToParts(date);
+  const parts = resolveLocalized(calendarFormat, uiLocale(locale)).formatToParts(date);
   const part = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((item) => item.type === type)?.value ?? "";
-  return locale === "en"
+  if (uiLocale(locale) === "zh-Hans" || uiLocale(locale) === "ko")
+    return resolveLocalized(calendarFormat, uiLocale(locale)).format(date);
+  return uiLocale(locale) !== "ja"
     ? `${part("weekday")}, ${part("day")} ${part("month")} ${part("year")}`
     : `${part("year")}年${part("month")}月${part("day")}日(${part("weekday")})`;
 }
@@ -73,15 +81,20 @@ export const money = (
   value: number,
   locale: Locale,
   currency: "JPY" | DisplayCurrencyCode = "JPY",
-) => moneyFormat.get(`${locale}:${currency}`)?.format(value).replace("￥", "¥") ?? String(value);
-export const time = (value: number, locale: Locale) => timeFormat[locale].format(value);
+) =>
+  moneyFormat
+    .get(`${uiLocale(locale)}:${currency}`)
+    ?.format(value)
+    .replace("￥", "¥") ?? String(value);
+export const time = (value: number, locale: Locale) =>
+  resolveLocalized(timeFormat, uiLocale(locale)).format(value);
 export const dateTime = (value: Date | number, locale: Locale) =>
-  `${calendarDate(value, locale)}${locale === "en" ? "," : ""} ${timeFormat[locale].format(value)}`;
+  `${calendarDate(value, locale)}${uiLocale(locale) === "en" ? "," : ""} ${resolveLocalized(timeFormat, uiLocale(locale)).format(value)}`;
 
-const relativeFormat = {
-  ja: new Intl.RelativeTimeFormat("ja-JP", { numeric: "auto" }),
-  en: new Intl.RelativeTimeFormat("en-GB", { numeric: "auto" }),
-};
+const relativeFormat: { [language: string]: Intl.RelativeTimeFormat; ja: Intl.RelativeTimeFormat } =
+  { ja: new Intl.RelativeTimeFormat(locales.ja, { numeric: "auto" }) };
+for (const language of ["en", "zh-Hans", "ko"] as const)
+  relativeFormat[language] = new Intl.RelativeTimeFormat(locales[language], { numeric: "auto" });
 /** 呼出からの経過時間を、分・時間・日の境界で過大に丸めず表示する。 */
 export function relativeTime(value: number, now: number, locale: Locale) {
   const seconds = Math.max(0, (now - value) / 1000);
@@ -99,5 +112,8 @@ export function relativeTime(value: number, now: number, locale: Locale) {
               : seconds < 31536000
                 ? ["month", 2592000]
                 : ["year", 31536000];
-  return relativeFormat[locale].format(-Math.floor(seconds / size), unit);
+  return resolveLocalized(relativeFormat, uiLocale(locale)).format(
+    -Math.floor(seconds / size),
+    unit,
+  );
 }

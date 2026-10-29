@@ -51,16 +51,20 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
     "get_configuration",
     {
       description:
-        "対象店舗・現在の公開設定・日英データ・入力schemaを取得する。資料の取り込み、設定提案、下書き作成の前に確認する。設定は変更しない。",
+        "対象店舗・現在の公開設定・登録言語・意味訳と転写・入力schemaを取得する。資料の取り込み、設定提案、下書き作成の前に確認する。設定は変更しない。",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
-    async () =>
-      result({
-        ...(await getCatalog(services, actor.storeId)),
+    async () => {
+      const catalog = await getCatalog(services, actor.storeId);
+      return result({
+        ...catalog,
         schema: z.toJSONSchema(configurationSchema),
-        locales: ["ja", "en"],
-      }),
+        locales: catalog.configuration.languages,
+        uiLocales: ["ja", "en", "zh-Hans", "ko"],
+        fallback: ["en", "ja"],
+      });
+    },
   );
 
   server.registerTool(
@@ -183,7 +187,7 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
     "update_draft",
     {
       description:
-        "依頼された店名・店舗ロゴ（branding）・テーマ（appearance）・チラシ（banners）・商品・価格・売切・画像・選択肢・翻訳・プラン・接客の変更を、最新expectedVersionと全configurationで下書きへ保存する。部分patchではないため他の商品と日英データを保持する。条件は選択肢のconditions.version=2とrequires/excludesのoption・and・or・notで表す。既存conditionsを落とさず、解除はrequires/excludesをnullにする。conditionsと非空の旧requires/excludes配列は併記しない。次にvalidate_draftとget_draft_diffで確認する。架空店の試作値は創作と明示し、実店舗の価格や安全情報は推測しない。公開設定は変更しない。",
+        "依頼された店名・店舗ロゴ（branding）・テーマ（appearance）・チラシ（banners）・商品・価格・売切・画像・選択肢・翻訳・プラン・接客の変更を、最新expectedVersionと全configurationで下書きへ保存する。部分patchではないため他の商品と言語データを保持する。languagesにBCP 47コードを登録でき、商品のtextの各言語にはdisplayName（意味訳）とtransliteration（転写）の両方が必須。英語の日本語転写は長音記号付きヘボン式とし、銘柄は意味訳せず、分類や調理法を意味訳する。条件は選択肢のconditions.version=2とrequires/excludesのoption・and・or・notで表す。既存conditionsを落とさず、解除はrequires/excludesをnullにする。conditionsと非空の旧requires/excludes配列は併記しない。次にvalidate_draftとget_draft_diffで確認する。架空店の試作値は創作と明示し、実店舗の価格や安全情報は推測しない。公開設定は変更しない。",
       inputSchema: {
         draftId: z.string(),
         expectedVersion: z.number().int(),

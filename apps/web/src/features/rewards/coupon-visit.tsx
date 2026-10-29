@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
@@ -31,7 +32,7 @@ export function CouponVisit({ storeId, sessionId }: { sessionId: string; storeId
       <ErrorNotice query={query} />
       {query.data?.requested.map((coupon) => (
         <div key={coupon.id} className="space-y-2">
-          <h4 className="font-semibold">{coupon.rules.title[locale]}</h4>
+          <h4 className="font-semibold">{resolveLocalized(coupon.rules.title, locale)}</h4>
           <UserIdentity compact user={coupon} />
           <p>
             {coupon.rules.discountKind === "fixed"

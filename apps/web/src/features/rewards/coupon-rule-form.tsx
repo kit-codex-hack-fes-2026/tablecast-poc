@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { type couponDefinitionSchema, couponRuleSchema } from "@tablecast/api/schema";
 import {
   useInfiniteQuery,
@@ -132,7 +133,7 @@ export function CouponRuleForm({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="flex min-w-0 items-center gap-2 text-lg font-semibold">
             <Ticket aria-hidden="true" className="size-5 shrink-0" />
-            {initial ? initial.rules.title[locale] : t("coupon_new")}
+            {initial ? resolveLocalized(initial.rules.title, locale) : t("coupon_new")}
           </h2>
           {onCancel && (
             <Button
@@ -169,19 +170,19 @@ export function CouponRuleForm({
             <LanguageFields>
               {(language) => (
                 <>
-                  <form.AppField name={`rules.title.${language}`}>
+                  <form.AppField name={`rules.title.${language === "ja" ? "ja" : "en"}`}>
                     {(field) => (
                       <field.TextField
-                        label={t(`coupon_title_${language}`)}
+                        label={t(`coupon_title_${language === "ja" ? "ja" : "en"}`)}
                         required
                         maxLength={500}
                       />
                     )}
                   </form.AppField>
-                  <form.AppField name={`rules.description.${language}`}>
+                  <form.AppField name={`rules.description.${language === "ja" ? "ja" : "en"}`}>
                     {(field) => (
                       <field.TextField
-                        label={t(`coupon_description_${language}`)}
+                        label={t(`coupon_description_${language === "ja" ? "ja" : "en"}`)}
                         required
                         maxLength={500}
                       />

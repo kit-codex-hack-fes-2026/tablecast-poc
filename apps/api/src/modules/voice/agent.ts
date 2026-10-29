@@ -5,6 +5,7 @@ import type { Actor } from "../auth/model";
 import type { DisplayCurrencyContext } from "../currency/model";
 import { ensure } from "../../platform/errors";
 import { localeSchema, id as productIdSchema } from "../../platform/model";
+import { resolveText } from "../catalog/localization";
 import { getCatalog } from "../catalog/queries";
 import { menuSearchPage } from "../catalog/search";
 import { maxConfigurationProducts } from "../configuration/model";
@@ -176,14 +177,14 @@ export function createCastTools(
             ? {
                 plans: catalog.configuration.plans.map((plan) => ({
                   ...plan,
-                  text: plan.text[locale],
+                  text: resolveText(plan.text, locale),
                   ...approximateAmounts({ pricePerPerson: plan.pricePerPerson }, currency, rates),
                 })),
               }
             : {}),
           categories: catalog.configuration.categories.map((category) => ({
             id: category.id,
-            displayName: category.text[locale].displayName,
+            displayName: resolveText(category.text, locale).displayName,
           })),
           detail,
           products: products.map((product) =>

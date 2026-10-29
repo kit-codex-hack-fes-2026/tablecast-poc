@@ -404,7 +404,7 @@ it("条件の空グループ・過剰な深さ・節数・形式併記をschema�
   owner.conditions = { version: 2, requires: null, excludes: null };
   expect(optionSchema.safeParse(owner).success).toBe(false);
   const json = JSON.stringify(z.toJSONSchema(configurationSchema));
-  expect(json).toContain("tablecastConditionDepth8");
+  expect(json).toContain("tablecastCondition8");
   expect(json.length).toBeLessThan(25000);
 });
 

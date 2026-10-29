@@ -4,6 +4,7 @@ import type { Cart, CartLine, PricedLine, Snapshot } from "../orders/model";
 import type { Plan } from "./model";
 import { ensure } from "../../platform/errors";
 import { evaluateCondition, productConditionErrors } from "./conditions";
+import { localizedNames, resolveLocalized, uiLocale } from "./localization";
 export function configurationErrors(config: Configuration): ConfigurationIssue[] {
   const errors: ConfigurationIssue[] = [];
   const unique = (items: { id: string }[], path: ConfigurationIssue["path"]) => {
@@ -199,10 +200,11 @@ export function priceCart(
           optionId: option.id,
           relation: "requires",
         });
+      const names = localizedNames(option.text);
       options.push({
         id: option.id,
-        name: { ja: option.text.ja.displayName, en: option.text.en.displayName },
-        speechName: { ja: option.text.ja.speechName, en: option.text.en.speechName },
+        name: names.name,
+        speechName: names.speechName,
         quantity: selection.quantity,
         priceDelta: option.priceDelta,
       });
@@ -232,8 +234,7 @@ export function priceCart(
     ensure(unitPrice >= 0, "NEGATIVE_PRICE", 422);
     return {
       ...line,
-      name: { ja: product.text.ja.displayName, en: product.text.en.displayName },
-      speechName: { ja: product.text.ja.speechName, en: product.text.en.speechName },
+      ...localizedNames(product.text),
       options,
       unitPrice,
       total: unitPrice * line.quantity,
@@ -281,26 +282,39 @@ export function confirmationText(
   locale: Locale,
   plan: Snapshot["plan"],
 ): string {
-  const formatted = new Intl.NumberFormat(locale === "ja" ? "ja-JP" : "en-GB");
+  const language = uiLocale(locale);
+  const formatted = new Intl.NumberFormat(language === "en" ? "en-GB" : language);
   const items = lines
     .map((line) => {
       const options = line.options
         .map(
           (o) =>
-            `${o.speechName[locale]}${o.quantity > 1 ? (locale === "ja" ? `${o.quantity}点` : ` × ${o.quantity}`) : ""}`,
+            `${resolveLocalized(o.speechName, locale)}${o.quantity > 1 ? (locale === "ja" ? `${o.quantity}点` : ` × ${o.quantity}`) : ""}`,
         )
         .join(locale === "ja" ? "、" : ", ");
-      return locale === "ja"
+      if (language === "zh-Hans")
+        return `${resolveLocalized(line.speechName, locale)}${options ? `，${options}` : ""} × ${line.quantity}，${formatted.format(line.total)}日元`;
+      if (language === "ko")
+        return `${resolveLocalized(line.speechName, locale)}${options ? `, ${options}` : ""} ${line.quantity}개, ${formatted.format(line.total)}엔`;
+      return language === "ja"
         ? `${line.speechName.ja}${options ? `、${options}` : ""}を${line.quantity}点、${formatted.format(line.total)}円`
-        : `${line.quantity} ${line.speechName.en}${options ? ` with ${options}` : ""}, ${formatted.format(line.total)} yen`;
+        : `${line.quantity} ${resolveLocalized(line.speechName, locale)}${options ? ` with ${options}` : ""}, ${formatted.format(line.total)} yen`;
     })
     .join(locale === "ja" ? "。" : ". ");
   const planText = plan
     ? locale === "ja"
       ? `適用プランは${plan.name.ja}です。`
-      : `Plan: ${plan.name.en}. `
+      : language === "zh-Hans"
+        ? `套餐：${resolveLocalized(plan.name, locale)}。`
+        : language === "ko"
+          ? `이용 플랜: ${resolveLocalized(plan.name, locale)}. `
+          : `Plan: ${resolveLocalized(plan.name, locale)}. `
     : "";
-  return locale === "ja"
+  if (language === "zh-Hans")
+    return `${items}。${planText}合计${formatted.format(total)}日元。确认提交此订单吗？`;
+  if (language === "ko")
+    return `${items}. ${planText}총 ${formatted.format(total)}엔입니다. 이 내용으로 주문할까요?`;
+  return language === "ja"
     ? `${items}。${planText}合計${formatted.format(total)}円です。この内容で注文を送信してよろしいですか。`
     : `${items}. ${planText}The total is ${formatted.format(total)} yen. Shall I submit this order?`;
 }

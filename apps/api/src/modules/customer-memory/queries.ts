@@ -14,6 +14,7 @@ import {
 } from "../../db/customer-schema";
 import { orders, tableSessions } from "../../db/table-schema";
 import { ensure } from "../../platform/errors";
+import { resolveText } from "../catalog/localization";
 import { getCatalog } from "../catalog/queries";
 import { requireCustomer } from "../customers/queries";
 import { snapshotSchema } from "../orders/model";
@@ -387,7 +388,7 @@ export async function customerSuggestions(
     version: catalog.version,
     products: candidates.slice(input.offset, input.offset + 8).map((p) => ({
       id: p.id,
-      name: p.text[session.locale].displayName,
+      name: resolveText(p.text, session.locale).displayName,
       price: p.price,
       previousQuantity: counts.get(p.id) ?? 0,
     })),

@@ -15,6 +15,7 @@ import { seedIdentityIcon } from "./tablecast-seed-icons.ts";
 import { seedMenuImages } from "./tablecast-seed-media.ts";
 import { type TablecastSeedTemplate } from "./tablecast-seed-template.ts";
 import { type DemoCredentials } from "./tablecast-seed.ts";
+import { rebuildSeedConfigurations } from "./tablecast-seed/configuration.ts";
 import {
   demoStaff,
   migrateDemoIdentityEmails,
@@ -401,8 +402,14 @@ async function populateSeedTemplate(
   return seedCounts(db);
 }
 
-export async function seedDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
+export async function seedDemoDatabase(
+  env: SeedEnv,
+  credentials: DemoCredentials,
+  options: { rebuildConfiguration?: boolean } = {},
+) {
   if (env.TABLECAST_ENV !== "development") throw new Error("seedは開発環境に限定されています。");
+  if (options.rebuildConfiguration)
+    await rebuildSeedConfigurations(env, normaliseDemoCredentials(credentials));
   const counts = await populateDemoDatabase(env, normaliseDemoCredentials(credentials));
   await migrateImageAssets(env);
   return counts;

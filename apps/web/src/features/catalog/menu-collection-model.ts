@@ -1,4 +1,5 @@
 import type { Configuration, Locale } from "@tablecast/api/schema";
+import { resolveText, uiLocale } from "@tablecast/api/localization";
 import { m } from "../../paraglide/messages";
 import { type MenuListSearch, type MenuSection } from "../configuration/menu-model";
 
@@ -26,8 +27,8 @@ export function menuCollectionRows(
   if (section === "guides")
     return (configuration.guides ?? []).map((item) => ({
       id: item.id,
-      name: item.text[locale].displayName,
-      secondary: item.text[locale].description,
+      name: resolveText(item.text, locale).displayName,
+      secondary: resolveText(item.text, locale).description,
       count: item.productIds.length,
     }));
   if (section === "products")
@@ -35,8 +36,8 @@ export function menuCollectionRows(
       const category = categories.get(item.categoryId);
       return {
         id: item.id,
-        name: item.text[locale].displayName,
-        secondary: category?.text[locale].displayName ?? "",
+        name: resolveText(item.text, locale).displayName,
+        secondary: (category ? resolveText(category.text, locale).displayName : undefined) ?? "",
         imageKey: item.imageKey,
         price: item.price,
         available: item.available,
@@ -54,18 +55,26 @@ export function menuCollectionRows(
       const products = productsByCategory.get(item.id) ?? [];
       return {
         id: item.id,
-        name: item.text[locale].displayName,
-        secondary: item.text[locale === "ja" ? "en" : "ja"].displayName,
+        name: resolveText(item.text, locale).displayName,
+        secondary: resolveText(item.text, locale === "ja" ? "en" : "ja").displayName,
         count: products.length,
-        summary: products.map((product) => product.text[locale].displayName).join(" · "),
+        summary: products
+          .map((product) => resolveText(product.text, locale).displayName)
+          .join(" · "),
       };
     });
   }
   return configuration.plans.map((item) => ({
     id: item.id,
-    name: item.text[locale].displayName,
-    secondary: m.menu_plan_duration({ minutes: item.durationMinutes }, { locale }),
-    lastOrder: m.menu_plan_last_order({ minutes: item.lastOrderMinutesBeforeEnd }, { locale }),
+    name: resolveText(item.text, locale).displayName,
+    secondary: m.menu_plan_duration(
+      { minutes: item.durationMinutes },
+      { locale: uiLocale(locale) },
+    ),
+    lastOrder: m.menu_plan_last_order(
+      { minutes: item.lastOrderMinutesBeforeEnd },
+      { locale: uiLocale(locale) },
+    ),
     price: item.pricePerPerson,
     duration: item.durationMinutes,
     count: configuration.products.filter(
@@ -76,10 +85,12 @@ export function menuCollectionRows(
     ).length,
     summary: [
       ...configuration.products.flatMap((product) =>
-        item.productIds.includes(product.id) ? [product.text[locale].displayName] : [],
+        item.productIds.includes(product.id) ? [resolveText(product.text, locale).displayName] : [],
       ),
       ...configuration.categories.flatMap((category) =>
-        item.categoryIds.includes(category.id) ? [category.text[locale].displayName] : [],
+        item.categoryIds.includes(category.id)
+          ? [resolveText(category.text, locale).displayName]
+          : [],
       ),
       ...item.tags,
     ].join(" · "),

@@ -9,6 +9,7 @@ import * as business from "../../../db/business-schema";
 import { ensure } from "../../../platform/errors";
 import { observeOperation } from "../../../platform/telemetry";
 import { voiceBillingAccount } from "../../billing/usage";
+import { resolveLocalized, resolveText } from "../../catalog/localization";
 import { getCatalog } from "../../catalog/queries";
 import { instructionText } from "../../configuration/instruction-model";
 import { getSession } from "../../tables/queries";
@@ -135,15 +136,15 @@ export async function createVoiceSuggestions(
       ]);
       const available = catalog.configuration.products.filter((product) => product.available);
       const named = available.filter((product) =>
-        input.text.includes(product.text[input.locale].displayName),
+        input.text.includes(resolveText(product.text, input.locale).displayName),
       );
       const products = [
         ...new Map([...named, ...available].map((product) => [product.id, product])).values(),
       ]
         .slice(0, 8)
         .map((product) => ({
-          name: product.text[input.locale].displayName,
-          description: product.text[input.locale].description,
+          name: resolveText(product.text, input.locale).displayName,
+          description: resolveText(product.text, input.locale).description,
         }));
       const client = new OpenAI({ apiKey: account.apiKey, timeout: 10_000, maxRetries: 0 });
       const result = await client.responses.parse(
@@ -158,7 +159,9 @@ export async function createVoiceSuggestions(
             locale: input.locale,
             message: input.text,
             products,
-            instructions: instructionText(catalog.configuration.cast.instructions[input.locale]),
+            instructions: instructionText(
+              resolveLocalized(catalog.configuration.cast.instructions, input.locale),
+            ),
           }),
           text: {
             format: zodTextFormat(voiceSuggestionsResultSchema, "tablecast_voice_suggestions"),

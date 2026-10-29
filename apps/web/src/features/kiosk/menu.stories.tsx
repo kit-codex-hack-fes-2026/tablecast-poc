@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { type CartLine, type Product, productSchema } from "@tablecast/api/schema";
 import { expect, fn, userEvent, within } from "storybook/test";
 import {
@@ -31,6 +32,16 @@ export const SeedMenuEnglish: Story = {
   name: "seedの店舗設定と商品画像・英語",
   globals: { locale: "en" },
 };
+export const SeedMenuChinese: Story = {
+  ...SeedMenu,
+  name: "seedの店舗設定と商品画像・簡体字中国語",
+  globals: { locale: "zh-Hans" },
+};
+export const SeedMenuKorean: Story = {
+  ...SeedMenu,
+  name: "seedの店舗設定と商品画像・韓国語",
+  globals: { locale: "ko" },
+};
 export const SeedProductDetails: Story = {
   name: "seedの日本酒と温度・容量・選択肢画像",
   render: () => <ProductPage product={seedProduct} busy={false} onClose={fn()} onSave={fn()} />,
@@ -53,7 +64,7 @@ export const EnglishProducts: Story = {
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const name = product.text.en.displayName;
+    const name = resolveLocalized(product.text, "en").displayName;
     const card = canvas.getByRole("button", { name: new RegExp(name) });
     await expect(card).toBeVisible();
     await expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
@@ -153,8 +164,13 @@ export const EnglishOptionalCustomisation: Story = {
 };
 
 const relationText = (ja: string, en: string) => ({
-  ja: { ...product.text.ja, displayName: ja, speechName: ja },
-  en: { ...product.text.en, displayName: en, speechName: en },
+  ja: { ...product.text.ja, displayName: ja, speechName: ja, transliteration: ja },
+  en: {
+    ...resolveLocalized(product.text, "en"),
+    displayName: en,
+    speechName: en,
+    transliteration: en,
+  },
 });
 const relatedProduct: Product = {
   ...product,
@@ -291,7 +307,7 @@ const longProduct = productSchema.parse({
         .slice(0, 3000),
     },
     en: {
-      ...product.text.en,
+      ...resolveLocalized(product.text, "en"),
       displayName: "A fragrant sake with a gentle finish, served alongside seasonal dishes. "
         .repeat(3)
         .slice(0, 150),
@@ -428,7 +444,9 @@ export const EmptyCategory: Story = {
     await userEvent.click(canvas.getByRole("button", { name: locale === "en" ? "All" : "すべて" }));
     await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
     await expect(
-      canvas.getByRole("button", { name: new RegExp(product.text[locale].displayName) }),
+      canvas.getByRole("button", {
+        name: new RegExp(resolveLocalized(product.text, locale).displayName),
+      }),
     ).toBeEnabled();
   },
 };
@@ -451,7 +469,9 @@ export const SoldOutOnly: Story = {
     const locale = globals.locale === "en" ? "en" : "ja";
     await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
     await expect(
-      canvas.getByRole("button", { name: new RegExp(product.text[locale].displayName) }),
+      canvas.getByRole("button", {
+        name: new RegExp(resolveLocalized(product.text, locale).displayName),
+      }),
     ).toBeDisabled();
     await expect(
       canvas.getByText(locale === "en" ? "Sold out" : "売り切れ", { exact: true }),

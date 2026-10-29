@@ -1,3 +1,4 @@
+import { uiLocale } from "@tablecast/api/localization";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { FilePenLine, Plus, X } from "lucide-react";
@@ -128,19 +129,24 @@ export function StartConfigurationEditing({
                           {draft.sections
                             .map((target) =>
                               t(
-                                target === "storeName"
-                                  ? "org_name"
-                                  : target === "branding" ||
-                                      target === "appearance" ||
-                                      target === "banners"
-                                    ? "theme_title"
-                                    : menuLabels[target],
+                                target === "languages"
+                                  ? "editor_store_languages"
+                                  : target === "storeName"
+                                    ? "org_name"
+                                    : target === "branding" ||
+                                        target === "appearance" ||
+                                        target === "banners"
+                                      ? "theme_title"
+                                      : menuLabels[target],
                               ),
                             )
                             .join(" · ")}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {m.workflow_summary({ count: draft.changeCount }, { locale })}
+                          {m.workflow_summary(
+                            { count: draft.changeCount },
+                            { locale: uiLocale(locale) },
+                          )}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           <DateTime value={draft.updatedAt} />

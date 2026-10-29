@@ -3,6 +3,7 @@ import { useContext } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
+import en from "../../../messages/en.json";
 import { LanguageSwitch } from "../../components/language-switch";
 import { Money, PriceChange } from "../../components/money";
 import { CurrencyContext } from "../../i18n/currency-context";
@@ -115,7 +116,9 @@ it("円を主表示に保ち、通貨の選択後は言語連動と再取得を�
     expect(getComputedStyle(estimate).opacity).toBe("0.75");
   }
   await page.getByRole("button", { name: "English", exact: true }).click();
-  await expect.element(page.getByText("(incl. tax)", { exact: true }).first()).toBeVisible();
+  await expect
+    .element(page.getByText(en.price_tax_included, { exact: true }).first())
+    .toBeVisible();
   await expect
     .element(page.getByRole("combobox", { name: /通貨|currency/i }))
     .toHaveTextContent("A$ AUD");

@@ -23,7 +23,12 @@ import tw from "flag-icons/flags/4x3/tw.svg?url";
 import us from "flag-icons/flags/4x3/us.svg?url";
 import vn from "flag-icons/flags/4x3/vn.svg?url";
 export { jp };
-export const languageFlags: Partial<Record<Locale, string>> = { ja: jp, en: gb };
+const languageFlags: Partial<Record<Locale, string>> = {
+  ja: jp,
+  en: gb,
+  "zh-Hans": cn,
+  ko: kr,
+};
 export const currencyFlags: Record<DisplayCurrencyCode, string> = {
   USD: us,
   GBP: gb,
@@ -48,3 +53,23 @@ export const currencyFlags: Record<DisplayCurrencyCode, string> = {
   LAK: la,
   MMK: mm,
 };
+
+const languageFlagAssets = import.meta.glob<string>("/node_modules/flag-icons/flags/4x3/*.svg", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+
+/** 明示された地域か標準の推奨地域を使い、未収録の旗は省略する。 */
+export function languageFlag(locale: string): string | undefined {
+  const preset = languageFlags[locale];
+  if (preset) return preset;
+  try {
+    const region = new Intl.Locale(locale).maximize().region?.toLowerCase();
+    return region
+      ? languageFlagAssets[`/node_modules/flag-icons/flags/4x3/${region}.svg`]
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}

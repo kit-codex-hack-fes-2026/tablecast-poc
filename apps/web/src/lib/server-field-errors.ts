@@ -1,4 +1,5 @@
 import type { Locale } from "@tablecast/api/schema";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { validationIssuesSchema } from "@tablecast/api/schema";
 import { apiError } from "./api-error";
 
@@ -17,7 +18,7 @@ export function serverFieldErrors(
   for (const issue of issues) {
     const path = issue.path.join(".");
     const key = fieldNames[path] ?? path;
-    (result[key] ??= []).push(issue.messages[locale]);
+    (result[key] ??= []).push(resolveLocalized(issue.messages, locale));
   }
   return result;
 }

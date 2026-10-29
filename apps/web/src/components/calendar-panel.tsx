@@ -1,4 +1,5 @@
 import { Popover } from "@base-ui/react/popover";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { storeTimeZone } from "@tablecast/api/schema";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
@@ -55,8 +56,8 @@ export function CalendarPanel({
     keyboardFocus.current = false;
     selected.current?.focus();
   });
-  const monthFormat = monthFormats[locale];
-  const weekdayFormat = weekdayFormats[locale];
+  const monthFormat = resolveLocalized(monthFormats, locale);
+  const weekdayFormat = resolveLocalized(weekdayFormats, locale);
   const start = `${month}-01`;
   const first = shiftCalendarDate(start, -new Date(`${start}T00:00:00Z`).getUTCDay());
   const days = Array.from({ length: 42 }, (_, index) => shiftCalendarDate(first, index));

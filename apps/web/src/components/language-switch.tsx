@@ -1,7 +1,6 @@
 import type { Locale } from "@tablecast/api/schema";
 import { Languages } from "lucide-react";
 import { useI18n } from "../i18n/locale";
-import { locales } from "../paraglide/runtime.js";
 import { LanguageLabel } from "./language-label";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "./ui/select";
@@ -17,13 +16,17 @@ const languages = ["ja", "en"] as const;
 export function LanguageSwitch({
   onChange,
   disabled = false,
+  availableLanguages = ["ja", "en"],
 }: {
+  availableLanguages?: readonly Locale[];
   disabled?: boolean;
   onChange: (locale: Locale) => void;
 }) {
   const { locale, t } = useI18n();
   const tabLanguages = [...new Set<Locale>([...languages, locale])];
-  const otherLanguages = locales.filter((language) => !languages.some((tab) => tab === language));
+  const otherLanguages = availableLanguages.filter(
+    (language) => !languages.some((tab) => tab === language),
+  );
   return (
     <fieldset
       data-ui="language-switch"

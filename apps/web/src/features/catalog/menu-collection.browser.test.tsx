@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import en from "../../../messages/en.json";
@@ -22,12 +23,14 @@ it.each([
         ja: {
           displayName: "唐揚げ",
           speechName: "からあげ",
+          transliteration: "からあげ",
           aliases: [],
           description: "柚子を添えた温かい料理",
         },
         en: {
           displayName: "Fried chicken",
           speechName: "Fried chicken",
+          transliteration: "Fried chicken",
           aliases: [],
           description: "Chicken with a citrus garnish",
         },
@@ -44,7 +47,7 @@ it.each([
       : "/admin/stores/tablecast-story/menu/products";
     const { screen, router } = await showMenu(value, locale, path, "draft");
     const search = screen.getByRole("searchbox", { name: labels.menu_search });
-    const name = chicken.text[locale].displayName;
+    const name = resolveLocalized(chicken.text, locale).displayName;
     for (const query of ["ｶﾗｱｹﾞ", "からあけ", "柚子", "citrus garnish"]) {
       await search.fill(query);
       await expect
@@ -53,14 +56,19 @@ it.each([
         )
         .toBeVisible();
       await expect
-        .element(screen.getByText(product.text[locale].displayName, { exact: true }))
+        .element(
+          screen.getByText(resolveLocalized(product.text, locale).displayName, { exact: true }),
+        )
         .not.toBeInTheDocument();
     }
     await screen.getByRole("combobox", { name: labels.editor_category, exact: true }).click();
     const category = value.configuration.categories.find((item) => item.id === chicken.categoryId);
     if (!category) throw new Error("検索対象のカテゴリがありません");
     await page
-      .getByRole("option", { name: category.text[locale].displayName, exact: true })
+      .getByRole("option", {
+        name: resolveLocalized(category.text, locale).displayName,
+        exact: true,
+      })
       .click();
     await screen.getByRole("combobox", { name: labels.menu_availability }).click();
     await page.getByRole("option", { name: labels.editor_available, exact: true }).click();
@@ -124,7 +132,10 @@ it.each(["ja", "en"] as const)(
       "/admin/stores/tablecast-story/menu/changes/tablecast-published-draft/products?q=Tsukinagi&page=2",
       "draft",
     );
-    const link = screen.getByRole("link", { name: product.text[locale].displayName, exact: true });
+    const link = screen.getByRole("link", {
+      name: resolveLocalized(product.text, locale).displayName,
+      exact: true,
+    });
     await expect.element(link).toBeVisible();
     const destination = new URL(link.element().getAttribute("href") ?? "", window.location.href);
     expect(destination.pathname).toBe(
@@ -147,14 +158,18 @@ for (const alias of ["moon drink", "月の酒"] as const) {
       id: `tablecast-product-${index}`,
       text: {
         ja: { ...product.text.ja, displayName: `日本酒 ${index}`, aliases: ["月の酒"] },
-        en: { ...product.text.en, displayName: `Sake ${index}`, aliases: ["moon drink"] },
+        en: {
+          ...resolveLocalized(product.text, "en"),
+          displayName: `Sake ${index}`,
+          aliases: ["moon drink"],
+        },
       },
     }));
     value.configuration.categories.push({
       id: "tablecast-other-category",
       text: {
         ja: { ...product.text.ja, displayName: "その他" },
-        en: { ...product.text.en, displayName: "Other" },
+        en: { ...resolveLocalized(product.text, "en"), displayName: "Other" },
       },
     });
     value.configuration.products.push({
@@ -178,7 +193,8 @@ for (const alias of ["moon drink", "月の酒"] as const) {
     await screen.getByRole("combobox", { name: labels.editor_category, exact: true }).click();
     await page
       .getByRole("option", {
-        name: fixtureValue(value.configuration.categories[0]).text[locale].displayName,
+        name: resolveLocalized(fixtureValue(value.configuration.categories[0]).text, locale)
+          .displayName,
         exact: true,
       })
       .click();

@@ -1,4 +1,5 @@
 import { createMenuSearch } from "@tablecast/api/catalog-search";
+import { resolveText } from "@tablecast/api/localization";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CircleCheck, CircleSlash, List, Plus, Tags } from "lucide-react";
@@ -112,7 +113,7 @@ function MenuListCollection({
               { value: "", label: t("menu_all_categories"), icon: List },
               ...categories.map((category) => ({
                 value: category.id,
-                label: category.text[locale].displayName,
+                label: resolveText(category.text, locale).displayName,
                 icon: Tags,
               })),
             ]}

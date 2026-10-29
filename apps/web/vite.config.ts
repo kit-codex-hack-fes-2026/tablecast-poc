@@ -89,7 +89,7 @@ export default defineConfig(async ({ command, mode, isPreview }) => {
       paraglideVitePlugin({
         project: "./project.inlang",
         outdir: "./src/paraglide",
-        strategy: ["cookie", "baseLocale"],
+        strategy: ["cookie", "custom-tablecast-default", "baseLocale"],
         cookieName: "tablecast_locale",
       }),
       tanstackStart(),

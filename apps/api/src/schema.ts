@@ -143,5 +143,12 @@ export {
 
 export type { VoiceReference } from "./modules/voice/model";
 
-export { apiErrorSchema, localeSchema, validationIssuesSchema } from "./platform/model";
+export {
+  apiErrorSchema,
+  localeSchema,
+  staffLocaleSchema,
+  uiLocaleSchema,
+  validationIssuesSchema,
+} from "./platform/model";
+export type { StaffLocale, UiLocale } from "./platform/model";
 export type { ApiError, Locale } from "./platform/model";

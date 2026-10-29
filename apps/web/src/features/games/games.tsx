@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check, Gamepad2, ShieldOff } from "lucide-react";
@@ -42,7 +43,7 @@ export function Games() {
             variant={selected === game.id ? "default" : "outline"}
             onClick={() => setSelected(game.id)}
           >
-            {game.name?.[locale] ?? t("games_title")}
+            {(game.name ? resolveLocalized(game.name, locale) : undefined) ?? t("games_title")}
           </Button>
         ))}
       </div>
@@ -140,7 +141,9 @@ function GameDetails({ storeId, gameId }: { gameId: string; storeId: string }) {
     <article className="space-y-4 rounded-xl border border-border bg-card p-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">
-          {game.data.versions[0]?.manifest.name[locale] ?? t("games_title")}
+          {(game.data.versions[0]
+            ? resolveLocalized(game.data.versions[0].manifest.name, locale)
+            : undefined) ?? t("games_title")}
         </h2>
         <Badge>{t(game.data.activeVersionId ? "games_published" : "games_unpublished")}</Badge>
         {manager && game.data.activeVersionId && (
@@ -202,10 +205,12 @@ function GameDetails({ storeId, gameId }: { gameId: string; storeId: string }) {
                 {t(version.status === "ready" ? "games_validated" : "games_draft")}
               </Badge>
             </div>
-            <p>{version.manifest.description[locale]}</p>
+            <p>{resolveLocalized(version.manifest.description, locale)}</p>
             <section className="rounded-xl bg-surface-subtle p-4">
               <h3 className="text-sm font-medium">{t("games_rules")}</h3>
-              <p className="mt-2 whitespace-pre-wrap">{version.manifest.rules[locale]}</p>
+              <p className="mt-2 whitespace-pre-wrap">
+                {resolveLocalized(version.manifest.rules, locale)}
+              </p>
             </section>
             {manager && (
               <div className="flex flex-wrap gap-2">
@@ -228,7 +233,7 @@ function GameDetails({ storeId, gameId }: { gameId: string; storeId: string }) {
                 </Button>
                 <ConfirmAction
                   label={t(version.published ? "games_restore" : "games_publish")}
-                  subject={version.manifest.name[locale]}
+                  subject={resolveLocalized(version.manifest.name, locale)}
                   icon={<Check />}
                   disabled={
                     pending || !version.previewed || game.data.activeVersionId === version.id

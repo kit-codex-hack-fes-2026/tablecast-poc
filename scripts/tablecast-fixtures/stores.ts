@@ -4,6 +4,7 @@ import type { GroupKey } from "./types.ts";
 import { demoOptionImageKey } from "../tablecast-demo-option-images.ts";
 import { koreanDemoStore } from "../tablecast-korean-demo.ts";
 import { demoImageKey, demoStoreBanner, demoStoreLogo } from "../tablecast-seed-media.ts";
+import { localizeSeedConfiguration } from "./localize.ts";
 import { groupDefinitions } from "./modifiers.ts";
 import { sakeKinds, sakes } from "./sake.ts";
 import { categories, drinks, foods, stores } from "./store-data.ts";
@@ -215,10 +216,22 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
   return seededStores.map((store) => ({
     ...store,
     configuration: configurationSchema.parse({
-      ...store.configuration,
+      ...localizeSeedConfiguration(store.configuration, store.id),
       branding: {
-        logo: demoStoreLogo(store.id, store.name),
-        banner: demoStoreBanner(store.id, store.name),
+        logo: (() => {
+          const image = demoStoreLogo(store.id, store.name);
+          return {
+            ...image,
+            alt: { ...image.alt, "zh-Hans": `${store.name} 标志`, ko: `${store.name} 로고` },
+          };
+        })(),
+        banner: (() => {
+          const image = demoStoreBanner(store.id, store.name);
+          return {
+            ...image,
+            alt: { ...image.alt, "zh-Hans": `${store.name} 横幅`, ko: `${store.name} 배너` },
+          };
+        })(),
       },
     }),
   }));

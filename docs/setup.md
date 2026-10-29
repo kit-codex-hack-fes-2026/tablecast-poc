@@ -403,3 +403,13 @@ CIの全検査はActionsの`CI`で作業branchを選択し、`catalog_pr`を空�
 ## 画像の生成依存
 
 画像取込・既存画像の索引移行は既存`TABLECAST_IMAGES` bindingを使い、`@unpic/pixels` 1.3.0と`blurhash` 2.0.5で6×4のBlurHashを生成する。WebのSSR表示は`@unpic/placeholder` 0.1.2を使う。新しいsecret・外部画像サービスは不要で、依存の正本はrootの`bun.lock`である。seed用の生成configにもImages bindingを含める。D1 migrationと再実行可能な索引化の順序は[画像の移行](deployment.md#画像の表示情報の移行)に従う。
+
+## 多言語seedの店舗設定を再作成する
+
+最新seedは3店舗・102商品を`ja`・`en`・`zh-Hans`・`ko`で用意する。通常の`db:seed`は既存の編集内容を保持する。旧設定との自動変換は行わず、開発用の既存店舗設定を置き換える場合は自worktreeのdev serverを止めて次を実行する。
+
+```sh
+bun run db:seed -- --rebuild-configuration
+```
+
+このオプションはdevelopmentだけで利用する。対象seed店舗の公開設定を新しい版へ更新し、下書き・設定release履歴・デモの固定設定を再作成する。既存の注文・決済・注文スナップショット・会員は保持する。確認待ちの注文確認と音声状態は無効化する。全DBを消す`demo:reset`とは別の操作であり、本番・stagingの全体リセット手順へ置き換えない。実行後は各言語の商品名・説明と店舗名を確認する。

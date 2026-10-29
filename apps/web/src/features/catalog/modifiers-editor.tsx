@@ -1,3 +1,4 @@
+import { resolveText, uiLocale } from "@tablecast/api/localization";
 import { type Modifier, type Product } from "@tablecast/api/schema";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
@@ -41,7 +42,7 @@ export function ModifiersEditor({
   const rowTitle = (kind: string, index: number, name: string) =>
     m.editor_row_title(
       { kind, index: index + 1, name: name || t("editor_not_configured") },
-      { locale },
+      { locale: uiLocale(locale) },
     );
   function updateGroup(groupId: string, change: Partial<Modifier>) {
     onChange(
@@ -87,7 +88,11 @@ export function ModifiersEditor({
                 tabIndex={-1}
                 className="scroll-mt-6 wrap-anywhere text-base font-semibold outline-offset-4"
               >
-                {rowTitle(t("editor_modifier"), groupIndex, group.text[locale].displayName)}
+                {rowTitle(
+                  t("editor_modifier"),
+                  groupIndex,
+                  resolveText(group.text, locale).displayName,
+                )}
               </h3>
             </legend>
             <div className="grid min-w-0 gap-4 @xl:grid-cols-3">
@@ -152,7 +157,11 @@ export function ModifiersEditor({
                   storeId={storeId}
                   key={option.id}
                   option={option}
-                  title={rowTitle(t("editor_option"), optionIndex, option.text[locale].displayName)}
+                  title={rowTitle(
+                    t("editor_option"),
+                    optionIndex,
+                    resolveText(option.text, locale).displayName,
+                  )}
                   id={`${groupId}-${encodeEditorId(option.id)}`}
                   labelledBy={groupId}
                   product={product}

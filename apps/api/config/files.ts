@@ -59,6 +59,7 @@ export const files = [
   ["mutation", "src/modules/{tables,customer-coupons,customer-points}/mutations.ts"],
   ["mutation", "src/modules/customer-coupons/issuance.ts"],
   ["model", "src/modules/configuration/instruction-model.ts"],
+  ["model", "src/modules/catalog/localization.ts"],
   ["pure", "src/modules/configuration/instruction-response.ts"],
   ["pure", "src/modules/catalog/search.ts"],
 

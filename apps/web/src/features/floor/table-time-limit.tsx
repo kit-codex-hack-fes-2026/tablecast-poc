@@ -1,4 +1,5 @@
 import type { TableState } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
 import { Hourglass, Infinity as InfinityIcon } from "lucide-react";
 import { tv } from "tailwind-variants";
 import { time } from "../../i18n/format";
@@ -42,7 +43,9 @@ export function TableTimeLimit({
   const remaining = timeLimitText(limit, locale);
   return (
     <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-      {detail && plan && <span className="font-medium">{plan.rules.text[locale].displayName}</span>}
+      {detail && plan && (
+        <span className="font-medium">{resolveText(plan.rules.text, locale).displayName}</span>
+      )}
       <span
         className={limitStyle({ urgent: limit.remainingMinutes <= 15 })}
         title={compact ? remaining : undefined}

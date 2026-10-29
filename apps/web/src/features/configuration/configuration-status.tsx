@@ -1,4 +1,5 @@
 import type { ConfigDraft } from "@tablecast/api/schema";
+import { uiLocale } from "@tablecast/api/localization";
 import { Check, FilePenLine, LoaderCircle, TriangleAlert } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { useI18n } from "../../i18n/locale";
@@ -50,14 +51,19 @@ export function ConfigurationStatus({
       <span hidden={!storeName} className="min-w-0 wrap-anywhere font-semibold">
         {storeName}
       </span>
-      <span>{m.workflow_published_version({ version: publishedVersion }, { locale })}</span>
+      <span>
+        {m.workflow_published_version({ version: publishedVersion }, { locale: uiLocale(locale) })}
+      </span>
       {draft && (
         <>
           <span className="inline-flex flex-wrap items-center gap-2 border-l-2 border-info/30 pl-3">
             <FilePenLine aria-hidden="true" className="size-4 text-info" />
             {t("workflow_draft_identity")}
             <span className="text-muted-foreground">
-              {m.workflow_base_version({ version: draft.baseVersion }, { locale })}
+              {m.workflow_base_version(
+                { version: draft.baseVersion },
+                { locale: uiLocale(locale) },
+              )}
             </span>
           </span>
           <DraftStatus status={draft.status} />

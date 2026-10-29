@@ -17,12 +17,14 @@ const meta = {
             ja: {
               displayName: "お手洗い",
               speechName: "お手洗い",
+              transliteration: "お手洗い",
               description: "店内奥の右手にございます。",
               aliases: ["トイレ"],
             },
             en: {
               displayName: "Toilets",
               speechName: "Toilets",
+              transliteration: "Toilets",
               description: "At the back, on your right.",
               aliases: ["restroom"],
             },

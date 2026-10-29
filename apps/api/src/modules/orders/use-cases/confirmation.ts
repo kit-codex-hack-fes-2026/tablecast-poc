@@ -6,6 +6,7 @@ import type { CoreState, StateView } from "../../tables/model";
 import * as business from "../../../db/business-schema";
 import { DomainError, ensure } from "../../../platform/errors";
 import { measured, observeOperation, recordD1Update } from "../../../platform/telemetry";
+import { localizedNames } from "../../catalog/localization";
 import { confirmationText, priceCart } from "../../catalog/pricing";
 import { catalogValue, sessionConfigVersion } from "../../catalog/queries";
 import { pointBillingCorrectionStatements } from "../../customer-points/mutations";
@@ -66,7 +67,7 @@ export async function prepareConfirmation(
       const snapshotPlan = plan
         ? {
             id: plan.id,
-            name: { ja: plan.rules.text.ja.displayName, en: plan.rules.text.en.displayName },
+            name: localizedNames(plan.rules.text).name,
           }
         : null;
       const snapshot: Snapshot = {

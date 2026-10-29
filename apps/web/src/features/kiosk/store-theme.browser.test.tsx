@@ -1,4 +1,5 @@
 import type { ThemeImage } from "@tablecast/api/schema";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
@@ -88,7 +89,9 @@ it("日本語でチラシ画像が失敗しても商品リンクから通常の�
   );
   const picture = document.querySelector("img");
   if (picture) picture.dispatchEvent(new Event("error"));
-  await page.getByRole("button", { name: product.text[locale].displayName, exact: true }).click();
+  await page
+    .getByRole("button", { name: resolveLocalized(product.text, locale).displayName, exact: true })
+    .click();
   expect(onChoose).toHaveBeenCalledWith(product);
 });
 it("ロゴ取得失敗時も店名を維持する", async () => {

@@ -1028,7 +1028,7 @@
   "theme_banner_full": "全幅",
   "evaluation_badge": "TableCast · 評価用デモ",
   "evaluation_title": "話しかけて、選んで、注文する。",
-  "evaluation_intro": "TableCastは、飲食店の卓上iPadで使うAI接客・注文システムです。料理の相談から好みに合わせた変更、注文内容の確認まで、日本語と英語でやり取りできます。",
+  "evaluation_intro": "TableCastは飲食店のiPad向けAI接客・注文システムです。日本語・英語・簡体字中国語・韓国語で料理を相談し、選択肢を選び、注文を確認できます。",
   "evaluation_start": "デモを試す",
   "evaluation_start_note": "アカウント作成・端末登録は不要。次の画面で佐藤 晴香を選びます。",
   "evaluation_steps": "はじめての方へ",
@@ -1538,5 +1538,13 @@
   "assistance_speak": "ご用件をお話しください",
   "staff_call_queue": "呼び出し中",
   "staff_call_open_table": "卓の詳細を開く",
-  "staff_call_unconfirmed": "用件は未確認です。引き継ぎメモの記録がありません。"
+  "staff_call_unconfirmed": "用件は未確認です。引き継ぎメモの記録がありません。",
+  "admin_meaning_name": "表示名・意味訳／日本語原名",
+  "admin_transliteration": "転写・読み",
+  "editor_store_languages": "店舗の対応言語",
+  "editor_language_code": "追加する言語コード",
+  "editor_language_code_invalid": "BCP 47形式の言語コードを入力してください。",
+  "editor_add_translation": "この言語の翻訳を追加",
+  "editor_remove_translation": "この言語の翻訳を削除",
+  "editor_translation_fallback": "未翻訳のため英語、日本語の順で表示します。"
 }

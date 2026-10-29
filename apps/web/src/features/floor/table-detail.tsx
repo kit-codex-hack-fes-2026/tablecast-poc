@@ -1,3 +1,4 @@
+import { resolveText } from "@tablecast/api/localization";
 import { type Order, type TableState } from "@tablecast/api/schema";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useHydrated } from "@tanstack/react-router";
@@ -195,7 +196,7 @@ export function TableDetail({
               </div>
               {table.plan && (
                 <p>
-                  {t("kiosk_plan")}: {table.plan.rules.text[locale].displayName}
+                  {t("kiosk_plan")}: {resolveText(table.plan.rules.text, locale).displayName}
                 </p>
               )}
               <h3 className="mt-5 mx-0 mb-3.5">{t("admin_updated")}</h3>

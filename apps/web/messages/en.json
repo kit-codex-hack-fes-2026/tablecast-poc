@@ -1028,7 +1028,7 @@
   "theme_banner_full": "Full width",
   "evaluation_badge": "TableCast · Evaluation demo",
   "evaluation_title": "Talk, choose, order.",
-  "evaluation_intro": "TableCast is an AI service and ordering system for restaurant iPads. Discuss dishes, customise your choices and review your order in Japanese or English.",
+  "evaluation_intro": "TableCast is an AI service and ordering system for restaurant iPads. Discuss dishes, customise your choices and review your order in Japanese, English, Simplified Chinese or Korean.",
   "evaluation_start": "Try the demo",
   "evaluation_start_note": "No registration or device pairing needed. Choose 佐藤 晴香 (Haruka Sato) on the sign-in screens.",
   "evaluation_steps": "Start here",
@@ -1448,7 +1448,7 @@
   "invite_unavailable": "This invitation is unavailable. Ask the person who invited you to send a new one.",
   "auth_magic_invalid": "This sign-in link is invalid or has expired. Enter your email address to request a new link.",
   "currency_approximate": "Approximate foreign amount",
-  "price_tax_included": "(incl. tax)",
+  "price_tax_included": "incl. tax",
   "currency_select": "Display currency",
   "currency_none": "Japanese yen only",
   "currency_note": "Foreign amounts are estimates. Payment is in Japanese yen.",
@@ -1538,5 +1538,13 @@
   "assistance_speak": "Tell us what you need",
   "staff_call_queue": "Staff calls awaiting attention",
   "staff_call_open_table": "Open table details",
-  "staff_call_unconfirmed": "The request has not been confirmed. No handover note was recorded."
+  "staff_call_unconfirmed": "The request has not been confirmed. No handover note was recorded.",
+  "admin_meaning_name": "Display name / meaning / original Japanese name",
+  "admin_transliteration": "Transliteration / reading",
+  "editor_store_languages": "Store languages",
+  "editor_language_code": "Language code to add",
+  "editor_language_code_invalid": "Enter a BCP 47 language code.",
+  "editor_add_translation": "Add a translation in this language",
+  "editor_remove_translation": "Remove this translation",
+  "editor_translation_fallback": "Missing translations use English, then Japanese."
 }

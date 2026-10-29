@@ -1,6 +1,7 @@
 import type { couponRuleSchema } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
 import type { z } from "zod";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { useI18n } from "../i18n/locale";
 import { DateTime } from "./date-time";
 import { ProductImage } from "./product-image";
@@ -18,15 +19,15 @@ export function CouponCard({
     <article className="overflow-hidden rounded-2xl border border-warning/20 bg-warning-soft/30">
       <ProductImage
         src={`/api/customer/stores/${storeId}/coupons/images/${rules.imageKey}`}
-        alt={rules.title[locale]}
+        alt={resolveLocalized(rules.title, locale)}
         width={600}
         height={300}
         sizes="(max-width: 640px) 100vw, 480px"
         className="aspect-2/1 w-full object-cover"
       />
       <div className="space-y-3 border-t-2 border-dashed border-warning/30 p-5">
-        <h3 className="text-xl font-semibold">{rules.title[locale]}</h3>
-        <p>{rules.description[locale]}</p>
+        <h3 className="text-xl font-semibold">{resolveLocalized(rules.title, locale)}</h3>
+        <p>{resolveLocalized(rules.description, locale)}</p>
         <p className="text-3xl font-semibold">
           {rules.discountKind === "fixed" ? `¥${rules.discountValue}` : `${rules.discountValue}%`}
         </p>

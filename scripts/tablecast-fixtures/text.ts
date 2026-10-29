@@ -5,10 +5,22 @@ export function bilingual(
   en: string,
   descriptionJa = "",
   descriptionEn = "",
-): Product["text"] {
+): { en: Product["text"]["ja"]; ja: Product["text"]["ja"] } {
   return {
-    ja: { displayName: ja, speechName: ja, description: descriptionJa, aliases: [] },
-    en: { displayName: en, speechName: en, description: descriptionEn, aliases: [] },
+    ja: {
+      displayName: ja,
+      transliteration: ja,
+      speechName: ja,
+      description: descriptionJa,
+      aliases: [],
+    },
+    en: {
+      displayName: en,
+      transliteration: en,
+      speechName: en,
+      description: descriptionEn,
+      aliases: [],
+    },
   };
 }
 

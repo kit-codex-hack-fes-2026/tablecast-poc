@@ -1,3 +1,4 @@
+import { uiLocale } from "@tablecast/api/localization";
 import {
   type Locale,
   storeDateSchema,
@@ -64,11 +65,14 @@ export function tableTimeLimit(plan: TableState["plan"] | undefined, now: number
 }
 
 export function timeLimitText(limit: ReturnType<typeof tableTimeLimit>, locale: Locale) {
-  if (limit.kind === "unknown") return m.floor_limit_unknown({}, { locale });
-  if (limit.kind === "unlimited") return m.floor_limit_unlimited({}, { locale });
+  if (limit.kind === "unknown") return m.floor_limit_unknown({}, { locale: uiLocale(locale) });
+  if (limit.kind === "unlimited") return m.floor_limit_unlimited({}, { locale: uiLocale(locale) });
   return limit.remainingMinutes >= 0
-    ? m.floor_limit_remaining({ minutes: limit.remainingMinutes }, { locale })
-    : m.floor_limit_overdue({ minutes: Math.abs(limit.remainingMinutes) }, { locale });
+    ? m.floor_limit_remaining({ minutes: limit.remainingMinutes }, { locale: uiLocale(locale) })
+    : m.floor_limit_overdue(
+        { minutes: Math.abs(limit.remainingMinutes) },
+        { locale: uiLocale(locale) },
+      );
 }
 
 export function floorPriority(visit?: null | TableState) {

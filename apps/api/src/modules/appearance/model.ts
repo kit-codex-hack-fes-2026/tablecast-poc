@@ -1,6 +1,7 @@
 import generate from "css-tree/generator";
 import parse from "css-tree/parser";
 import { z } from "zod";
+import { localizedSchema } from "../catalog/localization";
 import { imageMetadataSchema } from "../media/model";
 
 export const themeParts = [
@@ -23,9 +24,7 @@ export const themeFonts = {
   serif: '"Hiragino Mincho ProN", "Yu Mincho", Georgia, serif',
   rounded: '"Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", sans-serif',
 } as const;
-const text = z
-  .object({ ja: z.string().trim().min(1).max(200), en: z.string().trim().min(1).max(200) })
-  .strict();
+const text = localizedSchema(z.string().trim().min(1).max(200));
 const themeImageSchema = imageMetadataSchema
   .extend({
     imageKey: z.string().regex(/^tablecast\/uploads\/[a-f0-9]{64}\.webp$/),

@@ -43,7 +43,11 @@ export async function demoCredentials(profile: DemoCredentials["profile"] = "dem
 async function seed() {
   const { values } = parseArgs({
     args: process.argv.slice(2).filter((arg: string) => arg !== "--"),
-    options: { reset: { type: "boolean" }, profile: { type: "string" } },
+    options: {
+      reset: { type: "boolean" },
+      profile: { type: "string" },
+      "rebuild-configuration": { type: "boolean" },
+    },
   });
   const requestedProfile = demoSchema.shape.profile.optional().parse(values.profile);
   await assertPrepared();
@@ -56,6 +60,11 @@ async function seed() {
     otherEmail: tablecastDemoEmail(previousCredentials.otherEmail),
   };
   const profile = requestedProfile ?? credentials.profile;
+  if (
+    values["rebuild-configuration"] &&
+    !(await portAvailable(Number(process.env.TABLECAST_WEB_PORT ?? 0)))
+  )
+    throw new Error("開発サーバーを停止してから店舗設定を再作成してください。");
   if (values.reset) {
     if (!(await portAvailable(Number(process.env.TABLECAST_WEB_PORT ?? 0))))
       throw new Error("開発サーバーをCtrl+Cで停止してからリセットしてください。");
@@ -112,7 +121,9 @@ async function seed() {
     const env = platform.env;
     if (env.TABLECAST_ENV !== "development" || env.TABLECAST_PUBLIC_ORIGIN !== origin)
       throw new Error("seed対象がこのworktreeの開発環境ではありません。");
-    const counts = await seedDemoDatabase(env, credentials);
+    const counts = await seedDemoDatabase(env, credentials, {
+      rebuildConfiguration: values["rebuild-configuration"],
+    });
     if (
       credentials.email !== previousCredentials.email ||
       credentials.otherEmail !== previousCredentials.otherEmail

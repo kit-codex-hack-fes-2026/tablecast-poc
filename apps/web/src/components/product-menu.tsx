@@ -1,4 +1,5 @@
 import type { Catalog, Product } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
 import { ImageOff, Plus, Search } from "lucide-react";
 import { memo, type RefObject, useState } from "react";
 import { cn, tv } from "tailwind-variants";
@@ -7,6 +8,7 @@ import { IllustrationNotice } from "./illustration-notice";
 import { MenuBanners } from "./menu-banners";
 import { Money } from "./money";
 import { ProductImage } from "./product-image";
+import { ProductName } from "./product-name";
 import { StoreLogo } from "./store-logo";
 import { Button } from "./ui/button";
 
@@ -166,15 +168,15 @@ export const ProductMenu = memo(function ProductMenu({
                   )}
                 </span>
               )}
-              <strong
-                title={product.text[locale].displayName}
+              <span
+                title={resolveText(product.text, locale).displayName}
                 className={cn(
                   "block min-h-12 flex-1 text-base leading-6 font-semibold wrap-anywhere",
-                  compact && "line-clamp-2 min-h-10 text-sm leading-5",
+                  compact && "min-h-10 text-sm leading-5",
                 )}
               >
-                {product.text[locale].displayName}
-              </strong>
+                <ProductName text={product.text} />
+              </span>
               <span
                 className={cn(
                   "mt-3 flex items-center justify-between gap-2 text-base font-semibold tabular-nums",
@@ -243,7 +245,7 @@ function MenuCategories({
             aria-pressed={category === item.id}
             onClick={() => onCategoryChange(item.id)}
           >
-            {item.text[locale].displayName}
+            {resolveText(item.text, locale).displayName}
           </Button>
         ))}
       </fieldset>

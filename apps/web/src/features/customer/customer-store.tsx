@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { customerConsentVersion } from "@tablecast/api/schema";
 import {
   useInfiniteQuery,
@@ -168,7 +169,9 @@ function CustomerBenefits({ storeId }: { storeId: string }) {
           <ul className="space-y-3">
             {recentCoupons?.map((coupon) => (
               <li key={coupon.id} className="space-y-1">
-                <p className="font-medium wrap-break-word">{coupon.rules.title[locale]}</p>
+                <p className="font-medium wrap-break-word">
+                  {resolveLocalized(coupon.rules.title, locale)}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   {t(`coupon_${coupon.state}`)}
                   {!coupon.inDate && ` · ${t("coupon_expired")}`}

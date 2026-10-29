@@ -1,4 +1,6 @@
 import { Field } from "@base-ui/react/field";
+import { resolveText } from "@tablecast/api/localization";
+import { localeSchema } from "@tablecast/api/schema";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowLeft, Table2 } from "lucide-react";
 import { useId } from "react";
@@ -39,7 +41,7 @@ export function OpenTable({
       guestLocale,
       plan,
     }: {
-      guestLocale: "en" | "ja";
+      guestLocale: string;
       guests: number;
       plan: string;
     }) =>
@@ -60,7 +62,7 @@ export function OpenTable({
     },
   });
   const form = useAppForm({
-    defaultValues: { guests: 2, guestLocale: "ja" as "en" | "ja", plan: "" },
+    defaultValues: { guests: 2, guestLocale: "ja", plan: "" },
     onSubmit: async ({ value }) => {
       await open.mutateAsync(value).catch(() => undefined);
     },
@@ -97,10 +99,17 @@ export function OpenTable({
                   name={field.name}
                   value={field.state.value}
                   onBlur={field.handleBlur}
-                  onValueChange={(value) => field.handleChange(value === "en" ? "en" : "ja")}
+                  onValueChange={(value) => {
+                    const language = localeSchema.safeParse(value);
+                    if (
+                      language.success &&
+                      catalog.data.configuration.languages.includes(language.data)
+                    )
+                      field.handleChange(language.data);
+                  }}
                   className="grid grid-cols-2 gap-3"
                 >
-                  {(["ja", "en"] as const).map((language) => (
+                  {catalog.data.configuration.languages.map((language) => (
                     <label
                       key={language}
                       htmlFor={`${languageId}-${language}`}
@@ -133,7 +142,7 @@ export function OpenTable({
                     <option value="">{t("admin_no_plan")}</option>
                     {catalog.data.configuration.plans.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.text[locale].displayName}
+                        {resolveText(item.text, locale).displayName}
                       </option>
                     ))}
                   </NativeSelect>

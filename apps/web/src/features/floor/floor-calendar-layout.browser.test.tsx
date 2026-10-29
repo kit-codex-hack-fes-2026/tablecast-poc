@@ -168,12 +168,14 @@ it("12卓の行を3端末幅で見渡し、帯の詳細はhover・focus・クリ
                 ja: {
                   displayName: "飲み放題90分",
                   speechName: "飲み放題90分",
+                  transliteration: "飲み放題90分",
                   description: "",
                   aliases: [],
                 },
                 en: {
                   displayName: "90-minute drinks plan",
                   speechName: "90-minute drinks plan",
+                  transliteration: "90-minute drinks plan",
                   description: "",
                   aliases: [],
                 },

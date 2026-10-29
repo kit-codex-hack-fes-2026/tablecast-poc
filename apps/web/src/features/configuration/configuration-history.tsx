@@ -1,3 +1,4 @@
+import { uiLocale } from "@tablecast/api/localization";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { History, X } from "lucide-react";
 import { useRef } from "react";
@@ -69,7 +70,7 @@ function HistoryContent({
       {query.data && (
         <>
           <p className="text-sm text-muted-foreground">
-            {m.configuration_history_count({ count: entries.length }, { locale })}
+            {m.configuration_history_count({ count: entries.length }, { locale: uiLocale(locale) })}
             <span className="mt-1 block text-xs">{t("configuration_history_retention")}</span>
           </p>
           {entries.length ? (
@@ -106,7 +107,7 @@ function HistoryContent({
           <DialogHeader>
             <DialogTitle>
               {version !== undefined
-                ? m.configuration_history_release({ version }, { locale })
+                ? m.configuration_history_release({ version }, { locale: uiLocale(locale) })
                 : t("configuration_history_title")}
             </DialogTitle>
             <DialogClose aria-label={t("common_close")}>

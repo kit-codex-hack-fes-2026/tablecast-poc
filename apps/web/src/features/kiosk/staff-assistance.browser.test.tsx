@@ -240,6 +240,7 @@ it("案内に関連する商品を通常の商品詳細へ渡し、呼び出し�
         text: {
           displayName: "お冷",
           speechName: "お冷",
+          transliteration: "お冷",
           description: "こちらの商品からご依頼ください。",
           aliases: [],
         },
