@@ -1,5 +1,7 @@
 import type { Catalog, CoreState, Product, UiSectionInput } from "@tablecast/api/schema";
 import { ArrowLeft, ChevronLeft, ChevronRight, LoaderCircle, Search, X } from "lucide-react";
+import { useReducedMotion } from "motion/react";
+import * as motion from "motion/react-m";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { ProductMenu } from "../../components/product-menu";
@@ -10,6 +12,7 @@ import { useI18n } from "../../i18n/locale";
 export function KioskMenu({
   catalog,
   imageSizes,
+  imageTransition = false,
   category,
   onCategoryChange,
   onChoose,
@@ -25,6 +28,7 @@ export function KioskMenu({
   category: string;
   error: unknown;
   imageSizes?: string;
+  imageTransition?: boolean;
   onCategoryChange: (category: string) => void;
   onChange: (input: UiSectionInput) => void;
   onChoose: (product: Product) => void;
@@ -33,6 +37,7 @@ export function KioskMenu({
   search: UiSectionInput["search"];
 }) {
   const { t } = useI18n();
+  const reduced = useReducedMotion();
   const [draft, setDraft] = useState(search?.query ?? "");
   const [locallyOpened, setLocallyOpened] = useState(false);
   const opened = locallyOpened || Boolean(search) || Boolean(error);
@@ -141,130 +146,170 @@ export function KioskMenu({
   }, [draft, search, active, composing, opened, catalog.version]);
 
   const hasQuery = Boolean(draft.trim());
-  const updating = hasQuery && (pending || composing || draft.trim() !== search?.query);
-  const searching = hasQuery && Boolean(search);
-  const products = searching ? (result?.productIds ?? []) : undefined;
+  const updating = pending || (hasQuery && (composing || draft.trim() !== search?.query));
+  const products = result && (search || pending || error) ? result.productIds : undefined;
   return (
-    <div>
-      {opened && (
-        <section
-          aria-label={t("kiosk_menu_search_results")}
-          aria-busy={updating}
-          className="space-y-4 p-4"
+    <ProductMenu
+      catalog={catalog}
+      imageSizes={imageSizes}
+      imageTransition={imageTransition}
+      category={category}
+      onCategoryChange={(next) => {
+        onCategoryChange(next);
+        if (search) {
+          setDraft("");
+          send("");
+        }
+      }}
+      onChoose={onChoose}
+      productIds={products}
+      searchResults={Boolean(products)}
+      searchControl={
+        <motion.div
+          key={opened ? "input" : "trigger"}
+          data-ui="menu-search-control"
+          initial={{ opacity: 0, transform: reduced ? "none" : "translateX(8px)" }}
+          animate={{ opacity: 1, transform: "translateX(0px)" }}
+          transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+          className="h-14"
         >
-          <div className="flex items-center gap-3">
+          {opened ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-lg"
+                aria-label={t("common_back")}
+                onClick={() => {
+                  focusTrigger.current = true;
+                  setLocallyOpened(false);
+                  setDraft("");
+                  send("");
+                }}
+              >
+                <ArrowLeft aria-hidden />
+              </Button>
+              <Input
+                aria-label={t("kiosk_menu_search_label")}
+                className="h-14 min-w-0 flex-1"
+                id="tablecast-menu-search"
+                type="search"
+                maxLength={100}
+                value={draft}
+                placeholder={t("kiosk_menu_search_placeholder")}
+                ref={(element) => {
+                  input.current = element;
+                  if (element && focusInput.current) {
+                    element.focus();
+                    focusInput.current = false;
+                  }
+                }}
+                onCompositionStart={() => setComposing(true)}
+                onCompositionEnd={(event) => {
+                  editedQuery.current = event.currentTarget.value;
+                  setLocallyOpened(true);
+                  setDraft(event.currentTarget.value);
+                  setComposing(false);
+                  if (!event.currentTarget.value.trim()) send("");
+                }}
+                onChange={(event) => {
+                  editedQuery.current = event.target.value;
+                  setLocallyOpened(true);
+                  setDraft(event.target.value);
+                  if (!event.target.value.trim() && !composing) send("");
+                }}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    !event.nativeEvent.isComposing &&
+                    !composing &&
+                    event.keyCode !== 229
+                  ) {
+                    event.preventDefault();
+                    send(draft);
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-lg"
+                aria-label={t("kiosk_menu_search_clear")}
+                disabled={!draft}
+                onClick={() => {
+                  setLocallyOpened(true);
+                  setDraft("");
+                  send("");
+                  input.current?.focus();
+                }}
+              >
+                <X aria-hidden="true" size={20} />
+              </Button>
+            </div>
+          ) : (
             <Button
-              type="button"
+              ref={trigger}
+              className="h-14 w-full justify-start"
               variant="outline"
-              onClick={() => {
-                focusTrigger.current = true;
-                setLocallyOpened(false);
-                setDraft("");
-                send("");
-              }}
-            >
-              <ArrowLeft aria-hidden="true" size={20} />
-              {t("common_back")}
-            </Button>
-            <label className="font-semibold" htmlFor="tablecast-menu-search">
-              {t("kiosk_menu_search_label")}
-            </label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Search aria-hidden="true" size={20} className="shrink-0" />
-            <Input
-              id="tablecast-menu-search"
-              type="search"
-              maxLength={100}
-              value={draft}
-              placeholder={t("kiosk_menu_search_placeholder")}
-              ref={(element) => {
-                input.current = element;
-                if (element && focusInput.current) {
-                  element.focus();
-                  focusInput.current = false;
-                }
-              }}
-              onCompositionStart={() => setComposing(true)}
-              onCompositionEnd={(event) => {
-                editedQuery.current = event.currentTarget.value;
-                setLocallyOpened(true);
-                setDraft(event.currentTarget.value);
-                setComposing(false);
-                if (!event.currentTarget.value.trim()) send("");
-              }}
-              onChange={(event) => {
-                editedQuery.current = event.target.value;
-                setLocallyOpened(true);
-                setDraft(event.target.value);
-                if (!event.target.value.trim() && !composing) send("");
-              }}
-              onKeyDown={(event) => {
-                if (
-                  event.key === "Enter" &&
-                  !event.nativeEvent.isComposing &&
-                  !composing &&
-                  event.keyCode !== 229
-                ) {
-                  event.preventDefault();
-                  send(draft);
-                }
-              }}
-            />
-            <Button
               type="button"
-              variant="outline"
-              aria-label={t("kiosk_menu_search_clear")}
-              disabled={!draft}
               onClick={() => {
-                setLocallyOpened(true);
-                setDraft("");
-                send("");
-                input.current?.focus();
-              }}
-            >
-              <X aria-hidden="true" size={20} />
-            </Button>
-          </div>
-          {hasQuery && (
-            <SearchPageActions
-              result={searching && !error ? result : null}
-              updating={updating}
-              onPage={(offset) => send(draft, offset)}
-            />
-          )}
-          <ErrorNotice
-            error={error}
-            retrying={pending}
-            onRetry={() =>
-              hasQuery
-                ? send(draft, search?.offset ?? 0)
-                : onChange({ section: "menu", search: null })
-            }
-          />
-        </section>
-      )}
-      <ProductMenu
-        catalog={catalog}
-        imageSizes={imageSizes}
-        category={category}
-        onCategoryChange={onCategoryChange}
-        onChoose={onChoose}
-        productIds={products}
-        searchResults={searching}
-        searchButtonRef={trigger}
-        onSearch={
-          opened
-            ? undefined
-            : () => {
                 editedQuery.current = undefined;
                 focusInput.current = true;
                 setLocallyOpened(true);
                 setDraft("");
-              }
-        }
-      />
-    </div>
+              }}
+            >
+              <Search aria-hidden />
+              {t("kiosk_menu_search")}
+            </Button>
+          )}
+        </motion.div>
+      }
+      searchStatus={
+        <MenuSearchStatus
+          hasQuery={hasQuery}
+          result={result}
+          updating={updating}
+          pending={pending}
+          error={error}
+          onPage={(offset) => send(draft, offset)}
+          onRetry={() =>
+            hasQuery
+              ? send(draft, search?.offset ?? 0)
+              : onChange({ section: "menu", search: null })
+          }
+        />
+      }
+    />
+  );
+}
+
+function MenuSearchStatus({
+  hasQuery,
+  result,
+  updating,
+  pending,
+  error,
+  onPage,
+  onRetry,
+}: {
+  error: unknown;
+  hasQuery: boolean;
+  onPage: (offset: number) => void;
+  onRetry: () => void;
+  pending: boolean;
+  result: CoreState["menuSearch"];
+  updating: boolean;
+}) {
+  const { t } = useI18n();
+  if (!hasQuery && !updating && !error) return null;
+  return (
+    <section aria-label={t("kiosk_menu_search_results")} aria-busy={updating} className="px-4 pb-4">
+      {(hasQuery || updating) && (
+        <SearchPageActions result={result} updating={updating} onPage={onPage} />
+      )}
+      <ErrorNotice error={error} retrying={pending} onRetry={onRetry} />
+    </section>
   );
 }
 

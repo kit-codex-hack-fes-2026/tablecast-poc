@@ -1730,5 +1730,13 @@
   "food_reason_pork_ingredients": "豚由来原料を使用",
   "food_reason_alcohol": "アルコール含有",
   "food_reason_origin_unknown": "原材料の由来が未確認",
-  "food_reason_previous_record": "保存された判定"
+  "food_reason_previous_record": "保存された判定",
+  "kiosk_cart_added_product": "{product}を{count}点、注文かごに追加しました",
+  "kiosk_cart_updated_product": "{product}の注文内容を更新しました",
+  "kiosk_cart_failed_product": "{product}の注文かごを更新できませんでした",
+  "kiosk_ordered_items": "{count}点の商品を注文しました",
+  "kiosk_order_failed_items": "{count}点の商品の注文を送信できませんでした",
+  "kiosk_review_failed": "注文かごの内容を確認できませんでした",
+  "kiosk_staff_request_failed": "店員への呼出を送信できませんでした",
+  "kiosk_bill_request_failed": "お会計の依頼を送信できませんでした"
 }

@@ -167,6 +167,7 @@ it.each(["ja", "en"] as const)(
         .poll(() => conversation.getBoundingClientRect().height)
         .toBeGreaterThanOrEqual(width >= 896 ? 224 : 344);
       const resume = page.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
+      await page.getByRole("tab", { name: new RegExp(`^${labels.kiosk_cart}`) }).click();
       const review = page.getByRole("button", { name: labels.kiosk_review, exact: true });
       expect(resume.element().closest("[data-theme-part=voice-controls]")).not.toBeNull();
       expect(document.querySelector("[data-theme-part=header]")?.contains(resume.element())).toBe(
@@ -174,6 +175,9 @@ it.each(["ja", "en"] as const)(
       );
       for (const control of [resume, review]) {
         await expect.element(control).toBeVisible();
+        await expect
+          .poll(() => control.element().getBoundingClientRect().height)
+          .toBeGreaterThanOrEqual(56);
         const bounds = control.element().getBoundingClientRect();
         expect(bounds.height).toBeGreaterThanOrEqual(56);
         expect(bounds.left).toBeGreaterThanOrEqual(0);
@@ -183,6 +187,7 @@ it.each(["ja", "en"] as const)(
       await page.screenshot({
         path: `../../../test-results/tablecast-test-only-layout-${locale}-${width}.png`,
       });
+      await userEvent.keyboard("{Escape}");
       expect(tools.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
       await expect
@@ -285,7 +290,9 @@ it("店舗テーマでもヘッダーと音声・カート操作を縦横で維�
   ] as const) {
     await page.viewport(width, height);
     await expect.element(page.getByRole("button", { name: ja.kiosk_call_staff })).toBeVisible();
+    await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
     await expect.element(page.getByRole("button", { name: ja.kiosk_review })).toBeVisible();
+    await userEvent.keyboard("{Escape}");
     const voice = document.querySelector('[data-theme-part="voice-controls"]');
     if (!voice) throw new Error("音声操作が必要です");
     expect(voice.getBoundingClientRect().height).toBeGreaterThan(0);

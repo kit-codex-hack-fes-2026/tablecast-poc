@@ -51,6 +51,7 @@ it("未充足行の修正は競合後も選択を保持し、再送でも同じ�
     ],
   };
   await mountKiosk();
+  await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
   await expect
     .element(page.getByRole("button", { name: ja.kiosk_review, exact: true }))
     .toBeDisabled();
@@ -83,6 +84,7 @@ it("未充足行の修正は競合後も選択を保持し、再送でも同じ�
       ],
     })),
   );
+  await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
   await expect
     .element(page.getByRole("button", { name: ja.kiosk_review, exact: true }))
     .toBeEnabled();
@@ -91,6 +93,7 @@ it("未充足行の修正は競合後も選択を保持し、再送でも同じ�
 it("確認の期限が失効したら確定操作を閉じる", async () => {
   await page.viewport(1280, 1000);
   await mountKiosk();
+  await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
   const review = page.getByRole("button", { name: ja.kiosk_review, exact: true });
   await expect.element(review).toBeEnabled();
   fixture.confirmationDuration = 2000;
@@ -120,6 +123,7 @@ it("確認の期限が失効したら確定操作を閉じる", async () => {
 it.each(["カート版", "公開版"] as const)("確認の%sが失効したら確定操作を閉じる", async (reason) => {
   await page.viewport(1280, 1000);
   await mountKiosk();
+  await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
   await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
   const confirmation = page.getByRole("region", { name: ja.kiosk_review_title, exact: true });
   await expect.element(confirmation).toBeVisible();
@@ -173,6 +177,7 @@ it("公開通知で開いた商品を閉じて新価格を取得し、同じ通�
 it("注文操作は確認から修正・明示確定へ一箇所で切り替わる", async () => {
   await page.viewport(1024, 768);
   await mountKiosk();
+  await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
   await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
   await expect.element(page.getByRole("region", { name: ja.kiosk_review_title })).toBeVisible();
   await expect
@@ -185,12 +190,15 @@ it("注文操作は確認から修正・明示確定へ一箇所で切り替わ�
     ),
   ).toHaveLength(0);
   await page.getByRole("button", { name: ja.kiosk_edit, exact: true }).click();
+  await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
   await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
   const confirm = page.getByRole("button", { name: ja.kiosk_confirm, exact: true });
   await expect.element(confirm).toBeEnabled();
   confirm.element().focus();
   await userEvent.keyboard("{Enter}");
-  await expect.element(page.getByText(ja.kiosk_ordered, { exact: true })).toBeVisible();
+  await expect
+    .element(page.getByText(ja.kiosk_ordered_items.replace("{count}", "1"), { exact: true }))
+    .toBeVisible();
   expect(
     requests.filter(
       (request) =>

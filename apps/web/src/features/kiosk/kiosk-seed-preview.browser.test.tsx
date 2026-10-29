@@ -158,17 +158,42 @@ it.each(["ja", "en", "zh-Hans", "ko"] as const)(
         path: `../../../test-results/tablecast-seed-${locale}-${width}.png`,
       });
     }
-    await page.viewport(1512, 982);
-    const card = conversation.getByRole("button", {
-      name: new RegExp(resolveLocalized(product.text, locale).displayName),
+    for (const [width, height] of [
+      [1512, 982],
+      [1180, 820],
+      [402, 874],
+    ] as const) {
+      await page.viewport(width, height);
+      const menu = page.getByRole("tabpanel", { name: labels.kiosk_menu, exact: true });
+      const card = menu.getByRole("button", {
+        name: new RegExp(resolveLocalized(product.text, locale).displayName),
+      });
+      await card.click();
+      const dialog = page.getByRole("dialog", {
+        name: resolveLocalized(product.text, locale).displayName,
+        exact: true,
+      });
+      await expect
+        .element(dialog.getByRole("button", { name: labels.kiosk_add, exact: true }))
+        .toBeVisible();
+      const images = [...dialog.element().querySelectorAll("img")];
+      for (const image of images) image.loading = "eager";
+      await Promise.all(images.map((image) => image.decode()));
+      const photo = dialog.element().querySelector('[data-ui="product-image-transition"]');
+      if (!photo) throw new Error("共有する商品写真が必要です");
+      await expect.poll(() => getComputedStyle(photo).transform).toBe("none");
+      await page.screenshot({
+        path: `../../../test-results/tablecast-order-dialog-${locale}-${width}.png`,
+      });
+      await dialog.getByRole("button", { name: labels.common_close, exact: true }).click();
+      await expect.element(dialog).not.toBeInTheDocument();
+    }
+    await page.viewport(1180, 820);
+    await page.getByRole("tab", { name: new RegExp(`^${labels.kiosk_cart}`) }).click();
+    const review = page.getByRole("button", { name: labels.kiosk_review, exact: true });
+    await expect.element(review).toBeVisible();
+    await page.screenshot({
+      path: `../../../test-results/tablecast-order-popover-${locale}-1180.png`,
     });
-    await card.click();
-    const details = page.getByRole("region", {
-      name: resolveLocalized(product.text, locale).displayName,
-      exact: true,
-    });
-    await expect.element(details).toBeVisible();
-    await details.getByRole("button", { name: labels.common_close, exact: true }).click();
-    await expect.element(details).not.toBeInTheDocument();
   },
 );

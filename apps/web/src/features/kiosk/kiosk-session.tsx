@@ -1,6 +1,6 @@
 import { Dialog as PaneDialog } from "@base-ui/react/dialog";
 import { Toast } from "@base-ui/react/toast";
-import { resolveLocalized, resolveText } from "@tablecast/api/localization";
+import { resolveLocalized, resolveText, uiLocale } from "@tablecast/api/localization";
 import {
   type CartLine,
   type CoreState,
@@ -19,19 +19,10 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useHydrated } from "@tanstack/react-router";
-import {
-  Check,
-  ChevronRight,
-  LoaderCircle,
-  ReceiptText,
-  ShoppingBag,
-  Utensils,
-} from "lucide-react";
-import { useReducedMotion } from "motion/react";
+import { Check, ClipboardCheck, LoaderCircle, Pencil, Send } from "lucide-react";
+import { AnimatePresence, useReducedMotion } from "motion/react";
 import {
   type ReactNode,
-  type RefObject,
   useCallback,
   useContext,
   useEffect,
@@ -40,7 +31,11 @@ import {
   useState,
 } from "react";
 import { usePanelRef } from "react-resizable-panels";
-import { ActionToasts } from "../../components/action-toasts";
+import {
+  type ActionToastData,
+  ActionToasts,
+  actionToastTimeout,
+} from "../../components/action-toasts";
 import { Brand } from "../../components/brand";
 import { CartLines } from "../../components/cart-lines";
 import { ErrorNotice } from "../../components/error-notice";
@@ -48,11 +43,11 @@ import { ImageProvider } from "../../components/image-provider";
 import { LanguageSwitch } from "../../components/language-switch";
 import { LoadingState } from "../../components/loading-state";
 import { Money } from "../../components/money";
-import { ProductImage } from "../../components/product-image";
 import { StoreLogo } from "../../components/store-logo";
 import { StoreTheme } from "../../components/store-theme";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
+import { surfaceMotion } from "../../components/ui/motion-variants";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -65,6 +60,7 @@ import { useI18n } from "../../i18n/locale";
 import { parseResponse, type TableEndpoint } from "../../lib/api";
 import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
+import { m } from "../../paraglide/messages.js";
 import { pendingCartLines } from "./cart-change-model";
 import { type CartFlight, CartFlightImage } from "./cart-flight";
 import { useCartUpdates } from "./cart-updates-query";
@@ -74,6 +70,7 @@ import { CustomerOrderAttribution } from "./customer-order-attribution";
 import { customerParticipantsOptions, customerTargetKey } from "./customer-participants-query";
 import { CustomerVisitPanel } from "./customer-visit-panel";
 import { KioskGames } from "./games";
+import { KioskMenuTabs } from "./kiosk-menu-tabs";
 import { KioskVoicePanel } from "./kiosk-voice-panel";
 import { KioskMenu } from "./menu-search";
 import { useTablePresentation } from "./presentation-query";
@@ -103,7 +100,7 @@ function menuImageSizes(width?: number) {
 
 export function TableSession(props: TableSessionProps) {
   return (
-    <Toast.Provider timeout={4000} limit={1}>
+    <Toast.Provider timeout={actionToastTimeout} limit={1}>
       <TableSessionContent {...props} />
     </Toast.Provider>
   );
@@ -156,9 +153,10 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   }>();
   const [orderWidth, setOrderWidth] = useState<number>();
   const [prepared, setSnapshot] = useState<Snapshot>();
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [menuCategory, setMenuCategory] = useState("all");
   const confirmationHeading = useRef<HTMLHeadingElement>(null);
-  const toasts = Toast.useToastManager();
+  const toasts = Toast.useToastManager<ActionToastData>();
   const [flights, setFlights] = useState<CartFlight[]>([]);
   const reducedMotion = useReducedMotion();
   const orderPane = useRef<HTMLElement>(null);
@@ -188,8 +186,39 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
         ]);
     },
     onSuccess: ({ change }) => {
-      if (change.type === "add" || change.type === "edit")
-        toasts.add({ title: t(change.type === "add" ? "kiosk_cart_added" : "kiosk_cart_updated") });
+      if (change.type === "add" || change.type === "edit") {
+        const product = catalog.data?.configuration.products.find(
+          (item) => item.id === change.line.productId,
+        );
+        const name = product ? resolveText(product.text, locale).displayName : t("kiosk_cart");
+        toasts.add({
+          type: "success",
+          data: { icon: "product" },
+          title:
+            change.type === "add"
+              ? m.kiosk_cart_added_product(
+                  { product: name, count: change.line.quantity },
+                  { locale: uiLocale(locale) },
+                )
+              : m.kiosk_cart_updated_product({ product: name }, { locale: uiLocale(locale) }),
+        });
+      }
+    },
+    onError: (_error, input) => {
+      const change = input.change;
+      const line =
+        "line" in change ? change.line : data.cart.lines.find((item) => item.id === change.id);
+      const product = catalog.data?.configuration.products.find(
+        (item) => item.id === line?.productId,
+      );
+      toasts.add({
+        type: "error",
+        data: { icon: "product" },
+        title: m.kiosk_cart_failed_product(
+          { product: product ? resolveText(product.text, locale).displayName : t("kiosk_cart") },
+          { locale: uiLocale(locale) },
+        ),
+      });
     },
   });
   const cartPending = updateCart.pending.length > 0;
@@ -212,6 +241,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   const selectedProductId = presentation.productId;
   const setSection = (next: UiSection) => {
     setChosen(undefined);
+    if (next !== "cart") setCheckoutOpen(false);
     screen.mutate({ section: next, productId: null });
   };
 
@@ -263,8 +293,8 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       : undefined;
   const snapshotId = snapshot?.id;
   useEffect(() => {
-    if (snapshotId) confirmationHeading.current?.focus({ preventScroll: true });
-  }, [snapshotId]);
+    if (snapshotId && checkoutOpen) confirmationHeading.current?.focus({ preventScroll: true });
+  }, [snapshotId, checkoutOpen]);
   useEffect(() => {
     setLocale(displayLocale);
   }, [displayLocale, setLocale]);
@@ -309,12 +339,17 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     if (customerContextCursor > previousCustomerContext.current) {
       previousCustomerContext.current = customerContextCursor;
       voice.clearCustomerContext();
-      toasts.add({ title: t("customer_context_updated") });
+      toasts.add({
+        type: "success",
+        data: { icon: "member" },
+        title: t("customer_context_updated"),
+      });
     }
   }, [customerContextCursor, voice, toasts, t]);
   const resetCart = updateCart.reset;
   const choose = useCallback(
     (product: Product) => {
+      setCheckoutOpen(false);
       resetCart();
       detailTrigger.current =
         document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -336,9 +371,13 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       );
       setSection("cart");
       setSnapshot(confirmation);
+      setCheckoutOpen(true);
       setSubmitKey(crypto.randomUUID());
     },
-    onError: refresh,
+    onError: () => {
+      refresh();
+      toasts.add({ type: "error", title: t("kiosk_review_failed") });
+    },
   });
   const submit = useMutation({
     mutationFn: ({ confirmation }: { confirmation: Snapshot; pointer: boolean }) => {
@@ -375,12 +414,29 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     onSuccess: (result, _input, images) => {
       const { order, state } = submittedCoreOrderSchema.parse(result);
       setFlights(images ?? []);
+      setCheckoutOpen(false);
       setSnapshot(undefined);
-      toasts.add({ title: t("kiosk_ordered") });
+      toasts.add({
+        type: "success",
+        data: { icon: "order" },
+        title: m.kiosk_ordered_items(
+          { count: order.snapshot.lines.reduce((sum, line) => sum + line.quantity, 0) },
+          { locale: uiLocale(locale) },
+        ),
+      });
       receive(state);
       recordOrder(order);
     },
-    onError: refresh,
+    onError: (_error, input) => {
+      refresh();
+      toasts.add({
+        type: "error",
+        title: m.kiosk_order_failed_items(
+          { count: input.confirmation.lines.reduce((sum, line) => sum + line.quantity, 0) },
+          { locale: uiLocale(locale) },
+        ),
+      });
+    },
   });
   const call = useMutation({
     mutationFn: (bill: boolean) =>
@@ -391,8 +447,17 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       ),
     onSuccess: (updated, bill) => {
       receive(updated);
-      toasts.add({ title: t(bill ? "kiosk_bill_requested" : "kiosk_called_staff") });
+      toasts.add({
+        type: "success",
+        data: { icon: "staff" },
+        title: t(bill ? "kiosk_bill_requested" : "kiosk_called_staff"),
+      });
     },
+    onError: (_error, bill) =>
+      toasts.add({
+        type: "error",
+        title: t(bill ? "kiosk_bill_request_failed" : "kiosk_staff_request_failed"),
+      }),
   });
   const language = useMutation({
     mutationKey: languageKey,
@@ -404,13 +469,18 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     },
     onSuccess: (updated) => {
       receive(updated);
-      toasts.add({ title: t("kiosk_language_changed") });
+      toasts.add({
+        type: "success",
+        data: { icon: "language" },
+        title: t("kiosk_language_changed"),
+      });
     },
     onError: refresh,
   });
   function edit(line: CartLine) {
     const product = catalog.data?.configuration.products.find((item) => item.id === line.productId);
     if (product) {
+      setCheckoutOpen(false);
       detailTrigger.current =
         document.activeElement instanceof HTMLElement ? document.activeElement : null;
       updateCart.reset();
@@ -436,7 +506,6 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           title={snapshot ? t("kiosk_review_title") : t("kiosk_cart")}
           amount={snapshot?.total ?? data.cart.total}
           label={t("kiosk_cart_total")}
-          headingRef={snapshot ? confirmationHeading : undefined}
           pending={cartPending}
         />
         {snapshot ? (
@@ -485,6 +554,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       <Tabs.Panel value="menu">
         {catalog.data ? (
           <KioskMenu
+            imageTransition
             imageSizes={menuImageSizes(orderWidth)}
             catalog={catalog.data}
             category={menuCategory}
@@ -510,33 +580,45 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     const reviewing = snapshot && section === "cart";
     return (
       <div className="min-w-0 space-y-2">
-        <ErrorNotice error={submit.error} />
+        <ErrorNotice error={prepare.error || submit.error} />
         {reviewing ? (
-          <div className="grid w-full grid-cols-3 gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Button
               variant="outline"
               className="h-auto min-h-14 min-w-0 whitespace-normal px-3 py-2"
               disabled={submit.isPending || cartPending}
-              onClick={() => setSnapshot(undefined)}
+              onClick={() => {
+                setSnapshot(undefined);
+                setCheckoutOpen(false);
+              }}
             >
+              <Pencil aria-hidden />
               {t("kiosk_edit")}
             </Button>
             <Button
-              className="col-span-2 h-auto min-h-14 min-w-0 whitespace-normal px-3 py-2"
+              variant="default"
+              className="h-auto min-h-14 min-w-0 whitespace-normal px-3 py-2"
+              aria-busy={submit.isPending}
               disabled={submit.isPending || cartPending}
               onClick={(event) =>
                 submit.mutate({ confirmation: snapshot, pointer: event.detail > 0 })
               }
             >
               {t("kiosk_confirm")}
-              {submit.isPending ? <LoaderCircle className="motion-safe:animate-spin" /> : <Check />}
+              {submit.isPending ? (
+                <LoaderCircle aria-hidden className="motion-safe:animate-spin" />
+              ) : (
+                <Send aria-hidden />
+              )}
             </Button>
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
             <Button
               type="button"
-              className="h-auto min-h-14 min-w-0 flex-1 justify-between whitespace-normal px-3 py-2"
+              variant="default"
+              className="ml-auto h-auto min-h-14 min-w-0 whitespace-normal px-3 py-2"
+              aria-busy={prepare.isPending}
               disabled={
                 !snapshot &&
                 (!data.cart.complete ||
@@ -550,25 +632,11 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
               {prepare.isPending ? (
                 <LoaderCircle className="motion-safe:animate-spin" aria-hidden />
               ) : (
-                <ChevronRight size={20} aria-hidden="true" />
+                <ClipboardCheck size={20} aria-hidden="true" />
               )}
             </Button>
           </div>
         )}
-      </div>
-    );
-  }
-  function renderCheckout() {
-    if (section !== "cart" && (section !== "menu" || !cartLines.length)) return null;
-    return (
-      <div
-        role="group"
-        aria-label={t("kiosk_cart")}
-        data-ui="order-actions"
-        data-theme-part="checkout"
-        className="border-t border-border bg-card p-3"
-      >
-        {renderOrderActions()}
       </div>
     );
   }
@@ -626,6 +694,13 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           voice={voice}
           voiceBlocked={customerTargetUnconfirmed}
           onChoose={choose}
+          onCallResult={(result) =>
+            toasts.add({
+              type: result,
+              data: { icon: "staff" },
+              title: t(result === "success" ? "kiosk_called_staff" : "kiosk_staff_request_failed"),
+            })
+          }
         />
       </header>
     );
@@ -900,99 +975,124 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                           cartLines={cartLines}
                           cartPending={cartPending}
                           products={catalog.data?.configuration.products}
-                          cartActions={renderCheckout()}
+                          cartActions={renderOrderActions()}
+                          checkoutOpen={checkoutOpen && !selection}
+                          onCheckoutOpenChange={setCheckoutOpen}
+                          reviewing={Boolean(snapshot && section === "cart")}
+                          confirmationHeading={confirmationHeading}
+                          orderPane={orderPane}
                         />
                       </div>
-                    </Tabs.Root>
-                    <PaneDialog.Root
-                      open={Boolean(selection)}
-                      modal={false}
-                      disablePointerDismissal
-                      onOpenChange={(open) => {
-                        if (!open) setSection("menu");
-                      }}
-                    >
-                      <PaneDialog.Portal container={orderPane}>
-                        <PaneDialog.Backdrop
-                          data-ui="product-overlay"
-                          className="absolute inset-0 z-20 bg-overlay/30"
-                        />
-                        <PaneDialog.Popup
-                          aria-label={
-                            selection
-                              ? resolveText(selection.product.text, locale).displayName
-                              : undefined
-                          }
-                          initialFocus={false}
-                          finalFocus={() =>
-                            detailTrigger.current?.isConnected
-                              ? detailTrigger.current
-                              : (orderPane.current?.querySelector<HTMLElement>(
-                                  '[data-ui="cart-tab"]',
-                                ) ?? false)
-                          }
-                          data-theme-part="dialog"
-                          className="absolute inset-4 z-30 flex min-h-0 flex-col overflow-hidden rounded-3xl bg-card shadow-xl sm:inset-6"
-                        >
+                      <PaneDialog.Root
+                        open={Boolean(selection)}
+                        modal={false}
+                        disablePointerDismissal
+                        onOpenChange={(open) => {
+                          if (!open) setSection("menu");
+                        }}
+                      >
+                        <AnimatePresence>
                           {selection && (
-                            <ProductPage
-                              endpoint={endpoint}
-                              configVersion={data.configVersion}
-                              tableSessionId={data.id}
-                              imageSize={orderWidth && orderWidth < 576 ? 128 : 160}
-                              key={selection.line?.id ?? selection.product.id}
-                              product={selection.product}
-                              initial={selection.line}
-                              editing={selection.editing}
-                              cartLimitReached={
-                                cartLines.length >= maxCartLines &&
-                                !(selection.editing ?? Boolean(selection.line))
-                              }
-                              busy={false}
-                              error={selection.error}
-                              onClose={() => setSection("menu")}
-                              onSave={(line, pointer, origin) => {
-                                if (selection.failureId !== undefined)
-                                  updateCart.clearFailure(selection.failureId);
-                                const image = orderPane.current?.querySelector(
-                                  '[data-ui="product-detail"] img',
-                                );
-                                const imageBounds = image?.getBoundingClientRect();
-                                const paneBounds = orderPane.current?.getBoundingClientRect();
-                                // 詳細をスクロールして写真が見えないときは、押した追加ボタンから運ぶ。
-                                const from =
-                                  imageBounds &&
-                                  paneBounds &&
-                                  imageBounds.top >= paneBounds.top &&
-                                  imageBounds.bottom <= paneBounds.bottom
-                                    ? imageBounds
-                                    : origin;
-                                updateCart.mutate({
-                                  change: {
-                                    type:
-                                      (selection.editing ?? Boolean(selection.line))
-                                        ? "edit"
-                                        : "add",
-                                    line,
-                                  },
-                                  configVersion: selection.configVersion,
-                                  dismissProductId: selection.product.id,
-                                  addition:
-                                    pointer &&
-                                    !(selection.editing ?? Boolean(selection.line)) &&
-                                    selection.product.imageKey
-                                      ? {
-                                          imageKey: selection.product.imageKey,
-                                          from,
-                                        }
-                                      : undefined,
-                                });
-                              }}
-                            />
+                            <PaneDialog.Portal key="product" container={orderPane} keepMounted>
+                              <PaneDialog.Backdrop
+                                data-ui="product-overlay"
+                                className={surfaceMotion({
+                                  kind: "backdrop",
+                                  className: "absolute inset-0 z-20 bg-overlay/30",
+                                })}
+                              />
+                              <PaneDialog.Popup
+                                key="product"
+                                render={(popupProps, state) => (
+                                  <div
+                                    {...popupProps}
+                                    inert={!state.open}
+                                    aria-hidden={!state.open || undefined}
+                                  />
+                                )}
+                                aria-label={
+                                  selection
+                                    ? resolveText(selection.product.text, locale).displayName
+                                    : undefined
+                                }
+                                initialFocus={false}
+                                finalFocus={() =>
+                                  detailTrigger.current?.isConnected
+                                    ? detailTrigger.current
+                                    : (orderPane.current?.querySelector<HTMLElement>(
+                                        '[data-ui="cart-tab"]',
+                                      ) ?? false)
+                                }
+                                data-theme-part="dialog"
+                                className={surfaceMotion({
+                                  kind: "dialog",
+                                  className:
+                                    "absolute inset-x-6 top-1/2 z-30 flex max-h-[calc(100%-2rem)] min-h-0 -translate-y-1/2 flex-col rounded-3xl sm:inset-x-9 sm:max-h-[calc(100%-3rem)]",
+                                })}
+                              >
+                                {selection && (
+                                  <ProductPage
+                                    imageTransition
+                                    endpoint={endpoint}
+                                    configVersion={data.configVersion}
+                                    tableSessionId={data.id}
+                                    imageSize={orderWidth && orderWidth < 576 ? 128 : 160}
+                                    key={selection.line?.id ?? selection.product.id}
+                                    product={selection.product}
+                                    initial={selection.line}
+                                    editing={selection.editing}
+                                    cartLimitReached={
+                                      cartLines.length >= maxCartLines &&
+                                      !(selection.editing ?? Boolean(selection.line))
+                                    }
+                                    busy={false}
+                                    error={selection.error}
+                                    onClose={() => setSection("menu")}
+                                    onSave={(line, pointer, origin) => {
+                                      if (selection.failureId !== undefined)
+                                        updateCart.clearFailure(selection.failureId);
+                                      const image = orderPane.current?.querySelector(
+                                        '[data-ui="product-detail"] img',
+                                      );
+                                      const imageBounds = image?.getBoundingClientRect();
+                                      const paneBounds = orderPane.current?.getBoundingClientRect();
+                                      // 詳細をスクロールして写真が見えないときは、押した追加ボタンから運ぶ。
+                                      const from =
+                                        imageBounds &&
+                                        paneBounds &&
+                                        imageBounds.top >= paneBounds.top &&
+                                        imageBounds.bottom <= paneBounds.bottom
+                                          ? imageBounds
+                                          : origin;
+                                      updateCart.mutate({
+                                        change: {
+                                          type:
+                                            (selection.editing ?? Boolean(selection.line))
+                                              ? "edit"
+                                              : "add",
+                                          line,
+                                        },
+                                        configVersion: selection.configVersion,
+                                        dismissProductId: selection.product.id,
+                                        addition:
+                                          pointer &&
+                                          !(selection.editing ?? Boolean(selection.line)) &&
+                                          selection.product.imageKey
+                                            ? {
+                                                imageKey: selection.product.imageKey,
+                                                from,
+                                              }
+                                            : undefined,
+                                      });
+                                    }}
+                                  />
+                                )}
+                              </PaneDialog.Popup>
+                            </PaneDialog.Portal>
                           )}
-                        </PaneDialog.Popup>
-                      </PaneDialog.Portal>
-                    </PaneDialog.Root>
+                        </AnimatePresence>
+                      </PaneDialog.Root>
+                    </Tabs.Root>
                     {flights.map((flight) => (
                       <CartFlightImage
                         key={flight.id}
@@ -1002,7 +1102,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                         }
                       />
                     ))}
-                    <ActionToasts />
+                    <ActionToasts container={orderPane} />
                     {updateCart.failures.map((failure) => (
                       <div key={failure.mutationId} className="space-y-2 p-3">
                         <ErrorNotice error={failure.error} />
@@ -1024,9 +1124,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                         </div>
                       </div>
                     ))}
-                    <ErrorNotice
-                      error={prepare.error || call.error || language.error || speed.error}
-                    />
+                    <ErrorNotice error={call.error || language.error || speed.error} />
                   </aside>
                 </ResizablePanel>
               </ResizablePanelGroup>
@@ -1038,152 +1136,16 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   }
   return renderSession();
 }
-function KioskMenuTabs({
-  data,
-  cartLines,
-  cartPending,
-  products = [],
-  cartActions,
-}: {
-  cartActions: ReactNode;
-  cartLines: CartLine[];
-  cartPending: boolean;
-  data: CoreState;
-  products?: Product[];
-}) {
-  const hydrated = useHydrated();
-  const { t } = useI18n();
-  function imagesFor(lines: { productId: string }[]) {
-    return [
-      ...new Set(
-        lines
-          .map((line) => products.find((product) => product.id === line.productId)?.imageKey)
-          .filter((key): key is string => Boolean(key)),
-      ),
-    ].slice(0, 3);
-  }
-  const images = imagesFor(cartLines);
-  const orderedImages = imagesFor(data.orderSummary.productIds.map((productId) => ({ productId })));
-  const quantity = cartLines.reduce((sum, line) => sum + line.quantity, 0);
-  const orderedQuantity = data.orderSummary.quantity;
-  const priceClass = "block whitespace-nowrap text-sm tabular-nums";
-  const tabClass =
-    "h-14 min-h-14 min-w-0 flex-col gap-0 px-1 py-0 text-sm leading-tight whitespace-nowrap text-center [&_svg]:size-4";
-  return (
-    <div className="relative">
-      {cartActions}
-      <Tabs.List
-        data-ui="menu-tabs"
-        className="grid w-full grid-cols-3 gap-1 rounded-none border-t border-border px-2 pt-1 pb-3 overflow-x-auto @max-[32rem]/tablecast-order:grid-cols-[max-content_minmax(max-content,1fr)_minmax(max-content,1fr)] @max-[32rem]/tablecast-order:px-1"
-      >
-        <Tabs.Tab
-          className={tabClass}
-          size="guest"
-          data-theme-part="menu-tab"
-          disabled={!hydrated}
-          value="menu"
-        >
-          <span className="flex h-full flex-col items-center justify-center gap-0.5">
-            <Utensils aria-hidden />
-            <span>{t("kiosk_menu")}</span>
-          </span>
-        </Tabs.Tab>
-        <Tabs.Tab
-          className={tabClass}
-          size="guest"
-          data-theme-part="menu-tab"
-          data-ui="cart-tab"
-          disabled={!hydrated}
-          value="cart"
-        >
-          <span className="flex h-8 max-w-full items-center justify-center gap-1">
-            <ShoppingBag aria-hidden data-ui="cart-icon" className="shrink-0" />
-            <span className="min-w-0 whitespace-nowrap leading-none">{t("kiosk_cart")}</span>
-            <span
-              data-ui="cart-count"
-              className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-control px-1 text-foreground tabular-nums"
-            >
-              {quantity}
-            </span>
-            <TabProductImages images={images} kind="cart" />
-          </span>
-          <span data-ui="tab-price" className={priceClass}>
-            <Money taxIncluded value={data.cart.total} />
-            {cartPending && (
-              <LoaderCircle
-                role="status"
-                aria-label={t("kiosk_cart_syncing")}
-                className="ml-1 inline-block size-3.5 motion-safe:animate-spin"
-              />
-            )}
-          </span>
-        </Tabs.Tab>
-        <Tabs.Tab
-          className={tabClass}
-          size="guest"
-          data-theme-part="menu-tab"
-          disabled={!hydrated}
-          value="orders"
-        >
-          <span className="flex h-8 max-w-full items-center justify-center gap-1">
-            <ReceiptText aria-hidden data-ui="orders-icon" className="shrink-0" />
-            <span className="min-w-0 whitespace-nowrap leading-none">{t("kiosk_orders_bill")}</span>
-            <span
-              data-ui="orders-count"
-              className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-control px-1 text-foreground tabular-nums"
-            >
-              {orderedQuantity}
-            </span>
-            <TabProductImages images={orderedImages} kind="orders" />
-          </span>
-          <span data-ui="tab-price" className={priceClass}>
-            <Money taxIncluded value={data.bill.orderedTotal} />
-          </span>
-        </Tabs.Tab>
-      </Tabs.List>
-    </div>
-  );
-}
-
-function TabProductImages({ images, kind }: { images: string[]; kind: "cart" | "orders" }) {
-  if (!images.length) return null;
-  return (
-    <span
-      aria-hidden
-      data-ui={`${kind}-preview`}
-      className="ml-2 flex shrink-0 -space-x-3 @max-[32rem]/tablecast-order:-space-x-4.5"
-    >
-      {images.map((imageKey) => (
-        <span
-          key={imageKey}
-          data-image-key={imageKey}
-          className="inline-flex size-8 shrink-0 overflow-hidden rounded-lg border border-card bg-card shadow-sm"
-        >
-          <ProductImage
-            src={`/media/${imageKey}`}
-            width={32}
-            height={32}
-            sizes="32px"
-            alt=""
-            className="size-full object-contain"
-          />
-        </span>
-      ))}
-    </span>
-  );
-}
 
 function KioskPaneHeader({
   title,
   label,
   amount,
   children,
-  headingRef,
   pending = false,
 }: {
   amount: number;
   children?: ReactNode;
-  headingRef?: RefObject<HTMLHeadingElement | null>;
   label: string;
   pending?: boolean;
   title: string;
@@ -1195,13 +1157,7 @@ function KioskPaneHeader({
       className="sticky top-0 z-10 space-y-3 border-b border-border bg-card p-4"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <h2
-          ref={headingRef}
-          tabIndex={headingRef ? -1 : undefined}
-          className="text-lg font-semibold outline-none"
-        >
-          {title}
-        </h2>
+        <h2 className="text-lg font-semibold outline-none">{title}</h2>
         <div className="ml-auto text-right">
           <span className="block text-sm text-muted-foreground">{label}</span>
           <strong className="block text-base">

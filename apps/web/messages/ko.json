@@ -437,5 +437,13 @@
   "pwa_kiosk": "테이블 앱 열기",
   "pwa_staff": "직원 앱 열기",
   "kiosk_cart_limit": "장바구니에는 최대 {count}개 항목을 담을 수 있습니다. 더 담으려면 먼저 주문해 주세요.",
-  "kiosk_cart_limit_error": "장바구니가 가득 찼습니다. 먼저 주문하거나 항목을 삭제해 주세요."
+  "kiosk_cart_limit_error": "장바구니가 가득 찼습니다. 먼저 주문하거나 항목을 삭제해 주세요.",
+  "kiosk_cart_added_product": "{product} {count}개를 장바구니에 담았습니다",
+  "kiosk_cart_updated_product": "{product}의 주문 내용을 수정했습니다",
+  "kiosk_cart_failed_product": "장바구니의 {product}을(를) 수정하지 못했습니다",
+  "kiosk_ordered_items": "상품 {count}개를 주문했습니다",
+  "kiosk_order_failed_items": "상품 {count}개의 주문을 전송하지 못했습니다",
+  "kiosk_review_failed": "장바구니의 상품을 확인하지 못했습니다",
+  "kiosk_staff_request_failed": "직원 호출을 전송하지 못했습니다",
+  "kiosk_bill_request_failed": "계산 요청을 전송하지 못했습니다"
 }

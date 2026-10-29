@@ -1,5 +1,5 @@
 import { resolveLocalized } from "@tablecast/api/localization";
-import { expect, it } from "vitest";
+import { expect, it, onTestFinished } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
@@ -12,6 +12,9 @@ it.each(["ja", "en"] as const)(
   "%sで下部タブの金額・画像とペイン内詳細・成功通知を確認できる",
   async (locale) => {
     const labels = locale === "ja" ? ja : en;
+    const addedMessage = labels.kiosk_cart_added_product
+      .replace("{product}", resolveLocalized(product.text, locale).displayName)
+      .replace("{count}", "1");
     fixture.current.locale = locale;
     fixture.current.uiSection = "menu";
     fixture.current.staffCalled = false;
@@ -66,18 +69,41 @@ it.each(["ja", "en"] as const)(
     expect(brand.getBoundingClientRect().right).toBeLessThan(divider.getBoundingClientRect().left);
     expect(divider.getBoundingClientRect().right).toBeLessThan(banner.getBoundingClientRect().left);
     expect(document.querySelector("footer[data-theme-part=checkout]")).toBeNull();
+    await expect
+      .element(page.getByRole("button", { name: labels.kiosk_review, exact: true }))
+      .not.toBeInTheDocument();
+    await cart.click();
     const callout = page.getByRole("group", { name: labels.kiosk_cart, exact: true });
     await expect
       .element(callout.getByRole("button", { name: labels.kiosk_review, exact: true }))
       .toBeVisible();
-    expect(callout.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(
-      tabs.element().getBoundingClientRect().top,
-    );
+    await expect
+      .poll(
+        () =>
+          callout.element().getBoundingClientRect().bottom -
+          tabs.element().getBoundingClientRect().top,
+      )
+      .toBeLessThanOrEqual(0);
     for (const price of document.querySelectorAll('[data-ui="tab-price"]')) {
       expect(getComputedStyle(price).whiteSpace).toBe("nowrap");
       expect(parseFloat(getComputedStyle(price).fontSize)).toBeGreaterThanOrEqual(14);
       expect(price.getBoundingClientRect().height).toBeLessThanOrEqual(24);
     }
+    await userEvent.keyboard("{Escape}");
+    await expect.element(callout).not.toBeInTheDocument();
+    await expect.element(cart).toHaveFocus();
+    await page.getByRole("tab", { name: labels.kiosk_menu, exact: true }).click();
+    const movement = { opening: 0, closing: 0 };
+    let phase: "closing" | "opening" = "opening";
+    const observer = new MutationObserver(() => {
+      for (const frame of pane.querySelectorAll<HTMLElement>(
+        '[data-ui="product-image-transition"]',
+      )) {
+        if (frame.style.transform && frame.style.transform !== "none") movement[phase] += 1;
+      }
+    });
+    observer.observe(pane, { subtree: true, attributes: true, attributeFilter: ["style"] });
+    onTestFinished(() => observer.disconnect());
     const choose = page.getByRole("button").filter({
       has: page.getByText(resolveLocalized(pictured.text, locale).displayName, { exact: true }),
     });
@@ -88,6 +114,9 @@ it.each(["ja", "en"] as const)(
     });
     await expect.element(dialog).toBeVisible();
     expect(pane.contains(dialog.element())).toBe(true);
+    await expect
+      .poll(() => dialog.element().querySelector("img")?.getBoundingClientRect().width)
+      .toBe(160);
     const bounds = dialog.element().getBoundingClientRect();
     expect(bounds.left).toBeGreaterThan(pane.getBoundingClientRect().left);
     expect(bounds.right).toBeLessThan(pane.getBoundingClientRect().right);
@@ -107,8 +136,13 @@ it.each(["ja", "en"] as const)(
     await expect
       .element(dialog.getByRole("button", { name: labels.kiosk_add, exact: true }))
       .toBeVisible();
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    expect(movement.opening > 0).toBe(!reduced);
+    phase = "closing";
     await userEvent.keyboard("{Escape}");
     await expect.element(dialog).not.toBeInTheDocument();
+    expect(movement.closing > 0).toBe(!reduced);
+    observer.disconnect();
     await expect.element(choose).toHaveFocus();
     await choose.click();
     await dialog.getByRole("radio", { name: "90 mL", exact: true }).click();
@@ -131,21 +165,19 @@ it.each(["ja", "en"] as const)(
           .getByRole("button", { name: labels.kiosk_review, exact: true }),
       )
       .toBeEnabled();
-    const actionPosition = callout.element().getBoundingClientRect();
     await callout.getByRole("button", { name: labels.kiosk_review, exact: true }).click();
     await expect
       .element(callout.getByRole("button", { name: labels.kiosk_confirm, exact: true }))
       .toBeVisible();
-    expect(callout.element().getBoundingClientRect().top).toBeCloseTo(actionPosition.top, 0);
-    expect(callout.element().getBoundingClientRect().bottom).toBeCloseTo(actionPosition.bottom, 0);
     await callout.getByRole("button", { name: labels.kiosk_edit, exact: true }).click();
-    await expect.element(page.getByText(labels.kiosk_cart_added, { exact: true })).toBeVisible();
+    await expect.element(callout).not.toBeInTheDocument();
+    await expect.element(page.getByText(addedMessage, { exact: true })).toBeVisible();
     await page
-      .getByRole("dialog", { name: labels.kiosk_cart_added, exact: true })
+      .getByRole("dialog", { name: addedMessage, exact: true })
       .getByRole("button", { name: labels.common_close, exact: true })
       .click();
     await expect
-      .element(page.getByRole("dialog", { name: labels.kiosk_cart_added, exact: true }))
+      .element(page.getByRole("dialog", { name: addedMessage, exact: true }))
       .not.toBeInTheDocument();
     expect(cart.element().querySelectorAll("img")).toHaveLength(1);
     expect(
@@ -272,6 +304,7 @@ it("カゴの商品画像は3枚まで重ねて表示する", async () => {
       cart.element().querySelector('[data-ui="cart-icon"]')?.getBoundingClientRect().width,
     ).toBeGreaterThan(0);
   }
+  await cart.click();
   await page.getByRole("button", { name: en.kiosk_review, exact: true }).click();
   await page.getByRole("button", { name: en.kiosk_confirm, exact: true }).click();
   const orders = page.getByRole("tab", { name: new RegExp(`^${en.kiosk_orders_bill}`) });

@@ -27,6 +27,7 @@ export type AssistanceProps = {
   data: CoreState;
   endpoint: TableEndpoint;
   events: TableEvent[];
+  onCallResult?: (result: "error" | "success") => void;
   onChoose: (product: Product) => void;
   voice: VoiceConnection;
   voiceBlocked?: boolean;
@@ -38,6 +39,7 @@ export function useStaffAssistance({
   events,
   voice,
   onChoose,
+  onCallResult,
   voiceBlocked = false,
 }: AssistanceProps) {
   const { locale } = useI18n();
@@ -104,12 +106,14 @@ export function useStaffAssistance({
       );
       void client.invalidateQueries({ queryKey: staffCallsKey(endpoint, data.id) });
       requestKey.current = crypto.randomUUID();
+      onCallResult?.("success");
       setState((current) => ({
         ...current,
         tab: updated.staffCall ? "call" : "history",
         selectedCallId: updated.staffCall?.id,
       }));
     },
+    onError: () => onCallResult?.("error"),
   });
   useEffect(
     () => () => {
