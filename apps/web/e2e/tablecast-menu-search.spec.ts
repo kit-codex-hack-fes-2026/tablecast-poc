@@ -24,17 +24,23 @@ test("検索と商品詳細を往復して再読込し、外部からの共有�
     await page.setViewportSize(viewport);
     await expect
       .poll(() =>
-        page.locator('[data-theme-part="product-card"] img').evaluateAll((images) =>
-          images
-            .filter((image) => {
-              const rect = image.getBoundingClientRect();
-              return rect.top < window.innerHeight && rect.bottom > 0;
-            })
-            .every(
-              (image) =>
-                image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
-            ),
-        ),
+        page.locator("img").evaluateAll(async (images) => {
+          const visible = images.filter((image): image is HTMLImageElement => {
+            if (!(image instanceof HTMLImageElement)) return false;
+            const rect = image.getBoundingClientRect();
+            return (
+              rect.width > 0 &&
+              rect.height > 0 &&
+              rect.top < window.innerHeight &&
+              rect.bottom > 0 &&
+              rect.left < window.innerWidth &&
+              rect.right > 0
+            );
+          });
+          if (!visible.every((image) => image.complete && image.naturalWidth > 0)) return false;
+          await Promise.all(visible.map((image) => image.decode()));
+          return true;
+        }),
       )
       .toBe(true);
     await page.screenshot({
@@ -100,5 +106,5 @@ test("検索と商品詳細を往復して再読込し、外部からの共有�
   await page.setViewportSize({ width: 1180, height: 820 });
   await page.getByRole("button", { name: ja.common_back, exact: true }).click();
   await expect(page.getByRole("button", { name: ja.kiosk_menu_search, exact: true })).toBeFocused();
-  await page.screenshot({ path: testInfo.outputPath("tablecast-menu-search-button-1180x820.png") });
+  await captureMenu({ width: 1180, height: 820 }, "button");
 });
