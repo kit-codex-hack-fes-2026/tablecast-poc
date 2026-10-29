@@ -269,6 +269,7 @@ it.each(["ja", "en"] as const)(
     value.allergens = { milk: "contains", egg: "not_used" };
     value.dietary.vegan = { status: "no", reasons: ["animal_ingredients"] };
     value.dietary.vegetarian = { status: "yes", reasons: ["ingredients_confirmed"] };
+    value.dietary.halal = { status: "yes", reasons: ["ingredients_confirmed"] };
     const screen = await render(
       <LocaleProvider initialLocale={locale} persist={false}>
         <FoodInformationView value={value} />
@@ -311,7 +312,7 @@ it.each(["ja", "en"] as const)(
       .element(page.getByText(labels.food_certification_unknown, { exact: false }))
       .not.toBeInTheDocument();
     const trigger = screen.getByRole("button", {
-      name: `${labels.food_halal}: ${labels.food_unknown}`,
+      name: `${labels.food_halal}: ${labels.food_yes}`,
       exact: true,
     });
     await trigger.click();
@@ -321,6 +322,9 @@ it.each(["ja", "en"] as const)(
           exact: true,
         }),
       )
+      .toBeVisible();
+    await expect
+      .element(page.getByText(labels.food_ingredients_checked, { exact: true }))
       .toBeVisible();
     await page.getByRole("button", { name: labels.common_close, exact: true }).click();
     await expect.element(trigger).toHaveFocus();

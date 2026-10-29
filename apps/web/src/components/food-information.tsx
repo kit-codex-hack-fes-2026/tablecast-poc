@@ -158,21 +158,15 @@ export function FoodInformationView({
                       {key === "halal" && (
                         <li>{t(halalCertificationLabels[value.halalCertification])}</li>
                       )}
-                      {assessment.reasons
-                        .filter(
-                          (reason) =>
-                            key !== "halal" ||
-                            (reason !== "ingredients_confirmed" && reason !== "previous_record"),
-                        )
-                        .map((reason) => (
-                          <li key={reason}>
-                            {t(
-                              reason === "ingredients_confirmed"
-                                ? "food_ingredients_checked"
-                                : dietaryReasonLabels[reason],
-                            )}
-                          </li>
-                        ))}
+                      {assessment.reasons.map((reason) => (
+                        <li key={reason}>
+                          {t(
+                            reason === "ingredients_confirmed"
+                              ? "food_ingredients_checked"
+                              : dietaryReasonLabels[reason],
+                          )}
+                        </li>
+                      ))}
                       {key !== "halal" && !assessment.reasons.length && <li>{statusLabel}</li>}
                     </ul>
                   }
