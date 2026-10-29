@@ -7,7 +7,7 @@ description: 公開MCPへのOAuth接続、店舗・scopeの確認、作業別の
 
 [プラグイン導入](/account/integrations/plugins)または[手動導入](/account/integrations/manual)を開きます。この案内画面にはログインが必要です。表示された接続先をMCPクライアントに追加し、OAuthでログインして対象組織と権限に同意します。リポジトリのcloneや開発サーバーは不要です。
 
-本番とstagingは別環境です。stagingの画面では`tablecast-staging`の接続先を使い、利用中の画面とMCPのoriginを照合してください。pluginを導入済みなら同じ接続先を手動で重複登録しません。
+接続画面の名前は`tablecast`、URLは利用中の画面のoriginに`/mcp`を付けたものです。本番と検証環境は別のデータを持つため、画面とMCPのoriginを照合してください。公開pluginは本番へ接続します。同じ接続先を手動で重複登録する必要はありません。
 
 ## 権限と対象店舗を確認する
 

@@ -8,7 +8,7 @@
 
 店舗の利用者は、公開MCP `https://tablecast.kit-codex.workers.dev/mcp` へOAuthで接続する。リポジトリのclone、開発サーバー、pluginの生成は不要である。
 
-`/account/integrations/plugins` はGitHub Marketplaceからの導入とリモートMCPへのOAuth接続を案内する。`/account/integrations/manual` は任意のMCPクライアント向けの接続URL・Streamable HTTP・OAuth 2.1/PKCE/DCR設定と、用途別の4つのSKILL.mdの任意ダウンロードを提供する。staging以外の画面の接続URLは公開pluginの`plugins/tablecast/.mcp.json`を直接参照し、ローカル画面でも本番を案内する。スキルの追加だけでは接続や権限を付与しない。
+`/account/integrations/plugins` はGitHub Marketplaceからの導入とリモートMCPへのOAuth接続を案内する。`/account/integrations/manual` は任意のMCPクライアント向けの接続URL・Streamable HTTP・OAuth 2.1/PKCE/DCR設定と、用途別の4つのSKILL.mdの任意ダウンロードを提供する。画面の接続名は全環境で`tablecast`、接続URLは利用中のoriginの`/mcp`とする。公開pluginの`plugins/tablecast/.mcp.json`は本番接続用として維持し、検証環境への手動接続と区別する。スキルの追加だけでは接続や権限を付与しない。
 
 `/account/mcp-sessions` ではOAuth接続の日時・scope・有効期限を確認し、不要な接続を解除する。認可コードとPKCE、組織選択、明示同意を経て発行したアクセストークンだけを受け付ける。クライアントの初回接続には動的クライアント登録を使用する。登録だけでは店舗へのアクセス権を持たない。認可・scopeの契約は[MCP仕様](mcp.md)を参照する。
 
@@ -149,3 +149,7 @@ agent向けに`/llms.txt`で日英の索引とページ単位のMarkdown URL、`
 製品plugin 0.7.0の`tablecast` skillは[初期設定](../plugins/tablecast/skills/tablecast/references/onboarding.md)と[資料Skill](../plugins/tablecast/skills/tablecast/references/store-skills.md)の手順を同梱する。`get_store_onboarding`で現在値と不足を確認し、既存の下書きへメニュー・言語・食事情報・接客・テーマ・資料を反映する。画像アップロード、ファイルCRUD、ZIP取込／書出、Agent Skills lintをMCPから使える。GUIは店舗ホームの店舗の初期設定から同じ確認事項を開く。
 
 ポイント・クーポンは専用toolで確認し、メニュー下書きと異なり即時適用されることを説明する。未採用の特典を勝手に設定しない。現在値の存在を事実確認済みとせず、未確認の食事情報を安全と断定しない。OAuth、認証情報、端末登録、顧客本人の同意、最終公開の人の操作を保持する。配布元の更新は利用者がインストール済みのpluginの自動更新を保証しない。
+
+## 利用ケースと実行範囲
+
+製品plugin 0.8.0では[店舗の利用ケース](../plugins/tablecast/skills/tablecast/references/use-cases.md)に、資料取込・多言語接客・営業後の改善の具体的な依頼と必要なtoolをまとめる。[製品の価値と検証経路](use-cases.md)で客向け音声操作と店舗管理MCPの責務を区別する。自然言語の依頼を実行可能なtoolへ対応付けたことと、実モデルが依頼を完遂したことは別々に記録する。

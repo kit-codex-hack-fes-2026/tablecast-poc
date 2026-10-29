@@ -7,16 +7,32 @@
 
 そばで相談に乗る店員と、店固有のお品書きを卓上iPadに。
 
-TableCastは、声による接客とタッチ式注文を一つのカートにつなぐ、飲食店向けシステムのPoCです。料理やお酒のおすすめを聞き、好みに合わせてカスタマイズし、内容を確認して注文できます。来店客の画面と店舗の管理画面は、どちらも日本語・英語に対応します。
+TableCastは、声による接客とタッチ式注文を一つのカートにつなぐ、飲食店向けシステムのPoCです。料理やお酒のおすすめを聞き、好みに合わせてカスタマイズし、内容を確認して注文できます。商品情報は店舗ごとに対応言語を追加でき、音声では多言語で相談できます。店舗管理のUIは日本語・英語に対応します。
 
 [デモ](docs/demo.md) · [紹介動画](apps/presentation/README.md#現在の成果物) · [セットアップ](docs/setup.md) · [構成仕様](docs/architecture.md) · [仕様索引](docs/README.md)
+
+![卓上iPadの実際の注文画面](apps/web/public/landing/order-menu.webp)
+
+## 体験を支えるこだわり
+
+料理を選ぶ楽しさと、忙しい店の接客を両立したい。TableCastでは、地酒のおすすめ、旅先での食べ方や食材の質問、画面操作が苦手な人の注文を、店舗のメニューとスタッフにつなぎます。導入時のお品書き取込と営業後の改善も、同じ店舗設定を使います。
+
+| 利用者の体験                                       | 技術上の設計と挑戦                                                                              | 実装・検証への入口                                                                                                                     |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 話しながら写真を選び、途中からタッチでも注文できる | GPT-Live 1のWebRTCとResponses delegationを、GUIと共通のカートへ接続。停止・再開と業務状態を分離 | [音声接続](docs/voice/integration.md)・[注文仕様](docs/product.md#共通の注文操作)                                                      |
+| 食材の不明点を店員に聞き直さず伝えられる           | 原文・要約・案内済み内容・未解決点を構造化して卓へ紐付け、管理画面へ通知                        | [引き継ぎUI](docs/ui.md#店員への用件相談と呼び出し履歴)                                                                                |
+| メニュー写真から多言語の設定を準備できる           | OAuth付きMCP、完全なconfigurationの版管理、検証・差分・人の公開承認                             | [Pluginの実行例](plugins/tablecast/skills/tablecast/references/use-cases.md)・[MCP実行テスト](apps/api/test/mcp-configuration.test.ts) |
+| AIと相談しても価格や注文が勝手に決まらない         | 店舗・卓の認可、API側の価格計算、版付き注文確認と明示承認                                       | [認証](docs/authentication.md)・[業務API](apps/api/src/modules)                                                                        |
+| 営業結果を次の接客へ反映できる                     | 実D1の期間・母数を揃えた集計から、採用案だけを下書きへ反映                                      | [統計](docs/statistics.md)・[統計テスト](apps/api/test/statistics.test.ts)                                                             |
+
+[利用ケースと検証経路](docs/use-cases.md)には、作品の価値・完成度・技術レベルを確認する入口と、実モデル・実店舗で別途確認する範囲をまとめています。
 
 ## できること
 
 - **声とタッチで注文** — 商品説明、おすすめ、カスタマイズ、飲み放題などのプランの相談から、同じカートを操作できます。音声を停止しても画面から注文を続けられます。
 - **店舗の状況を共有** — 卓・来店・注文・提供・会計・スタッフ呼出しを管理し、変更をリアルタイムに表示します。
 - **ChatGPTから店舗設定** — MCP経由でメニュー資料や翻訳、接客方針、画像を下書きへ反映し、差分を確認して公開できます。
-- **店舗に合わせた接客と表示** — 日英の商品名・説明・読み上げ名、接客指示、音声、テーマやロゴを店舗ごとに設定できます。
+- **店舗に合わせた接客と表示** — 多言語の商品名・説明・読み上げ名、接客指示、音声、テーマやロゴを店舗ごとに設定できます。
 - **会員と卓上ゲーム** — 明示ログインと同意に基づく店舗別の記憶・ポイント・クーポン、店舗が承認したゲームを扱います。
 
 来店客の決済処理とPOS本接続は対象外です。会計の支払済み登録はスタッフによるモック操作です。店舗のTableCast利用料を扱う[組織向け課金・請求](docs/billing.md)とは区別します。
@@ -30,7 +46,7 @@ TypeScriptを中心に、WebとAPIをCloudflare Workersで動かす構成です�
 | Web・SSR             | React 19、TanStack Start / Router、Vite                         | 卓上画面・店舗管理画面、ルーティング、サーバーレンダリング              |
 | データ取得・フォーム | TanStack Query / Form / Table                                   | SSRとのデータ共有、キャッシュ、入力検証、一覧表示                       |
 | UI                   | Tailwind CSS 4、shadcn/ui、Base UI、Tailwind Variants、Motion   | 共通部品、店舗テーマ、アクセシビリティ、画面の動き                      |
-| 多言語               | Paraglide JS                                                    | 来店客・スタッフそれぞれの日本語・英語表示                              |
+| 多言語               | Paraglide JS                                                    | UIの翻訳。商品情報はBCP 47と言語別の意味訳・転写を管理                  |
 | API・入力検証        | Hono、Hono Client、Zod                                          | 型を共有するHTTP API、店舗・卓の認可、共通業務操作                      |
 | 音声会話             | OpenAI GPT-Live 1、WebRTC                                       | ブラウザーとモデルを直接接続する音声理解・応答・再生                    |
 | 業務の委任           | OpenAI Responses delegation、gpt-6.1-terra                      | 音声会話中の業務判断とtool呼出し。Fast mode、reasoning low              |
@@ -50,11 +66,12 @@ TypeScriptを中心に、WebとAPIをCloudflare Workersで動かす構成です�
 flowchart LR
     Guest["来店客のiPad"] <--> Web["Web Worker<br/>TanStack Start"]
     Staff["店舗の管理画面"] <--> Web
-    ChatGPT["店舗のChatGPT"] <-->|MCP / OAuth| Web
+    ChatGPT["店舗のChatGPT / Codex"] <-->|MCP / OAuth| Web
     Web <-->|Service Binding| API["API Worker<br/>Hono / Better Auth"]
     API --> D1[(D1)]
     API <--> DO["Durable Objects"]
     API --> Media["R2 / Images"]
+    Guest -->|音声toolの実行要求| Web
     Guest <-->|WebRTC| Live["GPT-Live 1"]
     Live <-->|Responses delegation| Terra["gpt-6.1-terra"]
 ```

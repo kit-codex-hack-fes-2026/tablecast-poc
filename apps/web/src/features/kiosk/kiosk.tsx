@@ -7,17 +7,11 @@ import { useI18n } from "../../i18n/locale";
 import { tableEndpoint, type TableEndpoint } from "../../lib/api";
 import { CurrencyProvider } from "./currency-provider";
 import { TableSession } from "./kiosk-session";
-import { Pairing } from "./pairing";
+import { Landing } from "./landing";
 import { tableOptions, tableQueryKey } from "./table-query";
 
 // 遅い応答が新しい画面操作・カート状態を巻き戻さない。
-export function Kiosk({
-  endpoint = tableEndpoint,
-  evaluation = false,
-}: {
-  endpoint?: TableEndpoint;
-  evaluation?: boolean;
-}) {
+export function Kiosk({ endpoint = tableEndpoint }: { endpoint?: TableEndpoint }) {
   const tableKey = useMemo(() => tableQueryKey(endpoint), [endpoint]);
   const { t } = useI18n();
   const client = useQueryClient();
@@ -36,7 +30,7 @@ export function Kiosk({
         <h1>{t("kiosk_closed")}</h1>
       </main>
     );
-  if (table.data === null) return <Pairing onReady={refresh} evaluation={evaluation} />;
+  if (table.data === null) return <Landing />;
   if (table.isPending)
     return (
       <main className="h-dvh">

@@ -9,6 +9,7 @@ declare module "@tanstack/react-router" {
 }
 
 type DocumentDetails = {
+  description?: SimpleMessageKey;
   name?: string | { [language: string]: string | undefined; ja: string };
   store?: string;
   title?: SimpleMessageKey;
@@ -38,7 +39,7 @@ export function DocumentHead() {
     ? "head_not_found_description"
     : failed
       ? "head_error_description"
-      : (metadata?.description ?? "head_guest_description");
+      : (latest?.description ?? metadata?.description ?? "head_guest_description");
   const store =
     !missing && !failed ? details.map((detail) => detail.store).findLast(Boolean) : undefined;
   const name = !missing && !failed ? latest?.name : undefined;

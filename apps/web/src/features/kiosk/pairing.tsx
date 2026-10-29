@@ -8,18 +8,10 @@ import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
 import { Button } from "../../components/ui/button";
 import { buttonVariants } from "../../components/ui/button-variants";
-import * as Disclosure from "../../components/ui/disclosure";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
-import { EvaluationGuide } from "./evaluation-guide";
 
-export function Pairing({
-  onReady,
-  evaluation = false,
-}: {
-  evaluation?: boolean;
-  onReady: () => void;
-}) {
+export function Pairing({ onReady }: { onReady: () => void }) {
   const { t, setLocale } = useI18n();
   const request = useMutation({
     mutationFn: () => parseResponse(rpc.api.devices.request.$post()),
@@ -37,13 +29,12 @@ export function Pairing({
   useEffect(() => {
     if (poll.data?.ready) onReady();
   }, [poll.data?.ready, onReady]);
-  const Heading = evaluation ? "h2" : "h1";
   const pairing = (
     <div className="mt-12 mx-auto mb-10 max-w-144 p-10 flex items-center flex-col text-center [&_>_[data-slot=button][data-size=text]]:mt-7 [&_>_[data-slot=button][data-size=text]]:text-muted-foreground max-sm:py-5 max-sm:px-6 max-sm:mt-9">
       <span className="flex items-center justify-center bg-secondary text-muted-foreground rounded-full mb-6 size-24">
         <MonitorSmartphone size={36} strokeWidth={1.3} />
       </span>
-      <Heading className="text-3xl mt-3 max-sm:text-2xl">{t("pair_title")}</Heading>
+      <h1 className="text-3xl mt-3 max-sm:text-2xl">{t("pair_title")}</h1>
       <p className="text-muted-foreground text-sm leading-loose mt-5 mx-0 mb-7">{t("pair_note")}</p>
       {request.data ? (
         <>
@@ -96,17 +87,7 @@ export function Pairing({
         </a>
         <LanguageSwitch onChange={setLocale} />
       </header>
-      {evaluation && <EvaluationGuide />}
-      {evaluation ? (
-        <Disclosure.Root className="mx-auto max-w-6xl px-6 pb-10">
-          <Disclosure.Trigger className="cursor-pointer py-5 text-base font-medium">
-            {t("evaluation_device")}
-          </Disclosure.Trigger>
-          <Disclosure.Panel>{pairing}</Disclosure.Panel>
-        </Disclosure.Root>
-      ) : (
-        pairing
-      )}
+      {pairing}
     </main>
   );
 }

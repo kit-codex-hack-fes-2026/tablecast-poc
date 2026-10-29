@@ -1,11 +1,23 @@
 ---
 title: Configuration and publishing
-description: Prepare bilingual drafts, validate changes, and publish with human approval.
+description: Prepare multilingual drafts, validate changes, and publish with human approval.
 ---
 
 ## Prepare a draft
 
 Create a change under Menu & service. Give your agent the products to change, the intended result and the photographs, tables or URLs that support it. Keep Japanese and English settings consistent. Leave unknown prices, allergens and ingredients unconfirmed. Preserve products, images and settings outside the requested change.
+
+## Start with the menu you already have
+
+> Create a menu draft from the attached menu and photographs. Keep the listed tax-inclusive prices, portions, temperatures and surcharges, and preserve existing products. Add English, Simplified Chinese and Korean names, pronunciations and descriptions. Do not guess ingredients or allergens. Show the changes and questions that need checking. Do not publish yet.
+
+Attach readable prices and options, and identify which photograph belongs to each dish. ChatGPT or Codex reads the materials; the connected MCP saves the configuration to TableCast. Keep Japanese and English when adding languages, and add the requested language settings and translations. Review the saved draft in the management app.
+
+## Improve the guidance guests receive
+
+> Guests often ask about local sake flavours and how to eat the dishes. Read the current menu and propose three explanations using real products. Include short Japanese and English wording, its sources, unresolved questions and a way to assess the improvement. Do not invent flavours or ingredients. Only propose changes for now.
+
+Include the manager’s observations to explain the problem. Once you choose a proposal, the agent can save it as a draft. Guest ordering and staff calls belong to the guest app. The management MCP prepares the configuration used for that service.
 
 ## Save through an agent
 

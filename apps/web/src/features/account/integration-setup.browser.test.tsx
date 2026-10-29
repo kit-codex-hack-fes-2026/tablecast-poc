@@ -26,7 +26,7 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-test("日本語のstaging接続案内に現在のURLと専用名を表示する", async () => {
+test("接続案内に現在のURLと環境共通の名前を表示する", async () => {
   const locale = "ja";
   const labels = ja;
   await page.viewport(1280, 1100);
@@ -45,12 +45,11 @@ test("日本語のstaging接続案内に現在のURLと専用名を表示する"
       <RouterProvider router={router} />
     </LocaleProvider>,
   );
-  await expect.element(page.getByText(labels.mcp_staging_connection)).toBeVisible();
   await expect
-    .element(page.getByText("codex mcp add tablecast-staging", { exact: false }))
+    .element(page.getByText("codex mcp add tablecast --url", { exact: false }))
     .toMatchTextContent("https://tablecast-staging.kit-codex.workers.dev/mcp");
   await expect
-    .element(page.getByText("codex mcp login tablecast-staging", { exact: false }))
+    .element(page.getByText("codex mcp login tablecast --scopes", { exact: false }))
     .toMatchTextContent("tablecast:read,tablecast:write");
   const copy = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
   for (const [label, prompt] of [
@@ -94,4 +93,13 @@ test("日本語のstaging接続案内に現在のURLと専用名を表示する"
     .element(page.getByRole("textbox", { name: labels.mcp_scenario_setup, exact: true }))
     .toBeVisible();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+  for (const label of [
+    labels.mcp_scenario_setup,
+    labels.mcp_scenario_advisor,
+    labels.mcp_scenario_analytics,
+  ]) {
+    const field = page.getByRole("textbox", { name: label, exact: true }).element();
+    expect(field.scrollWidth).toBeLessThanOrEqual(field.clientWidth);
+    expect(field.scrollHeight).toBeLessThanOrEqual(field.clientHeight);
+  }
 });

@@ -16,13 +16,7 @@ import { authClient, authResult, promptGoogleOneTap } from "../../lib/auth-clien
 import { AuthLayout } from "./auth-layout";
 import { loginReturnUrl } from "./login-model";
 
-export function Login({
-  evaluation = false,
-  memberStore,
-}: {
-  evaluation?: boolean;
-  memberStore?: MemberLoginBranding;
-}) {
+export function Login({ memberStore }: { memberStore?: MemberLoginBranding }) {
   const searchStr = useLocation({ select: (location) => location.searchStr });
   const { t, locale, setLocale } = useI18n();
   const hydrated = useHydrated();
@@ -91,7 +85,6 @@ export function Login({
     lastMethod === method ? <Badge variant="secondary">{t("auth_last_used")}</Badge> : null;
   return (
     <LoginLayout
-      evaluation={evaluation}
       memberStore={memberStore}
       searchStr={searchStr}
       onLocaleChange={(next) => {
@@ -105,11 +98,6 @@ export function Login({
             {t("auth_magic_invalid")}
           </p>
         )}
-        {evaluation && (
-          <aside className="rounded-xl bg-secondary p-5 text-base leading-relaxed">
-            {t("evaluation_login_note")}
-          </aside>
-        )}
         <Button
           variant="outline"
           className="w-full"
@@ -117,7 +105,7 @@ export function Login({
           onClick={() => social.mutate("google")}
         >
           <GoogleIcon className="size-5" />
-          {evaluation ? t("evaluation_login_button") : t("auth_google")}
+          {t("auth_google")}
           {last("google")}
         </Button>
         <Button
@@ -171,14 +159,12 @@ export function Login({
 }
 
 function LoginLayout({
-  evaluation,
   memberStore,
   searchStr,
   onLocaleChange,
   children,
 }: {
   children: ReactNode;
-  evaluation: boolean;
   memberStore?: MemberLoginBranding;
   onLocaleChange: (locale: "en" | "ja") => void;
   searchStr: string;
@@ -202,13 +188,11 @@ function LoginLayout({
       }
       eyebrow={memberSignIn ? memberStore?.storeName : undefined}
       title={
-        evaluation
-          ? t("evaluation_login_title")
-          : joiningVisit
-            ? t("customer_login_title")
-            : memberSignIn
-              ? t("customer_member_login_title")
-              : t("auth_subtitle")
+        joiningVisit
+          ? t("customer_login_title")
+          : memberSignIn
+            ? t("customer_member_login_title")
+            : t("auth_subtitle")
       }
       onLocaleChange={onLocaleChange}
       footer={
