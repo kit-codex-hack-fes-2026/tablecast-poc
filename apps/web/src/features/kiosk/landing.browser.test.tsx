@@ -82,6 +82,18 @@ test.each([320, 390, 1280])(
     await expect
       .element(page.getByRole("heading", { name: ja.landing_operations_title.replace("\n", " ") }))
       .toBeVisible();
+    for (const [label, id] of [
+      [ja.landing_case_sake_nav, "consult"],
+      [ja.landing_case_tourists_nav, "tourists"],
+      [ja.landing_case_elderly_nav, "elderly"],
+      [ja.landing_case_setup_nav, "setup"],
+      [ja.landing_case_handoff_nav, "handoff"],
+    ]) {
+      await expect
+        .element(page.getByRole("link", { name: label, exact: true }))
+        .toHaveAttribute("href", `#scene-${id}`);
+      expect(document.getElementById(`scene-${id}`)?.tagName).toBe("ARTICLE");
+    }
     const question = page.getByText(new RegExp(ja.landing_faq_confirmation));
     question.element().focus();
     await userEvent.keyboard("{Enter}");

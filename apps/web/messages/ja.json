@@ -1901,5 +1901,10 @@
   "landing_case_handoff_alt": "スマートフォンで用件を確かめてお客さまを案内するスタッフ",
   "landing_case_food_screen_alt": "料理の選択肢と食材情報を表示する注文画面",
   "landing_case_plugin_screen_alt": "TableCastのAgent Pluginと接続方法を案内する画面",
-  "landing_case_handoff_screen_alt": "質問の原文と日本語の要約、案内済み内容と未解決点を表示する引き継ぎメモ"
+  "landing_case_handoff_screen_alt": "質問の原文と日本語の要約、案内済み内容と未解決点を表示する引き継ぎメモ",
+  "landing_case_sake_nav": "料理選び",
+  "landing_case_tourists_nav": "多言語接客",
+  "landing_case_elderly_nav": "声で注文",
+  "landing_case_setup_nav": "導入準備",
+  "landing_case_handoff_nav": "スタッフ対応"
 }

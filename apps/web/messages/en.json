@@ -1901,5 +1901,10 @@
   "landing_case_handoff_alt": "A member of staff checking a request on a phone and helping guests",
   "landing_case_food_screen_alt": "Ordering screen with dish options and ingredient information",
   "landing_case_plugin_screen_alt": "TableCast Agent Plugin installation and connection screen",
-  "landing_case_handoff_screen_alt": "Staff handover with the original question, Japanese summary, previous guidance and unresolved points"
+  "landing_case_handoff_screen_alt": "Staff handover with the original question, Japanese summary, previous guidance and unresolved points",
+  "landing_case_sake_nav": "Choose a dish",
+  "landing_case_tourists_nav": "Multilingual service",
+  "landing_case_elderly_nav": "Order by voice",
+  "landing_case_setup_nav": "Get set up",
+  "landing_case_handoff_nav": "Staff handover"
 }

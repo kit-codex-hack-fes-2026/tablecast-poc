@@ -40,6 +40,7 @@ export function Landing() {
   const scenes = [
     {
       image: "consult",
+      label: t("landing_case_sake_nav"),
       title: t("landing_case_sake_title"),
       steps: [
         t("landing_case_sake_start"),
@@ -54,6 +55,7 @@ export function Landing() {
     },
     {
       image: "tourists",
+      label: t("landing_case_tourists_nav"),
       title: t("landing_case_tourists_title"),
       steps: [
         t("landing_case_tourists_start"),
@@ -68,6 +70,7 @@ export function Landing() {
     },
     {
       image: "elderly",
+      label: t("landing_case_elderly_nav"),
       title: t("landing_case_elderly_title"),
       steps: [
         t("landing_case_elderly_start"),
@@ -82,6 +85,7 @@ export function Landing() {
     },
     {
       image: "setup",
+      label: t("landing_case_setup_nav"),
       title: t("landing_case_setup_title"),
       steps: [
         t("landing_case_setup_start"),
@@ -96,6 +100,7 @@ export function Landing() {
     },
     {
       image: "handoff",
+      label: t("landing_case_handoff_nav"),
       title: t("landing_case_handoff_title"),
       steps: [
         t("landing_case_handoff_start"),
@@ -257,9 +262,22 @@ export function Landing() {
                 {t("landing_conversation_body")}
               </p>
             </div>
-            <div className="mt-6 divide-y divide-border">
+            <nav aria-label={t("landing_nav_guest")} className="mt-5 flex flex-wrap gap-2">
+              {scenes.map((scene) => (
+                <a
+                  key={scene.image}
+                  href={`#scene-${scene.image}`}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  {scene.label}
+                  <ArrowRight aria-hidden="true" />
+                </a>
+              ))}
+            </nav>
+            <div className="mt-4 divide-y divide-border">
               {scenes.map((scene) => (
                 <article
+                  id={`scene-${scene.image}`}
                   key={scene.image}
                   className="grid items-center gap-5 py-6 md:grid-cols-2 lg:grid-cols-[0.85fr_0.85fr_1fr] lg:gap-6"
                 >

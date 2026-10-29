@@ -9,7 +9,7 @@
 
 TableCastは、声による接客とタッチ式注文を一つのカートにつなぐ、飲食店向けシステムのPoCです。料理やお酒のおすすめを聞き、好みに合わせてカスタマイズし、内容を確認して注文できます。商品情報は店舗ごとに対応言語を追加でき、音声では多言語で相談できます。店舗管理のUIは日本語・英語に対応します。
 
-[デモ](docs/demo.md) · [紹介動画](apps/presentation/README.md#現在の成果物) · [セットアップ](docs/setup.md) · [構成仕様](docs/architecture.md) · [仕様索引](docs/README.md)
+[発表スライド](docs/presentation/pitch.md) · [デモ](docs/demo.md) · [紹介動画](apps/presentation/README.md#現在の成果物) · [セットアップ](docs/setup.md) · [構成仕様](docs/architecture.md) · [仕様索引](docs/README.md)
 
 ![卓上iPadの実際の注文画面](apps/web/public/landing/order-menu.webp)
 
