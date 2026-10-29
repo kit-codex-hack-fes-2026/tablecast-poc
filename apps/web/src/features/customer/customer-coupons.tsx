@@ -18,11 +18,12 @@ export function CustomerCoupons({ storeId, sessionId }: { sessionId?: string; st
       <header className="space-y-3">
         <h1 className="text-2xl font-semibold tracking-tight">{t("coupons")}</h1>
         <p className="text-sm leading-relaxed text-muted-foreground">{t("coupon_terms")}</p>
-        {!sessionId && (
+        <section className="space-y-2 rounded-xl bg-card p-4">
+          <h2 className="font-medium">{t("customer_coupon_how")}</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            {t("coupon_request_hint")}
+            {t(sessionId ? "customer_coupon_how_connected" : "customer_coupon_how_unconnected")}
           </p>
-        )}
+        </section>
       </header>
       <OwnedCoupons storeId={storeId} sessionId={sessionId} onChanged={refresh} />
       <ExchangeCoupons storeId={storeId} onChanged={refresh} />
@@ -58,7 +59,7 @@ function OwnedCoupons({
       </h2>
       <ErrorNotice query={query} retrying={query.isFetching} />
       {(coupons.length > 0 || request.status !== "idle") && (
-        <ActionFeedback mutation={request} successMessage={t("coupon_requested")} />
+        <ActionFeedback mutation={request} successMessage={t("customer_coupon_requested_hint")} />
       )}
       {query.isPending && <LoadingState />}
       {query.isSuccess && !coupons.length && <p>{t("customer_coupons_empty")}</p>}

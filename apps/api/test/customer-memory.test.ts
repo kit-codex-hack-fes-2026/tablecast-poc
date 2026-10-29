@@ -119,7 +119,10 @@ it("複数人では共通接客に戻り、明示選択・同意撤回で音声�
   let target = await customerServiceTarget(services, tablet);
   expect(target.target).toBeUndefined();
   expect(target.session.voice_session_id).toBeNull();
-  expect((await customerRecommendationContext(services, tablet)).needsTarget).toBe(true);
+  expect(await customerRecommendationContext(services, tablet)).toMatchObject({
+    needsTarget: true,
+    customer: null,
+  });
   assert(target.context);
   const selected = target.participants.find((p) => p.membership.userId === customer.userId);
   assert(selected);
@@ -129,6 +132,10 @@ it("複数人では共通接客に戻り、明示選択・同意撤回で音声�
   });
   target = await customerServiceTarget(services, tablet);
   expect(target.target?.membership.userId).toBe(customer.userId);
+  expect(await customerRecommendationContext(services, tablet)).toMatchObject({
+    needsTarget: false,
+    customer: { displayName: "店員" },
+  });
   const actor = await activate();
   await recordCustomerMemorySource(services, actor, "私は辛口が好きです");
   const source = (await fixtureDb.select().from(customerMemorySources)).find((row) =>
@@ -148,6 +155,12 @@ it("複数人では共通接客に戻り、明示選択・同意撤回で音声�
       clearFirstPersonPreference: true,
     }),
   ).rejects.toMatchObject({ code: "VOICE_SESSION_STALE" });
+  expect(await customerRecommendationContext(services, tablet)).toMatchObject({
+    mode: "shared",
+    memories: [],
+    consumption: [],
+    customer: null,
+  });
   expect(await fixtureDb.select().from(customerMemories)).toHaveLength(0);
 });
 it("会員参加後の個人字幕を卓全体の状態や通知へ保存しない", async () => {

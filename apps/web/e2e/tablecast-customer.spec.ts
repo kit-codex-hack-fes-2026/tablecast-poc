@@ -108,14 +108,14 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
     await first.getByRole("button", { name: ja.customer_enrol, exact: true }).click();
     await expect(first).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));
     await expect(first.getByRole("article").locator("header").getByRole("status")).toHaveText(
-      ja.customer_connected,
+      ja.customer_table_joined,
     );
     await signInStaff(second.request, baseURL, credentials.otherEmail);
     await second.goto(code.url);
     await second.getByRole("button", { name: ja.customer_enrol, exact: true }).click();
     await expect(second).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));
     await expect(second.getByRole("article").locator("header").getByRole("status")).toHaveText(
-      ja.customer_connected,
+      ja.customer_table_joined,
     );
     const identity = z.object({ user: z.object({ id: z.string(), email: z.string() }) });
     const firstSession = identity.parse(
@@ -128,7 +128,7 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
     expect(secondSession.user.email).toBe(credentials.otherEmail);
     expect(firstSession.user.id).not.toBe(secondSession.user.id);
     await expect(
-      tablet.getByRole("region", { name: ja.customer_join_visit }).locator("li"),
+      tablet.getByRole("region", { name: ja.customer_joined_guests }).locator("li"),
     ).toHaveCount(2);
     await expect(
       first
@@ -141,7 +141,7 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
     expect(privateVisit?.headers()["cache-control"]).toBe("private, no-store");
     await expect(first.locator('head link[rel="manifest"]')).toHaveAttribute(
       "href",
-      "/tablecast-customer.webmanifest",
+      `/api/member-stores/${storeId}/manifest.webmanifest`,
     );
     expect((await staff.request.post(`${adminBase}/tables/${visit.id}/close`)).ok()).toBe(true);
     await expect(first.getByRole("article").locator("header").getByRole("status")).toHaveText(
@@ -164,7 +164,7 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
         await phone.goto(nextCode.url);
         await expect(phone).toHaveURL(new RegExp(`/member/${storeId}/visits/${next.id}$`));
         await expect(phone.getByRole("article").locator("header").getByRole("status")).toHaveText(
-          ja.customer_connected,
+          ja.customer_table_joined,
         );
         await expect(
           phone.getByRole("button", { name: ja.customer_enrol, exact: true }),
@@ -179,7 +179,7 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
       ja.customer_disconnected,
     );
     await expect(
-      tablet.getByRole("region", { name: ja.customer_join_visit }).locator("li"),
+      tablet.getByRole("region", { name: ja.customer_joined_guests }).locator("li"),
     ).toHaveCount(1);
   } finally {
     await Promise.all(contexts.map((context) => context.close()));

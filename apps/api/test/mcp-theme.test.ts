@@ -150,6 +150,8 @@ it("MCPのテーマ制作を商品を保持した検証済み下書きへ保存�
     "background",
     "logo",
     "header-banner",
+    "membership-card",
+    "member-app-icon",
     "banner",
   ]);
   expect(new URL(spec.editorUrl).pathname).toBe("/admin/stores/tablecast-store/design");

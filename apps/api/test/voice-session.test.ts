@@ -238,6 +238,18 @@ it.each([
         },
         transport: { type: "webrtc", sdp: "tablecast-sdp-offer" },
       });
+      expect(JSON.parse(init.body)).toHaveProperty(
+        "session.instructions",
+        expect.stringContaining("現在の会員文脈を確認してから話します"),
+      );
+      expect(JSON.parse(init.body)).toHaveProperty(
+        "session.delegation.responses.instructions",
+        expect.stringContaining("その委任の初めにgetCustomerContext"),
+      );
+      expect(JSON.parse(init.body)).toHaveProperty(
+        "session.input.0.content.0.text",
+        expect.stringContaining("getCustomerContextで現在の接客対象と同意を確認"),
+      );
       for (const path of ["session.instructions", "session.delegation.responses.instructions"]) {
         const instructions =
           selected.cast.systemInstructions?.[locale] ?? defaultCastInstructions[locale];

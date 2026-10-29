@@ -281,15 +281,20 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       data.locale,
     );
   }, [data.voiceSessionId, data.voiceState, data.speechSpeed, data.locale, voice]);
-  const customerContextCursor =
+  const incomingCustomerContextCursor =
     events.findLast((event) => event.kind === "customer.context-reset")?.cursor ?? 0;
+  const [lastCustomerContextCursor, setLastCustomerContextCursor] = useState(0);
+  const customerContextCursor = Math.max(lastCustomerContextCursor, incomingCustomerContextCursor);
+  if (customerContextCursor > lastCustomerContextCursor)
+    setLastCustomerContextCursor(customerContextCursor);
   const previousCustomerContext = useRef(0);
   useEffect(() => {
     if (customerContextCursor > previousCustomerContext.current) {
       previousCustomerContext.current = customerContextCursor;
       voice.clearCustomerContext();
+      toasts.add({ title: t("customer_context_updated") });
     }
-  }, [customerContextCursor, voice]);
+  }, [customerContextCursor, voice, toasts, t]);
   const resetCart = updateCart.reset;
   const choose = useCallback(
     (product: Product) => {
@@ -585,12 +590,12 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
               </div>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1">{renderVisitTools()}</div>
           <div className="ml-auto flex shrink-0 items-center gap-1">
             <LanguageSwitch onChange={(next) => language.mutate(next)} />
             <CurrencySelector compact />
           </div>
         </div>
+        {renderVisitTools()}
         <StaffAssistance
           key={data.id}
           data={data}
@@ -610,7 +615,10 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           key={data.id}
           endpoint={endpoint}
           sessionId={data.id}
-          cursor={events.at(-1)?.cursor ?? 0}
+          cursor={customerContextCursor}
+          tableName={data.tableName}
+          voicePaused={!voiceActive}
+          onResume={toggleVoice}
         />
         <KioskGames
           endpoint={endpoint}

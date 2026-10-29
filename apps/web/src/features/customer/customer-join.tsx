@@ -75,8 +75,12 @@ export function CustomerJoin({ code }: { code: string }) {
   return (
     <section className="space-y-6">
       <div>
+        <p className="mb-2 text-sm text-muted-foreground">{t("customer_join_destination")}</p>
         <h1 className="text-2xl font-semibold">{destination.data.storeName}</h1>
         <p className="mt-2 text-muted-foreground">{destination.data.tableName}</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {t("customer_join_after_consent")}
+        </p>
       </div>
       {destination.data.membership?.active ? (
         <>

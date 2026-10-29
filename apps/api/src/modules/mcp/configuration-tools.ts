@@ -128,6 +128,24 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
               "注文画面のヘッダーで画像全体を元の比率のまま表示する。バナー・店名・卓名は同じ横一列に表示する。",
           },
           {
+            role: "membership-card",
+            target: "branding.membershipCard.image",
+            suggestedSize: "1600×640（5:2）",
+            brief:
+              "店舗会員カードの公開意匠。会員名・会員番号・認証用QRなどの個人情報は含めない。提供画像を優先し、会員名と入会日は画面側で表示する。",
+            placement:
+              "カード上部へ配置し、imageFit=containで全体表示、coverで枠いっぱいにする。toneはneutral/green/amber/violetの淡い背景と読める文字色を選ぶ。店舗デザインの下書きに保存し、通常の確認・承認後に反映する。",
+          },
+          {
+            role: "member-app-icon",
+            target: "branding.memberIcon",
+            suggestedSize: "1024×1024（512px以上の正方形）",
+            brief:
+              "店舗別会員PWAの公開アイコン。小さくても識別できる店舗ロゴを使い、個人情報を含めない。",
+            placement:
+              "店舗会員証からホーム画面へ追加すると店舗名とこのアイコンを使い、同じ店舗の会員証を開く。未設定時はTableCastアイコンへ戻る。",
+          },
+          {
             role: "banner",
             target: "banners[].image",
             suggestedSize: "1536×1024 または 1536×768",
@@ -151,7 +169,7 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
     "upload_image",
     {
       description:
-        "店舗設定用の商品・店舗ロゴ・テーマ装飾・チラシ画像・クーポン券面を取り込む。画像テーマは先にget_theme_specで素材別の寸法と配置を確認し、クライアントの画像生成機能で別々に制作する。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品、branding.logo、branding.banner、appearance.assets、bannersの画像へ設定する。ロゴ・装飾・チラシにはaltの日英説明も設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
+        "店舗設定用の商品・店舗ロゴ・テーマ装飾・チラシ画像・会員カード・会員PWAアイコン・クーポン券面を取り込む。画像テーマは先にget_theme_specで素材別の寸法と配置を確認し、クライアントの画像生成機能で別々に制作する。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品、branding.logo、branding.banner、branding.membershipCard.image、branding.memberIcon、appearance.assets、bannersの画像へ設定する。ロゴ・装飾・チラシにはaltの日英説明も設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
       inputSchema: uploadImageSchema.shape,
       outputSchema: uploadedImageSchema.shape,
       _meta: { "openai/fileParams": ["file"] },

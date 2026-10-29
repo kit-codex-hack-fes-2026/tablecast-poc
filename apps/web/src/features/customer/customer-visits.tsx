@@ -164,18 +164,26 @@ export function CustomerVisit({ storeId, sessionId }: { sessionId: string; store
           role="status"
           className={data.connected ? "font-medium text-success" : "text-muted-foreground"}
         >
-          {t(data.connected ? "customer_connected" : "customer_disconnected")}
+          {t(data.connected ? "customer_table_joined" : "customer_disconnected")}
         </p>
       </header>
-      <Link
-        to="/member/$storeId/coupons"
-        params={{ storeId }}
-        search={{ sessionId }}
-        className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-control-edge bg-control px-4 py-3 font-medium shadow-control transition-colors hover:bg-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      >
-        {t("customer_owned_coupons")}
-        <ArrowRight aria-hidden className="size-4 shrink-0" />
-      </Link>
+      {data.connected && (
+        <section className="space-y-3 rounded-xl bg-card p-5">
+          <h2 className="font-semibold">{t("customer_visit_next")}</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {t("customer_visit_next_hint")}
+          </p>
+          <Link
+            to="/member/$storeId/coupons"
+            params={{ storeId }}
+            search={{ sessionId }}
+            className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-control-edge bg-control px-4 py-3 font-medium shadow-control transition-colors hover:bg-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {t("customer_visit_coupons")}
+            <ArrowRight aria-hidden className="size-4 shrink-0" />
+          </Link>
+        </section>
+      )}
       <ErrorNotice query={visit} />
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 font-semibold">

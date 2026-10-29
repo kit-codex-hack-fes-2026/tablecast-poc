@@ -6,7 +6,7 @@ export const voiceToolDescriptions = {
   getCustomerSuggestions:
     "usualは本人が飲食した商品、untriedは本人の飲食記録にない販売中の商品、companionsは現在と同じ同行者構成の前回来店の共有注文から候補を返す。未体験を断定せず記録上未体験と伝える。注文前にgetCatalogで現在の必須選択を確認し、通常の確認と承認を経る。moreならnextOffsetで続き。",
   getCustomerContext:
-    "現在の接客対象について許可された個人記憶と飲食記録を取得する。needsTargetならiPadで本人の選択を依頼し、声や名前から識別しない。記録にない商品を未体験と断定する前にmoreConsumptionを確認する。現在の商品価格・販売状態・必須選択はgetCatalogで再確認する。sourceは今回の発話だけ。",
+    "現在の接客対象について許可された個人記憶、飲食記録とcustomerの表示名・確認済みの過去来店・ポイント・有効な券を取得する。customerがnullなら個人情報を推測しない。券は有効期限の近い順で最大5件、moreCouponsなら省略があり、最低会計額の充足や会計への適用済みを意味しない。needsTargetならiPadで本人の選択を依頼し、声や名前から識別しない。記録にない商品を未体験と断定する前にmoreConsumptionを確認する。現在の商品価格・販売状態・必須選択はgetCatalogで再確認する。sourceは今回の発話だけ。",
   saveCustomerMemory:
     "接客対象本人の明確な一人称の好み・希望だけを自動保存する。getCustomerContextが返した今回のsourceの原文からquoteを抜き出す。話者が曖昧、複数人の混ざった発言、背景会話、他人についての推測は保存しない。保存許可がなくsourceがnullなら実行しない。",
   getCatalog:

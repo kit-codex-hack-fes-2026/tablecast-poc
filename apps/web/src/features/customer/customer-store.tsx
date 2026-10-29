@@ -10,9 +10,10 @@ import { ArrowRight } from "lucide-react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
+import { MembershipCard } from "../../components/membership-card";
+import { PwaInstallHelp } from "../../components/pwa";
 import { Button } from "../../components/ui/button";
 import * as Disclosure from "../../components/ui/disclosure";
-import { calendarDate } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { customerCouponsOptions } from "./customer-coupons-query";
@@ -74,25 +75,38 @@ export function CustomerConsent({
 
 export function CustomerStore({ storeId }: { storeId: string }) {
   const { data } = useSuspenseQuery(customerStoreOptions(storeId));
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   return (
     <div key={storeId} className="space-y-9">
-      <header className="space-y-3 pb-2">
-        <p className="text-sm text-muted-foreground">{t("customer_card")}</p>
-        <h1 className="text-3xl font-semibold tracking-tight wrap-break-word">{data.store.name}</h1>
-        {data.membership?.active && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            <span className="font-medium text-success">{t("customer_membership_active")}</span>
-            <span className="text-muted-foreground">
-              {t("customer_since")} {calendarDate(data.membership.joinedAt, locale)}
-            </span>
-          </div>
-        )}
-      </header>
+      {data.membership?.active ? (
+        <MembershipCard
+          storeId={storeId}
+          storeName={data.store.name}
+          memberName={data.memberName}
+          joinedAt={data.membership.joinedAt}
+          branding={data.store.branding}
+        />
+      ) : (
+        <header className="space-y-3 pb-2">
+          <p className="text-sm text-muted-foreground">{t("customer_card")}</p>
+          <h1 className="text-3xl font-semibold tracking-tight wrap-break-word">
+            {data.store.name}
+          </h1>
+        </header>
+      )}
       {data.membership?.active ? (
         <>
           <CustomerBenefits key={storeId} storeId={storeId} />
           <CustomerVisits storeId={storeId} />
+          <Disclosure.Root className="rounded-xl bg-secondary/60 px-4">
+            <Disclosure.Trigger className="flex min-h-12 cursor-pointer items-center text-sm font-medium">
+              {t("customer_install_title")}
+            </Disclosure.Trigger>
+            <Disclosure.Panel>
+              <p className="text-sm text-muted-foreground">{t("customer_store_install_hint")}</p>
+              <PwaInstallHelp />
+            </Disclosure.Panel>
+          </Disclosure.Root>
           <nav aria-label={t("customer_personal_records")} className="space-y-3">
             <Link
               className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-control-edge bg-control px-4 py-3 font-medium shadow-control transition-colors hover:bg-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

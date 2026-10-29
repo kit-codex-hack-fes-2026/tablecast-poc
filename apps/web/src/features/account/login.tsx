@@ -15,6 +15,8 @@ import { loginReturnUrl } from "./login-model";
 
 export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const searchStr = useLocation({ select: (location) => location.searchStr });
+  const joiningVisit =
+    new URLSearchParams(searchStr).get("returnTo")?.startsWith("/member/join?") ?? false;
   const { t, locale, setLocale } = useI18n();
   const hydrated = useHydrated();
   const client = useQueryClient();
@@ -82,7 +84,13 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
     lastMethod === method ? <Badge variant="secondary">{t("auth_last_used")}</Badge> : null;
   return (
     <AuthLayout
-      title={evaluation ? t("evaluation_login_title") : t("auth_subtitle")}
+      title={
+        evaluation
+          ? t("evaluation_login_title")
+          : joiningVisit
+            ? t("customer_login_title")
+            : t("auth_subtitle")
+      }
       onLocaleChange={(next) => {
         setLocale(next);
         localStorage.setItem("tablecast_staff_locale", next);
@@ -94,6 +102,9 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
       }
     >
       <div className="space-y-6">
+        {joiningVisit && (
+          <p className="leading-relaxed text-muted-foreground">{t("customer_login_hint")}</p>
+        )}
         {new URLSearchParams(searchStr).has("error") && (
           <p role="alert" className="text-destructive">
             {t("auth_magic_invalid")}
