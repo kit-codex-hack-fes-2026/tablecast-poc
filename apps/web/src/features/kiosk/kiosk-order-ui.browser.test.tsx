@@ -105,9 +105,14 @@ it.each(["ja", "en"] as const)(
     });
     await expect.element(dialog).toBeVisible();
     expect(pane.contains(dialog.element())).toBe(true);
-    await expect
-      .poll(() => dialog.element().querySelector("img")?.getBoundingClientRect().width)
-      .toBe(160);
+    // Dialogの入場scaleが完了してから画像と余白の実寸を測る。
+    await expect.element(dialog).not.toHaveAttribute("data-starting-style");
+    await Promise.all(
+      dialog
+        .element()
+        .getAnimations()
+        .map((animation) => animation.finished),
+    );
     const bounds = dialog.element().getBoundingClientRect();
     expect(bounds.left).toBeGreaterThan(pane.getBoundingClientRect().left);
     expect(bounds.right).toBeLessThan(pane.getBoundingClientRect().right);
