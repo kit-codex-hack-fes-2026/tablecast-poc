@@ -1,5 +1,6 @@
 import { createAuth } from "@tablecast/api/bootstrap";
 import { business, createDatabase, type Database, identity } from "@tablecast/api/db";
+import { configurationSchema } from "@tablecast/api/schema";
 import { eq, sql } from "drizzle-orm";
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -320,6 +321,64 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
         first.db.select().from(identity.account),
       ]),
     ).toEqual(before);
+    // 旧stagingの保存名には転写がない。更新済み画像索引があっても設定読取を通す。
+    const published = await first.db
+      .select()
+      .from(business.stores)
+      .where(eq(business.stores.id, "tablecast-komorebi"))
+      .get();
+    if (!published) throw new Error("既存の公開設定がありません");
+    const configuration = configurationSchema.parse(JSON.parse(published.config_json));
+    const legacy = {
+      ...configuration,
+      products: configuration.products.map((product) => ({
+        ...product,
+        text: Object.fromEntries(
+          Object.entries(product.text).map(([language, value]) => {
+            const { transliteration: _transliteration, ...text } = value;
+            return [language, text];
+          }),
+        ),
+      })),
+    };
+    await first.db.batch([
+      first.db.update(business.deploymentOwner).set({ environment: "tablecast-staging" }),
+      first.db
+        .update(business.stores)
+        .set({ config_json: JSON.stringify(legacy) })
+        .where(eq(business.stores.id, published.id)),
+    ]);
+    const stagingBefore = await first.db.batch([
+      first.db.select().from(business.stores),
+      first.db.select().from(business.configReleases),
+      first.db.select().from(business.configDrafts),
+      first.db.select().from(business.demoSessions),
+      first.db.select().from(business.orders),
+      first.db.select().from(identity.account),
+      first.db.select().from(business.deploymentOwner),
+    ]);
+    expect(
+      await seedPreviewDatabase(
+        {
+          ...first.env,
+          TABLECAST_ENV: "staging",
+          TABLECAST_PUBLIC_ORIGIN: "https://tablecast-staging.kit-codex.workers.dev",
+        },
+        credentials,
+        template,
+      ),
+    ).toBe(false);
+    expect(
+      await first.db.batch([
+        first.db.select().from(business.stores),
+        first.db.select().from(business.configReleases),
+        first.db.select().from(business.configDrafts),
+        first.db.select().from(business.demoSessions),
+        first.db.select().from(business.orders),
+        first.db.select().from(identity.account),
+        first.db.select().from(business.deploymentOwner),
+      ]),
+    ).toEqual(stagingBefore);
     expect(await first.db.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
   } finally {
     try {

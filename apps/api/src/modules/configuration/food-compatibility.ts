@@ -5,7 +5,8 @@ import {
   readFoodProfile,
   unknownFoodProfile,
 } from "../catalog/food-model";
-import { localizedSchema } from "../catalog/localization";
+import { localizedSchema, mapLocalized } from "../catalog/localization";
+import { bilingualSchema } from "../catalog/model";
 import { configurationSchema } from "./model";
 
 const legacyAllergensSchema = z
@@ -58,10 +59,16 @@ export function readConfiguration(value: unknown) {
     ...record,
     products: record.products.map((product) => {
       const item = storedProductSchema.parse(product);
+      const text = mapLocalized(bilingualSchema.parse(item.text), (content) => ({
+        ...content,
+        transliteration:
+          content.transliteration === undefined ? content.displayName : content.transliteration,
+      }));
       if (item.foodInfo !== undefined) {
         const info = storedFoodInformationSchema.parse(item.foodInfo);
         return {
           ...item,
+          text,
           foodInfo: {
             ...info,
             base: readFoodProfile(info.base),
@@ -73,7 +80,11 @@ export function readConfiguration(value: unknown) {
         };
       }
       const { allergens, ...rest } = item;
-      return { ...rest, foodInfo: legacyFoodInformation(legacyAllergensSchema.parse(allergens)) };
+      return {
+        ...rest,
+        text,
+        foodInfo: legacyFoodInformation(legacyAllergensSchema.parse(allergens)),
+      };
     }),
   });
 }
