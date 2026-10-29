@@ -79,7 +79,7 @@ function sessionColumns(
     {
       id: "client",
       accessorFn: (row) => row.clientName ?? t("object_external_app"),
-      meta: { icon: Plug },
+      meta: { icon: Plug, sortLabel: t("collection_connection_name") },
       header: t("mcp_application"),
       cell: ({ row }) => (
         <div className="flex min-w-56 items-center gap-2">
@@ -90,7 +90,11 @@ function sessionColumns(
         </div>
       ),
     },
-    { accessorKey: "storeName", header: t("admin_store"), meta: { icon: Store } },
+    {
+      accessorKey: "storeName",
+      header: t("admin_store"),
+      meta: { icon: Store, sortLabel: t("org_name") },
+    },
     {
       accessorKey: "status",
       meta: { icon: CheckCircle2 },

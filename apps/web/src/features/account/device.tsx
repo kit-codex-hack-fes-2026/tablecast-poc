@@ -48,7 +48,11 @@ function deviceApprovalColumns(
   userCode: string,
 ): DataTableColumn<Store>[] {
   return [
-    { accessorKey: "name", header: t("admin_store"), meta: { icon: StoreIcon } },
+    {
+      accessorKey: "name",
+      header: t("admin_store"),
+      meta: { icon: StoreIcon, sortLabel: t("org_name") },
+    },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("admin_pair")}</span>,

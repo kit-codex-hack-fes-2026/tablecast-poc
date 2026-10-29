@@ -80,7 +80,7 @@ function connectionColumns(
     {
       id: "providerId",
       accessorFn: (row) => (row.providerId === "google" ? "Google" : t("auth_password")),
-      meta: { icon: Link2 },
+      meta: { icon: Link2, sortLabel: t("collection_connection_name") },
       header: t("account_connections"),
       cell: ({ row }) => (
         <div className="flex items-center gap-3">

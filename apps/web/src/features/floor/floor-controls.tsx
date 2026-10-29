@@ -59,7 +59,7 @@ export function FloorControls({
   };
   const FilterIcon = filterIcons[filter];
   const fields = [
-    { value: "table", label: t("floor_table"), icon: Table2 },
+    { value: "table", label: t("collection_table_name"), icon: Table2 },
     { value: "status", label: t("floor_sort_status"), icon: CircleDot },
     { value: "duration", label: t("floor_sort_duration"), icon: Clock3 },
     { value: "guests", label: t("floor_sort_guests"), icon: Users },
@@ -69,18 +69,7 @@ export function FloorControls({
     ...(view === "list"
       ? [{ value: "", label: t("floor_sort_attention"), icon: TriangleAlert }]
       : []),
-    ...fields.flatMap((field) => [
-      {
-        ...field,
-        value: `${field.value}:asc`,
-        label: `${field.label} · ${t("collection_sort_ascending")}`,
-      },
-      {
-        ...field,
-        value: `${field.value}:desc`,
-        label: `${field.label} · ${t("collection_sort_descending")}`,
-      },
-    ]),
+    ...fields,
   ];
   const filters = (
     ["all", "attention", "active", "called", "billing", "voice", "vacant"] as const
@@ -140,8 +129,24 @@ export function FloorControls({
         sort={
           <CollectionSort
             options={sortOptions}
-            value={sort ?? (view === "timeline" ? "table:asc" : "")}
-            onValueChange={(next) => onSortChange(floorSortValues.find((value) => value === next))}
+            value={sort?.split(":")[0] ?? (view === "timeline" ? "table" : "")}
+            descending={sort?.endsWith(":desc") ?? false}
+            directionDisabled={!sort && view === "list"}
+            onValueChange={(next) =>
+              onSortChange(
+                floorSortValues.find(
+                  (value) => value === `${next}:${sort?.endsWith(":desc") ? "desc" : "asc"}`,
+                ),
+              )
+            }
+            onDescendingChange={(descending) =>
+              onSortChange(
+                floorSortValues.find(
+                  (value) =>
+                    value === `${sort?.split(":")[0] ?? "table"}:${descending ? "desc" : "asc"}`,
+                ),
+              )
+            }
             disabled={disabled}
           />
         }

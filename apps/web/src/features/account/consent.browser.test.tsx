@@ -125,8 +125,8 @@ it.each([true, false])(
     await expect
       .element(page.getByRole("row").filter({ hasText: "こもれび" }))
       .not.toBeInTheDocument();
-    await page.getByRole("combobox", { name: "並べ替え" }).click();
-    await page.getByRole("option", { name: "店舗 · 降順", exact: true }).click();
+    await page.getByRole("combobox", { name: "並び順" }).click();
+    await page.getByRole("option", { name: "降順", exact: true }).click();
     await expect
       .poll(() => router.state.location.searchStr)
       .toBe(`?${raw}&consentStoresQ=${encodeURIComponent("みなと")}&consentStoresSort=name%3Adesc`);
@@ -138,8 +138,8 @@ it.each([true, false])(
       .element(page.getByRole("searchbox", { name: "店舗名で検索" }))
       .toHaveValue("みなと");
     await expect
-      .element(page.getByRole("combobox", { name: "並べ替え" }))
-      .toHaveTextContent("店舗 · 降順");
+      .element(page.getByRole("combobox", { name: "並べ替え対象" }))
+      .toHaveTextContent("店舗名");
     await page.getByRole("button", { name: "リセット", exact: true }).click();
     await expect.poll(() => router.state.location.searchStr).toBe(`?${raw}`);
     router.history.back();

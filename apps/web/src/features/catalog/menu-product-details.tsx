@@ -33,7 +33,7 @@ export function ProductDetails({ product }: { product: Configuration["products"]
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">{t("editor_modifiers")}</h2>
         <DataTable
-          defaultSort={{ label: t("collection_sort_configured") }}
+          defaultSort={{ id: "name", desc: false }}
           {...collection}
           searchLabel={t("editor_options")}
           searchPlaceholder={t("collection_search_options_placeholder")}

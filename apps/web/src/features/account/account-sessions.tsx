@@ -69,7 +69,7 @@ function loginSessionColumns(
     {
       id: "userAgent",
       accessorFn: (row) => sessionDeviceName(row.userAgent, t("account_device")),
-      meta: { icon: Monitor },
+      meta: { icon: Monitor, sortLabel: t("collection_device_name") },
       header: t("account_device"),
       cell: ({ row }) => (
         <div className="flex max-w-sm items-center gap-3">

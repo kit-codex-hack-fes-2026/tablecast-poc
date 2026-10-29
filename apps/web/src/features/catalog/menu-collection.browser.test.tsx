@@ -287,13 +287,8 @@ it("価格を金額順に並べ、URLの昇降順を履歴と詳細の往復で�
   await expect
     .element(search)
     .toHaveAttribute("placeholder", ja.collection_search_menu_placeholder);
-  await screen.getByRole("combobox", { name: ja.collection_sort, exact: true }).click();
-  await page
-    .getByRole("option", {
-      name: `${ja.admin_unit_price} · ${ja.collection_sort_ascending}`,
-      exact: true,
-    })
-    .click();
+  await screen.getByRole("combobox", { name: ja.collection_sort_direction, exact: true }).click();
+  await page.getByRole("option", { name: ja.collection_sort_ascending, exact: true }).click();
   await expect.element(first().getByRole("link", { name: "料理 50", exact: true })).toBeVisible();
   expect(router.state.location.search).toMatchObject({ sort: "price:asc" });
   router.history.back();
@@ -308,25 +303,38 @@ it("価格を金額順に並べ、URLの昇降順を履歴と詳細の往復で�
   expect(router.state.location.search).toMatchObject({ sort: "price:desc" });
   await screen.getByRole("button", { name: ja.collection_reset, exact: true }).click();
   expect(router.state.location.search).toEqual({});
-  const sort = screen.getByRole("combobox", { name: ja.collection_sort, exact: true });
-  await expect.element(sort).toHaveTextContent(ja.collection_sort_configured);
-  await expect.element(first().getByRole("link", { name: "料理 900", exact: true })).toBeVisible();
+  const sort = screen.getByRole("combobox", { name: ja.collection_sort_field, exact: true });
+  const direction = screen.getByRole("combobox", {
+    name: ja.collection_sort_direction,
+    exact: true,
+  });
+  await expect.element(sort).toHaveTextContent(ja.collection_product_name);
+  await expect.element(direction).toHaveTextContent(ja.collection_sort_ascending);
+  await expect.element(first().getByRole("link", { name: "料理 50", exact: true })).toBeVisible();
   await search.fill("料理");
   await expect.element(sort).toHaveTextContent(ja.collection_sort_relevance);
+  await expect.element(direction).toBeDisabled();
   await sort.click();
-  await page
-    .getByRole("option", {
-      name: `${ja.admin_unit_price} · ${ja.collection_sort_ascending}`,
-      exact: true,
-    })
-    .click();
+  await page.getByRole("option", { name: ja.collection_unit_price, exact: true }).click();
+  await expect.element(direction).toBeEnabled();
+  await expect
+    .element(first().getByRole("link", { name: "料理 10000", exact: true }))
+    .toBeVisible();
+  await direction.click();
+  await page.getByRole("option", { name: ja.collection_sort_ascending, exact: true }).click();
+  expect(router.state.location.search.sort).toBe("price:asc");
   await expect.element(first().getByRole("link", { name: "料理 50", exact: true })).toBeVisible();
+  await sort.click();
+  await page.getByRole("option", { name: ja.collection_product_name, exact: true }).click();
+  expect(router.state.location.search.sort).toBe("name:asc");
+  await expect.element(direction).toHaveTextContent(ja.collection_sort_ascending);
   await sort.click();
   await page.getByRole("option", { name: ja.collection_sort_relevance, exact: true }).click();
   await expect.element(first().getByRole("link", { name: "料理 900", exact: true })).toBeVisible();
   expect(router.state.location.search.sort).toBeUndefined();
   await search.fill("");
-  await expect.element(sort).toHaveTextContent(ja.collection_sort_configured);
+  await expect.poll(() => router.state.location.search).toEqual({});
+  await expect.element(sort).toHaveTextContent(ja.collection_product_name);
 });
 
 vi.mock("../store/store-context", () => ({

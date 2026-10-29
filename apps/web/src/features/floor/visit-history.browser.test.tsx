@@ -272,13 +272,15 @@ it("取得済み来店を金額の数値順で並べ、検索と並べ替えをU
   await expect.poll(order).toEqual(["T02", "T01"]);
   const search = screen.getByRole("searchbox", { name: ja.collection_search_visits, exact: true });
   await expect.element(search).toHaveValue("T");
-  await screen.getByRole("combobox", { name: ja.collection_sort, exact: true }).click();
+  await screen.getByRole("combobox", { name: ja.collection_sort_field, exact: true }).click();
   await page
     .getByRole("option", {
-      name: `${ja.admin_visit_total} · ${ja.collection_sort_descending}`,
+      name: ja.admin_visit_total,
       exact: true,
     })
     .click();
+  await page.getByRole("combobox", { name: ja.collection_sort_direction, exact: true }).click();
+  await page.getByRole("option", { name: ja.collection_sort_descending, exact: true }).click();
   await expect.poll(order).toEqual(["T01", "T02"]);
   expect(router.state.location.search).toMatchObject({ q: "T", sort: "total:desc" });
   await search.fill("T02");

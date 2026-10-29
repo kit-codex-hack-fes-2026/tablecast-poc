@@ -155,7 +155,11 @@ function consentStoreColumns(
   selectable: boolean,
 ): DataTableColumn<ConsentStore>[] {
   return [
-    { accessorKey: "name", header: t("admin_store"), meta: { icon: Store } },
+    {
+      accessorKey: "name",
+      header: t("admin_store"),
+      meta: { icon: Store, sortLabel: t("org_name") },
+    },
     {
       accessorKey: "role",
       meta: { icon: ShieldCheck },

@@ -62,7 +62,7 @@ function usageColumns(
     {
       id: "tableName",
       accessorFn: (row) => (row.demo ? t("demo_title") : (row.tableName ?? "")),
-      meta: { icon: TableProperties },
+      meta: { icon: TableProperties, sortLabel: t("collection_table_name") },
       header: t("admin_table"),
       cell: ({ row }) => (row.original.demo ? t("demo_title") : (row.original.tableName ?? "—")),
     },

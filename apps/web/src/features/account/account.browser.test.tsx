@@ -248,8 +248,8 @@ it("複数のアカウント一覧の検索と並べ替えをURLで分離し、�
   await page.getByRole("searchbox", { name: "接続先を検索" }).fill("Google");
   await page.getByRole("searchbox", { name: "パスキー名で検索" }).fill("MacBook");
   const passkeys = page.getByRole("region", { name: "パスキー", exact: true });
-  await passkeys.getByRole("combobox", { name: "並べ替え" }).click();
-  await page.getByRole("option", { name: "パスキーの名前 · 降順", exact: true }).click();
+  await passkeys.getByRole("combobox", { name: "並べ替え対象" }).click();
+  await page.getByRole("option", { name: "パスキーの名前", exact: true }).click();
   await expect
     .poll(() => new URLSearchParams(router.state.location.searchStr).get("passkeysSort"))
     .toBe("name:desc");
@@ -262,6 +262,9 @@ it("複数のアカウント一覧の検索と並べ替えをURLで分離し、�
     .element(page.getByRole("searchbox", { name: "パスキー名で検索" }))
     .toHaveValue("MacBook");
   await expect
-    .element(passkeys.getByRole("combobox", { name: "並べ替え" }))
-    .toHaveTextContent("パスキーの名前 · 降順");
+    .element(passkeys.getByRole("combobox", { name: "並べ替え対象" }))
+    .toHaveTextContent("パスキーの名前");
+  await expect
+    .element(passkeys.getByRole("combobox", { name: "並び順" }))
+    .toHaveTextContent("降順");
 });

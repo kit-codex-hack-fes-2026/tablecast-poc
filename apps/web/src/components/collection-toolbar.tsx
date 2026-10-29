@@ -58,7 +58,7 @@ export function CollectionToolbar({
         </fieldset>
       )}
       {sort && (
-        <fieldset disabled={disabled} className="min-w-0 basis-40 grow sm:basis-48">
+        <fieldset disabled={disabled} className="min-w-0 basis-72 grow sm:basis-80">
           <legend className="mb-2 flex items-center gap-2 text-sm font-medium">
             <ArrowDownUp aria-hidden className="size-4 shrink-0" />
             {t("collection_sort")}

@@ -316,15 +316,17 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
   expect(router.state.location.search.sort).toBeUndefined();
   expect(router.state.location.search.zoom).toBe(50);
   await expect
-    .element(screen.getByRole("combobox", { name: ja.collection_sort, exact: true }))
+    .element(screen.getByRole("combobox", { name: ja.collection_sort_field, exact: true }))
     .toHaveTextContent(ja.floor_sort_attention);
-  await screen.getByRole("combobox", { name: ja.collection_sort, exact: true }).click();
+  await screen.getByRole("combobox", { name: ja.collection_sort_field, exact: true }).click();
   await page
     .getByRole("option", {
-      name: `${ja.floor_table} · ${ja.collection_sort_descending}`,
+      name: ja.collection_table_name,
       exact: true,
     })
     .click();
+  await screen.getByRole("combobox", { name: ja.collection_sort_direction, exact: true }).click();
+  await page.getByRole("option", { name: ja.collection_sort_descending, exact: true }).click();
   await expect.poll(() => router.state.location.search.sort).toBe("table:desc");
   const names = () =>
     Array.from(
