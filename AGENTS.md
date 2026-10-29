@@ -76,6 +76,10 @@ PRのマージ完了を確認したら、対応worktreeのdev・preview・Storyb
 
 停止前にPR・branch・worktreeの対応と、作業ディレクトリ・起動元・PIDの親子関係・Compose projectで所属を確認する。停止後は子プロセス・待受ポート・containerが残っていないことを確認し、停止結果や残存理由を報告する。対象外のworktree、共有proxy、共有観測基盤（`tablecast-observability-local`）、Docker/OrbStack全体は停止せず、停止のためにvolume・worktree・未commit差分を削除しない。
 
+PRへ添付するUIのスクリーンショットは、ブラウザーで実際のWeb・API・seed DBを接続した画面を撮る。StorybookやVitest Browserの単独部品・fixture画面をPRの実画面証拠へ代用しない。表示だけでなく、手動編集・保存・再読込と、画像・コードブロックを含む実際の内容を確認する。
+
+ブラウザー操作にはCodexブラウザーを使い、サービス操作は対応するCLI・connectorも使える。Arcは操作しない。
+
 変更に関係するformat・lint・型・実行境界を[テスト戦略](docs/testing.md#変更に応じた検証)で選ぶ。成功済みの検証は、追加変更・失敗・未解決の懸念があるときに広げる。skip、型キャスト、広いignore、恒久mockで失敗を隠さない。
 
 ツールの版、依存導入、envとexample、dev scripts、devcontainerを変えたら[setup.md](docs/setup.md)と関連する手順を同じ差分で更新する。受入条件、実施した検証と対象版、未実施範囲、残るリスクを成果物とともに報告する。

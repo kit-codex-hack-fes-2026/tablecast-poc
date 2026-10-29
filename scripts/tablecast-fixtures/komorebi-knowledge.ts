@@ -1,10 +1,18 @@
 import type { StoreSkill } from "@tablecast/api/schema";
+import { demoImageKey } from "../tablecast-seed-media.ts";
 
 /** 実店舗の情報項目を参考にした架空店舗の運用資料。実在店の事実へ転用しない。 */
 export const komorebiSkills: StoreSkill[] = [
   {
     id: "komorebi-hospitality",
     files: [
+      {
+        path: "assets/sashimi.webp",
+        imageKey: demoImageKey("komorebi-sashimi.webp"),
+        imageKind: "illustration",
+        imageSource: { generated: true, description: "架空店舗こもれびのお造り三種盛りのデモ画像" },
+        alt: "こもれびのお造り三種盛り / Komorebi sashimi selection",
+      },
       {
         path: "SKILL.md",
         content: `---
@@ -20,6 +28,19 @@ metadata:
 京都・四条烏丸エリアを舞台にした架空の和食居酒屋です。少しずつ分け合う料理と、多彩な日本酒を落ち着いて楽しむ店を想定しています。実在する六角aceを情報項目と親しみやすい居酒屋の雰囲気の参考にしましたが、同店の支店・系列・公式資料ではありません。以下の営業時間や設備・方針はすべてデモ用の登録設定です。
 
 A fictional Japanese restaurant in the Shijo Karasuma area of Kyoto, serving small plates and a varied sake selection. These are demo operating policies, not verified facts about a real venue. Komorebi is not a branch of Rokkaku ace.
+
+## ファイル構成 / Files
+
+\`\`\`text
+komorebi-guide/
+├── SKILL.md
+├── assets/sashimi.webp
+└── references/
+    ├── visit.md
+    ├── reservations.md
+    ├── dining.md
+    └── service.md
+\`\`\`
 
 ## 質問別の参照先 / Reference files
 
@@ -124,6 +145,8 @@ Takeaway and delivery are not offered in this demo. Ask staff about leftovers or
       {
         path: "references/dining.md",
         content: `# 料理・おすすめ・食事制限 / Dishes and dietary questions
+
+![お造り三種盛り / Three-fish sashimi selection](../assets/sashimi.webp)
 
 ## 店の料理・分け合い / Dining style and sharing
 和食の小皿、お造り、焼きもの、揚げもの、〆のご飯を、好みに合わせて少しずつ楽しむ店です。最初はさっぱりした小皿とお造り、次に温かい料理、最後にご飯という組合せができます。これは提案であり注文ではありません。現在の品名・価格・内容・売切・必須選択はカタログを確認します。

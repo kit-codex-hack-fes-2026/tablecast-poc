@@ -1745,5 +1745,9 @@
   "knowledge_remove_file": "Delete file",
   "knowledge_remove_skill": "Delete skill",
   "knowledge_invalid": "Use lower-case letters, digits and hyphens for skill names and relative file paths. Avoid duplicates and include a non-empty SKILL.md. Limits: 8 skills, 30 files per skill, 32,000 characters per file and 256,000 characters in total.",
-  "knowledge_source": "Source"
+  "knowledge_source": "Source",
+  "knowledge_edit_file": "Edit",
+  "knowledge_add_image": "Add image",
+  "knowledge_image_hint": "Upload an image to your store and reference it from Markdown with a relative path.",
+  "knowledge_copy": "Copy code"
 }

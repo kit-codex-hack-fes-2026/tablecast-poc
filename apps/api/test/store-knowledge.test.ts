@@ -64,6 +64,54 @@ describe("店舗資料の入力と段階的取得", () => {
       ]).success,
     ).toBe(false);
   });
+  it("画像の出所を保持して検索・読取し、ファイルとフォルダーの衝突を拒否する", () => {
+    const image = {
+      path: "assets/photo.webp",
+      imageKey: "tablecast/images/photo.webp",
+      imageKind: "photograph",
+      imageSource: { generated: false, description: "客席の写真" },
+      alt: "カウンター席",
+    };
+    const value = storeSkillsSchema.parse([
+      { ...skills[0], files: [...(skills[0]?.files ?? []), image] },
+    ]);
+    expect(searchStoreSkills(value, "カウンター", 0).matches[0]?.path).toBe(image.path);
+    expect(readStoreSkill(value, "restaurant", image.path, 0)).toMatchObject({
+      kind: "image",
+      imageKey: image.imageKey,
+      alt: image.alt,
+      nextOffset: null,
+      content: "カウンター席\n客席の写真",
+    });
+    expect(readStoreSkill(value, "restaurant", image.path, 1)).toBeNull();
+    expect(
+      storeSkillsSchema.safeParse([
+        {
+          ...skills[0],
+          files: [...(skills[0]?.files ?? []), { path: "references", content: "衝突" }],
+        },
+      ]).success,
+    ).toBe(false);
+    expect(
+      storeSkillsSchema.safeParse([
+        {
+          ...skills[0],
+          files: [
+            ...(skills[0]?.files ?? []),
+            { ...image, imageKey: "https://example.com/photo.webp" },
+          ],
+        },
+      ]).success,
+    ).toBe(false);
+    expect(
+      storeSkillsSchema.safeParse([
+        {
+          ...skills[0],
+          files: [...(skills[0]?.files ?? []), { ...image, imageSource: undefined }],
+        },
+      ]).success,
+    ).toBe(false);
+  });
   it("本文の個別上限と店舗全体の上限を守る", () => {
     expect(storeSkillsSchema.safeParse([make("restaurant", 8)]).success).toBe(true);
     expect(storeSkillsSchema.safeParse([make("restaurant", 9)]).success).toBe(false);

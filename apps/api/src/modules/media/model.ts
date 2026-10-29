@@ -15,7 +15,8 @@ export const imageSourceSchema = z
     generated: z.boolean(),
     description: z.string().trim().min(1).max(500),
   })
-  .strict();
+  .strict()
+  .meta({ id: "tablecastImageSource" });
 export const imageMetadataSchema = z
   .object({
     imageKind: z.enum(["photograph", "illustration"]),

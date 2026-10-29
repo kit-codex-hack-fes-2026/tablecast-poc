@@ -138,4 +138,6 @@ stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、�
 
 既存下書きがあれば`get_draft_diff`で再取得して使い、なければ`create_draft`する。全configurationと最新`expectedVersion`を`update_draft`へ送り、他の商品・言語・Skillを保持する。保存済みSkillがある下書きでskillsを省略すると旧形式として拒否する。全削除を意図する場合は空配列を明示する。`validate_draft`と差分確認後、公開申請を依頼された場合だけ`request_publication`し、人が管理画面で承認する。資料は公開後の接客から検索可能になる。読取scopeでは更新できず、個人の顧客記憶を取得・設定するMCP操作は設けない。
 
-管理画面の接客設定でSkill・ファイルを選び、Markdownプレビューと原文を確認できる。参照資料のスクリプトを実行する機能ではない。資料は客へ案内してよい店舗情報に限定し、認証情報・内部連絡先・個人記憶を含めない。営業時間などの運用案内と、現在の価格・在庫・食事対応を判定する業務APIを区別する。
+画像ファイルは`upload_image`で取り込んだ`{ path, imageKey, imageKind, imageSource, alt }`をfilesへ追加する。画像のpathはPNG・JPEG・WebPの拡張子にする。Markdownから`![説明](../assets/photo.webp)`のように同じSkillの相対パスで参照できる。imageKeyの所属店舗と出所は、既存の画像設定と同じAPIで検証する。画像もファイル件数上限に含み、検索と原文読取では代替テキストと出所を返す。
+
+管理画面の接客設定で折り畳めるツリーからSkill・ファイルを選び、Markdown・画像・コードのプレビューと原文を確認し、下書きを手動編集できる。参照資料のスクリプトを実行する機能ではない。資料は客へ案内してよい店舗情報に限定し、認証情報・内部連絡先・個人記憶を含めない。営業時間などの運用案内と、現在の価格・在庫・食事対応を判定する業務APIを区別する。

@@ -1745,5 +1745,9 @@
   "knowledge_remove_file": "ファイルを削除",
   "knowledge_remove_skill": "Skillを削除",
   "knowledge_invalid": "Skill名は英小文字・数字・ハイフン、ファイルパスは相対パスにしてください。重複を避け、空でないSKILL.mdを含めてください。上限は8 Skill・各30ファイル・各32,000文字・全体256,000文字です。",
-  "knowledge_source": "原文"
+  "knowledge_source": "原文",
+  "knowledge_edit_file": "編集",
+  "knowledge_add_image": "画像を追加",
+  "knowledge_image_hint": "店舗の画像管理へ取り込み、Markdownから相対パスで参照できます。",
+  "knowledge_copy": "コードをコピー"
 }

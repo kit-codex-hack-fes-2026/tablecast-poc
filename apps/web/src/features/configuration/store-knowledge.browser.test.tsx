@@ -2,8 +2,9 @@ import type { Locale } from "@tablecast/api/schema";
 import { useState } from "react";
 import { afterEach, expect, it } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { catalog } from "../../../.storybook/tablecast-fixtures";
+import { ImageProvider } from "../../components/image-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import "../../styles.css";
 import { StoreKnowledge } from "./store-knowledge";
@@ -16,9 +17,15 @@ function Fixture({ locale, editable = true }: { editable?: boolean; locale: Loca
   const [skills, setSkills] = useState(catalog.configuration.cast.skills ?? []);
   return (
     <LocaleProvider initialLocale={locale} persist={false}>
-      <main className="mx-auto max-w-5xl p-4">
-        <StoreKnowledge value={skills} onChange={editable ? setSkills : undefined} />
-      </main>
+      <ImageProvider basePath={`/api/admin/stores/${catalog.storeId}`} assets={catalog.imageAssets}>
+        <main className="mx-auto max-w-5xl p-4">
+          <StoreKnowledge
+            storeId={catalog.storeId}
+            value={skills}
+            onChange={editable ? setSkills : undefined}
+          />
+        </main>
+      </ImageProvider>
     </LocaleProvider>
   );
 }
@@ -31,7 +38,7 @@ it.each([
   async ({ locale, width }) => {
     await page.viewport(width, 900);
     await render(<Fixture locale={locale} />);
-    await page.getByRole("button", { name: "references/visit.md", exact: true }).click();
+    await page.getByRole("treeitem", { name: "visit.md", exact: true }).click();
     await expect
       .element(
         page.getByRole("heading", {
@@ -40,7 +47,7 @@ it.each([
         }),
       )
       .toBeVisible();
-    await page.getByRole("tab", { name: locale === "ja" ? "原文" : "Source", exact: true }).click();
+    await page.getByRole("tab", { name: locale === "ja" ? "編集" : "Edit", exact: true }).click();
     const input = page.getByRole("textbox", {
       name: locale === "ja" ? "ファイルの原文" : "File source",
       exact: true,
@@ -54,13 +61,13 @@ it.each([
     await expect
       .element(page.getByRole("heading", { name: "更新した営業時間 / Updated hours", exact: true }))
       .toBeVisible();
-    expect(document.querySelector('img[src="https://example.test/image.png"]')).toBeNull();
-    expect(document.querySelector('a[href="https://example.test/private"]')).toBeNull();
+    await expect.element(page.getByRole("status").filter({ hasText: "外部画像" })).toBeVisible();
+    expect(document.querySelector('a[href="https://example.test/private"]')).not.toBeNull();
     expect(document.querySelector("script")?.textContent).not.toContain("tablecastUnsafe");
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
-    await page.getByRole("button", { name: "SKILL.md", exact: true }).click();
-    await page.getByRole("button", { name: "references/visit.md", exact: true }).click();
-    await page.getByRole("tab", { name: locale === "ja" ? "原文" : "Source", exact: true }).click();
+    await page.getByRole("treeitem", { name: "SKILL.md", exact: true }).click();
+    await page.getByRole("treeitem", { name: "visit.md", exact: true }).click();
+    await page.getByRole("tab", { name: locale === "ja" ? "編集" : "Edit", exact: true }).click();
     await expect.element(input).toHaveValue(content);
   },
 );
@@ -68,10 +75,8 @@ it.each([
 it("公開資料の表示は編集操作を持たず、こもれびの参照ファイルを表示する", async () => {
   await page.viewport(1280, 1000);
   await render(<Fixture locale="ja" editable={false} />);
-  await expect
-    .element(page.getByRole("button", { name: "references/sake.md", exact: true }))
-    .toBeVisible();
-  await page.getByRole("button", { name: "references/sake.md", exact: true }).click();
+  await expect.element(page.getByRole("treeitem", { name: "sake.md", exact: true })).toBeVisible();
+  await page.getByRole("treeitem", { name: "sake.md", exact: true }).click();
   await expect
     .element(
       page.getByRole("heading", {
@@ -83,11 +88,7 @@ it("公開資料の表示は編集操作を持たず、こもれびの参照フ�
   await expect
     .element(page.getByRole("button", { name: "Skillを追加", exact: true }))
     .not.toBeInTheDocument();
-  await page.getByRole("button", { name: "references/visit.md", exact: true }).click();
-  await page.screenshot({
-    path: "../../../test-results/tablecast-store-knowledge-ja.png",
-    fullPage: false,
-  });
+  await page.getByRole("treeitem", { name: "visit.md", exact: true }).click();
 });
 
 it("資料追加と削除で必須のSKILL.mdを保つ", async () => {
@@ -101,7 +102,48 @@ it("資料追加と削除で必須のSKILL.mdを保つ", async () => {
     .element(page.getByRole("button", { name: "ファイルを削除", exact: true }))
     .toBeDisabled();
   await page.getByRole("button", { name: "Skillを削除", exact: true }).click();
+  await expect.element(page.getByRole("treeitem", { name: "sake.md", exact: true })).toBeVisible();
+});
+
+it("階層フォルダーを開閉し、相対画像・コードブロック・参照リンクを表示する", async () => {
+  await render(<Fixture locale="ja" />);
   await expect
-    .element(page.getByRole("button", { name: "references/sake.md", exact: true }))
+    .element(page.getByRole("treeitem", { name: "SKILL.md", exact: true }))
+    .toHaveAttribute("aria-selected", "true");
+  await expect
+    .element(page.getByRole("button", { name: "コードをコピー", exact: true }))
+    .toBeVisible();
+  await page.getByRole("treeitem", { name: "references", exact: true }).click();
+  await expect
+    .element(page.getByRole("treeitem", { name: "visit.md", exact: true }))
+    .not.toBeInTheDocument();
+  await userEvent.keyboard("{ArrowRight}{ArrowRight}");
+  await expect.element(page.getByRole("treeitem", { name: "visit.md", exact: true })).toHaveFocus();
+  await userEvent.keyboard("{ArrowLeft}{End}{Enter}");
+  await expect
+    .element(page.getByRole("treeitem", { name: "local-area.md", exact: true }))
+    .toHaveAttribute("aria-selected", "true");
+  await page.getByRole("treeitem", { name: "SKILL.md", exact: true }).click();
+  await page
+    .getByRole("button", { name: "料理・食事制限 / Dishes and dietary questions", exact: true })
+    .click();
+  await expect
+    .element(
+      page.getByRole("img", { name: "お造り三種盛り / Three-fish sashimi selection", exact: true }),
+    )
+    .toBeVisible();
+  expect(
+    document
+      .querySelector('img[alt="お造り三種盛り / Three-fish sashimi selection"]')
+      ?.getAttribute("src"),
+  ).toContain("/api/admin/stores/");
+  await page.getByRole("treeitem", { name: "sashimi.webp", exact: true }).click();
+  await expect
+    .element(
+      page.getByRole("img", {
+        name: "こもれびのお造り三種盛り / Komorebi sashimi selection",
+        exact: true,
+      }),
+    )
     .toBeVisible();
 });

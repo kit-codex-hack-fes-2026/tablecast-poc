@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { publishDraft } from "../src/modules/configuration/use-cases/publish";
 import { createCastTools } from "../src/modules/voice/agent";
 import { createApiServices } from "../src/platform/context";
-import { catalogSchema, configDraftSchema } from "../src/schema";
+import { catalogSchema, configDraftSchema, uploadedImageSchema } from "../src/schema";
 import { device, setupFixture } from "./fixture";
 import { authorise, connect, toolData, toolError } from "./mcp-configuration-fixture";
 
@@ -19,6 +19,18 @@ it("MCPの店舗資料は下書きのまま接客へ出ず、人の公開後に�
     await client.callTool({ name: "create_draft", arguments: {} }),
     configDraftSchema,
   );
+  const image = toolData(
+    await client.callTool({
+      name: "upload_image",
+      arguments: {
+        data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+        mimeType: "image/png",
+        imageKind: "photograph",
+        imageSource: { generated: false, description: "店舗の席案内" },
+      },
+    }),
+    uploadedImageSchema,
+  );
   const configuration = {
     ...catalog.configuration,
     cast: {
@@ -27,6 +39,13 @@ it("MCPの店舗資料は下書きのまま接客へ出ず、人の公開後に�
         {
           id: "restaurant",
           files: [
+            {
+              path: "assets/seating.webp",
+              imageKey: image.imageKey,
+              imageKind: image.imageKind,
+              imageSource: image.imageSource,
+              alt: "店内の席",
+            },
             {
               path: "SKILL.md",
               content:
@@ -102,10 +121,17 @@ it("MCPの店舗資料は下書きのまま接客へ出ず、人の公開後に�
       version: 2,
     }),
   ).toMatchObject({
-    content: configuration.cast.skills[0]?.files[1]?.content,
+    content: configuration.cast.skills[0]?.files[2]?.content,
     version: 2,
     nextOffset: null,
   });
+  expect(
+    await tools.readStoreKnowledge.execute({
+      skillId: "restaurant",
+      path: "assets/seating.webp",
+      version: 2,
+    }),
+  ).toMatchObject({ kind: "image", imageKey: image.imageKey, alt: "店内の席", version: 2 });
   await expect(
     tools.readStoreKnowledge.execute({ skillId: "restaurant", version: 1 }),
   ).rejects.toMatchObject({ code: "KNOWLEDGE_VERSION_STALE" });

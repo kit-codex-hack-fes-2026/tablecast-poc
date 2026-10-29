@@ -72,15 +72,17 @@ const meta = {
           ((target) => {
             const language = t(target.endsWith("ja") ? "common_ja" : "common_en");
             const label =
-              target === "proactive"
-                ? t("cast_edit_proactive")
-                : target.startsWith("system")
-                  ? `${t("cast_edit_system")} (${language})`
-                  : target.startsWith("instructions")
-                    ? m.cast_edit_instructions({ language }, { locale: uiLocale(locale) })
-                    : target.startsWith("opening")
-                      ? `${t("cast_edit_opening")} (${language})`
-                      : m.cast_edit_voice({ language }, { locale: uiLocale(locale) });
+              target === "knowledge"
+                ? t("knowledge_edit")
+                : target === "proactive"
+                  ? t("cast_edit_proactive")
+                  : target.startsWith("system")
+                    ? `${t("cast_edit_system")} (${language})`
+                    : target.startsWith("instructions")
+                      ? m.cast_edit_instructions({ language }, { locale: uiLocale(locale) })
+                      : target.startsWith("opening")
+                        ? `${t("cast_edit_opening")} (${language})`
+                        : m.cast_edit_voice({ language }, { locale: uiLocale(locale) });
             return (
               <Button type="button" variant="outline" onClick={() => edit(target)}>
                 <Pencil />

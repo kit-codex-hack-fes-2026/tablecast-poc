@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { productSchema } from "../catalog/model";
+import { imageMetadataSchema } from "../media/model";
 
 export const storeSkillLimits = {
   skills: 8,
@@ -10,6 +12,17 @@ const storeSkillPathSchema = z
   .string()
   .max(160)
   .regex(/^(?:[\w-]+\/)*[\w-][\w.-]*$/);
+const textFileSchema = z
+  .object({ path: storeSkillPathSchema, content: z.string().max(storeSkillLimits.fileCharacters) })
+  .strict();
+const imageFileSchema = imageMetadataSchema
+  .extend({
+    path: storeSkillPathSchema.regex(/\.(png|jpe?g|webp)$/i),
+    imageKey: productSchema.shape.imageKey.unwrap().unwrap(),
+    alt: z.string().max(300).default(""),
+  })
+  .strict();
+const storeSkillFileSchema = z.union([textFileSchema, imageFileSchema]);
 export const storeSkillSchema = z
   .object({
     id: z
@@ -17,26 +30,27 @@ export const storeSkillSchema = z
       .min(1)
       .max(64)
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-    files: z
-      .array(
-        z
-          .object({
-            path: storeSkillPathSchema,
-            content: z.string().max(storeSkillLimits.fileCharacters),
-          })
-          .strict(),
-      )
-      .min(1)
-      .max(storeSkillLimits.files),
+    files: z.array(storeSkillFileSchema).min(1).max(storeSkillLimits.files),
   })
   .strict()
   .superRefine((skill, ctx) => {
-    if (!skill.files.some((file) => file.path === "SKILL.md" && file.content.trim()))
+    if (
+      !skill.files.some(
+        (file) => file.path === "SKILL.md" && "content" in file && file.content.trim(),
+      )
+    )
       ctx.addIssue({ code: "custom", path: ["files"], message: "SKILL.mdが必要です。" });
     const paths = new Set<string>();
     skill.files.forEach((file, index) => {
       const path = file.path.toLowerCase();
-      if (paths.has(path))
+      if (
+        paths.has(path) ||
+        skill.files.some(
+          (other) =>
+            other.path.toLowerCase().startsWith(`${path}/`) ||
+            path.startsWith(`${other.path.toLowerCase()}/`),
+        )
+      )
         ctx.addIssue({
           code: "custom",
           path: ["files", index, "path"],
@@ -44,8 +58,7 @@ export const storeSkillSchema = z
         });
       paths.add(path);
     });
-  })
-  .meta({ id: "tablecastStoreSkill" });
+  });
 
 export const storeSkillsSchema = z
   .array(storeSkillSchema)
@@ -55,7 +68,12 @@ export const storeSkillsSchema = z
       ctx.addIssue({ code: "custom", message: "SkillのIDが重複しています。" });
     if (
       skills.reduce(
-        (sum, skill) => sum + skill.files.reduce((size, file) => size + file.content.length, 0),
+        (sum, skill) =>
+          sum +
+          skill.files.reduce(
+            (size, file) => size + ("content" in file ? file.content.length : 0),
+            0,
+          ),
         0,
       ) > storeSkillLimits.totalCharacters
     )

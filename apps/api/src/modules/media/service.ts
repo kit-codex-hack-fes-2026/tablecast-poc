@@ -197,6 +197,9 @@ export async function requireConfigurationImages(
 ) {
   const images = [
     ...[
+      ...(configuration.cast.skills?.flatMap((skill) =>
+        skill.files.filter((file) => "imageKey" in file),
+      ) ?? []),
       configuration.branding?.logo,
       configuration.branding?.banner,
       configuration.branding?.memberIcon,

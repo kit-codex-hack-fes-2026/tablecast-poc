@@ -126,6 +126,7 @@ export function CastEditor({
       </LanguageFields>
       <div id={`${id}-knowledge`} tabIndex={-1}>
         <StoreKnowledge
+          storeId={storeId}
           value={value.skills ?? []}
           onChange={(skills) => onChange({ ...value, skills })}
           disabled={disabled}

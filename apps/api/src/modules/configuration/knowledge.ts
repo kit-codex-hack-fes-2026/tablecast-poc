@@ -11,7 +11,10 @@ export function searchStoreSkills(skills: StoreSkill[], query: string, offset: n
     const items = skills.map((skill) => ({
       skillId: skill.id,
       path: "SKILL.md",
-      excerpt: skill.files.find((file) => file.path === "SKILL.md")?.content.slice(0, 600) ?? "",
+      excerpt:
+        skill.files.flatMap((file) =>
+          file.path === "SKILL.md" && "content" in file ? [file.content.slice(0, 600)] : [],
+        )[0] ?? "",
       fileCount: skill.files.length,
     }));
     return {
@@ -23,9 +26,11 @@ export function searchStoreSkills(skills: StoreSkill[], query: string, offset: n
   }
   const chunks = skills.flatMap((skill) =>
     skill.files.flatMap((file) => {
+      const text =
+        "content" in file ? file.content : `${file.alt}\n${file.imageSource.description}`;
       const result = [];
-      for (let start = 0; start < file.content.length; start += chunkCharacters - 160) {
-        const excerpt = file.content.slice(start, start + chunkCharacters);
+      for (let start = 0; start < text.length; start += chunkCharacters - 160) {
+        const excerpt = text.slice(start, start + chunkCharacters);
         result.push({
           skillId: skill.id,
           path: file.path,
@@ -34,7 +39,7 @@ export function searchStoreSkills(skills: StoreSkill[], query: string, offset: n
           text: normalise(excerpt),
           name: normalise(`${skill.id}/${file.path}`),
         });
-        if (start + chunkCharacters >= file.content.length) break;
+        if (start + chunkCharacters >= text.length) break;
       }
       return result;
     }),
@@ -65,7 +70,24 @@ export function readStoreSkill(
 ) {
   const skill = skills.find((item) => item.id === skillId);
   const file = skill?.files.find((item) => item.path === path);
-  if (!skill || !file || offset > file.content.length) return null;
+  if (!skill || !file) return null;
+  if (!("content" in file))
+    return offset === 0
+      ? {
+          skillId,
+          path,
+          kind: "image",
+          imageKey: file.imageKey,
+          alt: file.alt,
+          imageSource: file.imageSource,
+          files: skill.files.map((item) => item.path),
+          nextOffset: null,
+          content: `${file.alt}\n${file.imageSource.description}`,
+          offset,
+          totalCharacters: file.alt.length + 1 + file.imageSource.description.length,
+        }
+      : null;
+  if (offset > file.content.length) return null;
   const content = file.content.slice(offset, offset + 4000);
   return {
     skillId,

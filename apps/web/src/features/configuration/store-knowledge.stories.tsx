@@ -1,17 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { useState } from "react";
 import { catalog } from "../../../.storybook/tablecast-fixtures";
+import { ImageProvider } from "../../components/image-provider";
 import { StoreKnowledge } from "./store-knowledge";
 
 const meta = {
   title: "店舗/店舗資料",
   component: StoreKnowledge,
-  args: { value: catalog.configuration.cast.skills ?? [] },
+  args: { storeId: catalog.storeId, value: catalog.configuration.cast.skills ?? [] },
   decorators: [
     (Story) => (
-      <main className="mx-auto max-w-5xl p-4">
-        <Story />
-      </main>
+      <ImageProvider basePath={`/api/admin/stores/${catalog.storeId}`} assets={catalog.imageAssets}>
+        <main className="mx-auto max-w-5xl p-4">
+          <Story />
+        </main>
+      </ImageProvider>
     ),
   ],
 } satisfies Meta<typeof StoreKnowledge>;
@@ -24,4 +27,4 @@ export const Editing: Story = {
     return <StoreKnowledge {...args} value={skills} onChange={setSkills} />;
   },
 };
-export const Empty: Story = { args: { value: [] } };
+export const Empty: Story = { args: { storeId: catalog.storeId, value: [] } };
