@@ -7,6 +7,7 @@ import { posCheckouts, posConnections, posOauthStates } from "../../db/pos-schem
 import { ensure } from "../../platform/errors";
 import { requireManager, requireManagerRead } from "../auth/policy";
 import { findStoreMembership } from "../auth/queries";
+import { mapLocalized } from "../catalog/localization";
 import { getCatalog } from "../catalog/queries";
 import {
   connectedAdapter,
@@ -75,7 +76,7 @@ export async function getPosSettings(services: ApiServices, actor: Actor): Promi
     mappings: posMappingSchema.array().parse(JSON.parse(connection?.mappingsJson ?? "[]")),
     products: catalog.configuration.products.map((product) => ({
       id: product.id,
-      name: { ja: product.text.ja.displayName, en: product.text.en.displayName },
+      name: mapLocalized(product.text, (value) => value.displayName),
       price: product.price,
       available: product.available,
       imageKey: product.imageKey,
@@ -83,7 +84,7 @@ export async function getPosSettings(services: ApiServices, actor: Actor): Promi
       options: product.modifiers.flatMap((group) =>
         group.options.map((option) => ({
           id: option.id,
-          name: { ja: option.text.ja.displayName, en: option.text.en.displayName },
+          name: mapLocalized(option.text, (value) => value.displayName),
           price: option.priceDelta,
           imageKey: option.imageKey,
           imageKind: option.imageKind,

@@ -1,3 +1,4 @@
+import { resolveText } from "@tablecast/api/localization";
 import {
   type CartLine,
   type OptionCondition,
@@ -88,8 +89,8 @@ export function OptionConditionsEditor({
   const choices: Choice[] = product.modifiers.flatMap((group) =>
     group.options.map((item) => ({
       id: item.id,
-      label: `${group.text[locale].displayName} / ${item.text[locale].displayName}`,
-      search: `${item.id} ${group.text.ja.displayName} ${group.text.en.displayName} ${item.text.ja.displayName} ${item.text.en.displayName}`,
+      label: `${resolveText(group.text, locale).displayName} / ${resolveText(item.text, locale).displayName}`,
+      search: `${item.id} ${group.text.ja.displayName} ${resolveText(group.text, "en").displayName} ${item.text.ja.displayName} ${resolveText(item.text, "en").displayName}`,
       available: item.available,
       invalid: item.id === optionId,
       allowsQuantity: group.kind === "quantity",

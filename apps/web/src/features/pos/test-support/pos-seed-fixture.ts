@@ -1,4 +1,5 @@
 import type { Locale, PosCatalog, PosCheckoutView, PosSettings } from "@tablecast/api/schema";
+import { localizedNames, resolveLocalized } from "@tablecast/api/localization";
 import { catalog, table } from "../../../../.storybook/tablecast-fixtures";
 import { posCheckoutFixture, posSettingsFixture } from "./pos-fixture";
 
@@ -9,7 +10,7 @@ export const posSeedSettings: PosSettings = {
   ...posSettingsFixture,
   products: products.map((product) => ({
     id: product.id,
-    name: { ja: product.text.ja.displayName, en: product.text.en.displayName },
+    name: localizedNames(product.text).name,
     price: product.price,
     available: product.available,
     imageKey: product.imageKey,
@@ -17,7 +18,7 @@ export const posSeedSettings: PosSettings = {
     options: product.modifiers.flatMap((group) =>
       group.options.map((option) => ({
         id: option.id,
-        name: { ja: option.text.ja.displayName, en: option.text.en.displayName },
+        name: localizedNames(option.text).name,
         price: option.priceDelta,
         imageKey: option.imageKey,
         imageKind: option.imageKind,
@@ -62,7 +63,9 @@ export const posSeedCheckout = (locale: Locale): PosCheckoutView => ({
       id: line.id,
       productId: line.productId,
       externalId: `square-${line.productId}`,
-      name: line.name[locale],
+      name: resolveLocalized(line.name, locale),
+      displayName: line.name,
+      transliteration: line.transliteration,
       quantity: line.quantity,
       unitPrice: line.unitPrice,
       referencePrice: line.unitPrice,
@@ -70,7 +73,8 @@ export const posSeedCheckout = (locale: Locale): PosCheckoutView => ({
       options: line.options.map((option) => ({
         id: option.id,
         externalId: `square-${option.id}`,
-        name: option.name[locale],
+        name: resolveLocalized(option.name, locale),
+        displayName: option.name,
         quantity: option.quantity,
         price: option.priceDelta,
         referencePrice: option.priceDelta,

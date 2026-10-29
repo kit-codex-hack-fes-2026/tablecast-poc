@@ -29,7 +29,9 @@ export function AuthLayout({
               <Brand />
             </Link>
           )}
-          <LanguageSwitch onChange={onLocaleChange ?? setLocale} />
+          <LanguageSwitch
+            onChange={(next) => (onLocaleChange ?? setLocale)(next === "ja" ? "ja" : "en")}
+          />
         </header>
         <section
           data-page-motion

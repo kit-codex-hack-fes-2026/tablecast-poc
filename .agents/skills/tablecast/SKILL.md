@@ -5,7 +5,7 @@ description: TableCastのメニュー・接客を資料から設定するとき�
 
 # TableCastを設定する
 
-店長が渡す資料と目的を、現在の店舗に適用できる日英の検証済み下書きへ変える。たとえば、このサイトとメニュー写真を元に設定して、この商品を売切にして、2番の接客案で設定して、季節商品を写真付きで追加して、架空のラーメン屋を試作して、という依頼に使う。
+店長が渡す資料と目的を、現在の店舗に適用できる店舗の対応言語を含む検証済み下書きへ変える。たとえば、このサイトとメニュー写真を元に設定して、この商品を売切にして、2番の接客案で設定して、季節商品を写真付きで追加して、架空のラーメン屋を試作して、という依頼に使う。
 
 ## 卓上ゲームを制作する
 
@@ -57,7 +57,7 @@ get_configurationの現行値、またはこの会話で編集中の下書きを
 
 1. 実際のtool一覧とschemaを確認する。get_pos_settingsのsection:itemsで商品・カスタマイズ、section:mappingsで既存対応をそれぞれ取得し、nextCursorがなくなるまで同じsectionとlimitで続ける。storeId・settingsUrl・接続・revisionも確認する。owner/adminとtablecast:readが必要で、保存にはtablecast:writeも必要である。未接続ならsettingsUrlで管理者にSquare接続を案内し、接続後に同じ依頼を再開する。
 2. get_pos_catalogで対象locationIdの全entriesを収集し、kindとproductIdからvariationと親ごとのmodifierを組み立てる。必要ならlist_pos_devicesで端末も全page取得する。両toolのlimit・locationIdを継続取得中に変更しない。POS_CURSOR_STALEなら先頭から再収集し、設定revisionも読み直す。既存の店舗・端末は維持し、未選択や複数候補で判断できない項目だけ確認する。架空のIDやOAuth・接続解除・端末登録・決済toolを作らない。
-3. TableCastの日英名とSquareの原文名、itemName・variationName、容量、通常価格、売切状態を照合する。Squareの登録名は表示言語に合わせて翻訳・書換えしない。名前が似ているだけで一致とせず、価格や容量が異なる候補は保留する。APIの対応範囲はJPYの税込10%である。
+3. TableCastの登録済み各言語名とSquareの原文名、itemName・variationName、容量、通常価格、売切状態を照合する。Squareの登録名は表示言語に合わせて翻訳・書換えしない。名前が似ているだけで一致とせず、価格や容量が異なる候補は保留する。APIの対応範囲はJPYの税込10%である。
 4. 商品はvariation IDへ、カスタマイズはそのvariationに属するmodifier IDへ対応付ける。同じlocal optionを複数商品が使う場合は、全ての親に有効な対応一つを共有する。保存配列はkindとlocalIdの組で一意にする。別商品で同じ外部modifierを再利用できる。異なる商品が同じvariationを使う候補や、同じ商品内で異なるoptionが同じmodifierを使う候補は重複として示し、曖昧な行だけ保留する。
 5. items全pageとmappings全pageを突合し、現存するlocal IDで、取得候補に存在する既存対応を依頼範囲外も保持する。廃止local IDや消失したSquare IDは区別し、依頼範囲の行は候補へ修正するか未対応として示す。範囲外で維持できない行が保存を妨げる場合はその行と選択肢を説明し、黙って解除して保存を通さない。取得したexpectedRevision・locationId・deviceIdと全mappingsをsave_pos_mappingsへ渡す。最大5,000件の全置換なので、変更行だけの送信や分割保存で他の対応を消さない。上限を超えるときは保留し、未対応行は配列へ含めない。競合なら最新設定から依頼差分を組み直し、会計中の固定を回避しない。
 6. 保存応答のconnection・mappingCountだけで完了にせず、get_pos_settingsのsection:mappingsを最後まで再取得してIDと保存値を照合する。対象店舗、保存した対応、保留・重複・要確認、settingsUrlを短く報告する。設定保存の成功を、実決済や実機の確認済みとして報告しない。未配備のtoolを実行済みと装わない。
@@ -88,3 +88,11 @@ upload_image応答のimageKey・imageKind・imageSourceを対象商品へ設定�
 ## 使い方を確認する
 
 接続・権限・設定の説明が必要なら、接続先originの`/llms.txt`から必要なヘルプ章だけ取得する。人向けの公開入口は`/help`、日英のページ単位Markdownは索引から辿れる。plugin同梱の`tablecast-help` skillでも同じ本文を参照できる。
+
+## 商品名と追加言語を設定する
+
+get_configurationのlocales・uiLocales・fallbackと入力schemaを確認する。対応言語を増やす依頼ではconfiguration.languagesに正規BCP 47コードを追加し、必須のjaと既存の他言語を保持する。enは任意であり、UIの4言語へ保存言語を限定しない。中国語の例はzh-Hans、韓国語はko。価格・画像・他言語を保持した全configurationで既存の下書き操作を使い、専用toolがあると説明しない。
+
+商品textの各言語はdisplayNameを意味訳、transliterationを音の転写として同時に設定する。日本語も原名と読みを持たせる。未翻訳の外国語はキー全体を省略し、片方だけ・空文字・空白だけを保存しない。画面で上下に表示するため、転写を括弧でdisplayNameへ連結しない。英語はイギリス英語で、転写は長音記号付きヘボン式にする。例はdisplayName: Japanese soy sauce fried chicken、transliteration: Karaage。銘柄は固有名を残し、純米吟醸等の種別は意味を訳す。料理名・材料・調理法・個数等を独断で短縮・省略しない。英語の大文字、料理の説明、通貨の扱いは、翻訳時に[多言語メニューの設定指針](references/localization.md)を読む。中国語・韓国語の転写は各言語の文字を使う。
+
+カテゴリ・選択肢・プラン・ガイド・説明・castの指示とvoice・画像altも必要な言語を揃える。未翻訳は英語→日本語へ戻るが会話言語は変更されない。無効化した言語の既存データを勝手に削除しない。update_draft→validate_draft→get_draft_diffを実行し、依頼された言語と実際に保存した文言・不足を示す。公開の承認手順は通常どおり人が行う。

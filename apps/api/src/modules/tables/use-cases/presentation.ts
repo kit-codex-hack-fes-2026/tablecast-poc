@@ -256,6 +256,8 @@ export async function changeLocale(
       ).updateVoiceLanguage(services, actor, row.voice_session_id);
     return view === "core" ? getCoreState(services, actor) : getTableState(services, actor);
   }
+  const catalog = await getCatalog(services, actor.storeId, actor.demoId);
+  ensure(catalog.configuration.languages.includes(locale), "LANGUAGE_NOT_ENABLED", 422);
   const mutation = crypto.randomUUID();
   const gate = voiceCondition(actor);
   const readActor: Actor = {

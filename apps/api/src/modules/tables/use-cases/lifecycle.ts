@@ -107,6 +107,7 @@ export async function openTable(
         .get();
       ensure(table, "TABLE_NOT_FOUND", 404);
       const catalog = await getCatalog(services, actor.storeId, actor.demoId);
+      ensure(catalog.configuration.languages.includes(input.locale), "LANGUAGE_NOT_ENABLED", 422);
       const plan = input.planId
         ? catalog.configuration.plans.find((p) => p.id === input.planId)
         : null;

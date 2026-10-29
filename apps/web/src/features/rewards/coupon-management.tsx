@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Ticket } from "lucide-react";
 import { useRef, useState } from "react";
@@ -90,7 +91,8 @@ export function CouponManagement() {
                   setEditing(rule);
                 }}
               >
-                {rule.rules.title[locale]} · v{rule.version} · {t(`coupon_${rule.rules.trigger}`)}
+                {resolveLocalized(rule.rules.title, locale)} · v{rule.version} ·{" "}
+                {t(`coupon_${rule.rules.trigger}`)}
               </Button>
             </li>
           ))}
@@ -105,7 +107,7 @@ export function CouponManagement() {
             storeId={store.id}
             rules={rules.flatMap((rule) =>
               rule.active && rule.rules.trigger === "manual"
-                ? [{ id: rule.id, title: rule.rules.title[locale] }]
+                ? [{ id: rule.id, title: resolveLocalized(rule.rules.title, locale) }]
                 : [],
             )}
           />

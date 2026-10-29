@@ -1,4 +1,5 @@
 import type { Product } from "@tablecast/api/schema";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { useI18n } from "../../i18n/locale";
 
 const allergenLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]>> = {
@@ -34,16 +35,17 @@ export function ProductAllergens({ product }: { product: Product }) {
             : t("kiosk_unknown"))}
       </p>
       <p className="block text-xs leading-relaxed text-muted-foreground">
-        {product.allergens.note[locale] || t("kiosk_unknown")}
+        {resolveLocalized(product.allergens.note, locale) || t("kiosk_unknown")}
       </p>
       {product.allergens.vegan === "yes" && (
         <p className="block text-xs leading-relaxed text-muted-foreground">{t("kiosk_vegan")}</p>
       )}
-      {product.allergens.crossContact !== "controlled" && !product.allergens.note[locale] && (
-        <p className="block text-xs leading-relaxed text-muted-foreground">
-          {t("kiosk_cross_contact")}
-        </p>
-      )}
+      {product.allergens.crossContact !== "controlled" &&
+        !resolveLocalized(product.allergens.note, locale) && (
+          <p className="block text-xs leading-relaxed text-muted-foreground">
+            {t("kiosk_cross_contact")}
+          </p>
+        )}
     </div>
   );
 }

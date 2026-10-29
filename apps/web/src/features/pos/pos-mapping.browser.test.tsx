@@ -1,7 +1,9 @@
+import type { Locale } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
+import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
@@ -46,17 +48,13 @@ const select = (name: string, kind: "option" | "product", parent?: string) =>
   page.getByRole("combobox", {
     name: `${parent ? parent + " · " : ""}${name} · ${ja[kind === "product" ? "pos_mapping_product" : "pos_mapping_option"]}`,
   });
-async function renderMappings() {
+async function renderMappings(settings = posMappingSettingsFixture, locale: Locale = "ja") {
   await render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initialLocale="ja" persist={false}>
+      <LocaleProvider initialLocale={locale} persist={false} staffOnly>
         <MotionProvider>
           <main className="h-dvh overflow-y-auto p-6">
-            <StorePosSettings
-              storeId="tablecast-store"
-              canEdit
-              settings={posMappingSettingsFixture}
-            />
+            <StorePosSettings storeId="tablecast-store" canEdit settings={settings} />
           </main>
         </MotionProvider>
       </LocaleProvider>
@@ -122,6 +120,32 @@ it("非表示行を含む全体件数を保ち、未対応・重複・要確認�
   await expect.element(filter(ja.pos_mapping_filter_review, 0)).toBeVisible();
   await expect.element(filter(ja.pos_mapping_filter_mapped, 9)).toBeVisible();
   await expect.element(filter(ja.pos_mapping_filter_all, 9)).toBeVisible();
+});
+
+it("管理言語を英語へ戻したとき英訳なしの商品は日本語へ戻しSquareの登録名を保持する", async () => {
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    unexpected.push(new Request(input, init).url);
+    return Response.json({}, { status: 500 });
+  });
+  const settings = {
+    ...posMappingSettingsFixture,
+    products: posMappingSettingsFixture.products.map((product) => ({
+      ...product,
+      name: product.id === "tablecast-tea" ? { ja: "煎茶", ko: "녹차" } : product.name,
+      options: product.options.map((option) => ({ ...option, name: { ja: option.name.ja } })),
+    })),
+  };
+  await renderMappings(settings, "ko");
+  await expect
+    .element(page.getByRole("heading", { name: en.pos_title, exact: true }))
+    .toBeVisible();
+  const tea = page.getByRole("article", { name: "煎茶", exact: true });
+  await expect.element(tea.getByRole("heading", { name: "煎茶", exact: true })).toBeVisible();
+  await expect
+    .element(page.getByRole("article", { name: "녹차", exact: true }))
+    .not.toBeInTheDocument();
+  const square = tea.getByRole("combobox", { name: `煎茶 · ${en.pos_mapping_product}` });
+  expect(square.element().querySelector("option:checked")?.textContent).toContain("煎茶（店内）");
 });
 
 it("共有する選択肢は別商品の行でも同じ入力を表示し、重複警告を許容して一つの対応だけを保存する", async () => {

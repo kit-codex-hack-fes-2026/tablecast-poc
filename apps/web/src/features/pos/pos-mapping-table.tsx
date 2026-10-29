@@ -1,5 +1,6 @@
 import type { PosCatalog, PosSettings } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
+import { resolveLocalized, uiLocale } from "@tablecast/api/localization";
 import { useTable } from "@tanstack/react-table";
 import { useState } from "react";
 import { CollectionToolbar } from "../../components/collection-toolbar";
@@ -133,7 +134,7 @@ function MappingProduct({
   const { t, locale } = useI18n();
   return (
     <article
-      aria-label={group.product.name[locale]}
+      aria-label={resolveLocalized(group.product.name, locale)}
       className="min-w-0 rounded-xl border border-border bg-card"
     >
       <MappingEntry row={group.product} renderMapping={renderMapping} />
@@ -183,7 +184,7 @@ function MappingSource({ row }: { row: PosMappingRow }) {
       {row.option ? (
         <CustomisationContent
           className="min-w-0 flex-1"
-          name={row.name[locale]}
+          name={resolveLocalized(row.name, locale)}
           imageKey={row.option.imageKey}
           imageKind={row.option.imageKind}
           reserveImageSpace
@@ -198,7 +199,7 @@ function MappingSource({ row }: { row: PosMappingRow }) {
             compact
           />
           <div className="min-w-0 flex-1 wrap-anywhere">
-            <h3 className="font-medium">{row.name[locale]}</h3>
+            <h3 className="font-medium">{resolveLocalized(row.name, locale)}</h3>
             {!row.product.available && (
               <span className="text-sm text-muted-foreground">{t("kiosk_sold_out")}</span>
             )}
@@ -238,10 +239,10 @@ function MappingStatus({ row }: { row: PosMappingRow }) {
             {m.pos_mapping_duplicate_with(
               {
                 names: row.duplicateWith
-                  .map((name) => name[locale])
+                  .map((name) => resolveLocalized(name, locale))
                   .join(locale === "ja" ? "、" : ", "),
               },
-              { locale },
+              { locale: uiLocale(locale) },
             )}
           </p>
         </>

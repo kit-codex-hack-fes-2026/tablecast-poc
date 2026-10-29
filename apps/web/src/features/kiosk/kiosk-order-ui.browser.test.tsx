@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { catalog as seedCatalog } from "../../../.storybook/tablecast-fixtures";
@@ -83,12 +84,12 @@ it.each(["ja", "en"] as const)(
       expect(parseFloat(getComputedStyle(price).fontSize)).toBeGreaterThanOrEqual(14);
       expect(price.getBoundingClientRect().height).toBeLessThanOrEqual(24);
     }
-    const choose = page
-      .getByRole("button")
-      .filter({ has: page.getByText(pictured.text[locale].displayName, { exact: true }) });
+    const choose = page.getByRole("button").filter({
+      has: page.getByText(resolveLocalized(pictured.text, locale).displayName, { exact: true }),
+    });
     await choose.click();
     const dialog = page.getByRole("dialog", {
-      name: pictured.text[locale].displayName,
+      name: resolveLocalized(pictured.text, locale).displayName,
       exact: true,
     });
     await expect.element(dialog).toBeVisible();
@@ -208,7 +209,7 @@ it.each(["ja", "en"] as const)(
       expect(control.top).toBeCloseTo(fixtureValue(controls[0]).top, 0);
     }
     expect(customisations.element().textContent).toContain(
-      `${fixtureValue(pictured.modifiers[0]).text[locale].displayName}:`,
+      `${resolveLocalized(fixtureValue(pictured.modifiers[0]).text, locale).displayName}:`,
     );
     const illustration = picture.querySelector('[data-ui="illustration-label"]');
     expect(illustration).not.toBeNull();

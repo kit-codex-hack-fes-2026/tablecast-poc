@@ -6,6 +6,7 @@ import { type ReactNode, useMemo } from "react";
 import { z } from "zod";
 import type { TableEndpoint } from "../../lib/api";
 import { CurrencyContext, type CurrencyDisplay } from "../../i18n/currency-context";
+import { automaticDisplayCurrency } from "./currency-model";
 import { exchangeRateOptions, tableQueryKey } from "./table-query";
 
 type Preference = { currency: DisplayCurrencyCode | null | undefined; revision: number };
@@ -15,7 +16,6 @@ const savedPreference = z.object({
   currency: displayCurrencyCodeSchema.nullable(),
   manual: z.boolean(),
 });
-const defaultCurrency = (locale: Locale) => (locale === "en" ? ("USD" as const) : null);
 
 export function CurrencyProvider({
   children,
@@ -55,7 +55,8 @@ export function CurrencyProvider({
   const selectedCurrency = preference.data?.currency;
   const value = useMemo<CurrencyDisplay>(
     () => ({
-      currency: selectedCurrency === undefined ? defaultCurrency(locale) : selectedCurrency,
+      currency:
+        selectedCurrency === undefined ? automaticDisplayCurrency(locale) : selectedCurrency,
       rates: rates.data,
       pending: rates.isPending,
 
@@ -65,7 +66,9 @@ export function CurrencyProvider({
           client.getQueryData<CoreState>(tableQueryKey(endpoint))?.locale ?? locale;
         return {
           currency:
-            selection.currency === undefined ? defaultCurrency(currentLocale) : selection.currency,
+            selection.currency === undefined
+              ? automaticDisplayCurrency(currentLocale)
+              : selection.currency,
           revision: selection.revision,
           rates: client.getQueryData(exchangeRateOptions(endpoint, sessionId).queryKey),
         };

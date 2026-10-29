@@ -38,6 +38,7 @@ export const boundaryFiles = [
   ["asset", "src/*.css"],
   ["declaration", "src/env.d.ts"],
   ["context", "src/features/store/store-context.tsx"],
+  ["context", "src/features/configuration/configuration-languages-context.ts"],
   ["composition", "src/features/(store)/{admin-shell,store-shell,settings-shell,store-home}.tsx"],
   ["model", "src/features/*/*-{model,defaults}.ts"],
   ["model", "src/features/*/table-cache.ts"],
@@ -67,6 +68,11 @@ const publicFiles = (feature: string, module: string[]) => ({
   allow: { to: file(["feature", "composition", "query", "model", "context"], feature, module) },
 });
 export const boundaryPolicies = [
+  {
+    from: { file: { path: "**/src/ssr.ts" } },
+    allow: { to: { file: { path: "**/src/i18n/runtime-default.ts" } } },
+  },
+
   ...Object.entries({
     test: [
       "test",
@@ -152,6 +158,7 @@ export const boundaryPolicies = [
     "configuration-image-field",
     "configuration-image-model",
     "language-fields",
+    "configuration-languages-context",
   ]),
   {
     from: file(["feature", "composition"], "catalog"),
@@ -166,6 +173,7 @@ export const boundaryPolicies = [
         "configuration-workflow",
         "instruction-view",
         "menu-model",
+        "store-languages-editor",
       ]),
     },
   },

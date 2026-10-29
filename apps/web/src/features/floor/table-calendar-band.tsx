@@ -1,4 +1,5 @@
 import type { TableState, TimelinePage, TimelineSession } from "@tablecast/api/schema";
+import { uiLocale } from "@tablecast/api/localization";
 import { Clock3, Users } from "lucide-react";
 import { tv } from "tailwind-variants";
 import { LanguageLabel } from "../../components/language-label";
@@ -115,7 +116,7 @@ function VisitBandLabel({
           {width >= 128 && (
             <span className="inline-flex items-center gap-1">
               <Clock3 aria-hidden className="size-3" />
-              {m.floor_elapsed({ minutes: duration }, { locale })}
+              {m.floor_elapsed({ minutes: duration }, { locale: uiLocale(locale) })}
             </span>
           )}
           {width >= 240 && current && (

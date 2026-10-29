@@ -3,6 +3,7 @@ import type { Order } from "../orders/model";
 import type { TableState } from "../tables/model";
 import type { PosInvoice, PosIssue, PosMapping } from "./model";
 import { ensure } from "../../platform/errors";
+import { mapLocalized, resolveLocalized } from "../catalog/localization";
 
 type InvoiceTable = Pick<
   TableState,
@@ -79,7 +80,7 @@ export function buildPosInvoice(input: {
         issues.push({
           code: "POS_MAPPING_REQUIRED",
           localId: line.productId,
-          name: line.name[table.locale],
+          name: resolveLocalized(line.name, table.locale),
         });
       const options = line.options.map((option) => {
         const source = sourceOptions.find((candidate) => candidate.id === option.id);
@@ -89,12 +90,12 @@ export function buildPosInvoice(input: {
           issues.push({
             code: "POS_MAPPING_REQUIRED",
             localId: option.id,
-            name: option.name[table.locale],
+            name: resolveLocalized(option.name, table.locale),
           });
         return {
           id: option.id,
           externalId: mapped,
-          name: option.name[table.locale],
+          name: resolveLocalized(option.name, table.locale),
           displayName: option.name,
           quantity: option.quantity,
           price:
@@ -111,8 +112,9 @@ export function buildPosInvoice(input: {
         id: `${order.id}:${line.id}`,
         productId: line.productId,
         externalId,
-        name: line.name[table.locale],
+        name: resolveLocalized(line.name, table.locale),
         displayName: line.name,
+        transliteration: line.transliteration,
         quantity: line.quantity,
         unitPrice,
         referencePrice: product.price,
@@ -127,11 +129,8 @@ export function buildPosInvoice(input: {
       id: `plan:${table.plan.id}`,
       productId: null,
       externalId: null,
-      name: table.plan.rules.text[table.locale].displayName,
-      displayName: {
-        ja: table.plan.rules.text.ja.displayName,
-        en: table.plan.rules.text.en.displayName,
-      },
+      name: resolveLocalized(table.plan.rules.text, table.locale).displayName,
+      displayName: mapLocalized(table.plan.rules.text, (value) => value.displayName),
       quantity: table.guestCount,
       unitPrice: table.plan.rules.pricePerPerson,
       referencePrice: table.plan.rules.pricePerPerson,

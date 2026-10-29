@@ -10,6 +10,7 @@ import { Button } from "./ui/button";
 /** 商品選択と店舗側の対応付けで、同じ写真・名称・価格・販売状態を表示する。 */
 export function ProductCard({
   name,
+  title,
   price,
   available,
   imageKey,
@@ -25,9 +26,10 @@ export function ProductCard({
   imageKey: null | string;
   imageKind: "illustration" | "photograph";
   imageSizes?: string;
-  name: string;
+  name: ReactNode;
   onChoose?: () => void;
   price: number;
+  title?: string;
 }) {
   const { t } = useI18n();
   const className = cn(
@@ -53,17 +55,17 @@ export function ProductCard({
             </span>
           </span>
         )}
-        <strong
+        <span
           role={onChoose ? undefined : "heading"}
           aria-level={onChoose ? undefined : 3}
-          title={name}
+          title={title ?? (typeof name === "string" ? name : undefined)}
           className={cn(
             "block min-h-12 flex-1 text-base leading-6 font-semibold wrap-anywhere",
-            compact && "line-clamp-2 min-h-10 text-sm leading-5",
+            compact && "min-h-10 text-sm leading-5",
           )}
         >
           {name}
-        </strong>
+        </span>
         <span
           className={cn(
             "mt-3 flex items-center justify-between gap-2 text-base font-semibold tabular-nums",

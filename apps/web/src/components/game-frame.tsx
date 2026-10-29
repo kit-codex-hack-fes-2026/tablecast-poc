@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import {
   gameMessageSchema,
   type GamePackage,
@@ -101,7 +102,7 @@ export function GameFrame({
   return (
     <section className="flex h-full min-h-96 flex-col gap-3">
       <header className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">{game.manifest.name[locale]}</h2>
+        <h2 className="text-lg font-semibold">{resolveLocalized(game.manifest.name, locale)}</h2>
         <Button variant="outline" onClick={onExit}>
           {t("games_exit")}
         </Button>
@@ -114,7 +115,7 @@ export function GameFrame({
           {document && (
             <iframe
               ref={frame}
-              title={game.manifest.name[locale]}
+              title={resolveLocalized(game.manifest.name, locale)}
               srcDoc={document}
               sandbox="allow-scripts"
               referrerPolicy="no-referrer"

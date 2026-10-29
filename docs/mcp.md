@@ -35,7 +35,7 @@ UIそのものの翻訳はWebのメッセージファイル、商品・プラン
 | テーマ制作仕様 | 素材の生成要件・推奨寸法・配置schemaを返す                 |
 | 画像取込       | 商品・ロゴ・装飾・チラシを保存し、出所付きの画像参照を返す |
 | 下書き作成     | 公開版を元に一つの変更セットを作る                         |
-| 商品バッチ更新 | カテゴリ、商品、カスタマイズ、日英テキスト                 |
+| 商品バッチ更新 | カテゴリ、商品、カスタマイズ、言語別テキスト               |
 | プラン更新     | 店舗依存ルールを登録する                                   |
 | キャスト更新   | 日英の標準voice・会話指示・自由文の演技方針                |
 | 下書き検証     | 不足、参照不整合、価格、ルール、読上げ名を検査             |
@@ -113,9 +113,9 @@ POS設定はメニューの下書きとは別に保存する。owner/adminが`ta
 | `list_pos_devices`  | 任意のlocationId・limit・cursorを受け取り、端末ID・名前・locationIdとcanPair・total・nextCursorを返す。端末の登録は行わない                                                                                |
 | `save_pos_mappings` | expectedRevision・locationId・deviceId・全mappingsを受け取り、storeId・settingsUrl・保存後connection・mappingCountだけを返す                                                                               |
 
-settingsのitemsはkind・id・productId・日英名・価格・販売状態に限定し、画像や全configurationを複製しない。section:mappingsも最後まで取得し、itemsの現存local IDと突合する。limit・section・locationIdを変えずにnextCursorを辿り、POS_CURSOR_STALEなら先頭から再収集してrevisionも読み直す。各pageは共有serviceを再読取するため、ページ化だけでDB処理量が一定になるとは保証しない。
+settingsのitemsはkind・id・productId・登録済み各言語名・価格・販売状態に限定し、画像や全configurationを複製しない。section:mappingsも最後まで取得し、itemsの現存local IDと突合する。limit・section・locationIdを変えずにnextCursorを辿り、POS_CURSOR_STALEなら先頭から再収集してrevisionも読み直す。各pageは共有serviceを再読取するため、ページ化だけでDB処理量が一定になるとは保証しない。
 
-agentはTableCastの日英名、Squareの登録名・itemName・variationName、容量、通常価格を照合し、確かめられた商品からvariationへ、その子のカスタマイズからmodifierへ対応付ける。Squareの名前は日本語登録なら英語UIでも原文を維持する。別の親に属するmodifierや不一致の価格を名前だけで対応済みにしない。
+agentはTableCastの登録済み各言語名、Squareの登録名・itemName・variationName、容量、通常価格を照合し、確かめられた商品からvariationへ、その子のカスタマイズからmodifierへ対応付ける。Squareの名前は日本語登録なら英語UIでも原文を維持する。別の親に属するmodifierや不一致の価格を名前だけで対応済みにしない。
 
 保存は最大5,000件の全置換であり、現存するlocal IDと取得候補IDに一致する既存対応は依頼範囲外も含める。分割保存で追加する方式ではない。廃止local IDや消失したSquare IDは保存時に拒否されるため、該当行を区別し、依頼範囲では修正候補または未対応として明示する。範囲外で維持できない対応を黙って解除しない。親modifierの所属と価格は会計前のquoteで厳密に照合する。共有local optionはkindとlocalIdの組で一件にし、別商品での外部modifier再利用を妨げない。未対応行は配列へ含めず、曖昧な行だけ保留する。競合時は最新revisionを再取得して差分を組み直し、保存後も設定を再取得して確認する。接続・再認証・接続解除・端末登録・会計は設定画面で行い、今回のMCP toolには含めない。対応範囲はJPYの税込10%で、実接続・実決済の確認は設定保存の検証と分ける。
 
@@ -138,3 +138,11 @@ agentはTableCastの日英名、Squareの登録名・itemName・variationName、
 `update_draft`で設定を保持しながら変更し、`validate_draft`・`get_draft_diff`・`request_publication`を使う。禁止CSSは行・列と理由を含む入力エラー、欠損商品は既存のPRODUCT_NOT_FOUNDを返す。領域IDとバナーIDは重複させない。詳しい制作例は製品pluginのtablecast-theme skillを参照する。テーマ文字列と画像を音声の業務tool結果へ複製しない。
 
 画像を使うテーマ制作では`get_configuration`と`get_theme_spec`を取得する。後者は接続先店舗、現行テーマschema、背景・ロゴ・チラシの生成要件と推奨寸法、公開部品、デザイン編集URLを返す読取り専用tool。画像生成はクライアントの生成・編集機能で行い、MCPは実素材の`upload_image`と共有下書きへ接続する。生成機能がない場合やファイルを渡せない場合は未生成・未登録と明示する。参考画像から一枚のUIを作って貼る方式にせず、素材別に生成・出所登録・配置・実UIプレビューを行う。
+
+## 対応言語と商品名
+
+`get_configuration`は現在の`configuration.languages`を`locales`として、収録済みUI言語を`uiLocales`、fallback順を`["en", "ja"]`として返す。新しい専用toolは作らず、`create_draft`→`update_draft`→`validate_draft`→`get_draft_diff`→`request_publication`を共用する。`update_draft`へは他の言語・価格・画像を保持した全configurationを渡す。公開は返された管理画面で人が承認する。
+
+店舗の`languages`に`ja`・`en`を残し、正規のBCP 47コード（例`zh-Hans`・`ko`・`fr-CA`）を追加する。商品`text`には日本語が必須で、各言語の`displayName`と`transliteration`を同時に指定する。片方だけ・空文字・空白だけは422となる。未翻訳の言語は`text`のキー全体を省略できる。`speechName`・`description`・`aliases`は必要に応じて付ける。カテゴリ・選択肢・プラン・ガイド・接客指示・voice・画像altも言語コードのmapを使う。
+
+英語の転写は長音記号付きヘボン式にし、銘柄を残して酒の種別を意味訳する。中国語・韓国語の転写は各言語の文字で記す。商品名の例は`en: { displayName: "Japanese soy sauce fried chicken", transliteration: "Karaage" }`。転写を括弧で意味訳へ埋め込まない。原材料・宗教認証等の安全情報を翻訳で創作しない。追加言語の欠落は英語→日本語へ戻り、選択した接客言語は維持する。

@@ -1,5 +1,6 @@
 import type { Configuration } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { calendarDate } from "../i18n/format";
 import { useI18n } from "../i18n/locale";
 import { ProductImage } from "./product-image";
@@ -59,7 +60,7 @@ export function MembershipCard({
         {card?.image && (
           <ProductImage
             src={`${images}/images/${card.image.imageKey}`}
-            alt={card.image.alt[locale]}
+            alt={resolveLocalized(card.image.alt, locale)}
             width={800}
             height={320}
             sizes="160px"

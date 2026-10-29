@@ -144,7 +144,7 @@ export function posMappingGroups(
   const matches = (row: PosMappingRow) =>
     matchesPosMapping(row, filter) &&
     (!query ||
-      [row.product.name.ja, row.product.name.en, row.name.ja, row.name.en, row.remote?.name]
+      [...Object.values(row.product.name), ...Object.values(row.name), row.remote?.name]
         .join(" ")
         .toLocaleLowerCase()
         .includes(query));

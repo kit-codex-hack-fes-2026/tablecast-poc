@@ -99,7 +99,7 @@ export function registerPosTools(server: McpServer, services: ApiServices, actor
     "get_pos_settings",
     {
       description:
-        "店舗のPOS状態・revisionと全商品の対応ID・日英名・価格をページ取得する。owner/adminのtablecast:readで使い、未接続でも読める。OAuth/再認証はsettingsUrlの公開GUIを案内する。section=itemsはproduct/optionの行で、option.productIdが親local商品。section=mappingsで既存対応を全ページ取得し、全置換保存で保持する。limitは既定50、最大100。totalは選択sectionの総件数、nextCursorがnullまで同条件で読む。POS_CURSOR_STALEなら最初から再取得し、版と価格を混在させない。tokenは返さない。",
+        "店舗のPOS状態・revisionと全商品の対応ID・登録済み各言語名・価格をページ取得する。nameは日本語原文jaと翻訳済みBCP 47言語キーを保持し、未翻訳言語は含まない。owner/adminのtablecast:readで使い、未接続でも読める。OAuth/再認証はsettingsUrlの公開GUIを案内する。section=itemsはproduct/optionの行で、option.productIdが親local商品。section=mappingsで既存対応を全ページ取得し、全置換保存で保持する。limitは既定50、最大100。totalは選択sectionの総件数、nextCursorがnullまで同条件で読む。POS_CURSOR_STALEなら最初から再取得し、版と価格を混在させない。tokenは返さない。",
       inputSchema: z
         .object({ section: z.enum(["items", "mappings"]).default("items"), ...pageInput })
         .strict(),

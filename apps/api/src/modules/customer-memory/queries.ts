@@ -35,6 +35,7 @@ import {
 } from "../../db/rewards-schema";
 import { orders, tableSessions } from "../../db/table-schema";
 import { ensure } from "../../platform/errors";
+import { resolveLocalized, resolveText } from "../catalog/localization";
 import { getCatalog } from "../catalog/queries";
 import { couponRuleSchema } from "../customer-coupons/model";
 import { pointBalance } from "../customer-points/queries";
@@ -370,8 +371,8 @@ export async function customerRecommendationContext(services: ApiServices, actor
             coupons: coupons.slice(0, 5).map(({ snapshot: couponSnapshot }) => {
               const rules = couponRuleSchema.parse(JSON.parse(couponSnapshot));
               return {
-                title: rules.title[session.locale],
-                description: rules.description[session.locale],
+                title: resolveLocalized(rules.title, session.locale),
+                description: resolveLocalized(rules.description, session.locale),
                 minimumYen: rules.minimumYen,
                 discountKind: rules.discountKind,
                 discountValue: rules.discountValue,
@@ -498,7 +499,7 @@ export async function customerSuggestions(
     version: catalog.version,
     products: candidates.slice(input.offset, input.offset + 8).map((p) => ({
       id: p.id,
-      name: p.text[session.locale].displayName,
+      name: resolveText(p.text, session.locale).displayName,
       price: p.price,
       previousQuantity: counts.get(p.id) ?? 0,
     })),

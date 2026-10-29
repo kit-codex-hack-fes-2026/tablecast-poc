@@ -1,4 +1,5 @@
 import { Menu } from "@base-ui/react/menu";
+import { uiLocale } from "@tablecast/api/localization";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { Check, ChevronDown, FilePenLine, History } from "lucide-react";
@@ -174,7 +175,10 @@ export function ConfigurationHeader({ storeId, role }: { role: string; storeId: 
                             aria-hidden="true"
                             className={`size-4 shrink-0 ${draftId === choice.id ? "" : "invisible"}`}
                           />
-                          {m.workflow_summary({ count: choice.changeCount }, { locale })}
+                          {m.workflow_summary(
+                            { count: choice.changeCount },
+                            { locale: uiLocale(locale) },
+                          )}
                           <DraftStatus status={choice.status} />
                         </span>
                         <span className="text-xs text-muted-foreground">
@@ -220,17 +224,26 @@ export function ConfigurationHeader({ storeId, role }: { role: string; storeId: 
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
           {publishedVersion !== undefined && (
             <span className="whitespace-nowrap text-sm">
-              {m.workflow_current_short({ version: publishedVersion }, { locale })}
+              {m.workflow_current_short(
+                { version: publishedVersion },
+                { locale: uiLocale(locale) },
+              )}
             </span>
           )}
           {draft.data && (
             <>
               <span className="whitespace-nowrap text-sm text-muted-foreground">
-                {m.workflow_source_short({ version: draft.data.baseVersion }, { locale })}
+                {m.workflow_source_short(
+                  { version: draft.data.baseVersion },
+                  { locale: uiLocale(locale) },
+                )}
               </span>
               <DraftStatus status={draft.data.status} />
               <Badge variant="secondary" className="whitespace-nowrap">
-                {m.workflow_changes_short({ count: draft.data.changes.length }, { locale })}
+                {m.workflow_changes_short(
+                  { count: draft.data.changes.length },
+                  { locale: uiLocale(locale) },
+                )}
               </Badge>
             </>
           )}

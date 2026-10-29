@@ -6,7 +6,7 @@ export type ConversationLine = {
   id: string;
   interrupted: boolean;
   live?: boolean;
-  locale: "en" | "ja";
+  locale: string;
   rawText?: string;
   role: "assistant" | "user";
   speaker?: string;
@@ -22,7 +22,7 @@ export function conversationLines(events: TableEvent[]): ConversationLine[] {
     if (
       (data.role !== "user" && data.role !== "assistant") ||
       typeof data.text !== "string" ||
-      (data.locale !== "ja" && data.locale !== "en")
+      typeof data.locale !== "string"
     )
       return [];
     const speaker = data.speaker && typeof data.speaker === "object" ? data.speaker : undefined;
@@ -47,7 +47,7 @@ export function conversationLines(events: TableEvent[]): ConversationLine[] {
   });
 }
 
-export function mergeConversation(lines: ConversationLine[], view: VoiceView, locale: "en" | "ja") {
+export function mergeConversation(lines: ConversationLine[], view: VoiceView, locale: string) {
   const saved = lines.filter((line) => line.text.trim());
   const merged: ConversationLine[] = [];
   for (const message of view.messages ?? []) {

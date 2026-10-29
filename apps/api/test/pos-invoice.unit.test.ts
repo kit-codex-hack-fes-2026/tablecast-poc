@@ -269,6 +269,90 @@ it("オプション込みのプランでは承認済みの0円を保ち登録追
 });
 
 it.each([
+  ["ja", "カフェラテ", "オーツミルク", "飲み放題"],
+  ["en", "Caffè latte", "Oat milk", "Drinks plan"],
+  ["ko", "카페라테", "귀리 우유", "음료 플랜"],
+  ["zh-Hans", "拿铁", "燕麦奶", "畅饮套餐"],
+  ["fr", "Caffè latte", "Oat milk", "Drinks plan"],
+])(
+  "%sの請求名は共通fallbackを使い、全翻訳と読み表記・金額を凍結する",
+  (locale, name, optionName, planName) => {
+    const config = structuredClone(configuration);
+    const product = config.products.find((value) => value.id === "coffee");
+    const option = product?.modifiers[0]?.options.find((value) => value.id === "oat");
+    if (!product || !option) throw new Error("多言語商品のfixtureがありません");
+    product.text.ko = {
+      ...product.text.ja,
+      displayName: "카페라테",
+      transliteration: "Kape latte",
+    };
+    product.text["zh-Hans"] = {
+      ...product.text.ja,
+      displayName: "拿铁",
+      transliteration: "Na tie",
+    };
+    option.text.ko = { ...option.text.ja, displayName: "귀리 우유" };
+    option.text["zh-Hans"] = { ...option.text.ja, displayName: "燕麦奶" };
+    const localizedPlan = structuredClone(plan);
+    localizedPlan.rules.text.ko = { ...localizedPlan.rules.text.ja, displayName: "음료 플랜" };
+    localizedPlan.rules.text["zh-Hans"] = {
+      ...localizedPlan.rules.text.ja,
+      displayName: "畅饮套餐",
+    };
+    const input = invoiceInput(
+      [servedOrder(priceCart(config, coffee, 1, localizedPlan, now).lines)],
+      config,
+    );
+    input.table.locale = locale;
+    input.table.plan = localizedPlan;
+    input.table.bill.planTotal = 6000;
+    input.table.bill.due = 6100;
+    const result = buildPosInvoice(input);
+    expect(result.issues).toEqual([]);
+    expect(result.invoice.total).toBe(6100);
+    expect(result.invoice.lines).toMatchObject([
+      {
+        name,
+        displayName: { ja: "カフェラテ", en: "Caffè latte", ko: "카페라테", "zh-Hans": "拿铁" },
+        transliteration: { ko: "Kape latte", "zh-Hans": "Na tie" },
+        options: [
+          { name: optionName, displayName: { ko: "귀리 우유", "zh-Hans": "燕麦奶" }, price: 100 },
+        ],
+      },
+      { name: planName, displayName: { ko: "음료 플랜", "zh-Hans": "畅饮套餐" }, total: 6000 },
+    ]);
+    expect(posInvoiceSchema.parse(result.invoice)).toEqual(result.invoice);
+  },
+);
+
+it("英語未登録の請求名は日本語へfallbackし、旧凍結明細の表示名省略も受け付ける", () => {
+  const config = structuredClone(configuration);
+  for (const product of config.products) {
+    delete product.text.en;
+    for (const group of product.modifiers)
+      for (const option of group.options) delete option.text.en;
+  }
+  const input = invoiceInput([servedOrder(priceCart(config, coffee, 1).lines)], config);
+  input.table.locale = "ko";
+  const result = buildPosInvoice(input);
+  expect(result.invoice.lines).toMatchObject([
+    {
+      name: "カフェラテ",
+      displayName: { ja: "カフェラテ" },
+      options: [{ name: "オーツミルク", displayName: { ja: "オーツミルク" } }],
+    },
+  ]);
+  expect(result.invoice.lines[0]?.displayName).not.toHaveProperty("en");
+  const legacy = structuredClone(result.invoice);
+  for (const line of legacy.lines) {
+    delete line.displayName;
+    delete line.transliteration;
+    for (const option of line.options) delete option.displayName;
+  }
+  expect(posInvoiceSchema.parse(legacy)).toEqual(legacy);
+});
+
+it.each([
   { status: "submitted", pending: true, count: 1 },
   { status: "accepted", pending: true, count: 1 },
   { status: "served", pending: false, count: 1 },

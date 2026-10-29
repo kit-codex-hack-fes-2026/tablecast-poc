@@ -21,11 +21,11 @@ async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
       deviceId: row.deviceId,
     };
   }
-  // 価格判定が直後に続く経路だけで取得し、他のGUI操作へ設定JSONを重複転送しない。
+  // 価格・商品選択・対応言語を判定する経路で店舗設定を認可と同時に取得する。
   const includeCatalog =
     (c.req.method === "PUT" && c.req.path === "/api/table/cart") ||
     (c.req.method === "POST" && c.req.path === "/api/table/confirm") ||
-    (c.req.method === "PATCH" && c.req.path === "/api/table/ui");
+    (c.req.method === "PATCH" && ["/api/table/ui", "/api/table/locale"].includes(c.req.path));
   const row = await findDeviceSession(c.get("services"), tokenHash, includeCatalog);
   ensure(row, "DEVICE_NOT_ASSIGNED", 401);
   c.get("services").tableAccess.session = row.session;

@@ -1,5 +1,6 @@
 import type { StaffCall } from "@tablecast/api/schema";
 import { Popover } from "@base-ui/react/popover";
+import { resolveLocalized } from "@tablecast/api/localization";
 import {
   ArrowLeft,
   AudioLines,
@@ -178,8 +179,12 @@ function AssistanceTopics({ model }: { model: ReturnType<typeof useStaffAssistan
   return (
     <div className="grid grid-cols-2 gap-2">
       {guideTemplates.map((topic) => (
-        <Button key={topic.en} variant="outline" onClick={() => model.selectTopic(topic[locale])}>
-          {topic[locale]}
+        <Button
+          key={topic.en}
+          variant="outline"
+          onClick={() => model.selectTopic(resolveLocalized(topic, locale))}
+        >
+          {resolveLocalized(topic, locale)}
         </Button>
       ))}
     </div>

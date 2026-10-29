@@ -5,6 +5,7 @@ import type {
   StaffCallInput,
   TableEvent,
 } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { VoiceConnection } from "./voice-connection";
@@ -79,7 +80,7 @@ export function useStaffAssistance({
           .filter((product) => shownIds.has(product.id))
           .map((product) => ({
             id: product.id,
-            text: product.text[locale],
+            text: resolveText(product.text, locale),
             price: product.price,
             available: product.available,
           })) ?? []),

@@ -1,3 +1,4 @@
+import { resolveLocalized, resolveText } from "@tablecast/api/localization";
 import { type Banner, type Configuration, type ThemeImage } from "@tablecast/api/schema";
 import { useRef } from "react";
 import { ProductImage } from "../../components/product-image";
@@ -53,7 +54,7 @@ export function ThemeImageEditor({
               {t("theme_alt")}
               <Input
                 disabled={disabled}
-                value={value.alt[locale]}
+                value={resolveLocalized(value.alt, locale)}
                 onChange={(event) =>
                   onChange({ ...value, alt: { ...value.alt, [locale]: event.target.value } })
                 }
@@ -108,7 +109,7 @@ export function HotspotEditor({
             height={600}
             sizes="100vw"
             src={`/media/${banner.image.imageKey}`}
-            alt={banner.image.alt[locale]}
+            alt={resolveLocalized(banner.image.alt, locale)}
             className="block h-auto w-full"
           />
           <button
@@ -179,7 +180,7 @@ export function HotspotEditor({
               )}
               {configuration.products.map((product) => (
                 <option key={product.id} value={product.id}>
-                  {product.text[locale].displayName}
+                  {resolveText(product.text, locale).displayName}
                 </option>
               ))}
             </NativeSelect>

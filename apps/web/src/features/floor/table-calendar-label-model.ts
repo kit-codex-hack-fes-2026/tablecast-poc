@@ -4,7 +4,7 @@ import { dateTime } from "../../i18n/format";
 export function visitLabel(
   session: TimelineSession,
   tableName: string,
-  locale: "en" | "ja",
+  locale: string,
   guests: string,
   open: string,
 ) {

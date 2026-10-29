@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { localizedSchema } from "../catalog/localization";
 
 const posProviderSchema = z.literal("square");
 export const posMappingSchema = z
@@ -90,7 +91,7 @@ export const posSettingsSchema = z.object({
   products: z.array(
     z.object({
       id: z.string(),
-      name: z.object({ ja: z.string(), en: z.string() }),
+      name: localizedSchema(z.string()),
       price: z.number().int(),
       available: z.boolean(),
       imageKey: z.string().nullable(),
@@ -98,7 +99,7 @@ export const posSettingsSchema = z.object({
       options: z.array(
         z.object({
           id: z.string(),
-          name: z.object({ ja: z.string(), en: z.string() }),
+          name: localizedSchema(z.string()),
           price: z.number().int(),
           imageKey: z.string().nullable(),
           imageKind: z.enum(["illustration", "photograph"]),
@@ -114,7 +115,8 @@ const posInvoiceLineSchema = z.object({
   productId: z.string().nullable(),
   externalId: z.string().nullable(),
   name: z.string(),
-  displayName: z.object({ ja: z.string(), en: z.string() }).optional(),
+  displayName: localizedSchema(z.string()).optional(),
+  transliteration: localizedSchema(z.string()).optional(),
   quantity: z.number().int().positive(),
   unitPrice: z.number().int().nonnegative(),
   referencePrice: z.number().int().nonnegative(),
@@ -123,7 +125,7 @@ const posInvoiceLineSchema = z.object({
       id: z.string(),
       externalId: z.string().nullable(),
       name: z.string(),
-      displayName: z.object({ ja: z.string(), en: z.string() }).optional(),
+      displayName: localizedSchema(z.string()).optional(),
       quantity: z.number().int().positive(),
       price: z.number().int(),
       referencePrice: z.number().int(),

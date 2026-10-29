@@ -38,7 +38,7 @@ const localPage = z.object({
       kind: z.enum(["product", "option"]),
       id: z.string(),
       productId: z.string().nullable(),
-      name: z.object({ ja: z.string(), en: z.string() }),
+      name: posSettingsSchema.shape.products.element.shape.name,
       price: z.number(),
       available: z.boolean().nullable(),
     }),
@@ -322,6 +322,47 @@ it("書込scopeで全対応を保存し、古いrevision・無効ID・所属外�
   ]);
   await expect(connectPos(token, configured(), "tablecast-other-pos-store")).rejects.toMatchObject({
     code: 403,
+  });
+});
+
+it("MCPと設定HTTPは英語が未翻訳でも登録済みの韓国語・中国語名を落とさない", async () => {
+  const { cookie } = await setupPosFixture();
+  const config = structuredClone(configuration);
+  const product = config.products.find((value) => value.id === "coffee");
+  const option = product?.modifiers[0]?.options.find((value) => value.id === "oat");
+  if (!product || !option) throw new Error("多言語商品のfixtureがありません");
+  delete product.text.en;
+  product.text.ko = { ...product.text.ja, displayName: "카페라테", transliteration: "Kape latte" };
+  product.text["zh-Hans"] = { ...product.text.ja, displayName: "拿铁", transliteration: "Na tie" };
+  delete option.text.en;
+  option.text.ko = { ...option.text.ja, displayName: "귀리 우유" };
+  option.text["zh-Hans"] = { ...option.text.ja, displayName: "燕麦奶" };
+  await fixtureDb
+    .update(stores)
+    .set({ config_json: JSON.stringify(config) })
+    .where(eq(stores.id, "tablecast-store"));
+  const client = await connectPos(await authorisePos(cookie, "tablecast:read"), configured());
+  const page = posToolData(
+    await client.callTool({ name: "get_pos_settings", arguments: {} }),
+    localPage,
+  );
+  expect(page.items.find((item) => item.id === "coffee")?.name).toEqual({
+    ja: "カフェラテ",
+    ko: "카페라테",
+    "zh-Hans": "拿铁",
+  });
+  expect(page.items.find((item) => item.id === "oat")?.name).toEqual({
+    ja: "オーツミルク",
+    ko: "귀리 우유",
+    "zh-Hans": "燕麦奶",
+  });
+  const response = await request("/api/admin/stores/tablecast-store/pos", cookie);
+  expect(response.status).toBe(200);
+  const settings = posSettingsSchema.parse(await response.json());
+  expect(settings.products.find((item) => item.id === "coffee")?.name).toEqual({
+    ja: "カフェラテ",
+    ko: "카페라테",
+    "zh-Hans": "拿铁",
   });
 });
 

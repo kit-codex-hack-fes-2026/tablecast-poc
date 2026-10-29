@@ -1,6 +1,8 @@
+import { uiLocale } from "@tablecast/api/localization";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FileCheck2, Pencil } from "lucide-react";
+import { useMemo } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
 import { PageHeader } from "../../components/page-header";
@@ -82,17 +84,24 @@ function CastEditAction({
 }) {
   const { locale, t } = useI18n();
   const navigate = useNavigate();
-  const language = t(target.endsWith("ja") ? "common_ja" : "common_en");
+  const languageNames = useMemo(
+    () => new Intl.DisplayNames([locale], { type: "language" }),
+    [locale],
+  );
+  const language =
+    target === "proactive"
+      ? ""
+      : (languageNames.of(target.slice(target.indexOf("-") + 1)) ?? target);
   const label =
     target === "proactive"
       ? t("cast_edit_proactive")
       : target.startsWith("system")
         ? `${t("cast_edit_system")} (${language})`
         : target.startsWith("instructions")
-          ? m.cast_edit_instructions({ language }, { locale })
+          ? m.cast_edit_instructions({ language }, { locale: uiLocale(locale) })
           : target.startsWith("opening")
             ? `${t("cast_edit_opening")} (${language})`
-            : m.cast_edit_voice({ language }, { locale });
+            : m.cast_edit_voice({ language }, { locale: uiLocale(locale) });
   return draftId ? (
     <Button
       nativeButton={false}

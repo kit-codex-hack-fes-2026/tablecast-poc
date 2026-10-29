@@ -1,4 +1,5 @@
 import type { Catalog, Product } from "@tablecast/api/schema";
+import { resolveLocalized, resolveText } from "@tablecast/api/localization";
 import { useState } from "react";
 import { tv } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
@@ -42,7 +43,7 @@ export function MenuBanners({
                     height={600}
                     sizes="100vw"
                     src={`/media/${banner.image.imageKey}`}
-                    alt={banner.image.alt[locale]}
+                    alt={resolveLocalized(banner.image.alt, locale)}
                     className="block h-auto w-full"
                     onError={() => setFailed((keys) => new Set([...keys, banner.image.imageKey]))}
                   />
@@ -55,7 +56,7 @@ export function MenuBanners({
                       <button
                         key={spot.id}
                         type="button"
-                        aria-label={product.text[locale].displayName}
+                        aria-label={resolveText(product.text, locale).displayName}
                         disabled={!product.available}
                         onClick={() => onChoose(product)}
                         className="group absolute rounded-sm border-2 border-transparent hover:border-primary focus-visible:border-primary focus-visible:bg-card/30"
@@ -70,7 +71,7 @@ export function MenuBanners({
                           aria-hidden
                           className="pointer-events-none absolute left-0 top-0 max-w-full rounded bg-card px-2 py-1 text-xs text-foreground opacity-0 group-focus-visible:opacity-100"
                         >
-                          {product.text[locale].displayName}
+                          {resolveText(product.text, locale).displayName}
                         </span>
                       </button>
                     );
@@ -90,7 +91,7 @@ export function MenuBanners({
                       disabled={!product.available}
                       onClick={() => onChoose(product)}
                     >
-                      {product.text[locale].displayName}
+                      {resolveText(product.text, locale).displayName}
                       {!product.available && ` · ${t("kiosk_sold_out")}`}
                     </Button>
                   ) : null;

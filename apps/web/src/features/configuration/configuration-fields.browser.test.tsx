@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
@@ -41,7 +42,7 @@ it.each(["ja", "en"] as const)(
     await aliases.fill("検索名1\n検索名2");
     const expected = structuredClone(product.text);
     expected[locale] = {
-      ...expected[locale],
+      ...resolveLocalized(expected, locale),
       displayName: "更新した商品",
       description: "更新した説明",
       aliases: ["検索名1", "検索名2"],

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { product, table } from "../../../.storybook/tablecast-fixtures";
 import { TableCalendar } from "./table-calendar";
@@ -137,7 +138,10 @@ export const Dense: Story = {
                 id: "tablecast-plan",
                 text: {
                   ja: { ...product.text.ja, displayName: "90分飲み放題" },
-                  en: { ...product.text.en, displayName: "90-minute drinks plan" },
+                  en: {
+                    ...resolveLocalized(product.text, "en"),
+                    displayName: "90-minute drinks plan",
+                  },
                 },
                 pricePerPerson: 2000,
                 durationMinutes: 90,

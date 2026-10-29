@@ -48,7 +48,7 @@ it("未認証端末・別店舗・不正localeや長いカーソルはprovider�
     { path: `${base}/voices?locale=ja`, cookie: `tablecast.device=${deviceToken}`, status: 401 },
     { path: "/api/admin/stores/tablecast-other-store/voices?locale=ja", cookie, status: 403 },
     { path: `${base}/voices`, cookie, status: 400 },
-    { path: `${base}/voices?locale=fr`, cookie, status: 400 },
+    { path: `${base}/voices?locale=fr_invalid`, cookie, status: 400 },
     { path: `${base}/voices?locale=ja&locale=en`, cookie, status: 400 },
     { path: `${base}/voices?locale=ja&pageToken=${"x".repeat(2049)}`, cookie, status: 400 },
   ];

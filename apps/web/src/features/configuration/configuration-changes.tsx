@@ -1,5 +1,6 @@
 import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
+import { resolveText } from "@tablecast/api/localization";
 import { castInstructionSchema } from "@tablecast/api/schema";
 import { ArrowRight, Minus, Pencil, Plus } from "lucide-react";
 import { Children } from "react";
@@ -25,7 +26,7 @@ export function ConfigurationChanges({
       ...configuration.products.flatMap((product) =>
         product.modifiers.flatMap((group) => [group, ...group.options]),
       ),
-    ].map((item) => [item.id, item.text[locale].displayName]),
+    ].map((item) => [item.id, resolveText(item.text, locale).displayName]),
   );
   const labelKeys = new Map(Object.entries(labels));
   function fieldLabel(key: string) {
@@ -60,9 +61,15 @@ export function ConfigurationChanges({
             ? configuration.plans[Number(index)]
             : undefined;
     if (wholeObject)
-      return previousName ?? item?.text[locale].displayName ?? fieldLabel(collection ?? "");
+      return (
+        previousName ??
+        (item ? resolveText(item.text, locale).displayName : undefined) ??
+        fieldLabel(collection ?? "")
+      );
     return [
-      previousName ?? item?.text[locale].displayName ?? fieldLabel(collection ?? ""),
+      previousName ??
+        (item ? resolveText(item.text, locale).displayName : undefined) ??
+        fieldLabel(collection ?? ""),
       ...parts
         .slice(item ? 2 : 1)
         .flatMap((part) =>

@@ -1,10 +1,12 @@
 import type { Catalog, Product } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
 import { Search } from "lucide-react";
 import { memo, type RefObject, useState } from "react";
 import { tv } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
 import { MenuBanners } from "./menu-banners";
 import { ProductCard } from "./product-card";
+import { ProductName } from "./product-name";
 import { StoreLogo } from "./store-logo";
 import { Button } from "./ui/button";
 
@@ -109,7 +111,8 @@ export const ProductMenu = memo(function ProductMenu({
         {products.map((product) => (
           <ProductCard
             key={product.id}
-            name={product.text[locale].displayName}
+            name={<ProductName text={product.text} />}
+            title={resolveText(product.text, locale).displayName}
             price={product.price}
             available={product.available}
             imageKey={product.imageKey}
@@ -176,7 +179,7 @@ function MenuCategories({
             aria-pressed={category === item.id}
             onClick={() => onCategoryChange(item.id)}
           >
-            {item.text[locale].displayName}
+            {resolveText(item.text, locale).displayName}
           </Button>
         ))}
       </fieldset>

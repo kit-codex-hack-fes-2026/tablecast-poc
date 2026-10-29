@@ -198,6 +198,7 @@ export function PosCheckoutSummary({
               id: line.id,
               productId: line.productId,
               name: line.displayName ?? { ja: line.name, en: line.name },
+              transliteration: line.transliteration,
               quantity: line.quantity,
               unitPrice: line.unitPrice,
               total: line.total,

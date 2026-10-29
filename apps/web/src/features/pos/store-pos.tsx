@@ -1,4 +1,5 @@
 import type { PosCatalog, PosSettings } from "@tablecast/api/schema";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { useStore as useFormStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useHydrated } from "@tanstack/react-router";
@@ -131,7 +132,9 @@ export function StorePosSettings({
             parentRequired={!!row.option && !row.parentId}
             kind={row.kind}
             name={
-              row.option ? `${row.product.name[locale]} · ${row.name[locale]}` : row.name[locale]
+              row.option
+                ? `${resolveLocalized(row.product.name, locale)} · ${resolveLocalized(row.name, locale)}`
+                : resolveLocalized(row.name, locale)
             }
             candidates={row.candidates}
             loaded={row.loaded}

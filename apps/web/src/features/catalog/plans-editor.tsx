@@ -1,3 +1,4 @@
+import { resolveText } from "@tablecast/api/localization";
 import { type Plan } from "@tablecast/api/schema";
 import { Clock, Languages, ListFilter, SlidersHorizontal } from "lucide-react";
 import type { EditorProps } from "../configuration/configuration-editor-model";
@@ -75,7 +76,7 @@ export function PlansEditor({ value, onChange, disabled, selectedId }: EditorPro
             value={plan.productIds}
             options={value.products.map((item) => ({
               id: item.id,
-              label: item.text[locale].displayName,
+              label: resolveText(item.text, locale).displayName,
             }))}
             onChange={(productIds) => update({ productIds })}
           />
@@ -84,7 +85,7 @@ export function PlansEditor({ value, onChange, disabled, selectedId }: EditorPro
             value={plan.categoryIds}
             options={value.categories.map((item) => ({
               id: item.id,
-              label: item.text[locale].displayName,
+              label: resolveText(item.text, locale).displayName,
             }))}
             onChange={(categoryIds) => update({ categoryIds })}
           />
@@ -100,7 +101,7 @@ export function PlansEditor({ value, onChange, disabled, selectedId }: EditorPro
               item.modifiers.flatMap((modifier) =>
                 modifier.options.map((option) => ({
                   id: option.id,
-                  label: `${item.text[locale].displayName} · ${modifier.text[locale].displayName} · ${option.text[locale].displayName}`,
+                  label: `${resolveText(item.text, locale).displayName} · ${resolveText(modifier.text, locale).displayName} · ${resolveText(option.text, locale).displayName}`,
                 })),
               ),
             )}

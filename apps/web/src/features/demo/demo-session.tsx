@@ -1,4 +1,5 @@
 import type { Demo, DemoUpdate } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
 import { configurationIssueSchema } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -154,7 +155,7 @@ export function DemoSession({
               { value: "none", label: t("demo_no_plan") },
               ...data.configuration.plans.map((plan) => ({
                 value: plan.id,
-                label: plan.text[locale].displayName,
+                label: resolveText(plan.text, locale).displayName,
               })),
             ]}
             onChange={(value) => update.mutate({ planId: value === "none" ? null : value })}

@@ -261,7 +261,7 @@ Squareの接続環境は`TABLECAST_SQUARE_ENVIRONMENT`で選び、未指定は`p
 
 接続環境・Application IDはAPI Workerの非秘密varsへ、`TABLECAST_SQUARE_APPLICATION_SECRET`・`TABLECAST_SQUARE_WEBHOOK_SIGNATURE_KEY`・`TABLECAST_POS_ENCRYPTION_SECRET`は既存のActions secret `TABLECAST_RUNTIME_SECRETS`のJSONからAPI Workerのsecretへ渡す。Web Workerへ5項目を渡さず、秘密値を公開assets・イメージへ含めない。有効な配備では環境に一致したApplication ID・application secretと秘密値3つが必要で、欠落や32文字未満の暗号化secretは遠隔資源を変更する前に拒否する。
 
-`TABLECAST_POS_ENCRYPTION_SECRET`は保存済みOAuth tokenの復号に使う固定値とし、通常の再配備や認証master変更で再生成しない。値や接続環境を変更するときは既存の会計を照合し、切替先で管理者が接続し直す。APIの既存migrationでPOSテーブル・会計固定triggerを適用し、同じアプリ・環境・署名鍵に対応する公開HTTPSのcallbackとWebhookをSquare側へ登録する。URLと操作は[セットアップ](setup.md#square接続)に従う。
+`TABLECAST_POS_ENCRYPTION_SECRET`は保存済みOAuth tokenの復号に使う固定値とし、通常の再配備や認証master変更で再生成しない。値や接続環境を変更するときは既存の会計を照合し、切替先で管理者が接続し直す。`0034_tablecast_pos.sql`でPOSテーブル・会計固定triggerを適用し、同じアプリ・環境・署名鍵に対応する公開HTTPSのcallbackとWebhookをSquare側へ登録する。旧番号`0033_tablecast_pos.sql`を適用済みのPRプレビューは、既存テーブルを再作成せず、既存データを保持して新番号へ追従する。URLと操作は[セットアップ](setup.md#square接続)に従う。
 
 本番接続のコード対応と外部の実施結果は分ける。実資格が未設定の現時点では本番の実決済・実機試験・配備を行わず、実施するときは対象と実行範囲を別途確定する。通常CIは明示的なSandbox設定とHTTP差替えを使い、資格付きSandbox確認も本番受入の証拠へ置き換えない。
 
@@ -274,3 +274,9 @@ preview/stagingでLangfuse Cloud日本リージョンを使う場合は、同じ
 `0030_tablecast_media_assets.sql`を適用してから、既存の配備準備・seedの`migrateImageAssets`を実行する。公開設定・下書き・過去release・デモ・クーポンの参照と既存索引を集め、R2に保存済みの画像から実寸とBlurHashを生成する。店舗とキーの複合主キーで所有関係を分離し、設定JSONと共有されているR2本体は書き換えない。R2のアップロード所有者と異なる店舗への索引化は拒否する。旧4×3の28文字の行は6×4の52文字へ再生成して更新し、更新済みの行は再利用する。同じ物理キーの解析は一実行中に一度だけ行う。失敗後は同じ処理を再実行する。
 
 索引移行の`tablecast.media_migration`ログに追加・更新件数とR2に存在しない参照を記録する。欠損画像は配信404のままとし、架空の寸法・BlurHashで埋めない。配備前に欠損が既知の削除済み下書きなのか公開中の画像なのか確認する。productionでもseedの初期投入とは独立して索引移行を実施する。画像配信を切り替える前に索引生成を完了させる。旧`/media/*`は再開せず、rollback時も匿名公開へ戻さない。既存の端末キャッシュは一括削除しない。
+
+## 店舗コンテンツの言語コード移行
+
+`0033_tablecast_content_languages.sql`は`table_sessions`・`voice_turns`の言語制約を拡張する。テーブルをコピーして再作成し、既存行・索引・timeline用生成列を保持する。注文・決済・保存済み注文スナップショットは更新しない。
+
+商品設定は意味訳`displayName`と転写`transliteration`の組が必須となる。旧configurationの自動補完は行わないため、既存環境へ配備する前に対象店舗の設定を新schemaに揃える。ローカルseed店舗は[設定の再作成](setup.md#多言語seedの店舗設定を再作成する)で置き換えられる。公開環境のデータをローカル専用オプションや全体リセットで変換したことにしない。通常配備のseedは既存設定を保持する。

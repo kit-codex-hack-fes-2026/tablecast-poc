@@ -1,23 +1,29 @@
 import { type Locale, localeSchema } from "@tablecast/api/schema";
-import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
+import { type ReactNode, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { LanguageLabel } from "../../components/language-label";
 import * as Tabs from "../../components/ui/tabs";
 import { useI18n } from "../../i18n/locale";
+import { ConfigurationLanguages } from "./configuration-languages-context";
 
 /** 言語を同じ幅で編集し、切り替えても未保存内容と入力履歴を保つ。 */
+
 export function LanguageFields({
   children,
   value,
   onValueChange,
+  languages: availableLanguages,
 }: {
   children: (language: Locale, labelId: string) => ReactNode;
+  languages?: readonly string[];
   onValueChange?: (language: Locale) => void;
   value?: Locale;
 }) {
+  const configuredLanguages = useContext(ConfigurationLanguages);
+  const languages = availableLanguages ?? configuredLanguages;
   const id = useId();
   const { locale, t } = useI18n();
-  const [selection, setSelection] = useState<Locale>(locale);
-  const selected = value ?? selection;
+  const [selection, setSelection] = useState<Locale>(languages.includes(locale) ? locale : "ja");
+  const selected = value ?? (languages.includes(selection) ? selection : "ja");
   const invalidField = useRef<null | {
     field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
     language: Locale;
@@ -47,13 +53,13 @@ export function LanguageFields({
       className="min-w-0 space-y-5"
     >
       <Tabs.List aria-label={t("common_language")} className="max-w-full">
-        {localeSchema.options.map((language) => (
+        {languages.map((language) => (
           <Tabs.Tab key={language} value={language}>
             <LanguageLabel locale={language} />
           </Tabs.Tab>
         ))}
       </Tabs.List>
-      {localeSchema.options.map((language) => (
+      {languages.map((language) => (
         <Tabs.Panel
           key={language}
           value={language}

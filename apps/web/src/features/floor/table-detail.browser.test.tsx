@@ -1,4 +1,5 @@
 import type { Catalog, OptionCondition, TableState } from "@tablecast/api/schema";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -38,11 +39,11 @@ it("店側の日本語カートで卓と同じ版のカタログから未充足�
   owner.id = "a7f284ce-61f5-4d64-a77d-55740574cb38";
   target.id = "417aa3eb-d940-46c9-b284-4e3d477f4cf2";
   owner.text.ja.displayName = "ホイップ";
-  owner.text.en.displayName = "Whipped cream";
+  resolveLocalized(owner.text, "en").displayName = "Whipped cream";
   target.text.ja.displayName = "チョコレート";
-  target.text.en.displayName = "Chocolate";
+  resolveLocalized(target.text, "en").displayName = "Chocolate";
   group.text.ja.displayName = "トッピング";
-  group.text.en.displayName = "Toppings";
+  resolveLocalized(group.text, "en").displayName = "Toppings";
   group.kind = "multiple";
   group.max = 2;
   const expression: OptionCondition = { kind: "option", optionId: target.id };
@@ -192,7 +193,9 @@ it("店側の日本語カートで卓と同じ版のカタログから未充足�
     )
     .toBeVisible();
   await expect.element(page.getByText(target.id, { exact: true })).not.toBeInTheDocument();
-  await expect.element(page.getByText(orderedLine.name[locale], { exact: true })).toBeVisible();
+  await expect
+    .element(page.getByText(resolveLocalized(orderedLine.name, locale), { exact: true }))
+    .toBeVisible();
   expect(document.querySelector("[data-ui='order-card']")?.querySelectorAll("button").length).toBe(
     0,
   );

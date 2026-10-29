@@ -1,4 +1,5 @@
 import { business, createDatabase } from "@tablecast/api/db";
+import { resolveText } from "@tablecast/api/localization";
 import { configurationSchema } from "@tablecast/api/schema";
 import { eq, sql } from "drizzle-orm";
 import { expect } from "vitest";
@@ -36,7 +37,7 @@ export async function seedIntegrity(env: TablecastEnv, credentials: DemoCredenti
   }
   for (const product of products.filter((item) => item.categoryId !== "sake")) {
     expect(product.allergens.note.ja).toContain(product.text.ja.description);
-    expect(product.allergens.note.en).toContain(product.text.en.description);
+    expect(product.allergens.note.en).toContain(resolveText(product.text, "en").description);
   }
   expect(
     products.find((product) => product.id === "tablecast-komorebi-karaage")?.allergens,

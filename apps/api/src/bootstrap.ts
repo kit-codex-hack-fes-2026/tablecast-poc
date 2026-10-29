@@ -3,10 +3,11 @@ import { z } from "zod";
 import * as business from "./db/business-schema";
 import { createDatabase } from "./db/client";
 import { type AuthEnv, createAuth } from "./modules/auth/service";
+import { resolveLocalized } from "./modules/catalog/localization";
 import { configurationErrors } from "./modules/catalog/pricing";
 import { configurationSchema } from "./modules/configuration/model";
 import { DomainError, ensure } from "./platform/errors";
-import { localeSchema } from "./platform/model";
+import { staffLocaleSchema } from "./platform/model";
 const id = z
   .string()
   .min(1)
@@ -24,7 +25,7 @@ export const bootstrapInputSchema = z
         .transform((value) => value.toLowerCase()),
       // 旧CLI入力の互換性だけを保ち、パスワードは保存しない。
       password: z.string().min(12).max(128).optional(),
-      locale: localeSchema,
+      locale: staffLocaleSchema,
     }),
     organization: z.strictObject({
       name,
@@ -44,8 +45,8 @@ export const bootstrapInputSchema = z
         path: ["store", "configuration", ...issue.path],
         message: issue.code,
       });
-    for (const locale of localeSchema.options)
-      if (input.store.configuration.cast.voice[locale] !== null)
+    for (const locale of input.store.configuration.languages)
+      if (resolveLocalized(input.store.configuration.cast.voice, locale) !== null)
         ctx.addIssue({
           code: "custom",
           path: ["store", "configuration", "cast", "voice", locale],

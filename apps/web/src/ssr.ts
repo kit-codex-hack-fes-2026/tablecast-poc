@@ -1,5 +1,8 @@
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
+import { registerDefaultLocale } from "./i18n/runtime-default";
 import { paraglideMiddleware } from "./paraglide/server.js";
+
+registerDefaultLocale();
 
 export default createServerEntry({
   async fetch(request) {
