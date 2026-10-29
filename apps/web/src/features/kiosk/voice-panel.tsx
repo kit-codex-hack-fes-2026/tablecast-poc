@@ -22,6 +22,7 @@ import {
   voiceOperationState,
 } from "./conversation-model";
 import { LocalCamera, useLocalCamera } from "./local-camera";
+import { localCameraDefaults } from "./local-camera-dom";
 import { type VoiceView } from "./voice-connection";
 import { VoiceAttention, VoiceControls } from "./voice-controls";
 import { ConversationEntry, ConversationMessage } from "./voice-conversation-message";
@@ -120,6 +121,11 @@ export function VoicePanelContent({
   const panel = useRef<HTMLElement>(null);
   const cameraArea = useRef<HTMLDivElement>(null);
   const [cameraHeight, setCameraHeight] = useState<number>();
+  // SSRも既定の映像比率・操作高11・間隔1.5と履歴までの間隔3を予約する。
+  const cameraPadding =
+    cameraHeight === undefined
+      ? `calc(${localCameraDefaults.width / localCameraDefaults.aspectRatio}px + var(--spacing) * 15.5)`
+      : `calc(${cameraHeight}px + var(--spacing) * 3)`;
   useLayoutEffect(() => {
     const element = cameraArea.current;
     if (!element) return undefined;
@@ -237,8 +243,8 @@ export function VoicePanelContent({
           <Conversation>
             <ConversationContent
               tabIndex={0}
-              className="relative min-h-full pt-40"
-              style={{ paddingTop: cameraHeight === undefined ? undefined : cameraHeight + 12 }}
+              className="relative min-h-full"
+              style={{ paddingTop: cameraPadding }}
             >
               <VoiceWelcome
                 view={view}

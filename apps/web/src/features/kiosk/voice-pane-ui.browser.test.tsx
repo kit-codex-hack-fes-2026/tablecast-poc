@@ -1,3 +1,4 @@
+import { renderToStaticMarkup } from "react-dom/server.browser";
 import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
@@ -6,6 +7,60 @@ import ja from "../../../messages/ja.json";
 import { StoreTheme } from "../../components/store-theme";
 import { event, line, startedAt, Surface } from "./test-support/voice-panel-fixture";
 import { VoicePanel } from "./voice-panel";
+
+it.each(["ja", "en"] as const)(
+  "%sのSSR案内はカメラ余白を予約し、後続の説明と操作で先頭を動かさない",
+  async (locale) => {
+    await page.viewport(1024, 768);
+    for (const width of [224, 240, 402]) {
+      const host = document.createElement("div");
+      try {
+        host.innerHTML = renderToStaticMarkup(
+          <Surface locale={locale}>
+            <div style={{ width, height: width === 402 ? 360 : 692 }}>
+              <VoicePanel view={{ status: "idle" }} lines={[]} onStart={() => {}} />
+            </div>
+          </Surface>,
+        );
+        document.body.appendChild(host);
+        const welcome = host.querySelector('[data-ui="voice-welcome"]');
+        const camera = host.querySelector('[data-ui="camera-window"]');
+        const content = host.querySelector('[role="log"] > div > div');
+        const footer = host.querySelector("footer");
+        if (!welcome || !camera || !content || !footer || !footer.parentElement)
+          throw new Error("SSRの会話領域がありません");
+        const panel = footer.parentElement;
+        expect(Number.parseFloat(getComputedStyle(content).paddingTop)).toBeCloseTo(
+          camera.getBoundingClientRect().height + 12,
+        );
+        const later = [...welcome.children].slice(1);
+        later.forEach((element) => element.remove());
+        footer.remove();
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        const graphic = welcome.firstElementChild;
+        if (!graphic) throw new Error("SSRの案内イラストがありません");
+        const before = graphic.getBoundingClientRect();
+        later.forEach((element) => welcome.appendChild(element));
+        panel.appendChild(footer);
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        const after = graphic.getBoundingClientRect();
+        expect(after.top).toBeCloseTo(before.top);
+        expect(after.left).toBeCloseTo(before.left);
+        expect(welcome.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+          camera.getBoundingClientRect().bottom,
+        );
+        const begin = welcome.querySelector("button");
+        const viewport = host.querySelector('[role="log"]');
+        if (!begin || !viewport) throw new Error("SSRの開始操作がありません");
+        expect(begin.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+          viewport.getBoundingClientRect().bottom,
+        );
+      } finally {
+        host.remove();
+      }
+    }
+  },
+);
 
 it.each(["ja", "en"] as const)(
   "%sの未接続画面は下部の音声操作と履歴を保ち、カメラの周囲へ会話を表示する",
