@@ -98,8 +98,8 @@ it.each(["ja", "en", "zh-Hans", "ko"] as const)(
     await expect.element(conversation.getByText(product.id)).not.toBeInTheDocument();
     for (const [width, height] of [
       [1180, 820],
-      [402, 874],
       [1512, 982],
+      [402, 874],
     ] as const) {
       await page.viewport(width, height);
       await Promise.all(
@@ -109,6 +109,14 @@ it.each(["ja", "en", "zh-Hans", "ko"] as const)(
           ),
         ].flatMap((element) => element.getAnimations().map((animation) => animation.finished)),
       );
+      if (width === 402) {
+        const menu = page.getByRole("tabpanel", { name: labels.kiosk_menu, exact: true });
+        const name = resolveLocalized(product.text, locale);
+        menu
+          .getByText(locale === "ja" ? name.displayName : name.transliteration, { exact: true })
+          .element()
+          .scrollIntoView({ block: "end", behavior: "instant" });
+      }
       const visible = [...document.images].filter((image) => {
         const bounds = image.getBoundingClientRect();
         return (
@@ -148,6 +156,7 @@ it.each(["ja", "en", "zh-Hans", "ko"] as const)(
         path: `../../../test-results/tablecast-seed-${locale}-${width}.png`,
       });
     }
+    await page.viewport(1512, 982);
     const card = conversation.getByRole("button", {
       name: new RegExp(resolveLocalized(product.text, locale).displayName),
     });

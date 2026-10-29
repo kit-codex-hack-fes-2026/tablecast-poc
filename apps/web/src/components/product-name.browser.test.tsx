@@ -125,3 +125,31 @@ it("追加言語の入口は対応言語を全てアイコンで表示し、旗�
   for (const label of trigger.querySelectorAll("span[lang] > span"))
     expect(label.classList.contains("sr-only")).toBe(true);
 });
+
+it.each(["zh-Hans", "ko"])(
+  "%sの選択中は直接表示中の言語アイコンを追加言語の入口へ重複表示しない",
+  async (locale) => {
+    await render(
+      <LocaleProvider initialLocale={locale} persist={false}>
+        <LanguageSwitch
+          availableLanguages={["ja", "en", "zh-Hans", "ko"]}
+          onChange={vi.fn<() => void>()}
+        />
+      </LocaleProvider>,
+    );
+    const trigger = page.getByRole("combobox").element();
+    expect(
+      [...trigger.querySelectorAll("span[lang]")].map((item) => item.getAttribute("lang")),
+    ).toEqual([locale === "ko" ? "zh-Hans" : "ko"]);
+    expect(trigger.querySelectorAll("img")).toHaveLength(1);
+  },
+);
+
+it("対応言語が全て直接表示中なら追加言語の入口を表示しない", async () => {
+  await render(
+    <LocaleProvider initialLocale="fr" persist={false}>
+      <LanguageSwitch availableLanguages={["ja", "en", "fr"]} onChange={vi.fn<() => void>()} />
+    </LocaleProvider>,
+  );
+  expect(page.getByRole("combobox").elements()).toHaveLength(0);
+});

@@ -22,17 +22,15 @@ export function LanguageSwitch({
   onChange: (locale: Locale) => void;
 }) {
   const { locale, t } = useI18n();
-  const tabLanguages = [...new Set<Locale>([...languages, locale])];
-  const otherLanguages = availableLanguages.filter(
-    (language) => !languages.some((tab) => tab === language),
-  );
+  const tabLanguages = new Set<Locale>([...languages, locale]);
+  const otherLanguages = availableLanguages.filter((language) => !tabLanguages.has(language));
   return (
     <fieldset
       data-ui="language-switch"
       className="flex shrink-0 rounded-lg border border-border bg-muted p-1"
       aria-label={t("common_language")}
     >
-      {tabLanguages.map((language) => (
+      {[...tabLanguages].map((language) => (
         <Button
           key={language}
           className="whitespace-nowrap font-medium aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-sm max-xl:px-2 max-sm:px-1.5"

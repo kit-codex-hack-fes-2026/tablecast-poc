@@ -187,7 +187,7 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
     "update_draft",
     {
       description:
-        "依頼された店名・店舗ロゴ（branding）・テーマ（appearance）・チラシ（banners）・商品・価格・売切・画像・選択肢・翻訳・プラン・接客の変更を、最新expectedVersionと全configurationで下書きへ保存する。部分patchではないため他の商品と言語データを保持する。languagesにBCP 47コードを登録でき、商品のtextの各言語にはdisplayName（意味訳）とtransliteration（転写）の両方が必須。英語の日本語転写は長音記号付きヘボン式とし、銘柄は意味訳せず、分類や調理法を短い名詞句で意味訳する。精米歩合や製法の詳細はdisplayNameではなくdescriptionへ分ける。条件は選択肢のconditions.version=2とrequires/excludesのoption・and・or・notで表す。既存conditionsを落とさず、解除はrequires/excludesをnullにする。conditionsと非空の旧requires/excludes配列は併記しない。次にvalidate_draftとget_draft_diffで確認する。架空店の試作値は創作と明示し、実店舗の価格や安全情報は推測しない。公開設定は変更しない。",
+        "依頼された店名・店舗ロゴ（branding）・テーマ（appearance）・チラシ（banners）・商品・価格・売切・画像・選択肢・翻訳・プラン・接客の変更を、最新expectedVersionと全configurationで下書きへ保存する。部分patchではないため他の商品と言語データを保持する。languagesにBCP 47コードを登録でき、商品のtextの各言語にはdisplayName（意味訳）とtransliteration（転写）の両方が必須。英語の日本語転写は長音記号付きヘボン式とし、銘柄は固有名を保持し、分類や調理法は意味を訳す。料理名・材料・調理法・個数等を独断で短縮・省略せず、日本酒や刺身などには何か分かる説明を加える。英語の商品名と転写はsentence caseに揃え、固有名詞と略語の正式表記は保持する。精米歩合や製法の詳細もdescriptionに保持する。条件は選択肢のconditions.version=2とrequires/excludesのoption・and・or・notで表す。既存conditionsを落とさず、解除はrequires/excludesをnullにする。conditionsと非空の旧requires/excludes配列は併記しない。次にvalidate_draftとget_draft_diffで確認する。架空店の試作値は創作と明示し、実店舗の価格や安全情報は推測しない。公開設定は変更しない。",
       inputSchema: {
         draftId: z.string(),
         expectedVersion: z.number().int(),

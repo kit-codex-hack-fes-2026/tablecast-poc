@@ -10,6 +10,12 @@ const translations = ["zh-Hans", "ko"] as const;
 function names(text: Text, product = false) {
   const ja = text.ja;
   const originalEnglish = resolveText(text, "en");
+  const categoryMeaning =
+    ja.displayName === "日本酒"
+      ? "Japanese rice wine"
+      : ja.displayName === "刺身"
+        ? "sliced raw fish"
+        : undefined;
   const kind = seedSakeKinds.find((item) => ja.displayName.endsWith(` ${item.ja}`));
   const brand = kind ? seedSakeNames.get(ja.displayName.split(" ")[1] ?? "") : undefined;
   const entry = product ? seedProductNames.get(ja.displayName) : undefined;
@@ -22,7 +28,10 @@ function names(text: Text, product = false) {
     displayName:
       brand && kind
         ? `Komorebi ${brand.en} ${kind.meaning}`
-        : (entry?.meaning ?? originalEnglish.displayName),
+        : (entry?.meaning ??
+          (categoryMeaning
+            ? `${originalEnglish.displayName} — ${categoryMeaning}`
+            : originalEnglish.displayName)),
     transliteration:
       brand && kind
         ? `Komorebi ${brand.en} ${kind.en}`
