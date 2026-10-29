@@ -6,19 +6,19 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 
 変更に関係する入口を選ぶ。誤字修正などで全仕様や全skillを読む必要はない。仕様は契約であり、実装・検証・配備の証拠ではないため、対象の実物と現在の差分を確認する。
 
-| 作業                                     | 判断と参照先                                                                                                                                                                         |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| コードの実装・設計・リファクタ・レビュー | [minimum-impl](.agents/skills/minimum-impl/SKILL.md)                                                                                                                                 |
-| API・DB・業務操作                        | [tablecast-api](.agents/skills/tablecast-api/SKILL.md)。認証は[authentication.md](docs/authentication.md)、MCPは[mcp.md](docs/mcp.md)、デモは[demo.md](docs/demo.md)                 |
-| Web・SSR・フォーム・UI                   | [tablecast-web](.agents/skills/tablecast-web/SKILL.md)と[UI仕様](docs/ui.md)                                                                                                         |
-| テストの設計・変更                       | [fullstack-web-testing](.agents/skills/fullstack-web-testing/SKILL.md)。runnerと環境は[テスト戦略](docs/testing.md)                                                                  |
-| 静的設定・skills・hooks                  | [tablecast-quality](.agents/skills/tablecast-quality/SKILL.md)                                                                                                                       |
-| Issue・PRの作成・更新                    | [github-issue-pr-ops](.agents/skills/github-issue-pr-ops/SKILL.md)。PR本文の正本は[PRテンプレート](.github/pull_request_template.md)                                                 |
-| Projectsの登録・更新                     | [github-project-ops](.agents/skills/github-project-ops/SKILL.md)                                                                                                                     |
-| 環境構築・agent plugins・MCP接続         | [セットアップ](docs/setup.md)。worktree・起動は[開発環境](docs/development.md)、コンテナは[Dev Container](docs/devcontainer.md)、製品pluginは[codex-plugin.md](docs/codex-plugin.md) |
-| 音声接続・Responses delegation・演技     | [接続](docs/voice/integration.md)と[発話仕様](docs/voice/speech.md)                                                                                                                  |
-| 性能診断・公開配備                       | [観測手順](docs/observability.md)、配備時は[deployment.md](docs/deployment.md)                                                                                                       |
-| 計画・完了判定                           | [着手順](docs/implementation.md)、[進捗](docs/progress.md)、[受入条件](docs/acceptance.md)。他の仕様は[索引](docs/README.md)から探す                                                 |
+| 作業                                     | 判断と参照先                                                                                                                                                                                    |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| コードの実装・設計・リファクタ・レビュー | [minimum-impl](.agents/skills/minimum-impl/SKILL.md)                                                                                                                                            |
+| API・DB・業務操作                        | [tablecast-api](.agents/skills/tablecast-api/SKILL.md)。認証は[authentication.md](docs/authentication.md)、MCPは[mcp.md](docs/mcp.md)、デモは[demo.md](docs/demo.md)                            |
+| Web・SSR・フォーム・UI                   | [tablecast-web](.agents/skills/tablecast-web/SKILL.md)と[UI仕様](docs/ui.md)                                                                                                                    |
+| テストの設計・変更                       | [fullstack-web-testing](.agents/skills/fullstack-web-testing/SKILL.md)。runnerと環境は[テスト戦略](docs/testing.md)                                                                             |
+| 静的設定・skills・hooks                  | [tablecast-quality](.agents/skills/tablecast-quality/SKILL.md)                                                                                                                                  |
+| Issue・PRの作成・更新                    | [github-issue-pr-ops](.agents/skills/github-issue-pr-ops/SKILL.md)と[TableCastの証拠要件](docs/development.md#prの検証と証拠)。PR本文の正本は[PRテンプレート](.github/pull_request_template.md) |
+| Projectsの登録・更新                     | [github-project-ops](.agents/skills/github-project-ops/SKILL.md)                                                                                                                                |
+| 環境構築・agent plugins・MCP接続         | [セットアップ](docs/setup.md)。worktree・起動は[開発環境](docs/development.md)、コンテナは[Dev Container](docs/devcontainer.md)、製品pluginは[codex-plugin.md](docs/codex-plugin.md)            |
+| 音声接続・Responses delegation・演技     | [接続](docs/voice/integration.md)と[発話仕様](docs/voice/speech.md)                                                                                                                             |
+| 性能診断・公開配備                       | [観測手順](docs/observability.md)、配備時は[deployment.md](docs/deployment.md)                                                                                                                  |
+| 計画・完了判定                           | [着手順](docs/implementation.md)、[進捗](docs/progress.md)、[受入条件](docs/acceptance.md)。他の仕様は[索引](docs/README.md)から探す                                                            |
 
 観測履歴の調査では[観測手順](docs/observability.md)からlocal／Cloud・環境・worktreeまたはPR・時間範囲を先に定める。会話・prompt・評価は[Langfuse skill](.agents/skills/langfuse/SKILL.md)、ログは[Loki](.agents/skills/loki/SKILL.md)、traceは[Tempo](.agents/skills/tempo/SKILL.md)、metricsは[PromQL](.agents/skills/promql/SKILL.md)、dashboardは[Dashboarding](.agents/skills/dashboarding/SKILL.md)、Grafana MCP接続は[Assistant MCP](.agents/skills/assistant-mcp/SKILL.md)を使う。
 
@@ -30,7 +30,7 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 
 他worktreeの生成状態・プロセス・コンテナは、下記のマージ後の終了処理を除き操作しない。ロックファイルとDBマイグレーションは統合担当が調整する。変更に関係しない作業ツリーの差分を保つ。
 
-通常の開発branchは`origin/staging`を起点とし、PRの統合先をstagingにする。mainへの通常のマージはstagingからのrelease PRに限定する。stagingへ統合したagentはrelease PRの関連PR・概要・変更内容・移行手順を現在の差分へ更新し、Draft解除・マージ前にも照合する。本文の自動領域と編集領域、集約PRのIssue例外は[release運用](.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#stagingとrelease-pr)に従う。常設stagingの停止・全体リセットをローカル作業の終了処理に含めない。
+通常の開発branchは`origin/staging`を起点とし、PRの統合先をstagingにする。mainへの通常のマージはstagingからのrelease PRに限定する。stagingへ統合したagentはrelease PRの関連PR・概要・変更内容・移行手順を現在の差分へ更新し、Draft解除・マージ前にも照合する。本文の自動領域と編集領域、集約PRのIssue例外は[release運用](docs/deployment.md#release-pr)に従う。常設stagingの停止・全体リセットをローカル作業の終了処理に含めない。
 
 PRタイトルは変更内容が分かる自然な日本語にし、`feat:`や`chore(scope):`などのConventional Commits形式を使わない。Renovateの自動更新PRは例外とし、標準の生成方法で英語commit件名と同じタイトルを使う。コミットメッセージは[コミット規約](.agents/skills/conventional-commit/SKILL.md)に従う。
 
