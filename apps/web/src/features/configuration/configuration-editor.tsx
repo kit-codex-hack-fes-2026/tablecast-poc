@@ -1,4 +1,4 @@
-import { type Configuration, type Locale, localeSchema } from "@tablecast/api/schema";
+import { type Configuration, type Locale } from "@tablecast/api/schema";
 import { AudioLines, MessageSquare } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { CastTarget } from "./menu-model";
@@ -26,7 +26,7 @@ export function CastEditor({
 }) {
   const id = useId();
   const { t, locale } = useI18n();
-  const targetLanguage = localeSchema.options.find((language) =>
+  const targetLanguage = Object.keys(value.instructions).find((language) =>
     focusTarget?.endsWith(`-${language}`),
   );
   const [selection, setSelection] = useState({
@@ -67,7 +67,7 @@ export function CastEditor({
                 id={`${id}-instructions-${itemLanguage}`}
                 labelledBy={`${languageLabelId} ${id}-${itemLanguage}-instructions`}
                 language={itemLanguage}
-                value={value.instructions[itemLanguage]}
+                value={value.instructions[itemLanguage] ?? ""}
                 disabled={disabled}
                 onChange={(instructions) =>
                   onChange({
@@ -110,8 +110,10 @@ export function CastEditor({
                 inputId={`${id}-voice-${itemLanguage}`}
                 language={itemLanguage}
                 labelledBy={languageLabelId}
-                value={value.voice[itemLanguage]}
-                retained={voices.map((voice) => voice[itemLanguage])}
+                value={value.voice[itemLanguage] ?? null}
+                retained={voices.flatMap((voice) =>
+                  voice[itemLanguage] === undefined ? [] : [voice[itemLanguage] ?? null],
+                )}
                 disabled={disabled}
                 onChange={(voiceId) =>
                   onChange({ ...value, voice: { ...value.voice, [itemLanguage]: voiceId } })

@@ -1,5 +1,6 @@
 import { Dialog as PaneDialog } from "@base-ui/react/dialog";
 import { Toast } from "@base-ui/react/toast";
+import { resolveLocalized, resolveText } from "@tablecast/api/localization";
 import {
   type CartLine,
   type CoreState,
@@ -446,7 +447,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             <CartLines lines={snapshot.lines} products={catalog.data?.configuration.products} />
             {snapshot.plan && (
               <p>
-                {t("kiosk_plan")}: {snapshot.plan.name[locale]}
+                {t("kiosk_plan")}: {resolveLocalized(snapshot.plan.name, locale)}
               </p>
             )}
           </section>
@@ -608,7 +609,10 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           </div>
           {renderVisitTools()}
           <div className="ml-auto flex shrink-0 items-center gap-1">
-            <LanguageSwitch onChange={(next) => language.mutate(next)} />
+            <LanguageSwitch
+              availableLanguages={catalog.data?.configuration.languages}
+              onChange={(next) => language.mutate(next)}
+            />
             <CurrencySelector compact />
           </div>
         </div>
@@ -649,7 +653,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     return (
       <div className="border-b border-border px-4 py-2">
         <div className="flex flex-wrap justify-between gap-2 text-sm">
-          <span>{plan.rules.text[locale].displayName}</span>
+          <span>{resolveText(plan.rules.text, locale).displayName}</span>
           <small className="text-xs text-muted-foreground whitespace-nowrap">
             {t("kiosk_last_order")}{" "}
             {time(
@@ -911,7 +915,11 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                           className="absolute inset-0 z-20 bg-overlay/30"
                         />
                         <PaneDialog.Popup
-                          aria-label={selection?.product.text[locale].displayName}
+                          aria-label={
+                            selection
+                              ? resolveText(selection.product.text, locale).displayName
+                              : undefined
+                          }
                           initialFocus={false}
                           finalFocus={() =>
                             detailTrigger.current?.isConnected

@@ -1,4 +1,5 @@
 import type { ConfigurationRelease } from "@tablecast/api/schema";
+import { uiLocale } from "@tablecast/api/localization";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { RotateCcw } from "lucide-react";
@@ -64,7 +65,7 @@ export function ReleaseContent({ storeId, version }: { storeId: string; version:
                 <p>
                   {m.configuration_history_restore_scope(
                     { source: version, current: release.publishedVersion },
-                    { locale },
+                    { locale: uiLocale(locale) },
                   )}
                 </p>
                 <p>{t("configuration_history_restore_note")}</p>
@@ -187,11 +188,14 @@ function ReleaseSummary({ release, storeId }: { release: ConfigurationRelease; s
                 categories: release.configuration.categories.length,
                 plans: release.configuration.plans.length,
               },
-              { locale },
+              { locale: uiLocale(locale) },
             )}
           </p>
           <h2 className="text-lg font-semibold">
-            {m.configuration_history_compare({ version: release.publishedVersion }, { locale })}
+            {m.configuration_history_compare(
+              { version: release.publishedVersion },
+              { locale: uiLocale(locale) },
+            )}
           </h2>
           {release.changes.length ? (
             <ConfigurationChanges changes={release.changes} configuration={release.configuration} />

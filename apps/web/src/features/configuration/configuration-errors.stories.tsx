@@ -77,10 +77,17 @@ const meta = {
             ja: {
               displayName: "日本酒プラン",
               speechName: "にほんしゅぷらん",
+              transliteration: "にほんしゅぷらん",
               description: "",
               aliases: [],
             },
-            en: { displayName: "Sake plan", speechName: "Sake plan", description: "", aliases: [] },
+            en: {
+              displayName: "Sake plan",
+              speechName: "Sake plan",
+              transliteration: "Sake plan",
+              description: "",
+              aliases: [],
+            },
           },
           pricePerPerson: 2000,
           durationMinutes: 60,

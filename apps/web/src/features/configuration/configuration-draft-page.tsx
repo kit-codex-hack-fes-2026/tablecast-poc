@@ -1,4 +1,5 @@
 import type { ConfigDraft } from "@tablecast/api/schema";
+import { uiLocale } from "@tablecast/api/localization";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -233,7 +234,7 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
           <DialogDescription>
             {m.workflow_publish_impact(
               { store: store.name, version: draft.baseVersion + 1 },
-              { locale },
+              { locale: uiLocale(locale) },
             )}
           </DialogDescription>
           <DialogScroll>

@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
+import { SnapshotProductName } from "../../components/product-name";
 import { Button } from "../../components/ui/button";
 import { ParticipantIdentity } from "../../components/user-identity";
 import { calendarDate } from "../../i18n/format";
@@ -220,7 +221,9 @@ export function CustomerVisit({ storeId, sessionId }: { sessionId: string; store
               <ul className="space-y-2">
                 {order.snapshot.lines.map((line) => (
                   <li key={line.id} className="space-y-2">
-                    <span>{line.name[locale]}</span>
+                    <span>
+                      <SnapshotProductName line={line} />
+                    </span>
                     <span> × {line.quantity}</span>
                     <ConsumptionEditor
                       storeId={storeId}

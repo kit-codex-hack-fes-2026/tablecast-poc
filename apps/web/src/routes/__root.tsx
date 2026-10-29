@@ -6,6 +6,7 @@ import {
   Outlet,
   redirect,
   Scripts,
+  useLocation,
   useMatchRoute,
 } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
@@ -143,8 +144,15 @@ function Root({ children }: { children: ReactNode }) {
   const help = matchRoute({ to: "/help/$lang/$" });
   const helpLocale = help && (help.lang === "ja" || help.lang === "en") ? help.lang : undefined;
   const demo = matchRoute({ to: "/admin/stores/$storeId/demo/$demoId" });
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const staffOnly =
+    !demo &&
+    /^\/(admin|account|billing|organisations|stores|device|consent|invitations|passkey-setup|login|register)(\/|$)/.test(
+      pathname,
+    );
+  const language = helpLocale ?? (staffOnly && getLocale() !== "ja" ? "en" : getLocale());
   return (
-    <html lang={helpLocale ?? getLocale()}>
+    <html lang={language}>
       <head>
         <HeadContent />
       </head>
@@ -153,6 +161,7 @@ function Root({ children }: { children: ReactNode }) {
           key={helpLocale ? `help:${helpLocale}` : demo ? `${demo.storeId}/${demo.demoId}` : "app"}
           initialLocale={helpLocale}
           persist={!demo && !helpLocale}
+          staffOnly={staffOnly}
         >
           <DocumentHead />
           <MotionProvider>{children}</MotionProvider>

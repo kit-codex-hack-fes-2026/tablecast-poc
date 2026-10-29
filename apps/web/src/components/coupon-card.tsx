@@ -1,6 +1,7 @@
 import type { couponRuleSchema } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
 import type { z } from "zod";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { cn, tv } from "tailwind-variants";
 import { dateTime } from "../i18n/format";
 import { useI18n } from "../i18n/locale";
@@ -35,7 +36,7 @@ export function CouponCard({
       <div className={compact ? "flex items-start gap-4 p-4" : undefined}>
         <ProductImage
           src={`${imageBasePath ?? `/api/customer/stores/${storeId}/coupons`}/images/${rules.imageKey}`}
-          alt={rules.title[locale]}
+          alt={resolveLocalized(rules.title, locale)}
           width={600}
           height={rules.presentation?.layout === "portrait" ? 800 : 300}
           sizes={compact ? "96px" : "(max-width: 640px) 100vw, 480px"}
@@ -53,7 +54,7 @@ export function CouponCard({
               compact ? "font-semibold leading-snug wrap-anywhere" : "text-xl font-semibold"
             }
           >
-            {rules.title[locale]}
+            {resolveLocalized(rules.title, locale)}
           </h3>
           <p className={compact ? "text-2xl font-semibold tabular-nums" : "text-3xl font-semibold"}>
             {rules.discountKind === "fixed" ? `¥${rules.discountValue}` : `${rules.discountValue}%`}
@@ -99,7 +100,7 @@ function CouponTerms({ rules }: { rules: z.infer<typeof couponRuleSchema> }) {
   const { t, locale } = useI18n();
   return (
     <div className="space-y-2 text-sm">
-      <p>{rules.description[locale]}</p>
+      <p>{resolveLocalized(rules.description, locale)}</p>
       {rules.discountKind === "percent" && (
         <p>
           {t("coupon_cap")}: ¥{rules.maximumYen}

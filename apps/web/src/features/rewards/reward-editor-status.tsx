@@ -1,3 +1,4 @@
+import { uiLocale } from "@tablecast/api/localization";
 import { Undo2 } from "lucide-react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { useI18n } from "../../i18n/locale";
@@ -18,7 +19,7 @@ export function RewardEditorStatus({
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        {m.reward_editor_version({ version }, { locale })}
+        {m.reward_editor_version({ version }, { locale: uiLocale(locale) })}
       </p>
       {conflict && (
         <p role="status" className="rounded-lg border border-border bg-muted p-4">

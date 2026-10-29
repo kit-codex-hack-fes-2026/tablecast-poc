@@ -6,6 +6,7 @@ import { customerMemberships, customerVisitParticipants } from "../../../db/cust
 import { customerCoupons, customerCouponUses } from "../../../db/rewards-schema";
 import { tableSessions } from "../../../db/table-schema";
 import { ensure } from "../../../platform/errors";
+import { resolveLocalized } from "../../catalog/localization";
 import { pointBillingCorrectionStatements } from "../../customer-points/mutations";
 import {
   eventStatement,
@@ -174,7 +175,7 @@ export async function applyCustomerCoupon(
       token,
       `coupon:${useId}`,
       -discount,
-      `クーポン / Coupon: ${rules.title[table.locale]}`,
+      `クーポン / Coupon: ${resolveLocalized(rules.title, table.locale)}`,
     ),
     ...corrections,
     couponEvent(services, actor.storeId, token, "applied", useId, actor.userId),

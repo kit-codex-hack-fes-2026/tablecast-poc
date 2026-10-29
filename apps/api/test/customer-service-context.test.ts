@@ -222,13 +222,18 @@ it("接客対象の確認済み来店・ポイント・有効券だけを件数�
     moreCoupons: true,
   });
   expect(JSON.stringify(context.customer)).not.toContain(rules.imageKey);
-  await fixtureDb
-    .update(tableSessions)
-    .set({ locale: "en" })
-    .where(eq(tableSessions.id, device.tableSessionId));
-  expect((await customerRecommendationContext(services, device)).customer?.coupons[0]?.title).toBe(
-    "Reward 0",
-  );
+  for (const locale of ["en", "zh-Hans", "ko"]) {
+    await fixtureDb
+      .update(tableSessions)
+      .set({ locale })
+      .where(eq(tableSessions.id, device.tableSessionId));
+    expect(
+      (await customerRecommendationContext(services, device)).customer?.coupons[0],
+    ).toMatchObject({
+      title: "Reward 0",
+      description: rules.description.en,
+    });
+  }
   await updateCustomerPreferences(services, customer, {
     revision: 1,
     shareCompanions: true,

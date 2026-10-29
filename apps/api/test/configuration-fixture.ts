@@ -1,8 +1,20 @@
 import { type Configuration, configurationSchema } from "../src/schema";
 
 export const text = (ja: string, en: string) => ({
-  ja: { displayName: ja, speechName: ja, description: `${ja}の説明`, aliases: [] },
-  en: { displayName: en, speechName: en, description: `${en} description`, aliases: [] },
+  ja: {
+    displayName: ja,
+    transliteration: ja,
+    speechName: ja,
+    description: `${ja}の説明`,
+    aliases: [],
+  },
+  en: {
+    displayName: en,
+    transliteration: en,
+    speechName: en,
+    description: `${en} description`,
+    aliases: [],
+  },
 });
 const allergens = {
   contains: [] as string[],
@@ -12,6 +24,7 @@ const allergens = {
   note: { ja: "スタッフにご確認ください", en: "Please ask a member of staff" },
 };
 export const configuration: Configuration = configurationSchema.parse({
+  languages: ["ja", "en"],
   categories: [{ id: "drinks", text: text("飲み物", "Drinks") }],
   products: [
     {

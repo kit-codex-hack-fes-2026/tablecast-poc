@@ -24,6 +24,8 @@ export const 標準: Story = {
   },
 };
 export const 英語: Story = { ...標準, globals: { locale: "en" } };
+export const 簡体字中国語: Story = { ...標準, globals: { locale: "zh-Hans" } };
+export const 韓国語: Story = { ...標準, globals: { locale: "ko" } };
 const korean = catalogs.find((item) => item.storeId === "tablecast-hanul");
 const burgers = catalogs.find((item) => item.storeId === "tablecast-koharu");
 if (!korean || !burgers) throw new Error("seedの店舗がありません。");

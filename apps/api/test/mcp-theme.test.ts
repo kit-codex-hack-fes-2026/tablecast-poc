@@ -316,6 +316,7 @@ it("架空の二郎系店舗を店名・生成画像・マシマシ・日英接�
     configDraftSchema,
   );
   const configuration = configurationSchema.parse({
+    languages: ["ja", "en"],
     storeName: "麺屋 マシの頂",
     categories: [{ id: "ramen", text: text("ラーメン", "Ramen") }],
     products: [

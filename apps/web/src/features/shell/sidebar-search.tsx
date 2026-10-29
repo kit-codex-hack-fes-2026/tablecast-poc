@@ -394,10 +394,20 @@ function SearchResult({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium group-hover:text-[var(--nav-color)]">
-          <SearchSnippet text={title} tree={titleTree} query={query} locale={locale} />
+          <SearchSnippet
+            text={title}
+            tree={titleTree}
+            query={query}
+            locale={locale === "ja" ? "ja" : "en"}
+          />
         </span>
         <span className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-          <SearchSnippet text={description} tree={tree} query={query} locale={locale} />
+          <SearchSnippet
+            text={description}
+            tree={tree}
+            query={query}
+            locale={locale === "ja" ? "ja" : "en"}
+          />
         </span>
       </span>
       {position <= 4 ? (

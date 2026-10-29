@@ -1,4 +1,5 @@
 import type { Catalog, Locale, StaffCallInput, TableEvent } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
 import type { VoiceView } from "./voice-model";
 import { guideTemplates } from "../configuration/guide-model";
 
@@ -10,7 +11,9 @@ export function assistanceHandoff(
   locale: Locale,
 ): StaffCallInput {
   const selected = catalog?.configuration.guides?.find(
-    (guide) => guide.id === selection.guideId || guide.text[locale].displayName === selection.query,
+    (guide) =>
+      guide.id === selection.guideId ||
+      resolveText(guide.text, locale).displayName === selection.query,
   );
   const topic = guideTemplates.find(
     (item) => item.ja === selection.query || item.en === selection.query,

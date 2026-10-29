@@ -4,6 +4,7 @@ import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import * as business from "../../db/business-schema";
 import { ensure } from "../../platform/errors";
+import { resolveLocalized, resolveText } from "../catalog/localization";
 import { getCatalog } from "../catalog/queries";
 import { createMenuSearch } from "../catalog/search";
 import {
@@ -92,8 +93,11 @@ export async function getServiceGuidance(
     configVersion: catalog.version,
     guides: page.map((guide) => ({
       id: guide.id,
-      text: guide.text[session.locale],
-      links: guide.links.map((link) => ({ label: link.label[session.locale], url: link.url })),
+      text: resolveText(guide.text, session.locale),
+      links: guide.links.map((link) => ({
+        label: resolveLocalized(link.label, session.locale),
+        url: link.url,
+      })),
     })),
     products: productIds.slice(offset, offset + 4).flatMap((id) => {
       const product = configuration.products.find((item) => item.id === id);
@@ -102,8 +106,8 @@ export async function getServiceGuidance(
             {
               id,
               text: {
-                displayName: product.text[session.locale].displayName,
-                speechName: product.text[session.locale].speechName,
+                displayName: resolveText(product.text, session.locale).displayName,
+                speechName: resolveText(product.text, session.locale).speechName,
               },
               price: product.price,
               available: product.available,

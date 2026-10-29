@@ -1,7 +1,5 @@
 import type { Locale } from "@tablecast/api/schema";
-import { Languages } from "lucide-react";
 import { useI18n } from "../i18n/locale";
-import { locales } from "../paraglide/runtime.js";
 import { LanguageLabel } from "./language-label";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "./ui/select";
@@ -17,20 +15,22 @@ const languages = ["ja", "en"] as const;
 export function LanguageSwitch({
   onChange,
   disabled = false,
+  availableLanguages = ["ja", "en"],
 }: {
+  availableLanguages?: readonly Locale[];
   disabled?: boolean;
   onChange: (locale: Locale) => void;
 }) {
   const { locale, t } = useI18n();
-  const tabLanguages = [...new Set<Locale>([...languages, locale])];
-  const otherLanguages = locales.filter((language) => !languages.some((tab) => tab === language));
+  const tabLanguages = new Set<Locale>([...languages, locale]);
+  const otherLanguages = availableLanguages.filter((language) => !tabLanguages.has(language));
   return (
     <fieldset
       data-ui="language-switch"
       className="flex shrink-0 rounded-lg border border-border bg-muted p-1"
       aria-label={t("common_language")}
     >
-      {tabLanguages.map((language) => (
+      {[...tabLanguages].map((language) => (
         <Button
           key={language}
           className="whitespace-nowrap font-medium aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-sm max-xl:px-2 max-sm:px-1.5"
@@ -58,7 +58,11 @@ export function LanguageSwitch({
             aria-label={t("common_language")}
             className="w-auto border-0 bg-transparent shadow-none"
           >
-            <Languages className="size-4" />
+            <span className="inline-flex items-center gap-1.5">
+              {otherLanguages.map((language) => (
+                <LanguageLabel key={language} locale={language} compact />
+              ))}
+            </span>
           </SelectTrigger>
           <SelectContent>
             {otherLanguages.map((language) => (

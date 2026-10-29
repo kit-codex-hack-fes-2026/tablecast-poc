@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
@@ -21,7 +22,7 @@ it.each(["ja", "en"] as const)(
       text: {
         ...base.text,
         [locale]: {
-          ...base.text[locale],
+          ...resolveLocalized(base.text, locale),
           displayName: `${locale === "ja" ? "季節のおすすめ" : "Seasonal recommendation"} ${index} ${"Komorebi".repeat(12)}`,
         },
       },
@@ -100,11 +101,19 @@ it.each(["ja", "en"] as const)(
       );
       const card = row.querySelector("button");
       if (!card) throw new Error("商品を選択できません");
+      const lastProduct = products.at(-1);
+      if (!lastProduct) throw new Error("表示する商品fixtureがありません。");
       expect(card.querySelector("strong")?.textContent).toBe(
-        products.at(-1)?.text[locale].displayName,
+        resolveLocalized(lastProduct.text, locale).displayName,
       );
       expect(card.getBoundingClientRect().width).toBeLessThanOrEqual(176);
-      expect(card.getBoundingClientRect().height).toBeLessThanOrEqual(260);
+      const meaning = card.querySelector("strong");
+      if (!meaning) throw new Error("意味訳の表示がありません。");
+      expect(getComputedStyle(meaning).webkitLineClamp).toBe("none");
+      expect(meaning.scrollHeight).toBeLessThanOrEqual(meaning.clientHeight);
+      expect(meaning.getBoundingClientRect().bottom).toBeLessThan(
+        card.getBoundingClientRect().bottom,
+      );
       expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
       expect(card.textContent).toContain("≈");
       expect(row.getBoundingClientRect().width).toBeLessThanOrEqual(width - 24);

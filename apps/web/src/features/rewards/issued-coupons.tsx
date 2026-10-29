@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
@@ -27,7 +28,7 @@ export function IssuedCoupons({ storeId, canEdit }: { canEdit: boolean; storeId:
       {query.data?.pages.flatMap((page) =>
         page.coupons.map((coupon) => (
           <article key={coupon.id} className="space-y-3 rounded-xl border p-4">
-            <h3>{coupon.rules.title[locale]}</h3>
+            <h3>{resolveLocalized(coupon.rules.title, locale)}</h3>
             <UserIdentity compact user={coupon} />
             <Badge
               variant={

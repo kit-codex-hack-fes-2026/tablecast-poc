@@ -1,5 +1,6 @@
 import type { GameState, Locale } from "@tablecast/api/schema";
 import { Dialog } from "@base-ui/react/dialog";
+import { resolveLocalized, uiLocale } from "@tablecast/api/localization";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Gamepad2 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -166,10 +167,12 @@ export function KioskGames({
                     key={game.id}
                     className="space-y-3 rounded-xl border border-border bg-card p-5"
                   >
-                    <h2 className="text-xl font-semibold">{game.manifest.name[locale]}</h2>
-                    <p>{game.manifest.description[locale]}</p>
+                    <h2 className="text-xl font-semibold">
+                      {resolveLocalized(game.manifest.name, locale)}
+                    </h2>
+                    <p>{resolveLocalized(game.manifest.description, locale)}</p>
                     <p className="whitespace-pre-wrap text-muted-foreground">
-                      {game.manifest.rules[locale]}
+                      {resolveLocalized(game.manifest.rules, locale)}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {m.games_players(
@@ -178,7 +181,7 @@ export function KioskGames({
                           max: game.manifest.maxPlayers,
                           current: players,
                         },
-                        { locale },
+                        { locale: uiLocale(locale) },
                       )}
                     </p>
                     <Button

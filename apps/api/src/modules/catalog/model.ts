@@ -1,20 +1,25 @@
 import { z } from "zod";
 import { id, money } from "../../platform/model";
 import { imageSourceSchema } from "../media/model";
+import { localizedSchema } from "./localization";
+const nameSchema = z.string().min(1).max(150).regex(/\S/).meta({ id: "tablecastName" });
 const contentSchema = z
   .object({
-    displayName: z.string().min(1).max(150),
-    speechName: z.string().min(1).max(150),
-    description: z.string().max(3000),
+    displayName: nameSchema,
+    speechName: z.string().max(150).default(""),
+    description: z.string().max(3000).default(""),
     aliases: z.array(z.string().max(100)).max(30).default([]),
+    transliteration: nameSchema.optional(),
   })
   .strict()
   .meta({ id: "tablecastLocalizedContent" });
 
-export const bilingualSchema = z
-  .object({ ja: contentSchema, en: contentSchema })
-  .strict()
-  .meta({ id: "tablecastBilingualContent" });
+export const bilingualSchema = localizedSchema(contentSchema).meta({
+  id: "tablecastBilingualContent",
+});
+const productTextSchema = localizedSchema(
+  contentSchema.extend({ transliteration: nameSchema }).meta({ id: "tablecastProductName" }),
+).meta({ id: "tablecastProductTexts" });
 
 const imageFields = {
   imageKey: z
@@ -39,13 +44,17 @@ export const conditionLimits = {
   configurationNodes: 65536,
 } as const;
 
-// 深さをschema自体で有限にし、過剰なネストを再帰parseする前に拒否する。
+const conditionOptionSchema = z
+  .object({ kind: z.literal("option"), optionId: id })
+  .strict()
+  .meta({ id: "tablecastConditionOption" });
+
+// 深さをschema自体で有限にし、共通の選択肢節をMCP schemaでも再利用する。
 function conditionAtDepth(depth: number): z.ZodType<OptionCondition> {
-  const leaf = z.object({ kind: z.literal("option"), optionId: id }).strict();
-  if (depth === conditionLimits.depth) return leaf;
+  if (depth === conditionLimits.depth) return conditionOptionSchema;
   const child = conditionAtDepth(depth + 1).meta({ id: `tablecastConditionDepth${depth + 1}` });
   return z.discriminatedUnion("kind", [
-    leaf,
+    conditionOptionSchema,
     z
       .object({
         kind: z.literal("and"),
@@ -124,7 +133,7 @@ export const productSchema = z
   .object({
     id,
     categoryId: id,
-    text: bilingualSchema,
+    text: productTextSchema,
     price: money,
     available: z.boolean(),
     tags: z.array(id).default([]),
@@ -144,7 +153,7 @@ export const productSchema = z
         evidence: z.enum(["verified", "unknown"]),
         crossContact: z.enum(["possible", "unknown", "controlled"]),
         vegan: z.enum(["yes", "no", "unknown"]),
-        note: z.object({ ja: z.string(), en: z.string() }),
+        note: localizedSchema(z.string()),
       })
       .strict(),
   })

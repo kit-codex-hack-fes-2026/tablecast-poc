@@ -22,7 +22,7 @@ export const voiceToolDescriptions = {
   endConversation:
     "もう大丈夫です・今は結構です・That is all, thank youなど、接客が不要という明確な意思で音声を終了する。注文確認へのそれで大丈夫ですは承認であり終了ではない。曖昧なら意図を確認する。終了後の注文操作は行わない。",
   setLanguage:
-    "客の明示依頼で表示と音声の言語をja（日本語）/en（British English）へ切り替える。同じ音声接続と声を維持し、次の応答から新言語を使う。切替後は古い確認や追加の業務操作を続けない。",
+    "客の明示依頼で表示と音声を店舗のlanguagesに登録されたBCP 47言語へ切り替える。同じ音声接続と声を維持し、次の応答から新言語を使う。切替後は古い確認や追加の業務操作を続けない。",
   setDisplayCurrency:
     "客の明示依頼で、この端末の外貨参考表示を変更する。currencyは対応ISOコード、nullは円のみ。価格の外貨質問だけならgetCatalog/getTableStateのquoteCurrencyを使い表示は変更しない。円の注文・会計、音声接続は変更しない。",
   setSpeechSpeed:

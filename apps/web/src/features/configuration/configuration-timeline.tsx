@@ -1,4 +1,5 @@
 import type { ConfigurationHistoryEntry } from "@tablecast/api/schema";
+import { uiLocale } from "@tablecast/api/localization";
 import { Link } from "@tanstack/react-router";
 import { Check, ChevronRight, CornerDownRight, FilePenLine } from "lucide-react";
 import { DateTime } from "../../components/date-time";
@@ -61,7 +62,10 @@ export function ConfigurationTimeline({
                     className="text-base"
                     onClick={(event) => onSelect(entry.version, event.currentTarget)}
                   >
-                    {m.configuration_history_release({ version: entry.version }, { locale })}
+                    {m.configuration_history_release(
+                      { version: entry.version },
+                      { locale: uiLocale(locale) },
+                    )}
                     <ChevronRight aria-hidden="true" className="size-4" />
                   </Button>
                 ) : (
@@ -116,14 +120,17 @@ export function ConfigurationTimeline({
                 </div>
                 {entry.baseVersion !== null && (
                   <p className="text-sm text-muted-foreground">
-                    {m.configuration_history_base({ version: entry.baseVersion }, { locale })}
+                    {m.configuration_history_base(
+                      { version: entry.baseVersion },
+                      { locale: uiLocale(locale) },
+                    )}
                   </p>
                 )}
                 {entry.restoredFromVersion !== null && (
                   <p className="text-sm text-muted-foreground">
                     {m.configuration_history_restored(
                       { version: entry.restoredFromVersion },
-                      { locale },
+                      { locale: uiLocale(locale) },
                     )}
                   </p>
                 )}

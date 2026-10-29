@@ -1,5 +1,6 @@
 import type { TableState, TimelineSession } from "@tablecast/api/schema";
 import { Popover } from "@base-ui/react/popover";
+import { uiLocale } from "@tablecast/api/localization";
 import {
   Bell,
   ChevronRight,
@@ -129,7 +130,7 @@ function VisitSummary({
         </span>
         <span className="inline-flex items-center gap-1.5">
           <Clock3 aria-hidden className="size-4 text-muted-foreground" />
-          {m.floor_elapsed({ minutes: duration }, { locale })}
+          {m.floor_elapsed({ minutes: duration }, { locale: uiLocale(locale) })}
         </span>
         {current && <LanguageLabel locale={current.locale} />}
       </div>
@@ -223,8 +224,14 @@ function VisitList({
         render={<Button variant="ghost" size="icon-sm" className="flex-col gap-0.5 text-xs" />}
         aria-label={
           partial
-            ? m.floor_visits_partial({ table: tableName, count: visits.length }, { locale })
-            : m.floor_visits({ table: tableName, count: visits.length }, { locale })
+            ? m.floor_visits_partial(
+                { table: tableName, count: visits.length },
+                { locale: uiLocale(locale) },
+              )
+            : m.floor_visits(
+                { table: tableName, count: visits.length },
+                { locale: uiLocale(locale) },
+              )
         }
       >
         <History aria-hidden className="size-4" />

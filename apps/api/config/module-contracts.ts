@@ -6,7 +6,7 @@ const moduleContracts = {
   appearance: ["model"],
   auth: ["middleware", "model", "policy", "token", "passkey-policy"],
   billing: ["credentials", "stripe", "usage"],
-  catalog: ["conditions", "model", "pricing", "queries", "search"],
+  catalog: ["conditions", "localization", "model", "pricing", "queries", "search"],
   configuration: [
     "instruction-model",
     "instruction-response",

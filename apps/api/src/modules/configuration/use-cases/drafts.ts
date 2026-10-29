@@ -88,7 +88,7 @@ export async function updateDraft(
         eq(business.configDrafts.version, input.expectedVersion),
         input.instructionFormatVersion === 1
           ? undefined
-          : sql`json_type(${business.configDrafts.config_json}, '$.cast.instructions.ja') = 'text' AND json_type(${business.configDrafts.config_json}, '$.cast.instructions.en') = 'text'`,
+          : sql`NOT EXISTS (SELECT 1 FROM json_each(${business.configDrafts.config_json}, '$.cast.instructions') WHERE type <> 'text')`,
         inArray(business.configDrafts.status, ["draft", "ready"]),
       ),
     );

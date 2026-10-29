@@ -1,3 +1,4 @@
+import { uiLocale } from "@tablecast/api/localization";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useId, useRef } from "react";
@@ -81,7 +82,10 @@ function CouponVisitPicker({ storeId }: { storeId: string }) {
                     />
                   }
                 >
-                  {m.customer_coupon_use_at({ table: visit.tableName }, { locale })}
+                  {m.customer_coupon_use_at(
+                    { table: visit.tableName },
+                    { locale: uiLocale(locale) },
+                  )}
                 </Button>
               </li>
             ))}

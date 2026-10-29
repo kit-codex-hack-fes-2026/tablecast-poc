@@ -37,12 +37,14 @@ test("呼び出しメモと対応済み状態が客と店員で共有され、�
     const text = {
       ja: {
         displayName: "お冷",
+        transliteration: "おひや",
         speechName: "お冷",
         description: "無料のお冷です。こちらからご注文いただけます。",
         aliases: ["お水"],
       },
       en: {
         displayName: "Water",
+        transliteration: "Ohiya",
         speechName: "Water",
         description: "Tap water is free of charge. You can order it here.",
         aliases: ["Glass of water"],

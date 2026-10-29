@@ -1,11 +1,13 @@
 import type { CartLine, Product } from "@tablecast/api/schema";
 import { RadioGroup } from "@base-ui/react/radio-group";
+import { resolveText, uiLocale } from "@tablecast/api/localization";
 import { Minus, Plus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { ConditionSummary } from "../../components/condition-summary";
 import { ErrorNotice } from "../../components/error-notice";
 import { Money, PriceChange } from "../../components/money";
 import { ProductImage } from "../../components/product-image";
+import { ProductName } from "../../components/product-name";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -55,7 +57,7 @@ export function ProductPage({
     <section
       data-ui="product-detail"
       className="@container/product-dialog flex h-full min-h-0 flex-col"
-      aria-label={product.text[locale].displayName}
+      aria-label={resolveText(product.text, locale).displayName}
     >
       <div
         data-ui="product-detail-header"
@@ -69,14 +71,14 @@ export function ProductPage({
             sizes={`${imageSize}px`}
             className="col-start-1 row-span-2 row-start-1 size-32 rounded-lg object-top-left @min-[36rem]/product-dialog:row-span-1 @min-[36rem]/product-dialog:size-40"
             src={`/media/${product.imageKey}`}
-            alt={product.text[locale].displayName}
+            alt={resolveText(product.text, locale).displayName}
           />
         )}
         <div
           className={`min-w-0 py-2 ${product.imageKey ? "col-start-2 row-start-2 @min-[36rem]/product-dialog:row-start-1" : "col-start-1 row-start-1"}`}
         >
           <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold outline-none">
-            {product.text[locale].displayName}
+            <ProductName text={product.text} />
           </h2>
           <div className="mt-3 text-lg font-semibold">
             <Money taxIncluded value={product.price} />
@@ -94,7 +96,9 @@ export function ProductPage({
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 scrollbar-thin">
-        <p className="mb-2 text-sm leading-relaxed">{product.text[locale].description}</p>
+        <p className="mb-2 text-sm leading-relaxed">
+          {resolveText(product.text, locale).description}
+        </p>
         {product.modifiers.length > 0 && (
           <p className="mb-6 text-sm text-muted-foreground">{t("kiosk_option_price_note")}</p>
         )}
@@ -105,7 +109,7 @@ export function ProductPage({
           {product.modifiers.map((group, groupIndex) => (
             <fieldset className="min-w-0 space-y-2" key={group.id}>
               <legend className="flex items-center justify-between gap-3 w-full pb-1 text-sm font-semibold">
-                {group.text[locale].displayName}
+                {resolveText(group.text, locale).displayName}
                 <Badge
                   variant="secondary"
                   data-required={group.min > 0 || undefined}
@@ -113,10 +117,13 @@ export function ProductPage({
                 >
                   {group.min > 0 ? t("kiosk_required") : t("kiosk_optional")} ·{" "}
                   {group.min === group.max
-                    ? m.kiosk_select_exact({ count: group.min }, { locale })
+                    ? m.kiosk_select_exact({ count: group.min }, { locale: uiLocale(locale) })
                     : group.min === 0
-                      ? m.kiosk_select_at_most({ count: group.max }, { locale })
-                      : m.kiosk_select_range({ min: group.min, max: group.max }, { locale })}
+                      ? m.kiosk_select_at_most({ count: group.max }, { locale: uiLocale(locale) })
+                      : m.kiosk_select_range(
+                          { min: group.min, max: group.max },
+                          { locale: uiLocale(locale) },
+                        )}
                 </Badge>
               </legend>
               {group.kind === "single" ? (
@@ -134,7 +141,7 @@ export function ProductPage({
                         group.options.map((option) => option.id),
                       );
                   }}
-                  aria-label={group.text[locale].displayName}
+                  aria-label={resolveText(group.text, locale).displayName}
                   className="grid gap-1"
                 >
                   {group.min === 0 && (
@@ -154,7 +161,7 @@ export function ProductPage({
                         value={option.id}
                         disabled={!option.available || busy}
                         aria-labelledby={`${id}-${groupIndex}-${optionIndex}-name`}
-                        aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
+                        aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${resolveText(option.text, locale).description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                       ></RadioGroupItem>
                       <OptionContent
                         option={option}
@@ -196,7 +203,7 @@ export function ProductPage({
                             onCheckedChange={(checked) => select(option.id, checked ? 1 : 0)}
                             disabled={!option.available || busy}
                             aria-labelledby={`${id}-${groupIndex}-${optionIndex}-name`}
-                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
+                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${resolveText(option.text, locale).description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                           ></Checkbox>
                           <OptionContent
                             option={option}
@@ -229,8 +236,8 @@ export function ProductPage({
                             size="icon-sm"
                             variant="outline"
                             type="button"
-                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
-                            aria-label={`${option.text[locale].displayName}: ${t("common_decrease")}`}
+                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${resolveText(option.text, locale).description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
+                            aria-label={`${resolveText(option.text, locale).displayName}: ${t("common_decrease")}`}
                             disabled={amount === 0 || busy}
                             onClick={() => select(option.id, amount - 1)}
                           >
@@ -247,8 +254,8 @@ export function ProductPage({
                             size="icon-sm"
                             variant="outline"
                             type="button"
-                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
-                            aria-label={`${option.text[locale].displayName}: ${t("common_increase")}`}
+                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${resolveText(option.text, locale).description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
+                            aria-label={`${resolveText(option.text, locale).displayName}: ${t("common_increase")}`}
                             disabled={amount >= option.maxQuantity || !option.available || busy}
                             onClick={() => select(option.id, amount + 1)}
                           >
@@ -269,7 +276,7 @@ export function ProductPage({
             option.conditions &&
             selections.some((selection) => selection.optionId === option.id) ? (
               <div key={option.id} className="my-3 space-y-2 rounded-lg bg-muted p-3 text-sm">
-                <p className="font-semibold">{option.text[locale].displayName}</p>
+                <p className="font-semibold">{resolveText(option.text, locale).displayName}</p>
                 {option.conditions?.requires && (
                   <p>
                     {t("condition_requires")}：

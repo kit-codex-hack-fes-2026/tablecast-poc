@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { ArrowDown, ReceiptText, RefreshCw } from "lucide-react";
@@ -141,7 +142,7 @@ export function BillingOverview({
   const { t, locale } = useI18n();
   function renderUsage() {
     const state = data.usage.aiState;
-    const monthTitle = months[locale].format(data.period.start);
+    const monthTitle = resolveLocalized(months, locale).format(data.period.start);
     return (
       <>
         {state !== "ready" && !data.financial?.checkoutRequired && (

@@ -1,6 +1,7 @@
 import type { ConfirmationRecord, EventRecord, OrderRecord, TableRecord } from "../../db/records";
 import type { Catalog } from "../configuration/model";
 import { DomainError } from "../../platform/errors";
+import { resolveText } from "../catalog/localization";
 import { type PlanContext, priceCart } from "../catalog/pricing";
 import { menuSearchPage } from "../catalog/search";
 import {
@@ -71,11 +72,13 @@ function previewCart(
             ...line,
             name: {
               ja: product?.text.ja.displayName ?? "販売終了した商品",
-              en: product?.text.en.displayName ?? "Unavailable item",
+              en:
+                (product ? resolveText(product.text, "en").displayName : undefined) ??
+                "Unavailable item",
             },
             speechName: {
               ja: product?.text.ja.speechName ?? "商品",
-              en: product?.text.en.speechName ?? "Item",
+              en: (product ? resolveText(product.text, "en").speechName : undefined) ?? "Item",
             },
             options: [],
             unitPrice: product?.price ?? 0,

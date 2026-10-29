@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { type GamePackage, gameStateSchema } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, onTestFinished, vi } from "vitest";
@@ -113,7 +114,7 @@ it("日本語で保存・通信復旧・公開停止・開始遅着を扱う", a
   await page.getByRole("button", { name: labels.games_title, exact: true }).click();
   expect(stopVoice).toHaveBeenCalledOnce();
   await expect
-    .element(page.getByRole("heading", { name: game.manifest.name[locale] }))
+    .element(page.getByRole("heading", { name: resolveLocalized(game.manifest.name, locale) }))
     .toBeVisible();
   await page.getByRole("button", { name: labels.games_start, exact: true }).click();
   await expect
@@ -122,16 +123,20 @@ it("日本語で保存・通信復旧・公開停止・開始遅着を扱う", a
   const key = ["tablecast-game-run", "table", "tablecast-run"];
   failure = 503;
   await client.refetchQueries({ queryKey: key, exact: true });
-  await expect.element(page.getByTitle(game.manifest.name[locale])).not.toBeInTheDocument();
+  await expect
+    .element(page.getByTitle(resolveLocalized(game.manifest.name, locale)))
+    .not.toBeInTheDocument();
   await expect.element(page.getByText(labels.games_unavailable, { exact: true })).toBeVisible();
   failure = 0;
   await client.refetchQueries({ queryKey: key, exact: true });
-  await expect.element(page.getByTitle(game.manifest.name[locale])).toBeVisible();
+  await expect.element(page.getByTitle(resolveLocalized(game.manifest.name, locale))).toBeVisible();
   await expect.poll(() => snapshots).toEqual([{}, { turn: 2, locale, players: 2 }]);
   expect(saves).toHaveLength(1);
   failure = 409;
   await client.refetchQueries({ queryKey: key, exact: true });
-  await expect.element(page.getByTitle(game.manifest.name[locale])).not.toBeInTheDocument();
+  await expect
+    .element(page.getByTitle(resolveLocalized(game.manifest.name, locale)))
+    .not.toBeInTheDocument();
   await page.getByRole("button", { name: labels.games_return, exact: true }).click();
   await expect.poll(() => ended.length).toBe(1);
   await page.getByRole("button", { name: labels.games_title, exact: true }).click();
@@ -162,7 +167,9 @@ it("日本語で保存・通信復旧・公開停止・開始遅着を扱う", a
     await expect
       .element(page.getByRole("button", { name: labels.games_start, exact: true }))
       .toBeEnabled();
-    await expect.element(page.getByTitle(game.manifest.name[locale])).not.toBeInTheDocument();
+    await expect
+      .element(page.getByTitle(resolveLocalized(game.manifest.name, locale)))
+      .not.toBeInTheDocument();
   } finally {
     response.resolve(completed);
     await expect.poll(() => client.isMutating()).toBe(0);

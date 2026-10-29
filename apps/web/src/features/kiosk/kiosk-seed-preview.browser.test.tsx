@@ -1,14 +1,18 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { catalog, product, table } from "../../../.storybook/tablecast-fixtures";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
+import ko from "../../../messages/ko.json";
+import zh from "../../../messages/zh-Hans.json";
 import { fixture, mountKiosk } from "./test-support/kiosk-fixture";
 
-it.each(["ja", "en"] as const)(
+const languages = { ja, en, "zh-Hans": zh, ko };
+it.each(["ja", "en", "zh-Hans", "ko"] as const)(
   "%sの代表画面はseedの店舗設定・商品・価格・実画像を使い、画像読込後に記録する",
   async (locale) => {
-    const labels = locale === "ja" ? ja : en;
+    const labels = languages[locale];
     fixture.current = structuredClone(table);
     fixture.current.locale = locale;
     fixture.catalogResponse = Response.json(catalog);
@@ -31,7 +35,11 @@ it.each(["ja", "en"] as const)(
           text:
             locale === "ja"
               ? "お刺身に合う日本酒はありますか？"
-              : "Which sake goes well with sashimi?",
+              : locale === "zh-Hans"
+                ? "有什么适合搭配生鱼片的清酒？"
+                : locale === "ko"
+                  ? "사시미에 어울리는 사케가 있나요?"
+                  : "Which sake goes well with sashimi?",
         },
       },
       {
@@ -65,7 +73,11 @@ it.each(["ja", "en"] as const)(
           text:
             locale === "ja"
               ? "お造りには月凪がおすすめです。気になる料理はありますか？"
-              : "Tsukinagi pairs well with sashimi. Would you like to hear about it?",
+              : locale === "zh-Hans"
+                ? "月凪很适合搭配生鱼片。想了解一下吗？"
+                : locale === "ko"
+                  ? "쓰키나기는 사시미와 잘 어울려요. 설명해 드릴까요?"
+                  : "Tsukinagi pairs well with sashimi. Would you like to hear about it?",
         },
       },
     ].map((event) => ({
@@ -79,13 +91,15 @@ it.each(["ja", "en"] as const)(
     await mountKiosk();
     const conversation = page.getByRole("region", { name: labels.kiosk_conversation, exact: true });
     await expect
-      .element(conversation.getByText(product.text[locale].displayName, { exact: true }))
+      .element(
+        conversation.getByText(resolveLocalized(product.text, locale).displayName, { exact: true }),
+      )
       .toBeVisible();
     await expect.element(conversation.getByText(product.id)).not.toBeInTheDocument();
     for (const [width, height] of [
       [1180, 820],
-      [402, 874],
       [1512, 982],
+      [402, 874],
     ] as const) {
       await page.viewport(width, height);
       await Promise.all(
@@ -95,6 +109,14 @@ it.each(["ja", "en"] as const)(
           ),
         ].flatMap((element) => element.getAnimations().map((animation) => animation.finished)),
       );
+      if (width === 402) {
+        const menu = page.getByRole("tabpanel", { name: labels.kiosk_menu, exact: true });
+        const name = resolveLocalized(product.text, locale);
+        menu
+          .getByText(locale === "ja" ? name.displayName : name.transliteration, { exact: true })
+          .element()
+          .scrollIntoView({ block: "end", behavior: "instant" });
+      }
       const visible = [...document.images].filter((image) => {
         const bounds = image.getBoundingClientRect();
         return (
@@ -112,6 +134,8 @@ it.each(["ja", "en"] as const)(
         );
       });
       expect(visible.length).toBeGreaterThanOrEqual(2);
+      // 撮影対象の実画像を読み込み、headless iframeのlazy判定に撮影準備を依存させない。
+      for (const image of visible) image.loading = "eager";
       await expect
         .poll(async () => {
           try {
@@ -134,12 +158,13 @@ it.each(["ja", "en"] as const)(
         path: `../../../test-results/tablecast-seed-${locale}-${width}.png`,
       });
     }
+    await page.viewport(1512, 982);
     const card = conversation.getByRole("button", {
-      name: new RegExp(product.text[locale].displayName),
+      name: new RegExp(resolveLocalized(product.text, locale).displayName),
     });
     await card.click();
     const details = page.getByRole("region", {
-      name: product.text[locale].displayName,
+      name: resolveLocalized(product.text, locale).displayName,
       exact: true,
     });
     await expect.element(details).toBeVisible();

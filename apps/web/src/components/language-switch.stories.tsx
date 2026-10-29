@@ -33,3 +33,23 @@ export const English: Story = {
   globals: { locale: "en" },
 };
 export const Disabled: Story = { name: "言語を更新中", args: { disabled: true } };
+
+export const AdditionalLanguageIcons: Story = {
+  name: "追加言語の国旗を文字なしで並べる",
+  args: { availableLanguages: ["ja", "en", "zh-Hans", "ko", "fr"] },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole("combobox");
+    await expect(trigger.querySelectorAll("img")).toHaveLength(3);
+    await expect(
+      [...trigger.querySelectorAll("span[lang]")].map((item) => item.getAttribute("lang")),
+    ).toEqual(["zh-Hans", "ko", "fr"]);
+    for (const text of trigger.querySelectorAll("span[lang] > span"))
+      await expect(text).toHaveClass("sr-only");
+    await userEvent.click(trigger);
+    await userEvent.click(
+      await within(canvasElement.ownerDocument.body).findByRole("option", { name: "한국어" }),
+    );
+    await expect(args.onChange).toHaveBeenCalledWith("ko");
+  },
+};

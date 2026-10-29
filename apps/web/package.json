@@ -8,7 +8,7 @@
     "build": "vite build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts",
     "preview": "bun --env-file=../../.local/.env exec 'vite preview'",
     "typecheck": "node ../../node_modules/@tablecast/typescript-native/bin/tsc --noEmit",
-    "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
+    "i18n:compile": "paraglide-js compile --project ./project.inlang",
     "lint": "oxlint . --type-aware --deny-warnings",
     "format": "oxfmt --write .",
     "test": "vitest run --config vitest.config.ts --project unit",

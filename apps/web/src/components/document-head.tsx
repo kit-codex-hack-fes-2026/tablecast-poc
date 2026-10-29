@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { useMatches } from "@tanstack/react-router";
 import { type SimpleMessageKey, useI18n } from "../i18n/locale";
 
@@ -8,7 +9,7 @@ declare module "@tanstack/react-router" {
 }
 
 type DocumentDetails = {
-  name?: string | { en: string; ja: string };
+  name?: string | { [language: string]: string | undefined; ja: string };
   store?: string;
   title?: SimpleMessageKey;
 };
@@ -41,7 +42,7 @@ export function DocumentHead() {
   const store =
     !missing && !failed ? details.map((detail) => detail.store).findLast(Boolean) : undefined;
   const name = !missing && !failed ? latest?.name : undefined;
-  const objectName = typeof name === "string" ? name : name?.[locale];
+  const objectName = localizedDocumentName(name, locale);
   const title = [objectName, titleKey ? t(titleKey) : undefined, store, "TableCast"]
     .filter(Boolean)
     .join(" · ");
@@ -52,4 +53,9 @@ export function DocumentHead() {
       <meta name="description" content={description} />
     </>
   );
+}
+
+function localizedDocumentName(name: DocumentDetails["name"], locale: string) {
+  if (typeof name === "string") return name;
+  return name ? resolveLocalized(name, locale) : undefined;
 }

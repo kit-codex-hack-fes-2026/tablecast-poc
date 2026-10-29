@@ -7,6 +7,7 @@ import { afterEach, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 import app from "../src/app";
 import { createAuth } from "../src/modules/auth/service";
+import { resolveLocalized } from "../src/modules/catalog/localization";
 import {
   catalogSchema,
   configDraftSchema,
@@ -169,6 +170,7 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
   );
   const configuration = configurationSchema.parse({
     ...published.configuration,
+    languages: ["ja", "en", "fr", "zh-Hans", "ko"],
     products: published.configuration.products.map((product) =>
       product.id === "tea"
         ? {
@@ -178,11 +180,19 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
             imageKind: uploaded.imageKind,
             imageSource: uploaded.imageSource,
             text: {
-              ja: { ...product.text.ja, displayName: "焙じ茶", speechName: "ほうじちゃ" },
+              ...product.text,
+              fr: { displayName: "Thé vert grillé", transliteration: "Hōjicha" },
+              ja: {
+                ...product.text.ja,
+                displayName: "焙じ茶",
+                speechName: "ほうじちゃ",
+                transliteration: "ほうじちゃ",
+              },
               en: {
-                ...product.text.en,
+                ...resolveLocalized(product.text, "en"),
                 displayName: "Roasted tea",
                 speechName: "Roasted tea",
+                transliteration: "Roasted tea",
                 description: "A mellow roasted tea.",
               },
             },
@@ -225,7 +235,8 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
   option.imageKey = "tablecast/images/tablecast-milk.webp";
   option.imageKind = "photograph";
   option.text.ja.description = "白いミルクをグラスに注いだ参考写真です。";
-  option.text.en.description = "A reference photograph of white milk in a glass.";
+  resolveLocalized(option.text, "en").description =
+    "A reference photograph of white milk in a glass.";
   draft = toolData(
     await client.callTool({
       name: "update_draft",

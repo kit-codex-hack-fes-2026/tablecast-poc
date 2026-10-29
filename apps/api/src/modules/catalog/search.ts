@@ -14,6 +14,10 @@ function normalise(value: string) {
   return value
     .normalize("NFKC")
     .toLowerCase()
+    .replace(
+      /[āēīōū]/g,
+      (character) => ({ ā: "a", ē: "e", ī: "i", ō: "o", ū: "u" })[character] ?? character,
+    )
     .replace(/[ァ-ヶ]/g, (character) => String.fromCharCode(character.charCodeAt(0) - 0x60))
     .trim()
     .replace(/\s+/g, " ");
@@ -23,6 +27,7 @@ function searchFields(text: Configuration["categories"][number]["text"]) {
   const names = Object.values(text).flatMap((value) => [
     value.displayName,
     value.speechName,
+    value.transliteration ?? "",
     ...value.aliases,
   ]);
   return {
