@@ -10,7 +10,7 @@ import {
   themeFonts,
   themeParts,
 } from "../appearance/model";
-import { foodClassification } from "../catalog/food-model";
+import { dietaryReasonsByKind, foodClassification } from "../catalog/food-model";
 import { getCatalog } from "../catalog/queries";
 import { configurationSchema } from "../configuration/model";
 import { getDraft } from "../configuration/queries";
@@ -61,7 +61,7 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
         ...(await getCatalog(services, actor.storeId)),
         schema: z.toJSONSchema(configurationSchema),
         locales: ["ja", "en"],
-        foodClassification,
+        foodClassification: { ...foodClassification, dietaryReasons: dietaryReasonsByKind },
       }),
   );
 
@@ -185,7 +185,7 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
     "update_draft",
     {
       description:
-        "依頼された店名・店舗ロゴ（branding）・テーマ（appearance）・チラシ（banners）・商品・価格・売切・画像・選択肢・翻訳・プラン・接客の変更を、最新expectedVersionと全configurationで下書きへ保存する。部分patchではないため他の商品と日英データを保持する。食事制限はfoodInfoのbase・components・defaultComponentIdsと選択肢のfoodChanges.add/removeで設定する。分類外の成分はotherAllergens、29品目の未登録はunknown。4食事区分のyes/noには日英のbasisが必要。削除した具材以外に残る成分を消さず、認証はbasisへ記録する。条件は選択肢のconditions.version=2とrequires/excludesのoption・and・or・notで表す。既存conditionsを落とさず、解除はrequires/excludesをnullにする。conditionsと非空の旧requires/excludes配列は併記しない。次にvalidate_draftとget_draft_diffで確認する。架空店の試作値は創作と明示し、実店舗の価格や安全情報は推測しない。公開設定は変更しない。",
+        "依頼された店名・店舗ロゴ（branding）・テーマ（appearance）・チラシ（banners）・商品・価格・売切・画像・選択肢・翻訳・プラン・接客の変更を、最新expectedVersionと全configurationで下書きへ保存する。部分patchではないため他の商品と日英データを保持する。食事制限はfoodInfoのbase・components・defaultComponentIdsと選択肢のfoodChanges.add/removeで設定する。アレルゲンIDは日本の29品目のenumだけで、未登録はunknown。分類外IDと自由文basisは受け付けない。4食事区分のyes/noにはreasonsのenumを指定し、認証はhalalCertification、共用設備はcrossContactSourcesで設定する。削除した具材以外に残る成分を消さない。条件は選択肢のconditions.version=2とrequires/excludesのoption・and・or・notで表す。既存conditionsを落とさず、解除はrequires/excludesをnullにする。conditionsと非空の旧requires/excludes配列は併記しない。次にvalidate_draftとget_draft_diffで確認する。提供資料と設定値に従い、価格や食事制限の情報は推測しない。公開設定は変更しない。",
       inputSchema: {
         draftId: z.string(),
         expectedVersion: z.number().int(),

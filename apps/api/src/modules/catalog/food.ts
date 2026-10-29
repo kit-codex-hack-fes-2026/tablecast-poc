@@ -3,11 +3,6 @@ import type { CartLine } from "../orders/model";
 import type { Product } from "./model";
 import { dietaryKeys, type FoodProfile, japaneseAllergenSchema } from "./food-model";
 
-const notes = (values: FoodProfile["basis"][]): FoodProfile["basis"] => ({
-  ja: [...new Set(values.map((value) => value.ja).filter(Boolean))].join("\n"),
-  en: [...new Set(values.map((value) => value.en).filter(Boolean))].join("\n"),
-});
-
 export function productFoodErrors(
   product: Product,
   path: (number | string)[] = [],
@@ -71,8 +66,12 @@ export function productFoodInformation(
 
   const result: FoodProfile = {
     allergens: {},
-    otherAllergens: [...new Set(profiles.flatMap((profile) => profile.otherAllergens))],
-    basis: notes(profiles.map((profile) => profile.basis)),
+    crossContactSources: [...new Set(profiles.flatMap((profile) => profile.crossContactSources))],
+    halalCertification: profiles.some((profile) => profile.halalCertification === "not_certified")
+      ? "not_certified"
+      : profiles.some((profile) => profile.halalCertification === "unknown")
+        ? "unknown"
+        : "certified",
     crossContact: profiles.some((profile) => profile.crossContact === "possible")
       ? "possible"
       : profiles.some((profile) => profile.crossContact === "unknown")
@@ -95,11 +94,13 @@ export function productFoodInformation(
         : "yes";
     result.dietary[key] = {
       status,
-      basis: notes(
-        profiles
-          .filter((profile) => profile.dietary[key].status === status)
-          .map((profile) => profile.dietary[key].basis),
-      ),
+      reasons: [
+        ...new Set(
+          profiles
+            .filter((profile) => profile.dietary[key].status === status)
+            .flatMap((profile) => profile.dietary[key].reasons),
+        ),
+      ],
     };
   }
   return result;

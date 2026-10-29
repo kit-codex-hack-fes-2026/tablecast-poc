@@ -60,7 +60,7 @@ describe("デモの構成データ", () => {
     expect(products.some((product) => !product.available)).toBe(true);
     expect(products.some((product) => product.modifiers.some((group) => group.min > 0))).toBe(true);
     expect(products.some((product) => product.foodInfo.base.crossContact === "unknown")).toBe(true);
-    expect(products.some((product) => product.foodInfo.base.otherAllergens.includes("fish"))).toBe(
+    expect(products.some((product) => product.foodInfo.base.allergens.salmon === "contains")).toBe(
       true,
     );
     expect(

@@ -24,6 +24,10 @@ it("MCPで日本の分類と具材の増減を設定し、根拠と参照を往�
     configDraftSchema,
   );
   const configuration = { ...draft.configuration, products: [foodProduct()] };
+  const base = configuration.products[0]?.foodInfo.base;
+  if (!base) throw new Error("食事情報がありません");
+  base.halalCertification = "not_certified";
+  base.crossContactSources = ["shared_equipment"];
   draft = toolData(
     await client.callTool({
       name: "update_draft",

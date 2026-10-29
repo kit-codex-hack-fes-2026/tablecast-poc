@@ -23,7 +23,7 @@ export const rice: Food[] = [
       "ご飯、焼きざけ、選んだ出汁を合わせます",
       "Rice and grilled salmon with your chosen broth",
     ],
-    contains: ["fish"],
+    contains: ["salmon"],
   },
   {
     id: "udon",

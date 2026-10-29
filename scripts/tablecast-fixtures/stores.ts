@@ -65,13 +65,7 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
           imageKey: demoImageKey(`komorebi-sake-${id}.webp`),
           imageKind: "illustration",
           modifiers: modifiers(kind === "sparkling" ? ["serving"] : ["temperature", "serving"]),
-          foodInfo: allergenRecord(
-            [],
-            [
-              `${kindJa}。製造原材料の詳細は未登録です`,
-              `${kindEn}; detailed production ingredients are not recorded`,
-            ],
-          ),
+          foodInfo: allergenRecord([]),
         };
       },
     );
@@ -104,7 +98,7 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
         imageKey: demoImageKey(`komorebi-${item.id}.webp`),
         imageKind: "illustration",
         modifiers: modifiers(item.groups),
-        foodInfo: allergenRecord(item.contains, item.ingredients),
+        foodInfo: allergenRecord(item.contains),
       });
     });
     const featuredIds = [

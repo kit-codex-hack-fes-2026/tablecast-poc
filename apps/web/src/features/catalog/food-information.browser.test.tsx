@@ -110,16 +110,22 @@ it.each(["ja", "en"] as const)(
       </QueryClientProvider>,
     );
     await screen.getByText(labels.food_base, { exact: true }).click();
-    await userEvent.selectOptions(
-      screen.getByRole("combobox", { name: locale === "ja" ? "乳" : "Milk", exact: true }),
-      "contains",
-    );
+    await screen
+      .getByRole("combobox", { name: locale === "ja" ? "乳" : "Milk", exact: true })
+      .click();
+    await page.getByRole("option", { name: labels.food_contains, exact: true }).click();
     const halal = screen.getByRole("group", { name: labels.food_halal, exact: true });
-    await userEvent.selectOptions(halal.getByRole("combobox"), "no");
-    await halal.getByRole("tab", { name: "日本語", exact: true }).click();
-    await halal.getByRole("textbox").fill("原材料にアルコールを含む。認証なし。");
-    await halal.getByRole("tab", { name: "English", exact: true }).click();
-    await halal.getByRole("textbox").fill("Contains alcohol. No certification.");
+    await userEvent.selectOptions(
+      halal.getByRole("combobox", { name: labels.food_suitability, exact: true }),
+      "no",
+    );
+    await halal.getByRole("checkbox", { name: labels.food_reason_alcohol, exact: true }).click();
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: labels.food_halal_certification, exact: true }),
+      "not_certified",
+    );
+    await screen.getByRole("checkbox", { name: labels.food_contact_oil, exact: true }).click();
+    await expect.element(halal.getByRole("textbox")).not.toBeInTheDocument();
     await screen
       .getByText(locale === "ja" ? "乳の具材" : "Milk component", { exact: true })
       .first()
@@ -137,6 +143,13 @@ it.each(["ja", "en"] as const)(
       .toContain('"defaultComponentIds":["milk"]');
     await expect.poll(() => saved.element().textContent).toContain('"add":["milk"]');
     await expect.poll(() => saved.element().textContent).toContain('"status":"no"');
+    await expect.poll(() => saved.element().textContent).toContain('"reasons":["alcohol"]');
+    await expect
+      .poll(() => saved.element().textContent)
+      .toContain('"halalCertification":"not_certified"');
+    await expect
+      .poll(() => saved.element().textContent)
+      .toContain('"crossContactSources":["shared_frying_oil"]');
   },
 );
 
@@ -147,10 +160,6 @@ it("選択を変えた後の遅い応答を捨て、失敗時に入力を維持�
   const updated = {
     ...unknownFoodProfile(),
     allergens: { milk: "not_used" as const },
-    basis: {
-      ja: "乳の具材を除去した登録情報",
-      en: "Recorded information with the milk component removed",
-    },
   };
   vi.stubGlobal(
     "fetch",
@@ -182,14 +191,12 @@ it("選択を変えた後の遅い応答を捨て、失敗時に入力を維持�
       complete: true,
       foodInformation: {
         ...updated,
-        basis: { ja: "古い乳含有の応答", en: "Old milk response" },
         allergens: { milk: "contains" },
       },
     }),
   );
   await expect.poll(() => calls).toBe(3);
   await expect.element(page.getByText(ja.food_selection_complete)).toBeVisible();
-  await expect.element(screen.getByText("古い乳含有の応答")).not.toBeInTheDocument();
   await expect
     .element(screen.getByLabelText("乳: 不使用", { exact: true }))
     .not.toBeInTheDocument();
@@ -202,10 +209,8 @@ it.each(["ja", "en"] as const)(
     const labels = locale === "ja" ? ja : en;
     const value = unknownFoodProfile();
     value.allergens = { milk: "contains", egg: "not_used" };
-    value.basis = { ja: "原材料の長い説明", en: "Long ingredient explanation" };
-    value.dietary.vegan = { status: "no", basis: value.basis };
-    value.dietary.vegetarian = { status: "yes", basis: value.basis };
-    value.dietary.halal.basis = { ja: "認証未確認", en: "Certification unverified" };
+    value.dietary.vegan = { status: "no", reasons: ["animal_ingredients"] };
+    value.dietary.vegetarian = { status: "yes", reasons: ["ingredients_confirmed"] };
     const screen = await render(
       <LocaleProvider initialLocale={locale} persist={false}>
         <FoodInformationView value={value} />
@@ -245,11 +250,9 @@ it.each(["ja", "en"] as const)(
       )
       .toHaveAttribute("data-variant", "success");
     await expect
-      .element(screen.getByText(value.dietary.halal.basis[locale], { exact: false }))
+      .element(screen.getByText(labels.food_certification_unknown, { exact: false }))
       .toBeVisible();
-    await expect
-      .element(screen.getByText(value.basis[locale], { exact: true }))
-      .not.toBeInTheDocument();
+
     expect(screen.container.querySelector("details,summary,[data-slot=accordion]")).toBeNull();
     const row = screen.getByRole("list", { name: labels.food_dietary });
     row.element().focus();

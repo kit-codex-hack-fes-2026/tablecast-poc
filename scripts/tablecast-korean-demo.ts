@@ -1,17 +1,18 @@
 import {
   configurationSchema,
-  legacyFoodInformation,
+  type JapaneseAllergen,
   type Modifier,
   type Product,
 } from "@tablecast/api/schema";
 import { demoOptionImageKey } from "./tablecast-demo-option-images.ts";
 import { koreanFoodInformation, withDemoFoodChanges } from "./tablecast-fixtures/food.ts";
+import { allergenRecord } from "./tablecast-fixtures/text.ts";
 import { demoImageKey } from "./tablecast-seed-media.ts";
 
 type KoreanMenuItem = {
   available?: boolean;
   category: string;
-  contains: string[];
+  contains: JapaneseAllergen[];
   en: string;
   groups: string[];
   hotVessel?: boolean;
@@ -35,7 +36,7 @@ const mains: KoreanMenuItem[] = [
       "豚ばら肉300g、サンチュ6枚、にんにく、みそだれ。みそだれは大豆と小麦を含みます",
       "300g of pork belly, six lettuce leaves, garlic and ssamjang containing soya and wheat",
     ],
-    contains: ["soya", "wheat"],
+    contains: ["pork", "soya", "wheat"],
     spice: "mild",
     groups: ["wraps", "ssamjang"],
     tabletop: true,
@@ -52,7 +53,7 @@ const mains: KoreanMenuItem[] = [
       "牛肉、玉ねぎ、にんじんをしょうゆ、砂糖、ごま油で炒めます",
       "Beef, onion and carrot stir-fried with soy sauce, sugar and sesame oil",
     ],
-    contains: ["soya", "wheat", "sesame"],
+    contains: ["beef", "soya", "wheat", "sesame"],
     spice: "none",
     groups: ["rice"],
     photo:
@@ -68,7 +69,7 @@ const mains: KoreanMenuItem[] = [
       "鶏もも肉、キャベツ、さつまいも、米のトックをコチュジャンだれで炒めます。たれは大豆と小麦を含みます",
       "Chicken thigh, cabbage, sweet potato and rice cakes cooked in gochujang sauce containing soya and wheat",
     ],
-    contains: ["soya", "wheat"],
+    contains: ["chicken", "soya", "wheat"],
     spice: "medium",
     groups: ["spice", "hotpot-extras"],
     tabletop: true,
@@ -85,7 +86,7 @@ const mains: KoreanMenuItem[] = [
       "豚肉と玉ねぎをコチュジャン、しょうゆ、ごま油で炒めます",
       "Pork and onion stir-fried with gochujang, soy sauce and sesame oil",
     ],
-    contains: ["soya", "wheat", "sesame"],
+    contains: ["pork", "soya", "wheat", "sesame"],
     spice: "medium",
     groups: ["spice", "rice"],
     photo:
@@ -101,7 +102,7 @@ const mains: KoreanMenuItem[] = [
       "豚ばら肉をしょうがとにんにくでゆで、サンチュ6枚とみそだれを添えます",
       "Pork belly boiled with ginger and garlic, served with six lettuce leaves and ssamjang",
     ],
-    contains: ["soya", "wheat"],
+    contains: ["pork", "soya", "wheat"],
     spice: "mild",
     groups: ["wraps", "ssamjang"],
     photo:
@@ -117,7 +118,7 @@ const mains: KoreanMenuItem[] = [
       "鶏もも肉を小麦粉と片栗粉の衣で揚げた五個盛り。基本はソースなしで、選択により材料が変わります",
       "Five chicken-thigh pieces fried in wheat-flour and potato-starch coating; plain by default, with ingredients changing for the selected sauce",
     ],
-    contains: ["wheat"],
+    contains: ["chicken", "wheat"],
     spice: "none",
     groups: ["chicken-sauce"],
     photo:
@@ -133,7 +134,7 @@ const mains: KoreanMenuItem[] = [
       "米のトックと魚のすり身揚げをコチュジャンだれで煮ます。小麦、大豆、魚を含みます",
       "Rice cakes and fish cake simmered in gochujang sauce containing wheat, soya and fish",
     ],
-    contains: ["wheat", "soya", "fish"],
+    contains: ["wheat", "soya"],
     spice: "medium",
     groups: ["spice", "hotpot-extras"],
     photo:
@@ -149,7 +150,7 @@ const mains: KoreanMenuItem[] = [
       "海老、いか、ねぎ、小麦粉、卵を焼き、八切れに分けます",
       "Prawns, squid, spring onion, wheat flour and egg cooked as a pancake and cut into eight pieces",
     ],
-    contains: ["crustaceans", "molluscs", "wheat", "egg"],
+    contains: ["prawn", "squid", "wheat", "egg"],
     spice: "none",
     groups: ["dip"],
     photo:
@@ -165,7 +166,7 @@ const mains: KoreanMenuItem[] = [
       "白菜キムチ、小麦粉、卵を焼き、六切れに分けます。キムチは魚醤とえびの塩辛を含みます",
       "Cabbage kimchi, wheat flour and egg cooked as a pancake and cut into six pieces; the kimchi contains fish sauce and salted prawns",
     ],
-    contains: ["fish", "crustaceans", "wheat", "egg"],
+    contains: ["prawn", "wheat", "egg"],
     spice: "mild",
     groups: ["dip"],
     photo:
@@ -200,7 +201,7 @@ const sides: KoreanMenuItem[] = [
       "ご飯、牛肉、ほうれん草、にんじん、もやし、きのこ、目玉焼き、ごま油。コチュジャンは別添えです",
       "Rice, beef, spinach, carrot, bean sprouts, mushrooms, a fried egg and sesame oil, with gochujang served separately",
     ],
-    contains: ["egg", "sesame", "soya", "wheat"],
+    contains: ["beef", "egg", "sesame", "soya", "wheat"],
     spice: "none",
     groups: ["rice", "bibimbap-protein", "egg", "vegetables"],
     photo:
@@ -216,7 +217,7 @@ const sides: KoreanMenuItem[] = [
       "そばと小麦を使う麺を冷たい牛肉出汁で提供し、ゆで卵半分、きゅうり、梨を添えます",
       "Buckwheat and wheat noodles in chilled beef broth with half a boiled egg, cucumber and pear",
     ],
-    contains: ["buckwheat", "wheat", "egg"],
+    contains: ["beef", "buckwheat", "wheat", "egg"],
     spice: "none",
     groups: ["noodles"],
     photo:
@@ -232,7 +233,7 @@ const sides: KoreanMenuItem[] = [
       "小麦の麺に豚肉、玉ねぎ、大豆のみそを炒めた黒いソースをかけます",
       "Wheat noodles topped with pork and onion in a dark fermented-soya sauce",
     ],
-    contains: ["wheat", "soya"],
+    contains: ["pork", "wheat", "soya"],
     spice: "none",
     groups: ["noodles"],
     photo:
@@ -248,7 +249,7 @@ const sides: KoreanMenuItem[] = [
       "豚肉、豆腐、白菜キムチ、ねぎを煮込みます。キムチは魚醤とえびの塩辛を含みます",
       "Pork, tofu, cabbage kimchi and spring onion simmered together; the kimchi contains fish sauce and salted prawns",
     ],
-    contains: ["soya", "fish", "crustaceans"],
+    contains: ["pork", "soya", "prawn"],
     spice: "medium",
     groups: ["spice", "hotpot-extras", "rice"],
     hotVessel: true,
@@ -265,7 +266,7 @@ const sides: KoreanMenuItem[] = [
       "やわらかい豆腐、あさり、海老、卵、玉ねぎを唐辛子の出汁で煮込み、卵は十分に加熱します",
       "Soft tofu, clams, prawns, egg and onion simmered in chilli broth; the egg is fully cooked",
     ],
-    contains: ["soya", "molluscs", "crustaceans", "egg"],
+    contains: ["soya", "prawn", "egg"],
     spice: "medium",
     groups: ["spice", "hotpot-extras", "rice"],
     hotVessel: true,
@@ -282,7 +283,7 @@ const sides: KoreanMenuItem[] = [
       "牛骨の白い出汁に牛肉とねぎを合わせます。米や麺は含まず、塩は別添えです",
       "Milky beef-bone broth with beef and spring onion; rice and noodles are not included, and salt is served separately",
     ],
-    contains: [],
+    contains: ["beef"],
     spice: "none",
     groups: ["rice"],
     hotVessel: true,
@@ -299,7 +300,7 @@ const sides: KoreanMenuItem[] = [
       "さつまいもでんぷんの春雨、牛肉、きのこ、ほうれん草、にんじんをしょうゆとごま油で炒めます",
       "Sweet-potato starch noodles, beef, mushrooms, spinach and carrot stir-fried with soy sauce and sesame oil",
     ],
-    contains: ["soya", "wheat", "sesame"],
+    contains: ["beef", "soya", "wheat", "sesame"],
     spice: "none",
     groups: [],
     photo:
@@ -315,7 +316,7 @@ const sides: KoreanMenuItem[] = [
       "豚ひき肉、白菜、にらを小麦の皮で包んで蒸した四個盛り",
       "Four steamed dumplings with minced pork, cabbage and garlic chives in wheat wrappers",
     ],
-    contains: ["wheat"],
+    contains: ["pork", "wheat"],
     spice: "none",
     groups: ["dip"],
     photo:
@@ -331,7 +332,7 @@ const sides: KoreanMenuItem[] = [
       "白菜、大根、きゅうりのキムチ。魚醤、えびの塩辛、にんにく、唐辛子を使います",
       "Cabbage, daikon and cucumber kimchi made with fish sauce, salted prawns, garlic and chilli",
     ],
-    contains: ["fish", "crustaceans"],
+    contains: ["prawn"],
     spice: "medium",
     groups: [],
     photo:
@@ -431,7 +432,7 @@ const drinks: KoreanMenuItem[] = [
       "大麦麦芽とホップを使うラガー。アルコール4.5%、330ml瓶です",
       "lager brewed with barley malt and hops, 4.5% ABV, in a 330ml bottle",
     ],
-    contains: ["barley"],
+    contains: [],
     spice: "none",
     groups: [],
     photo:
@@ -479,7 +480,7 @@ const drinks: KoreanMenuItem[] = [
       "米、大麦麦芽、砂糖を使う冷たいノンアルコールドリンク。甘酒とは製法が異なります",
       "A chilled non-alcoholic drink made with rice, barley malt and sugar; it is prepared differently from amazake",
     ],
-    contains: ["barley"],
+    contains: [],
     spice: "none",
     groups: ["ice"],
     photo:
@@ -715,13 +716,7 @@ export function koreanDemoStore(profile: "demo" | "history" | "smoke") {
             if (!value) throw new Error(`韓国店の選択肢がありません: ${key}`);
             return value;
           }),
-          foodInfo: legacyFoodInformation({
-            contains: item.contains,
-            evidence: "verified",
-            crossContact: "unknown",
-            vegan: "unknown",
-            note: description,
-          }),
+          foodInfo: allergenRecord(item.contains),
         }),
       );
     });

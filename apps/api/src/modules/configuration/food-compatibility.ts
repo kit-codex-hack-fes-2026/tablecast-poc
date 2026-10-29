@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   type FoodInformation,
   japaneseAllergenSchema,
+  readFoodProfile,
   unknownFoodProfile,
 } from "../catalog/food-model";
 import { configurationSchema } from "./model";
@@ -20,22 +21,32 @@ const storedConfigurationSchema = z.object({ products: z.array(z.unknown()) }).p
 const storedProductSchema = z
   .object({ foodInfo: z.unknown().optional(), allergens: z.unknown().optional() })
   .passthrough();
+const storedFoodInformationSchema = z
+  .object({
+    base: z.unknown(),
+    components: z.array(
+      z
+        .object({
+          profile: z.unknown(),
+        })
+        .passthrough(),
+    ),
+  })
+  .passthrough();
 
 // 旧記録の含有を保持し、分類全体の不使用確認へ読み替えない。
 export function legacyFoodInformation(
   input: z.infer<typeof legacyAllergensSchema>,
 ): FoodInformation {
   const base = unknownFoodProfile();
-  base.basis = {
-    ja: input.note.ja || "旧設定の登録情報。未記載の成分は未確認です。",
-    en: input.note.en || "Previously recorded information. Unlisted ingredients are unverified.",
-  };
   base.crossContact = input.crossContact;
-  base.dietary.vegan = { status: input.vegan, basis: base.basis };
+  base.dietary.vegan = {
+    status: input.vegan,
+    reasons: input.vegan === "unknown" ? [] : ["previous_record"],
+  };
   for (const value of input.contains) {
     const parsed = japaneseAllergenSchema.safeParse(value);
     if (parsed.success) base.allergens[parsed.data] = "contains";
-    else base.otherAllergens.push(value);
   }
   return { base, components: [], defaultComponentIds: [] };
 }
@@ -46,7 +57,20 @@ export function readConfiguration(value: unknown) {
     ...record,
     products: record.products.map((product) => {
       const item = storedProductSchema.parse(product);
-      if (item.foodInfo !== undefined) return item;
+      if (item.foodInfo !== undefined) {
+        const info = storedFoodInformationSchema.parse(item.foodInfo);
+        return {
+          ...item,
+          foodInfo: {
+            ...info,
+            base: readFoodProfile(info.base),
+            components: info.components.map((component) => ({
+              ...component,
+              profile: readFoodProfile(component.profile),
+            })),
+          },
+        };
+      }
       const { allergens, ...rest } = item;
       return { ...rest, foodInfo: legacyFoodInformation(legacyAllergensSchema.parse(allergens)) };
     }),

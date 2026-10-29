@@ -1,4 +1,4 @@
-import type { Modifier, Product } from "@tablecast/api/schema";
+import type { JapaneseAllergen, Modifier, Product } from "@tablecast/api/schema";
 import { configurationSchema } from "@tablecast/api/schema";
 import { demoImageKey } from "../tablecast-seed-media.ts";
 import { westwardFoodInformation } from "./food.ts";
@@ -10,7 +10,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
   const menu: {
     available?: boolean;
     category: string;
-    contains: null | string[];
+    contains: JapaneseAllergen[] | null;
     en: string;
     image?: string;
     ingredients: readonly [string, string];
@@ -29,7 +29,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "ブリオッシュ、ビーフ、チェダー、レタス、トマト、玉ねぎ、ピクルス、卵入りソース。パティは十分に加熱します",
         "Brioche, fully cooked beef, cheddar, lettuce, tomato, onion, pickles and an egg-based sauce",
       ],
-      contains: ["wheat", "egg", "milk", "mustard"],
+      contains: ["wheat", "egg", "milk"],
       modifiers: [bun, patty, cheese, omit, sauce, extras],
       image: "westward-burger.png",
     },
@@ -43,7 +43,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "ブリオッシュ、十分に加熱した鶏肉、チェダー、野菜、卵入りソース",
         "Brioche, fully cooked chicken, cheddar, vegetables and an egg-based sauce",
       ],
-      contains: ["wheat", "egg", "milk", "mustard"],
+      contains: ["wheat", "egg", "milk"],
       modifiers: [bun, cheese, omit, sauce, extras],
     },
     {
@@ -112,7 +112,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "麦芽とホップ、柑橘を思わせる香りと明瞭な苦味。アルコール6.5%。基本容量280ml",
         "beer brewed with malt and hops, citrus-like aromas and a firm bitterness; 6.5% ABV, base serving 280ml",
       ],
-      contains: ["barley"],
+      contains: [],
       modifiers: [serving],
       image: "westward-ipa.png",
     },
@@ -126,7 +126,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "麦芽とホップ、穏やかな苦味。アルコール5.0%。基本容量280ml",
         "beer brewed with malt and hops, with a gentle bitterness; 5.0% ABV, base serving 280ml",
       ],
-      contains: ["barley"],
+      contains: [],
       modifiers: [serving],
     },
     {
@@ -139,7 +139,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "焙煎麦芽の香り。アルコール6.0%。基本容量280ml。本日は売切です",
         "beer with roasted-malt aromas; 6.0% ABV, base serving 280ml. Sold out today",
       ],
-      contains: ["barley"],
+      contains: [],
       modifiers: [serving],
       available: false,
     },
@@ -187,7 +187,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         imageKey: demoImageKey(`westward-${item.key}.webp`),
         imageKind: "illustration",
         modifiers: item.modifiers ?? [],
-        foodInfo: allergenRecord(item.contains, item.ingredients),
+        foodInfo: allergenRecord(item.contains),
       });
     });
   return configurationSchema.parse({

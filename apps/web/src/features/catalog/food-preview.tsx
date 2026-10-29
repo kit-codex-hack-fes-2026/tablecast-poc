@@ -30,8 +30,8 @@ export function FoodPreview({ product, storeId }: { product: Product; storeId: s
   });
   const result = preview.data?.signature === signature ? preview.data.result : undefined;
   return (
-    <details>
-      <summary className="min-h-11 cursor-pointer py-3 font-medium">{t("food_preview")}</summary>
+    <section aria-label={t("food_preview")}>
+      <h3 className="pb-3 text-sm font-semibold">{t("food_preview")}</h3>
       <div className="grid gap-4">
         {product.modifiers.map((group) => (
           <fieldset key={group.id}>
@@ -98,6 +98,6 @@ export function FoodPreview({ product, storeId }: { product: Product; storeId: s
           </>
         )}
       </div>
-    </details>
+    </section>
   );
 }

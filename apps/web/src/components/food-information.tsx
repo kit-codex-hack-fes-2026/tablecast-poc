@@ -13,9 +13,11 @@ import {
 import { useI18n } from "../i18n/locale";
 import {
   allergenEmoji,
+  crossContactSourceLabels,
   dietaryLabels,
+  dietaryReasonLabels,
   foodStatusLabels,
-  otherAllergenLabels,
+  halalCertificationLabels,
 } from "./food-information-model";
 import { Badge } from "./ui/badge";
 
@@ -35,12 +37,6 @@ export function FoodInformationView({ value }: { value?: FoodProfile }) {
     emoji: allergenEmoji[item.id],
     status: value.allergens[item.id] ?? "unknown",
   }));
-  const others = value.otherAllergens.map((id) => ({
-    id,
-    name: otherAllergenLabels[id] ? t(otherAllergenLabels[id]) : id,
-    emoji: allergenEmoji[id] ?? "🍽️",
-    status: "contains" as const,
-  }));
   const contact =
     value.crossContact === "possible"
       ? "contains"
@@ -55,7 +51,10 @@ export function FoodInformationView({ value }: { value?: FoodProfile }) {
         : CircleHelp;
   const contactVariant =
     contact === "contains" ? "destructive" : contact === "not_used" ? "success" : "inactive";
-  const halalBasis = value.dietary.halal.basis[locale];
+  const halalNotes = [
+    t(halalCertificationLabels[value.halalCertification]),
+    ...value.dietary.halal.reasons.map((reason) => t(dietaryReasonLabels[reason])),
+  ].join(" · ");
   return (
     <div className="grid min-w-0 gap-1.5 text-xs" data-ui="food-information">
       <div className="flex min-w-0 items-start gap-2">
@@ -66,7 +65,7 @@ export function FoodInformationView({ value }: { value?: FoodProfile }) {
           tabIndex={0}
           className="flex min-w-0 gap-1.5 overflow-x-auto rounded-lg pb-1 outline-none focus-visible:ring-2 focus-visible:ring-ring scrollbar-thin"
         >
-          {[...allergens, ...others]
+          {allergens
             .filter((item) => item.status === "contains")
             .map((item) => (
               <li key={item.id} className="shrink-0">
@@ -93,7 +92,7 @@ export function FoodInformationView({ value }: { value?: FoodProfile }) {
                 {t("food_unknown")}
               </Badge>
             </li>
-          ) : !allergens.some((item) => item.status === "contains") && !others.length ? (
+          ) : !allergens.some((item) => item.status === "contains") ? (
             <li className="py-1 text-muted-foreground">{t("food_allergens_none")}</li>
           ) : null}
         </ul>
@@ -135,16 +134,24 @@ export function FoodInformationView({ value }: { value?: FoodProfile }) {
               variant={contactVariant}
               className="gap-1.5 rounded-md px-2 py-1 text-xs whitespace-nowrap"
               aria-label={`${t("editor_cross_contact")}: ${t(foodStatusLabels[value.crossContact])}`}
+              title={value.crossContactSources
+                .map((source) => t(crossContactSourceLabels[source]))
+                .join(" · ")}
             >
               <ContactIcon aria-hidden="true" />
-              {t("food_cross_contact_short")}: {t(foodStatusLabels[value.crossContact])}
+              {value.crossContactSources.length
+                ? value.crossContactSources
+                    .map((source) => t(crossContactSourceLabels[source]))
+                    .join(" · ")
+                : t("food_cross_contact_short")}
+              : {t(foodStatusLabels[value.crossContact])}
             </Badge>
           </li>
         </ul>
       </div>
-      {halalBasis && (
-        <p className="line-clamp-1 text-xs text-muted-foreground" title={halalBasis}>
-          {t("food_halal")}: {halalBasis}
+      {halalNotes && (
+        <p className="line-clamp-1 text-xs text-muted-foreground" title={halalNotes}>
+          {t("food_halal")}: {halalNotes}
         </p>
       )}
     </div>

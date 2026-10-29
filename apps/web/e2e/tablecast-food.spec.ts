@@ -37,6 +37,7 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
   const information = detail.getByRole("region", { name: ja.food_title, exact: true });
   await expect(information.getByText(ja.food_selection_complete, { exact: true })).toBeVisible();
   await expect(information.getByLabel("乳: 含有", { exact: true })).toBeVisible();
+  await expect(information.getByText("マスタード", { exact: false })).toHaveCount(0);
   await detail.getByRole("radio", { name: /^レタス包み/ }).check();
   await detail.getByRole("radio", { name: /^植物由来パティ/ }).check();
   await expect(information.getByText(ja.food_selection_complete, { exact: true })).toBeVisible();
@@ -107,15 +108,28 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
   await page
     .getByRole("combobox", { name: ja.editor_cross_contact, exact: true })
     .selectOption("possible");
+  await page.getByRole("checkbox", { name: ja.food_contact_oil, exact: true }).check();
+  await page
+    .getByRole("combobox", { name: ja.food_halal_certification, exact: true })
+    .selectOption("not_certified");
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
   const saved = configDraftSchema.parse(
     await (await page.request.get(`${api}/drafts/${draft.id}`)).json(),
   );
   expect(
-    saved.configuration.products.find((product) => product.id === productId)?.foodInfo.base
-      .crossContact,
-  ).toBe("possible");
-  await page.getByRole("heading", { name: ja.food_title, exact: true }).scrollIntoViewIfNeeded();
+    saved.configuration.products.find((product) => product.id === productId)?.foodInfo.base,
+  ).toMatchObject({
+    crossContact: "possible",
+    crossContactSources: ["shared_frying_oil"],
+    halalCertification: "not_certified",
+  });
+  await page.getByRole("tab", { name: "ブリオッシュ", exact: true }).click();
+  await page.getByRole("group", { name: ja.food_required, exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath("tablecast-food-editor-1180x820.png") });
+  await page.getByRole("tab", { name: ja.food_base, exact: true }).click();
+  await page.getByRole("group", { name: ja.food_halal, exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: testInfo.outputPath("tablecast-food-editor-dietary-1180x820.png"),
+  });
 });

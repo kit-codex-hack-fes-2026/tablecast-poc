@@ -3,6 +3,11 @@ import type { ReactNode } from "react";
 import { castInstructionSchema, foodClassification } from "@tablecast/api/schema";
 import { ArrowRight, Minus, Pencil, Plus } from "lucide-react";
 import { Children } from "react";
+import {
+  crossContactSourceLabels,
+  dietaryReasonLabels,
+  halalCertificationLabels,
+} from "../../components/food-information-model";
 import { Badge } from "../../components/ui/badge";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
@@ -33,7 +38,14 @@ export function ConfigurationChanges({
   const allergenNames = new Map<string, string>(
     foodClassification.allergens.map((item) => [item.id, item.name[locale]]),
   );
-  const labelKeys = new Map(Object.entries(labels));
+  const labelKeys = new Map(
+    Object.entries({
+      ...labels,
+      ...crossContactSourceLabels,
+      ...dietaryReasonLabels,
+      ...halalCertificationLabels,
+    }),
+  );
   function fieldLabel(key: string) {
     const translation = labelKeys.get(key);
     return translation ? t(translation) : (allergenNames.get(key) ?? key);
@@ -94,6 +106,8 @@ export function ConfigurationChanges({
         : String(value);
     if (typeof value === "string") {
       if (key === "id") return t("config_change_identifier");
+      if (["reasons", "crossContactSources", "halalCertification"].includes(key))
+        return fieldLabel(value);
       if (
         [
           "categoryId",

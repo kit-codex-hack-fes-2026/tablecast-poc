@@ -30,8 +30,6 @@ export async function seedIntegrity(env: TablecastEnv, credentials: DemoCredenti
     expect(product.imageKey).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.webp$/);
   for (const product of products) {
     expect(product.imageKind).toBe("illustration");
-    expect(product.foodInfo.base.basis.ja.length).toBeGreaterThan(0);
-    expect(product.foodInfo.base.basis.en.length).toBeGreaterThan(0);
   }
   expect(
     products.find((product) => product.id === "tablecast-komorebi-karaage")?.foodInfo.base,

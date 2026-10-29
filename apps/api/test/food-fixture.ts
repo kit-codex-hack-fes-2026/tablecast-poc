@@ -9,11 +9,10 @@ import { configuration, text } from "./configuration-fixture";
 
 export function profile(contains: JapaneseAllergen[] = []): FoodProfile {
   const value = unknownFoodProfile();
-  value.basis = { ja: "試験の登録原材料", en: "Recorded test ingredients" };
   for (const id of japaneseAllergenSchema.options)
     value.allergens[id] = contains.includes(id) ? "contains" : "not_used";
   for (const key of ["vegan", "vegetarian", "halal", "glutenFree"] as const)
-    value.dietary[key] = { status: "yes", basis: value.basis };
+    value.dietary[key] = { status: "yes", reasons: ["ingredients_confirmed"] };
   value.crossContact = "controlled";
   return value;
 }

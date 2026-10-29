@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { id } from "../../platform/model";
 
-// 消費者庁の2026年4月版。分類外の成分はotherAllergensへ分ける。
+// 消費者庁の2026年4月版。アレルゲンIDはこの29品目だけを受け付ける。
 const required = {
   prawn: ["えび", "Prawns"],
   cashew: ["カシューナッツ", "Cashews"],
@@ -81,29 +81,50 @@ export const foodClassification = {
   }),
 } as const;
 export const dietaryKeys = ["vegan", "vegetarian", "halal", "glutenFree"] as const;
-const foodNoteSchema = z
-  .object({ ja: z.string(), en: z.string() })
-  .strict()
-  .meta({ id: "tablecastFoodNote" });
+export const dietaryReasonSchema = z
+  .enum([
+    "ingredients_confirmed",
+    "animal_ingredients",
+    "meat_or_fish",
+    "gluten_ingredients",
+    "pork_ingredients",
+    "alcohol",
+    "ingredient_origin_unknown",
+    "previous_record",
+  ])
+  .meta({ id: "tablecastDietaryReason" });
+const commonDietaryReasons = [
+  "ingredients_confirmed",
+  "ingredient_origin_unknown",
+  "previous_record",
+] as const;
+export const dietaryReasonsByKind = {
+  vegan: [...commonDietaryReasons, "animal_ingredients", "meat_or_fish", "pork_ingredients"],
+  vegetarian: [...commonDietaryReasons, "meat_or_fish", "pork_ingredients"],
+  halal: [...commonDietaryReasons, "pork_ingredients", "alcohol"],
+  glutenFree: [...commonDietaryReasons, "gluten_ingredients"],
+} as const;
+export const crossContactSourceSchema = z
+  .enum(["shared_equipment", "shared_frying_oil", "shared_production_line"])
+  .meta({ id: "tablecastCrossContactSource" });
+export const halalCertificationSchema = z.enum(["certified", "not_certified", "unknown"]);
 export const dietaryAssessmentSchema = z
   .object({
     status: z.enum(["yes", "no", "unknown"]),
-    basis: foodNoteSchema,
+    reasons: z.array(dietaryReasonSchema).max(9),
   })
   .strict()
-  .refine(
-    (value) =>
-      value.status === "unknown" ||
-      (value.basis.ja.trim().length > 0 && value.basis.en.trim().length > 0),
-    { path: ["basis"], message: "FOOD_BASIS_REQUIRED" },
-  )
+  .refine((value) => value.status === "unknown" || value.reasons.length > 0, {
+    path: ["reasons"],
+    message: "FOOD_REASON_REQUIRED",
+  })
   .meta({ id: "tablecastDietaryAssessment" });
 export const foodProfileSchema = z
   .object({
     allergens: z.partialRecord(japaneseAllergenSchema, z.enum(["contains", "not_used", "unknown"])),
-    otherAllergens: z.array(z.string().trim().min(1).max(100)).max(40),
-    basis: foodNoteSchema,
     crossContact: z.enum(["possible", "unknown", "controlled"]),
+    crossContactSources: z.array(crossContactSourceSchema).max(3),
+    halalCertification: halalCertificationSchema,
     dietary: z
       .object({
         vegan: dietaryAssessmentSchema,
@@ -116,11 +137,17 @@ export const foodProfileSchema = z
   .strict()
   .refine(
     (value) =>
-      (value.crossContact === "unknown" &&
-        !value.otherAllergens.length &&
-        !Object.values(value.allergens).some((status) => status !== "unknown")) ||
-      (value.basis.ja.trim().length > 0 && value.basis.en.trim().length > 0),
-    { path: ["basis"], message: "FOOD_BASIS_REQUIRED" },
+      dietaryKeys.every((key) =>
+        value.dietary[key].reasons.every(
+          (reason) =>
+            dietaryReasonsByKind[key].some((allowed) => allowed === reason) &&
+            (reason === "ingredient_origin_unknown"
+              ? value.dietary[key].status === "unknown"
+              : commonDietaryReasons.some((common) => common === reason) ||
+                value.dietary[key].status === "no"),
+        ),
+      ),
+    { path: ["dietary"], message: "FOOD_REASON_INVALID" },
   )
   .meta({ id: "tablecastFoodProfile" });
 export const foodInformationSchema = z
@@ -148,18 +175,53 @@ export const foodChangesSchema = z
 export type FoodProfile = z.infer<typeof foodProfileSchema>;
 export type FoodInformation = z.infer<typeof foodInformationSchema>;
 
-// 合算した分類外成分には、元のprofileごとの件数上限を再適用しない。
-export const foodResultSchema = foodProfileSchema.safeExtend({
-  otherAllergens: z.array(z.string()),
-});
-
-const unknown = () => ({ status: "unknown" as const, basis: { ja: "", en: "" } });
+// 旧snapshotの原本を変えず、保存済みの判定だけを新しいenumへ読み替える。
+const previousAssessmentSchema = z
+  .object({
+    status: z.enum(["yes", "no", "unknown"]),
+    basis: z.object({ ja: z.string(), en: z.string() }),
+  })
+  .strict();
+const previousFoodProfileSchema = z
+  .object({
+    allergens: foodProfileSchema.shape.allergens,
+    otherAllergens: z.array(z.string()),
+    basis: z.object({ ja: z.string(), en: z.string() }),
+    crossContact: foodProfileSchema.shape.crossContact,
+    dietary: z
+      .object({
+        vegan: previousAssessmentSchema,
+        vegetarian: previousAssessmentSchema,
+        halal: previousAssessmentSchema,
+        glutenFree: previousAssessmentSchema,
+      })
+      .strict(),
+  })
+  .strict();
+export const foodResultSchema = z.union([
+  foodProfileSchema,
+  previousFoodProfileSchema.transform((value): FoodProfile => {
+    const result = unknownFoodProfile();
+    result.allergens = value.allergens;
+    result.crossContact = value.crossContact;
+    for (const key of dietaryKeys)
+      result.dietary[key] = {
+        status: value.dietary[key].status,
+        reasons: value.dietary[key].status === "unknown" ? [] : ["previous_record"],
+      };
+    return result;
+  }),
+]);
+export function readFoodProfile(value: unknown): FoodProfile {
+  return foodResultSchema.parse(value);
+}
+const unknown = () => ({ status: "unknown" as const, reasons: [] });
 export function unknownFoodProfile(): FoodProfile {
   return {
     allergens: {},
-    otherAllergens: [],
-    basis: { ja: "", en: "" },
     crossContact: "unknown",
+    crossContactSources: [],
+    halalCertification: "unknown",
     dietary: { vegan: unknown(), vegetarian: unknown(), halal: unknown(), glutenFree: unknown() },
   };
 }

@@ -8,12 +8,16 @@ export {
 } from "./modules/appearance/model";
 export type { Appearance, Banner, ThemeImage, ThemePart } from "./modules/appearance/model";
 export {
+  crossContactSourceSchema,
   dietaryAssessmentSchema,
   dietaryKeys,
+  dietaryReasonsByKind,
+  dietaryReasonSchema,
   foodChangesSchema,
   foodClassification,
   foodInformationSchema,
   foodProfileSchema,
+  halalCertificationSchema,
   japaneseAllergenSchema,
   unknownFoodProfile,
 } from "./modules/catalog/food-model";
