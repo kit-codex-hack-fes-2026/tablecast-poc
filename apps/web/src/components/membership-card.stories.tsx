@@ -16,6 +16,8 @@ const meta = {
     storeName: catalog.storeName,
     memberName: "山田 花子",
     joinedAt: 1782903600000,
+    balance: 1280,
+    visitCount: 4,
     imageBasePath: `/api/admin/stores/${catalog.storeId}`,
   },
   decorators: [
@@ -30,6 +32,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const 標準: Story = {};
+export const 店舗ロゴ: Story = {
+  args: { branding: catalog.configuration.branding },
+};
 export const グリーン: Story = {
   args: { branding: { logo: null, membershipCard: { tone: "green", imageFit: "contain" } } },
 };

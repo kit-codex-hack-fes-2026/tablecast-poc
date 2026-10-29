@@ -42,6 +42,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const 横長: Story = {};
+export const ウォレット: Story = { args: { compact: true } };
 export const 縦長で全体表示: Story = {
   args: {
     rules: { ...meta.args.rules, presentation: { layout: "portrait", imageFit: "contain" } },

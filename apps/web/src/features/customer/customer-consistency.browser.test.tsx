@@ -87,6 +87,8 @@ it("来店の再取得で追加注文と状態変更を注文欄へ反映する"
   let orders = [first];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(new Request(input, init).url);
+    if (url.pathname === "/api/customer/stores/tablecast-store/coupons")
+      return Response.json({ coupons: [], nextCursor: null });
     if (!url.pathname.startsWith("/api/customer/stores/tablecast-store/visits/tablecast-visit"))
       throw new Error(`未定義の要求: ${url.pathname}`);
     return Response.json({

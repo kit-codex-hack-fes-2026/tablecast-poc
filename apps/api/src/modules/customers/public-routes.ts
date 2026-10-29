@@ -5,6 +5,14 @@ import { getMemberStoreBranding } from "./queries";
 
 export const memberStorePublicRoutes = apiFactory
   .createApp()
+  .get("/:storeId/identity", async (c) => {
+    const store = await getMemberStoreBranding(c.var.services, c.req.param("storeId"));
+    c.header("Cache-Control", "public, max-age=300");
+    return c.json(
+      { storeId: store.id, storeName: store.name, logo: store.branding?.logo ?? null },
+      200,
+    );
+  })
   .get("/:storeId/icon", async (c) => {
     const store = await getMemberStoreBranding(c.var.services, c.req.param("storeId"));
     const width = Number(c.req.query("width"));

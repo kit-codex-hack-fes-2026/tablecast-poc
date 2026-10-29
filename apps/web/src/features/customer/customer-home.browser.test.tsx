@@ -1,3 +1,4 @@
+import { couponRuleSchema } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -24,6 +25,27 @@ let paths: string[];
 let active: boolean;
 let pointsFail: boolean;
 let writes: unknown[];
+const image = {
+  imageKey: `tablecast/uploads/${"a".repeat(64)}.webp`,
+  alt: { ja: "卓上喫茶のロゴ", en: "Tablecast Coffee logo" },
+  imageKind: "illustration",
+  imageSource: { generated: false, description: "店舗のロゴ" },
+};
+const couponRules = couponRuleSchema.parse({
+  title: { ja: "季節のデザートを一皿", en: "A seasonal dessert to enjoy on your next visit" },
+  description: { ja: "お会計から100円引き", en: "JPY 100 off your bill" },
+  startsAt: 1,
+  endsAt: 9999999999999,
+  minimumYen: 0,
+  discountKind: "fixed",
+  discountValue: 100,
+  maximumYen: 100,
+  trigger: "enrol",
+  threshold: 1,
+  imageKey: image.imageKey,
+  imageKind: image.imageKind,
+  imageSource: image.imageSource,
+});
 beforeEach(() => {
   initialViewport = { width: window.innerWidth, height: window.innerHeight };
   paths = [];
@@ -45,7 +67,16 @@ beforeEach(() => {
             storeId === "tablecast-first"
               ? "卓上喫茶 / Tablecast Coffee and Seasonal Kitchen"
               : "川沿い食堂",
+          branding: {
+            logo: image,
+            membershipCard: {
+              tone: "green",
+              imageFit: "contain",
+              image: { ...image, alt: { ja: "会員証の柄", en: "Membership artwork" } },
+            },
+          },
         },
+        memberName: "佐藤 晴香",
         membership: active
           ? {
               id: `${storeId}-member`,
@@ -76,12 +107,7 @@ beforeEach(() => {
                   id: "coupon",
                   state: "available",
                   inDate: true,
-                  rules: {
-                    title: {
-                      ja: "季節のデザートを一皿",
-                      en: "A seasonal dessert to enjoy on your next visit",
-                    },
-                  },
+                  rules: couponRules,
                 },
               ]
             : [],
@@ -153,10 +179,10 @@ async function show(locale: "en" | "ja" = "ja", initial = "/member/tablecast-fir
 }
 
 it.each(["ja", "en"] as const)(
-  "%sで残高・券・来店の順に表示し、390pxで店舗の記録へ進める",
+  "%sの402px初期表示で店舗会員証と券のタイトル・額・利用入口が見える",
   async (locale) => {
     const labels = locale === "ja" ? ja : en;
-    await page.viewport(390, 844);
+    await page.viewport(402, 874);
     await show(locale);
     await expect.element(page.getByText("1,280 pt", { exact: true })).toBeVisible();
     await expect
@@ -169,10 +195,16 @@ it.each(["ja", "en"] as const)(
         ),
       )
       .toBeVisible();
-    const balance = page.getByRole("heading", { name: labels.customer_points_balance }).element();
+    const balance = page.getByText(labels.customer_points_balance, { exact: true }).element();
     const visits = page.getByRole("heading", { name: labels.customer_visits }).element();
     expect(balance.compareDocumentPosition(visits) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+    const coupon = page.getByRole("region", { name: labels.customer_coupons_owned });
+    const action = coupon.getByRole("link", { name: labels.customer_coupon_open, exact: true });
+    await expect.element(action).toBeVisible();
+    await expect.element(coupon.getByText("¥100", { exact: true })).toBeVisible();
+    expect(action.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(874);
+    await expect.element(page.getByRole("img", { name: image.alt[locale] })).toBeVisible();
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(402);
     await expect
       .element(page.getByRole("link", { name: labels.customer_memories, exact: true }))
       .toHaveAttribute("href", "/member/tablecast-first/memories");

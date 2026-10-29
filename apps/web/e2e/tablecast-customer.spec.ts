@@ -198,23 +198,37 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     await first.goto(code.url);
     await expect(first).toHaveURL(/\/login\?returnTo=/);
     await expect(first.getByRole("heading", { name: ja.customer_login_title })).toBeVisible();
+    await expect(first.getByText("京料理こもれび四条店", { exact: true })).toBeVisible();
+    await expect(first.locator('img[src^="/api/member-stores/"]')).toBeVisible();
     await capture(first, "02-phone-login");
     await signInFromLogin(first, baseURL);
     await expect(first.getByRole("heading", { name: ja.customer_consent_title })).toBeVisible();
     await capture(first, "03-phone-consent");
     await first.getByRole("button", { name: ja.customer_enrol, exact: true }).click();
     await expect(first).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));
-    await expect(first.getByRole("article").locator("header").getByRole("status")).toHaveText(
-      ja.customer_table_joined,
+    await expect(
+      first
+        .locator("article > header")
+        .getByRole("status")
+        .filter({ hasText: ja.customer_table_joined }),
+    ).toBeVisible();
+    const owned = first.getByRole("region", { name: ja.customer_coupons_owned });
+    await expect(owned.getByRole("heading", { name: couponTitle, exact: true })).toBeVisible();
+    await expect(owned.getByRole("img", { name: couponTitle, exact: true })).not.toHaveJSProperty(
+      "naturalWidth",
+      0,
     );
-    await capture(first, "04-phone-joined");
+    await capture(first, "04-phone-joined", false);
     await signInStaff(second.request, baseURL, credentials.otherEmail);
     await second.goto(code.url);
     await second.getByRole("button", { name: ja.customer_enrol, exact: true }).click();
     await expect(second).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));
-    await expect(second.getByRole("article").locator("header").getByRole("status")).toHaveText(
-      ja.customer_table_joined,
-    );
+    await expect(
+      second
+        .locator("article > header")
+        .getByRole("status")
+        .filter({ hasText: ja.customer_table_joined }),
+    ).toBeVisible();
     const identity = z.object({ user: z.object({ id: z.string(), email: z.string() }) });
     const firstSession = identity.parse(
       await (await first.request.get("/api/auth/get-session")).json(),
@@ -273,6 +287,16 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     await expect(first.getByText("10 pt", { exact: true })).toBeVisible();
     await expect(first.getByRole("heading", { name: ja.customer_current_visit })).toBeVisible();
     await capture(first, "07-phone-membership-card");
+    await first.evaluate(() => scrollTo(0, 0));
+    await capture(first, "07b-phone-membership-first-view", false);
+    await first.getByRole("link", { name: ja.customer_coupon_open, exact: true }).click();
+    await expect(first).toHaveURL(new RegExp(`/member/${storeId}/coupons$`));
+    await expect(first.getByText(ja.customer_coupon_choose_visit, { exact: true })).toBeVisible();
+    await expect(first.getByRole("link", { name: /T10/ })).toBeVisible();
+    await capture(first, "07c-phone-choose-visit");
+    await first.getByRole("link", { name: /T10/ }).click();
+    await expect(first).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));
+    await first.getByRole("link", { name: ja.customer_card, exact: true }).click();
     await first.getByRole("link", { name: ja.customer_points_history, exact: true }).click();
     await expect(
       first.getByRole("heading", { name: ja.customer_points, exact: true }),
@@ -281,6 +305,9 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     await capture(first, "08-phone-points");
     await first.getByRole("link", { name: new RegExp(ja.customer_back_to_store) }).click();
     await first.getByRole("link", { name: ja.customer_memories, exact: true }).click();
+    await expect(first.getByText(ja.customer_memories_note)).toBeVisible();
+    await expect(first.getByRole("textbox")).toHaveCount(0);
+    await capture(first, "09a-phone-automatic-memory");
     await first.getByRole("button", { name: ja.customer_memory_add, exact: true }).click();
     const memory = "辛さは控えめ、冷たいお茶が好きです。";
     await first.getByRole("textbox", { name: ja.customer_memory_content }).fill(memory);
@@ -290,8 +317,6 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     await capture(first, "10-phone-memories");
     await first.getByRole("link", { name: new RegExp(ja.customer_back_to_store) }).click();
     await first.getByRole("link", { name: new RegExp("T10") }).click();
-    await first.getByRole("link", { name: ja.customer_visit_coupons, exact: true }).click();
-    const owned = first.getByRole("region", { name: ja.customer_coupons_owned });
     await expect(owned.getByRole("heading", { name: couponTitle, exact: true })).toBeVisible();
     const couponImage = owned.getByRole("img", { name: couponTitle, exact: true });
     await expect(couponImage).toBeVisible();
@@ -354,9 +379,12 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     ).toBe(true);
     await first.goto(`/member/${storeId}/visits/${visit.id}`);
     expect((await staff.request.post(`${adminBase}/tables/${visit.id}/close`)).ok()).toBe(true);
-    await expect(first.getByRole("article").locator("header").getByRole("status")).toHaveText(
-      ja.customer_disconnected,
-    );
+    await expect(
+      first
+        .locator("article > header")
+        .getByRole("status")
+        .filter({ hasText: ja.customer_disconnected }),
+    ).toBeVisible();
     await capture(first, "16-phone-visit-complete");
     await first.getByRole("link", { name: ja.customer_card, exact: true }).click();
     await expect(first.getByRole("heading", { name: ja.customer_previous_visits })).toBeVisible();
@@ -377,9 +405,12 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
       try {
         await phone.goto(nextCode.url);
         await expect(phone).toHaveURL(new RegExp(`/member/${storeId}/visits/${next.id}$`));
-        await expect(phone.getByRole("article").locator("header").getByRole("status")).toHaveText(
-          ja.customer_table_joined,
-        );
+        await expect(
+          phone
+            .locator("article > header")
+            .getByRole("status")
+            .filter({ hasText: ja.customer_table_joined }),
+        ).toBeVisible();
         await expect(
           phone.getByRole("button", { name: ja.customer_enrol, exact: true }),
         ).toHaveCount(0);
@@ -394,14 +425,36 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     ).toHaveCount(2);
     await capture(tablet, "19-ipad-return-members");
     await second.getByRole("button", { name: ja.customer_leave_visit }).click();
-    await expect(second.getByRole("article").locator("header").getByRole("status")).toHaveText(
-      ja.customer_disconnected,
-    );
+    await expect(
+      second
+        .locator("article > header")
+        .getByRole("status")
+        .filter({ hasText: ja.customer_disconnected }),
+    ).toBeVisible();
     await capture(second, "20-phone-left-visit");
     await expect(
       tablet.getByRole("region", { name: ja.customer_joined_guests }).locator("li"),
     ).toHaveCount(1);
     await capture(tablet, "21-ipad-after-member-left");
+    const signedOut = await browser.newContext({
+      baseURL,
+      viewport: { width: 402, height: 874 },
+      serviceWorkers: "block",
+    });
+    try {
+      await signedOut.addCookies([{ name: "tablecast_locale", value: "ja", url: baseURL }]);
+      const pwa = await signedOut.newPage();
+      await pwa.goto(`/member/${storeId}`);
+      await expect(pwa).toHaveURL(/\/login\?returnTo=/);
+      await expect(
+        pwa.getByRole("heading", { name: ja.customer_member_login_title }),
+      ).toBeVisible();
+      await expect(pwa.getByText("京料理こもれび四条店", { exact: true })).toBeVisible();
+      await expect(pwa.locator('img[src^="/api/member-stores/"]')).toBeVisible();
+      await capture(pwa, "22-phone-pwa-sign-in");
+    } finally {
+      await signedOut.close();
+    }
   } finally {
     await Promise.all(contexts.map((context) => context.close()));
   }

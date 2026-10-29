@@ -32,6 +32,14 @@ it("店舗別manifestは未ログインでも取得でき、会員情報や接�
   expect(response.status).toBe(200);
   expect(response.headers.get("Content-Type")).toBe("application/manifest+json");
   expect(response.headers.get("Cache-Control")).toBe("public, max-age=300");
+  const identity = await request(`${base}/identity`);
+  expect(identity.status).toBe(200);
+  expect(identity.headers.get("Cache-Control")).toBe("public, max-age=300");
+  expect(await identity.json()).toEqual({
+    storeId: "tablecast-store",
+    storeName: "卓上喫茶",
+    logo: null,
+  });
   const manifest = await response.json<Record<string, unknown>>();
   expect(manifest).toMatchObject({
     id: "/member/tablecast-store",

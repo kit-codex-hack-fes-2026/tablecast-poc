@@ -1,7 +1,7 @@
 import { customerMemoryInputSchema } from "@tablecast/api/schema";
 import { useMutation, useQueryClient, useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { Brain, Pencil, Plus, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
@@ -43,16 +43,6 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
           {t("customer_memories_note")}
         </p>
       </header>
-      <Button
-        disabled={editing !== undefined || remove.isPending}
-        onClick={(event) => {
-          editOrigin.current = event.currentTarget;
-          setEditing(null);
-        }}
-      >
-        <Plus aria-hidden="true" />
-        {t("customer_memory_add")}
-      </Button>
       {editing !== undefined && (
         <MemoryEditor
           key={editing?.id ?? "new"}
@@ -103,6 +93,17 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
         )}
       </ul>
       {!records.data.pages[0]?.memories.length && <p>{t("common_empty")}</p>}
+      <Button
+        variant="outline"
+        disabled={editing !== undefined || remove.isPending}
+        onClick={(event) => {
+          editOrigin.current = event.currentTarget;
+          setEditing(null);
+        }}
+      >
+        <Plus aria-hidden="true" />
+        {t("customer_memory_add")}
+      </Button>
       {!remove.isIdle && <ActionFeedback mutation={remove} successMessage={t("account_saved")} />}
       {records.hasNextPage && (
         <Button
@@ -128,6 +129,7 @@ function MemoryEditor({
   const { t } = useI18n();
   const client = useQueryClient();
   const [id] = useState(() => memory?.id ?? crypto.randomUUID());
+  const focusInput = useCallback((input: HTMLInputElement | null) => input?.focus(), []);
   const save = useMutation({
     mutationFn: (content: string) =>
       parseResponse(
@@ -157,6 +159,7 @@ function MemoryEditor({
           {(field) => (
             <field.TextField
               label={t("customer_memory_content")}
+              ref={focusInput}
               required
               maxLength={1000}
               disabled={save.isPending}

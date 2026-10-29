@@ -11,12 +11,13 @@ import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
 import { MembershipCard } from "../../components/membership-card";
+import { ProductImage } from "../../components/product-image";
 import { PwaInstallHelp } from "../../components/pwa";
 import { Button } from "../../components/ui/button";
 import * as Disclosure from "../../components/ui/disclosure";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
-import { customerCouponsOptions } from "./customer-coupons-query";
+import { OwnedCoupons } from "./customer-coupons";
 import { customerPointsOptions } from "./customer-points-query";
 import { customerStoreOptions } from "./customer-query";
 import { CustomerPreferences } from "./customer-store-preferences";
@@ -75,9 +76,13 @@ export function CustomerConsent({
 
 export function CustomerStore({ storeId }: { storeId: string }) {
   const { data } = useSuspenseQuery(customerStoreOptions(storeId));
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const points = useInfiniteQuery({
+    ...customerPointsOptions(storeId),
+    enabled: Boolean(data.membership?.active),
+  });
   return (
-    <div key={storeId} className="space-y-9">
+    <div key={storeId} className="space-y-6">
       {data.membership?.active ? (
         <MembershipCard
           storeId={storeId}
@@ -85,18 +90,54 @@ export function CustomerStore({ storeId }: { storeId: string }) {
           memberName={data.memberName}
           joinedAt={data.membership.joinedAt}
           branding={data.store.branding}
-        />
+          balance={points.data?.pages[0]?.balance}
+          visitCount={points.data?.pages[0]?.totals.visits}
+        >
+          {points.isPending && <LoadingState />}
+          <ErrorNotice query={points} retrying={points.isFetching} />
+          <Link
+            to="/member/$storeId/points"
+            params={{ storeId }}
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:text-primary"
+          >
+            {t("customer_points_history")}
+            <ArrowRight aria-hidden className="size-4 shrink-0" />
+          </Link>
+        </MembershipCard>
       ) : (
-        <header className="space-y-3 pb-2">
-          <p className="text-sm text-muted-foreground">{t("customer_card")}</p>
-          <h1 className="text-3xl font-semibold tracking-tight wrap-break-word">
-            {data.store.name}
-          </h1>
+        <header className="flex items-center gap-3 pb-2">
+          {data.store.branding?.logo && (
+            <ProductImage
+              src={`/api/member-stores/${encodeURIComponent(storeId)}/images/${data.store.branding.logo.imageKey}`}
+              alt={data.store.branding.logo.alt[locale]}
+              width={56}
+              height={56}
+              sizes="56px"
+              priority
+              className="size-14 shrink-0 rounded-xl object-contain"
+            />
+          )}
+          <div className="min-w-0 space-y-1">
+            <p className="text-sm text-muted-foreground">{t("customer_card")}</p>
+            <h1 className="text-xl font-semibold tracking-tight wrap-break-word">
+              {data.store.name}
+            </h1>
+          </div>
         </header>
       )}
       {data.membership?.active ? (
         <>
-          <CustomerBenefits key={storeId} storeId={storeId} />
+          <div className="space-y-3">
+            <OwnedCoupons storeId={storeId} compact />
+            <Link
+              to="/member/$storeId/coupons"
+              params={{ storeId }}
+              className="inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:text-primary"
+            >
+              {t("customer_coupons_and_rewards")}
+              <ArrowRight aria-hidden className="size-4 shrink-0" />
+            </Link>
+          </div>
           <CustomerVisits storeId={storeId} />
           <Disclosure.Root className="rounded-xl bg-secondary/60 px-4">
             <Disclosure.Trigger className="flex min-h-12 cursor-pointer items-center text-sm font-medium">
@@ -107,9 +148,12 @@ export function CustomerStore({ storeId }: { storeId: string }) {
               <PwaInstallHelp />
             </Disclosure.Panel>
           </Disclosure.Root>
-          <nav aria-label={t("customer_personal_records")} className="space-y-3">
+          <nav
+            aria-label={t("customer_personal_records")}
+            className="divide-y divide-border border-y border-border text-sm"
+          >
             <Link
-              className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-control-edge bg-control px-4 py-3 font-medium shadow-control transition-colors hover:bg-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="flex min-h-12 items-center justify-between gap-4 py-3 font-medium hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               to="/member/$storeId/memories"
               params={{ storeId }}
             >
@@ -117,7 +161,7 @@ export function CustomerStore({ storeId }: { storeId: string }) {
               <ArrowRight aria-hidden className="size-4 shrink-0" />
             </Link>
             <Link
-              className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-control-edge bg-control px-4 py-3 font-medium shadow-control transition-colors hover:bg-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="flex min-h-12 items-center justify-between gap-4 py-3 font-medium hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               to="/member/$storeId/consumption"
               params={{ storeId }}
             >
@@ -137,73 +181,6 @@ export function CustomerStore({ storeId }: { storeId: string }) {
       ) : (
         <CustomerConsent storeId={storeId} />
       )}
-    </div>
-  );
-}
-
-function CustomerBenefits({ storeId }: { storeId: string }) {
-  const { t, locale } = useI18n();
-  const points = useInfiniteQuery(customerPointsOptions(storeId));
-  const coupons = useInfiniteQuery(customerCouponsOptions(storeId));
-  const recentCoupons = coupons.data?.pages.flatMap((page) => page.coupons).slice(0, 2);
-  return (
-    <div className="grid gap-7 rounded-2xl bg-card p-5 shadow-xs sm:grid-cols-2 sm:p-6">
-      <section aria-labelledby="customer-balance-title" className="space-y-3">
-        <h2 id="customer-balance-title" className="text-sm font-medium text-muted-foreground">
-          {t("customer_points_balance")}
-        </h2>
-        {points.isPending ? (
-          <LoadingState />
-        ) : (
-          points.data && (
-            <p className="text-4xl font-semibold tracking-tight tabular-nums">
-              {points.data.pages[0]?.balance.toLocaleString(locale)}{" "}
-              <span className="text-base font-medium">pt</span>
-            </p>
-          )
-        )}
-        <ErrorNotice query={points} retrying={points.isFetching} />
-        <Link
-          to="/member/$storeId/points"
-          params={{ storeId }}
-          className="inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:text-primary"
-        >
-          {t("customer_points_history")}
-          <ArrowRight aria-hidden className="size-4 shrink-0" />
-        </Link>
-      </section>
-      <section aria-labelledby="customer-coupons-title" className="space-y-3">
-        <h2 id="customer-coupons-title" className="text-sm font-medium text-muted-foreground">
-          {t("customer_owned_coupons")}
-        </h2>
-        {coupons.isPending ? (
-          <LoadingState />
-        ) : (
-          <ul className="space-y-3">
-            {recentCoupons?.map((coupon) => (
-              <li key={coupon.id} className="space-y-1">
-                <p className="font-medium wrap-break-word">{coupon.rules.title[locale]}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t(`coupon_${coupon.state}`)}
-                  {!coupon.inDate && ` · ${t("coupon_expired")}`}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-        {recentCoupons?.length === 0 && !coupons.error && (
-          <p className="text-sm text-muted-foreground">{t("customer_owned_coupons_empty")}</p>
-        )}
-        <ErrorNotice query={coupons} retrying={coupons.isFetching} />
-        <Link
-          to="/member/$storeId/coupons"
-          params={{ storeId }}
-          className="inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:text-primary"
-        >
-          {t("customer_coupons_and_rewards")}
-          <ArrowRight aria-hidden className="size-4 shrink-0" />
-        </Link>
-      </section>
     </div>
   );
 }

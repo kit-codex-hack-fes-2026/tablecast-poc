@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
+import { ProductImage } from "../components/product-image";
 import { customerStoreOptions } from "../features/customer/customer-query";
 import { useI18n } from "../i18n/locale";
 export const Route = createFileRoute("/member/$storeId")({
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/member/$storeId")({
 });
 
 function Page() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const data = Route.useLoaderData();
   const { storeId } = Route.useParams();
   const path = useRouterState({ select: (state) => state.location.pathname });
@@ -35,9 +36,20 @@ function Page() {
         <Link
           to="/member/$storeId"
           params={{ storeId }}
-          className="mb-6 flex min-h-11 items-center gap-3 pb-2 text-sm font-medium hover:text-primary"
+          className="mb-4 flex min-h-11 items-center gap-3 text-sm font-medium hover:text-primary"
         >
           <ArrowLeft aria-hidden className="size-4 shrink-0" />
+          {data.store.branding?.logo && (
+            <ProductImage
+              src={`/api/member-stores/${encodeURIComponent(storeId)}/images/${data.store.branding.logo.imageKey}`}
+              alt={data.store.branding.logo.alt[locale]}
+              width={44}
+              height={44}
+              sizes="44px"
+              priority
+              className="size-11 shrink-0 rounded-lg object-contain"
+            />
+          )}
           <span className="min-w-0">
             <span className="block wrap-anywhere">{data.store.name}</span>
             <span className="block font-normal text-muted-foreground">

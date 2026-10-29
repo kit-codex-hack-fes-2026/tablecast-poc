@@ -4,6 +4,7 @@ import { ArrowLeft, QrCode } from "lucide-react";
 import { useEffect } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
+import { ProductImage } from "../../components/product-image";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
@@ -12,7 +13,7 @@ import { CustomerConsent } from "./customer-store";
 import { customerVisitOptions } from "./customer-visit-query";
 
 export function CustomerJoin({ code }: { code: string }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const client = useQueryClient();
   const navigate = useNavigate();
   const destination = useQuery({
@@ -74,10 +75,23 @@ export function CustomerJoin({ code }: { code: string }) {
   if (!destination.data) return null;
   return (
     <section className="space-y-6">
-      <div>
-        <p className="mb-2 text-sm text-muted-foreground">{t("customer_join_destination")}</p>
-        <h1 className="text-2xl font-semibold">{destination.data.storeName}</h1>
-        <p className="mt-2 text-muted-foreground">{destination.data.tableName}</p>
+      <div className="flex items-center gap-3">
+        {destination.data.branding?.logo && (
+          <ProductImage
+            src={`/api/member-stores/${encodeURIComponent(destination.data.storeId)}/images/${destination.data.branding.logo.imageKey}`}
+            alt={destination.data.branding.logo.alt[locale]}
+            width={56}
+            height={56}
+            sizes="56px"
+            priority
+            className="size-14 shrink-0 rounded-xl object-contain"
+          />
+        )}
+        <div className="min-w-0">
+          <p className="mb-2 text-sm text-muted-foreground">{t("customer_join_destination")}</p>
+          <h1 className="text-xl font-semibold wrap-anywhere">{destination.data.storeName}</h1>
+          <p className="mt-2 text-muted-foreground">{destination.data.tableName}</p>
+        </div>
       </div>
       {destination.data.membership?.active ? (
         <>

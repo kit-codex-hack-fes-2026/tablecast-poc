@@ -12,16 +12,27 @@ import {
 import { VoiceConnection } from "./voice-connection";
 
 it.each(["ja", "en"] as const)(
-  "%sの会員PopoverはQRと参加者だけをスクロールなしで表示し、背景操作とフォーカス復帰を保つ",
+  "%sの会員Popoverは短い案内と参加者をスクロールなしで表示し、背景操作とフォーカス復帰を保つ",
   async (locale) => {
     const labels = locale === "ja" ? ja : en;
     fixture.current.locale = locale;
     await page.viewport(1180, 820);
     await mountKiosk();
     const entry = page.getByRole("button", { name: labels.kiosk_visit_tools, exact: true });
+    await expect
+      .element(entry.getByText(labels.customer_member_label, { exact: true }))
+      .toBeVisible();
+    expect(entry.element().querySelector("svg.lucide-qr-code")).not.toBeNull();
     await entry.click();
     const popover = page.getByRole("dialog", { name: labels.kiosk_visit_tools, exact: true });
     await expect.element(popover).toBeVisible();
+    await expect
+      .element(popover.getByRole("heading", { name: labels.customer_phone_sign_in, exact: true }))
+      .toBeVisible();
+    await expect
+      .element(popover.getByRole("heading", { name: labels.customer_active_members, exact: true }))
+      .toBeVisible();
+    await expect.element(popover.getByText(labels.customer_members_empty)).toBeVisible();
     await expect
       .poll(() => popover.element().querySelector("svg title")?.textContent)
       .toBe(labels.customer_join_visit);
@@ -46,6 +57,11 @@ it.each(["ja", "en"] as const)(
     ];
     notify("customer.context-reset");
     await expect.element(popover.getByRole("button", { name: "Alex", exact: true })).toBeVisible();
+    await expect.element(popover.getByText(labels.customer_members_empty)).not.toBeInTheDocument();
+    await expect
+      .element(entry.getByText(labels.customer_member_label, { exact: true }))
+      .toBeVisible();
+    expect(entry.element().querySelector("svg.lucide-qr-code")).not.toBeNull();
     await expect.element(entry).toHaveAttribute("aria-expanded", "true");
     await expect
       .poll(
@@ -118,6 +134,7 @@ it("退出通知後の取得失敗とイベント上限でも以前の会員名�
   fail = true;
   notify("customer.context-reset");
   await expect.element(popover.getByRole("alert")).toBeVisible();
+  await expect.element(popover.getByText(ja.customer_members_empty)).not.toBeInTheDocument();
   await expect
     .element(popover.getByRole("button", { name: "Alex", exact: true }))
     .not.toBeInTheDocument();

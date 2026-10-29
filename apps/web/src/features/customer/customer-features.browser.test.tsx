@@ -178,6 +178,41 @@ it("日本語で初回同意後の設定を保存し、新しい画面でも撤�
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
 });
 
+it.each(["ja", "en"] as const)(
+  "%sで会話の記憶の確認を優先し、手動追加は一覧の後へ置く",
+  async (locale) => {
+    const labels = locale === "ja" ? ja : en;
+    vi.stubGlobal("fetch", async () =>
+      Response.json({
+        memories: [
+          {
+            id: "voice-memory",
+            content: "辛さは控えめ",
+            sourceKind: "voice",
+            revision: 1,
+            createdAt: 1,
+          },
+        ],
+        nextCursor: null,
+      }),
+    );
+    await show(<CustomerMemories storeId="tablecast-store" />, locale);
+    await expect
+      .element(page.getByRole("heading", { name: labels.customer_memories }))
+      .toBeVisible();
+    await expect.element(page.getByText(labels.customer_memories_note)).toBeVisible();
+    const memory = page.getByText("辛さは控えめ", { exact: true }).element();
+    const add = page.getByRole("button", { name: labels.customer_memory_add, exact: true });
+    expect(
+      memory.compareDocumentPosition(add.element()) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    await expect.element(add).toHaveAttribute("data-variant", "outline");
+    await expect
+      .element(page.getByRole("button", { name: labels.customer_edit, exact: true }))
+      .toBeEnabled();
+  },
+);
+
 it("日本語で記憶を作成・編集し、新しい画面で再取得して削除する", async () => {
   const locale = "ja";
   const labels = ja;
@@ -269,6 +304,8 @@ it("ポイント交換の失敗は同じキーで再試行し、交換した券�
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const path = new URL(request.url).pathname;
+    if (path === `${base}/visits/tablecast-visit`)
+      return Response.json({ connected: true, tableName: "T10", openedAt: 1 });
     if (path === `${base}/points`)
       return Response.json({
         balance: 4,

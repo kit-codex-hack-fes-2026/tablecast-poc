@@ -76,6 +76,8 @@ export function CustomerVisitPanel({
           />
         }
       >
+        <QrCode aria-hidden className="size-5 shrink-0" />
+        <span className="text-sm whitespace-nowrap">{t("customer_member_label")}</span>
         <MemberAvatarStack people={people} />
       </Popover.Trigger>
       <Popover.Portal>
@@ -143,9 +145,7 @@ function MemberAvatarStack({ people }: { people: Participant[] }) {
         </span>
       )}
     </span>
-  ) : (
-    <QrCode aria-hidden className="size-5" />
-  );
+  ) : null;
 }
 
 function VisitQr({
@@ -163,7 +163,13 @@ function VisitQr({
 }) {
   const { t } = useI18n();
   return (
-    <section aria-label={t("customer_join_visit")}>
+    <section
+      aria-label={t("customer_join_visit")}
+      className={short ? "w-40 space-y-2" : "space-y-2"}
+    >
+      <h2 className="pr-8 text-center text-sm font-semibold leading-5">
+        {t("customer_phone_sign_in")}
+      </h2>
       <div
         className={`mx-auto grid place-items-center rounded-xl bg-card ${short ? "size-40" : "size-52"}`}
       >
@@ -225,11 +231,15 @@ function VisitParticipants({
   const shown = people.slice(currentPage * 4, (currentPage + 1) * 4);
   return (
     <section aria-label={t("customer_joined_guests")} className="space-y-2">
+      <h2 className="text-sm font-semibold leading-5">{t("customer_active_members")}</h2>
       {participants.isPending && (
         <LoaderCircle
           aria-label={t("common_loading")}
           className="mx-auto size-5 motion-safe:animate-spin"
         />
+      )}
+      {participants.isSuccess && !people.length && (
+        <p className="text-sm text-muted-foreground">{t("customer_members_empty")}</p>
       )}
       <ul className="grid grid-cols-2 gap-2">
         {shown.map((person) => (

@@ -1,11 +1,12 @@
 import type { couponRuleSchema } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
 import type { z } from "zod";
-import { tv } from "tailwind-variants";
+import { cn, tv } from "tailwind-variants";
 import { dateTime } from "../i18n/format";
 import { useI18n } from "../i18n/locale";
 import { DateTime } from "./date-time";
 import { ProductImage } from "./product-image";
+import * as Disclosure from "./ui/disclosure";
 const couponImage = tv({
   base: "h-auto w-full bg-card",
   variants: {
@@ -20,8 +21,10 @@ export function CouponCard({
   storeId,
   children,
   imageBasePath,
+  compact = false,
 }: {
   children?: ReactNode;
+  compact?: boolean;
   imageBasePath?: string;
   rules: z.infer<typeof couponRuleSchema>;
   storeId: string;
@@ -29,68 +32,119 @@ export function CouponCard({
   const { t, locale } = useI18n();
   return (
     <article className="overflow-hidden rounded-2xl border border-border bg-card">
-      <ProductImage
-        src={`${imageBasePath ?? `/api/customer/stores/${storeId}/coupons`}/images/${rules.imageKey}`}
-        alt={rules.title[locale]}
-        width={600}
-        height={rules.presentation?.layout === "portrait" ? 800 : 300}
-        sizes="(max-width: 640px) 100vw, 480px"
-        className={couponImage(rules.presentation)}
-      />
-      <div className="space-y-3 border-t-2 border-dashed border-border p-5">
-        <h3 className="text-xl font-semibold">{rules.title[locale]}</h3>
-        <p>{rules.description[locale]}</p>
-        <p className="text-3xl font-semibold">
-          {rules.discountKind === "fixed" ? `¥${rules.discountValue}` : `${rules.discountValue}%`}
-        </p>
-        {rules.discountKind === "percent" && (
-          <p>
-            {t("coupon_cap")}: ¥{rules.maximumYen}
+      <div className={compact ? "flex items-start gap-4 p-4" : undefined}>
+        <ProductImage
+          src={`${imageBasePath ?? `/api/customer/stores/${storeId}/coupons`}/images/${rules.imageKey}`}
+          alt={rules.title[locale]}
+          width={600}
+          height={rules.presentation?.layout === "portrait" ? 800 : 300}
+          sizes={compact ? "96px" : "(max-width: 640px) 100vw, 480px"}
+          className={cn(couponImage(rules.presentation), compact && "w-24 shrink-0 rounded-lg")}
+        />
+        <div
+          className={
+            compact
+              ? "min-w-0 flex-1 space-y-2"
+              : "space-y-3 border-t-2 border-dashed border-border p-5"
+          }
+        >
+          <h3
+            className={
+              compact ? "font-semibold leading-snug wrap-anywhere" : "text-xl font-semibold"
+            }
+          >
+            {rules.title[locale]}
+          </h3>
+          <p className={compact ? "text-2xl font-semibold tabular-nums" : "text-3xl font-semibold"}>
+            {rules.discountKind === "fixed" ? `¥${rules.discountValue}` : `${rules.discountValue}%`}
           </p>
-        )}
-        <p>
-          {t("coupon_minimum")}: ¥{rules.minimumYen}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          <DateTime value={rules.startsAt} /> {locale === "ja" ? "から" : "to"}{" "}
-          <DateTime value={rules.endsAt} />
-        </p>
-        {rules.conditions &&
-          (rules.conditions.all.length > 0 || rules.conditions.any.length > 0) && (
-            <section className="space-y-2 text-sm" aria-label={t("coupon_acquisition_conditions")}>
-              <h4 className="font-medium">{t("coupon_acquisition_conditions")}</h4>
-              {(["all", "any"] as const).map((group) =>
-                rules.conditions?.[group].length ? (
-                  <p key={group}>
-                    {t(`coupon_acquisition_${group}`)}:{" "}
-                    {rules.conditions[group]
-                      .map((condition) => {
-                        const dated =
-                          condition.field === "joinedAt" || condition.field === "lastVisitAt";
-                        const value = dated
-                          ? dateTime(condition.value, locale)
-                          : condition.value.toLocaleString(locale);
-                        const comparison = t(
-                          condition.operator === "gte"
-                            ? dated
-                              ? "coupon_acquisition_after"
-                              : "coupon_acquisition_gte"
-                            : dated
-                              ? "coupon_acquisition_before"
-                              : "coupon_acquisition_lte",
-                        );
-                        return locale === "ja"
-                          ? `${t(`coupon_condition_${condition.field}`)} ${value}${comparison}`
-                          : `${t(`coupon_condition_${condition.field}`)} ${comparison} ${value}`;
-                      })
-                      .join(locale === "ja" ? "、" : "; ")}
-                  </p>
-                ) : null,
-              )}
-            </section>
-          )}
-        {children}
+          {compact ? <CouponSummary rules={rules} /> : <CouponTerms rules={rules} />}
+          {children}
+        </div>
       </div>
+      {compact && (
+        <Disclosure.Root className="border-t border-dashed border-border px-4">
+          <Disclosure.Trigger className="text-xs text-muted-foreground">
+            {t("customer_coupon_details")}
+          </Disclosure.Trigger>
+          <Disclosure.Panel className="pb-4">
+            <CouponTerms rules={rules} />
+          </Disclosure.Panel>
+        </Disclosure.Root>
+      )}
     </article>
+  );
+}
+
+function CouponSummary({ rules }: { rules: z.infer<typeof couponRuleSchema> }) {
+  const { t } = useI18n();
+  return (
+    <div className="space-y-1 text-xs leading-relaxed text-muted-foreground">
+      <p>
+        {t("coupon_minimum")}: ¥{rules.minimumYen}
+      </p>
+      {rules.discountKind === "percent" && (
+        <p>
+          {t("coupon_cap")}: ¥{rules.maximumYen}
+        </p>
+      )}
+      <p>
+        {t("coupon_end")}: <DateTime value={rules.endsAt} />
+      </p>
+    </div>
+  );
+}
+
+function CouponTerms({ rules }: { rules: z.infer<typeof couponRuleSchema> }) {
+  const { t, locale } = useI18n();
+  return (
+    <div className="space-y-2 text-sm">
+      <p>{rules.description[locale]}</p>
+      {rules.discountKind === "percent" && (
+        <p>
+          {t("coupon_cap")}: ¥{rules.maximumYen}
+        </p>
+      )}
+      <p>
+        {t("coupon_minimum")}: ¥{rules.minimumYen}
+      </p>
+      <p className="text-muted-foreground">
+        <DateTime value={rules.startsAt} /> {locale === "ja" ? "から" : "to"}{" "}
+        <DateTime value={rules.endsAt} />
+      </p>
+      {rules.conditions && (rules.conditions.all.length > 0 || rules.conditions.any.length > 0) && (
+        <section className="space-y-2" aria-label={t("coupon_acquisition_conditions")}>
+          <h4 className="font-medium">{t("coupon_acquisition_conditions")}</h4>
+          {(["all", "any"] as const).map((group) =>
+            rules.conditions?.[group].length ? (
+              <p key={group}>
+                {t(`coupon_acquisition_${group}`)}:{" "}
+                {rules.conditions[group]
+                  .map((condition) => {
+                    const dated =
+                      condition.field === "joinedAt" || condition.field === "lastVisitAt";
+                    const value = dated
+                      ? dateTime(condition.value, locale)
+                      : condition.value.toLocaleString(locale);
+                    const comparison = t(
+                      condition.operator === "gte"
+                        ? dated
+                          ? "coupon_acquisition_after"
+                          : "coupon_acquisition_gte"
+                        : dated
+                          ? "coupon_acquisition_before"
+                          : "coupon_acquisition_lte",
+                    );
+                    return locale === "ja"
+                      ? `${t(`coupon_condition_${condition.field}`)} ${value}${comparison}`
+                      : `${t(`coupon_condition_${condition.field}`)} ${comparison} ${value}`;
+                  })
+                  .join(locale === "ja" ? "、" : "; ")}
+              </p>
+            ) : null,
+          )}
+        </section>
+      )}
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, assert, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { customerMemories, customerMemorySources } from "../src/db/customer-schema";
 import { user } from "../src/db/identity-schema";
 import { tableEvents, tableSessions } from "../src/db/table-schema";
@@ -27,9 +28,12 @@ import { updateCart } from "../src/modules/orders/use-cases/cart";
 import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
 import { getTableState } from "../src/modules/tables/queries";
 import { recordConversationItems } from "../src/modules/voice/conversation";
+import { invokeVoiceTool } from "../src/modules/voice/realtime";
+import { finishVoiceTurn } from "../src/modules/voice/turns";
 import { createApiServices } from "../src/platform/context";
 import { fixtureDb } from "./database-fixture";
 import { device, setupFixture } from "./fixture";
+import { runVoiceTurn } from "./voice-fixture";
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -103,6 +107,74 @@ it("自動記憶は現在の本人発話だけを採用し、再送で本人の�
   expect((await listCustomerMemories(services, customer, { limit: 20 })).memories[0]?.content).toBe(
     "本人による訂正",
   );
+});
+it("保存依頼なしの本人発話を通常委任の登録toolで保存し、次の委任の接客へ引き継ぐ", async () => {
+  const { services, customer } = await setup();
+  const actor = await activate();
+  const turnId = "tablecast-automatic-preference";
+  const quote = "私はいつも甘さ控えめが好きです";
+  const first = await runVoiceTurn({
+    voiceSessionId: actor.voiceSessionId,
+    turnId,
+    locale: "ja",
+    messages: [{ role: "user", content: quote }],
+  });
+  await first.finish();
+  const context = await invokeVoiceTool(
+    services,
+    {
+      voiceSessionId: actor.voiceSessionId,
+      turnId,
+      toolName: "getCustomerContext",
+      toolCallId: "tablecast-preference-context",
+      arguments: {},
+    },
+    new AbortController().signal,
+  );
+  const { source } = z
+    .object({ source: z.object({ id: z.string(), content: z.string() }) })
+    .parse(context.result);
+  expect(source.content).toBe(quote);
+  const saved = await invokeVoiceTool(
+    services,
+    {
+      voiceSessionId: actor.voiceSessionId,
+      turnId,
+      toolName: "saveCustomerMemory",
+      toolCallId: "tablecast-preference-save",
+      arguments: { sourceId: source.id, quote, clearFirstPersonPreference: true },
+    },
+    new AbortController().signal,
+  );
+  expect(saved.result).toEqual({ saved: true });
+  await finishVoiceTurn(services, actor.voiceSessionId, turnId, "completed");
+  expect((await listCustomerMemories(services, customer, { limit: 20 })).memories).toEqual([
+    expect.objectContaining({ content: quote, sourceKind: "voice" }),
+  ]);
+  const nextId = "tablecast-automatic-next";
+  const next = await runVoiceTurn({
+    voiceSessionId: actor.voiceSessionId,
+    turnId: nextId,
+    locale: "ja",
+    messages: [{ role: "user", content: "おすすめはありますか" }],
+  });
+  await next.finish();
+  const recalled = await invokeVoiceTool(
+    services,
+    {
+      voiceSessionId: actor.voiceSessionId,
+      turnId: nextId,
+      toolName: "getCustomerContext",
+      toolCallId: "tablecast-preference-recall",
+      arguments: {},
+    },
+    new AbortController().signal,
+  );
+  expect(recalled.result).toMatchObject({ memories: [{ content: quote }] });
+  await finishVoiceTurn(services, actor.voiceSessionId, nextId, "completed");
+  expect(await fixtureDb.select().from(customerMemorySources)).toEqual([
+    expect.objectContaining({ id: source.id }),
+  ]);
 });
 it("複数人では共通接客に戻り、明示選択・同意撤回で音声と遅着保存を失効させる", async () => {
   const { services, customer, tablet, code } = await setup();

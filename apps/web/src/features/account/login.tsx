@@ -1,10 +1,13 @@
+import type { ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useHydrated, useLocation } from "@tanstack/react-router";
 import { Fingerprint, Mail } from "lucide-react";
 import { useEffect } from "react";
 import { z } from "zod";
+import type { MemberLoginBranding } from "./member-login-query";
 import { useAppForm } from "../../components/form";
 import { GoogleIcon } from "../../components/google-icon";
+import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -13,10 +16,14 @@ import { authClient, authResult, promptGoogleOneTap } from "../../lib/auth-clien
 import { AuthLayout } from "./auth-layout";
 import { loginReturnUrl } from "./login-model";
 
-export function Login({ evaluation = false }: { evaluation?: boolean }) {
+export function Login({
+  evaluation = false,
+  memberStore,
+}: {
+  evaluation?: boolean;
+  memberStore?: MemberLoginBranding;
+}) {
   const searchStr = useLocation({ select: (location) => location.searchStr });
-  const joiningVisit =
-    new URLSearchParams(searchStr).get("returnTo")?.startsWith("/member/join?") ?? false;
   const { t, locale, setLocale } = useI18n();
   const hydrated = useHydrated();
   const client = useQueryClient();
@@ -83,28 +90,16 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const last = (method: string) =>
     lastMethod === method ? <Badge variant="secondary">{t("auth_last_used")}</Badge> : null;
   return (
-    <AuthLayout
-      title={
-        evaluation
-          ? t("evaluation_login_title")
-          : joiningVisit
-            ? t("customer_login_title")
-            : t("auth_subtitle")
-      }
+    <LoginLayout
+      evaluation={evaluation}
+      memberStore={memberStore}
+      searchStr={searchStr}
       onLocaleChange={(next) => {
         setLocale(next);
         localStorage.setItem("tablecast_staff_locale", next);
       }}
-      footer={
-        <Link to="/" className="inline-flex min-h-11 items-center underline underline-offset-4">
-          {t("auth_guest")}
-        </Link>
-      }
     >
       <div className="space-y-6">
-        {joiningVisit && (
-          <p className="leading-relaxed text-muted-foreground">{t("customer_login_hint")}</p>
-        )}
         {new URLSearchParams(searchStr).has("error") && (
           <p role="alert" className="text-destructive">
             {t("auth_magic_invalid")}
@@ -170,6 +165,68 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
             )}
           </form.Form>
         </form.AppForm>
+      </div>
+    </LoginLayout>
+  );
+}
+
+function LoginLayout({
+  evaluation,
+  memberStore,
+  searchStr,
+  onLocaleChange,
+  children,
+}: {
+  children: ReactNode;
+  evaluation: boolean;
+  memberStore?: MemberLoginBranding;
+  onLocaleChange: (locale: "en" | "ja") => void;
+  searchStr: string;
+}) {
+  const { t, locale } = useI18n();
+  const memberDestination = new URLSearchParams(searchStr).get("returnTo");
+  const joiningVisit = memberDestination?.startsWith("/member/join?") ?? false;
+  const memberSignIn =
+    memberDestination === "/member" || memberDestination?.startsWith("/member/") === true;
+  return (
+    <AuthLayout
+      brand={
+        memberSignIn && memberStore?.logo ? (
+          <ProductImage
+            src={`/api/member-stores/${encodeURIComponent(memberStore.storeId)}/images/${memberStore.logo.imageKey}`}
+            alt={memberStore.logo.alt[locale]}
+            width={144}
+            height={56}
+            sizes="144px"
+            className="h-14 w-36 object-contain object-left"
+          />
+        ) : undefined
+      }
+      eyebrow={memberSignIn ? memberStore?.storeName : undefined}
+      title={
+        evaluation
+          ? t("evaluation_login_title")
+          : joiningVisit
+            ? t("customer_login_title")
+            : memberSignIn
+              ? t("customer_member_login_title")
+              : t("auth_subtitle")
+      }
+      onLocaleChange={onLocaleChange}
+      footer={
+        <Link to="/" className="inline-flex min-h-11 items-center underline underline-offset-4">
+          {t("auth_guest")}
+        </Link>
+      }
+    >
+      <div className="space-y-6">
+        {joiningVisit && (
+          <p className="leading-relaxed text-muted-foreground">{t("customer_login_hint")}</p>
+        )}
+        {memberSignIn && !joiningVisit && (
+          <p className="leading-relaxed text-muted-foreground">{t("customer_member_login_hint")}</p>
+        )}
+        {children}
       </div>
     </AuthLayout>
   );

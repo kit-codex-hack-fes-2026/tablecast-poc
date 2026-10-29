@@ -16,6 +16,7 @@ import { calendarDate } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { ConsumptionEditor } from "./customer-consumption";
+import { OwnedCoupons } from "./customer-coupons";
 import {
   customerOrdersOptions,
   customerVisitOptions,
@@ -154,7 +155,7 @@ export function CustomerVisit({ storeId, sessionId }: { sessionId: string; store
   });
   const data = visit.data;
   return (
-    <article className="space-y-7">
+    <article className="space-y-6">
       <header className="space-y-2">
         <p className="text-sm text-muted-foreground">{t("customer_visits")}</p>
         <h1 className="text-2xl font-semibold tracking-tight wrap-break-word">
@@ -168,21 +169,18 @@ export function CustomerVisit({ storeId, sessionId }: { sessionId: string; store
         </p>
       </header>
       {data.connected && (
-        <section className="space-y-3 rounded-xl bg-card p-5">
-          <h2 className="font-semibold">{t("customer_visit_next")}</h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {t("customer_visit_next_hint")}
-          </p>
+        <div className="space-y-3">
+          <OwnedCoupons storeId={storeId} sessionId={sessionId} compact />
           <Link
             to="/member/$storeId/coupons"
             params={{ storeId }}
             search={{ sessionId }}
-            className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-control-edge bg-control px-4 py-3 font-medium shadow-control transition-colors hover:bg-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:text-primary"
           >
-            {t("customer_visit_coupons")}
+            {t("customer_coupons_and_rewards")}
             <ArrowRight aria-hidden className="size-4 shrink-0" />
           </Link>
-        </section>
+        </div>
       )}
       <ErrorNotice query={visit} />
       <section className="space-y-3">
