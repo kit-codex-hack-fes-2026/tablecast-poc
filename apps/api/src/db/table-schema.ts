@@ -51,7 +51,7 @@ export const tableSessions = sqliteTable("table_sessions", {
   kind: text("kind", { enum: ["table", "demo"] })
     .notNull()
     .default("table"),
-  locale: text("locale", { enum: ["ja", "en"] }).notNull(),
+  locale: text("locale").notNull(),
   status: text("status", { enum: ["open", "closed"] })
     .notNull()
     .default("open"),
@@ -158,9 +158,7 @@ export const voiceTurns = sqliteTable("voice_turns", {
   voice_session_id: text("voice_session_id").notNull(),
   table_session_id: text("table_session_id").notNull(),
   store_id: text("store_id").notNull(),
-  locale: text("locale", { enum: ["ja", "en"] })
-    .notNull()
-    .default("ja"),
+  locale: text("locale").notNull().default("ja"),
   status: text("status", { enum: ["started", "completed", "interrupted", "failed"] }).notNull(),
   started_at: integer("started_at").notNull(),
   ended_at: integer("ended_at"),

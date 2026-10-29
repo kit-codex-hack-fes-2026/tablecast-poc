@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { type Product, unknownFoodProfile } from "@tablecast/api/schema";
 import { useState } from "react";
 import { Button } from "../../components/ui/button";
@@ -43,7 +44,7 @@ export function FoodInformationEditor({
           <Tabs.Tab value="base">{t("food_base")}</Tabs.Tab>
           {value.components.map((component) => (
             <Tabs.Tab key={component.id} value={`component:${component.id}`}>
-              {component.name[locale]}
+              {resolveLocalized(component.name, locale)}
             </Tabs.Tab>
           ))}
           <Tabs.Tab value="preview">{t("food_preview")}</Tabs.Tab>
@@ -65,7 +66,7 @@ export function FoodInformationEditor({
                     <Input
                       lang={language}
                       disabled={disabled}
-                      value={component.name[language]}
+                      value={component.name[language] ?? ""}
                       onChange={(event) =>
                         onChange({
                           foodInfo: {
@@ -188,6 +189,12 @@ export function FoodChangesEditor({
 }) {
   const { t, locale } = useI18n();
   const changes = option.foodChanges ?? { add: [], remove: [] };
+  const componentNames = new Map(
+    product.foodInfo.components.map((component) => [
+      component.id,
+      resolveLocalized(component.name, locale),
+    ]),
+  );
   return (
     <fieldset className="grid gap-3">
       <legend className="mb-3 font-medium">{t("food_changes")}</legend>
@@ -218,8 +225,7 @@ export function FoodChangesEditor({
                   })
                 }
               />
-              {product.foodInfo.components.find((component) => component.id === id)?.name[locale] ??
-                `${t("editor_missing_reference")}: ${id}`}
+              {componentNames.get(id) ?? `${t("editor_missing_reference")}: ${id}`}
             </label>
           ))}
         </div>

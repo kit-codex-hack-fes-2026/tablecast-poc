@@ -1,3 +1,4 @@
+import { uiLocale } from "@tablecast/api/localization";
 import { type ReactTable, type RowData } from "@tanstack/react-table";
 import { ArrowDownUp, ChevronLeft, ChevronRight, List } from "lucide-react";
 import { type ReactNode } from "react";
@@ -113,7 +114,10 @@ export function TablePagination<T extends RowData>({
       <span>
         {pending
           ? t("common_loading")
-          : m.common_result_count({ count: table.getFilteredRowModel().rows.length }, { locale })}
+          : m.common_result_count(
+              { count: table.getFilteredRowModel().rows.length },
+              { locale: uiLocale(locale) },
+            )}
       </span>
       <div className="flex items-center gap-2">
         <Button

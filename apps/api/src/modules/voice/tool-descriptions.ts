@@ -7,9 +7,9 @@ export const voiceToolDescriptions = {
   getCustomerSuggestions:
     "usualは本人が飲食した商品、untriedは本人の飲食記録にない販売中の商品、companionsは現在と同じ同行者構成の前回来店の共有注文から候補を返す。未体験を断定せず記録上未体験と伝える。注文前にgetCatalogで現在の必須選択を確認し、通常の確認と承認を経る。moreならnextOffsetで続き。",
   getCustomerContext:
-    "現在の接客対象について許可された個人記憶と飲食記録を取得する。needsTargetならiPadで本人の選択を依頼し、声や名前から識別しない。記録にない商品を未体験と断定する前にmoreConsumptionを確認する。現在の商品価格・販売状態・必須選択はgetCatalogで再確認する。sourceは今回の発話だけ。",
+    "現在の接客対象について許可された個人記憶、飲食記録とcustomerの表示名・確認済みの過去来店・ポイント・有効な券を取得する。customerがnullなら個人情報を推測しない。券は有効期限の近い順で最大5件、moreCouponsなら省略があり、最低会計額の充足や会計への適用済みを意味しない。needsTargetならiPadで本人の選択を依頼し、声や名前から識別しない。記録にない商品を未体験と断定する前にmoreConsumptionを確認する。現在の商品価格・販売状態・必須選択はgetCatalogで再確認する。sourceは今回の発話だけ。",
   saveCustomerMemory:
-    "接客対象本人の明確な一人称の好み・希望だけを自動保存する。getCustomerContextが返した今回のsourceの原文からquoteを抜き出す。話者が曖昧、複数人の混ざった発言、背景会話、他人についての推測は保存しない。保存許可がなくsourceがnullなら実行しない。",
+    "接客対象本人が明確に伝えた継続的な一人称の好み・配慮・希望だけを、初回の自動保存同意の範囲で自動保存する。保存依頼や発言ごとの保存確認、会員画面の操作は不要。一時的な注文・数量・今回だけの希望や、センシティブな属性・健康状態の推測は保存しない。getCustomerContextが返した今回のsourceの原文からquoteを抜き出す。話者が曖昧、複数人の混ざった発言、背景会話、他人についての推測は保存しない。保存許可がなくsourceがnullなら実行しない。",
   getProductFoodInformation:
     "商品IDと検討中のselectionsで選択後の食事制限情報と根拠を確認する。カートは変更しない。complete=false・unknown・交差接触不明を安全や適合と説明しない。",
   getCatalog:
@@ -25,7 +25,7 @@ export const voiceToolDescriptions = {
   endConversation:
     "もう大丈夫です・今は結構です・That is all, thank youなど、接客が不要という明確な意思で音声を終了する。注文確認へのそれで大丈夫ですは承認であり終了ではない。曖昧なら意図を確認する。終了後の注文操作は行わない。",
   setLanguage:
-    "客の明示依頼で表示と音声の言語をja（日本語）/en（British English）へ切り替える。同じ音声接続と声を維持し、次の応答から新言語を使う。切替後は古い確認や追加の業務操作を続けない。",
+    "客の明示依頼で表示と音声を店舗のlanguagesに登録されたBCP 47言語へ切り替える。同じ音声接続と声を維持し、次の応答から新言語を使う。切替後は古い確認や追加の業務操作を続けない。",
   setDisplayCurrency:
     "客の明示依頼で、この端末の外貨参考表示を変更する。currencyは対応ISOコード、nullは円のみ。価格の外貨質問だけならgetCatalog/getTableStateのquoteCurrencyを使い表示は変更しない。円の注文・会計、音声接続は変更しない。",
   setSpeechSpeed:

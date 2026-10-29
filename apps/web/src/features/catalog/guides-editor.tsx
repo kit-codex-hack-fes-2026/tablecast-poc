@@ -1,10 +1,12 @@
 import type { Guide } from "@tablecast/api/schema";
+import { resolveLocalized, resolveText } from "@tablecast/api/localization";
 import { BookOpen, Link, UtensilsCrossed } from "lucide-react";
 import type { EditorProps } from "../configuration/configuration-editor-model";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { BilingualFields, ConfigurationSection } from "../configuration/configuration-fields";
 import { guideTemplates } from "../configuration/guide-model";
+import { LanguageFields } from "../configuration/language-fields";
 
 export function GuidesEditor({ value, onChange, disabled, selectedId }: EditorProps) {
   const { t, locale } = useI18n();
@@ -31,7 +33,11 @@ export function GuidesEditor({ value, onChange, disabled, selectedId }: EditorPr
                 update({
                   text: {
                     ja: { ...guide.text.ja, displayName: template.ja, speechName: template.ja },
-                    en: { ...guide.text.en, displayName: template.en, speechName: template.en },
+                    en: {
+                      ...resolveText(guide.text, "en"),
+                      displayName: template.en,
+                      speechName: template.en,
+                    },
                   },
                 });
             }}
@@ -39,7 +45,7 @@ export function GuidesEditor({ value, onChange, disabled, selectedId }: EditorPr
             <option value="">{t("assistance_template_hint")}</option>
             {guideTemplates.map((item) => (
               <option key={item.en} value={item.en}>
-                {item[locale]}
+                {resolveLocalized(item, locale)}
               </option>
             ))}
           </select>
@@ -70,7 +76,7 @@ export function GuidesEditor({ value, onChange, disabled, selectedId }: EditorPr
                   })
                 }
               />
-              {product.text[locale].displayName}
+              {resolveText(product.text, locale).displayName}
             </label>
           ))}
         </div>
@@ -82,24 +88,28 @@ export function GuidesEditor({ value, onChange, disabled, selectedId }: EditorPr
             disabled={disabled}
             className="space-y-3 rounded-lg border border-border p-3"
           >
-            {(["ja", "en"] as const).map((language) => (
-              <label key={language} className="grid gap-1">
-                {t(language === "ja" ? "common_ja" : "common_en")}
-                <input
-                  className="min-h-11 rounded-lg border border-input px-3"
-                  value={link.label[language]}
-                  onChange={(event) =>
-                    update({
-                      links: guide.links.map((item, position) =>
-                        position === index
-                          ? { ...item, label: { ...item.label, [language]: event.target.value } }
-                          : item,
-                      ),
-                    })
-                  }
-                />
-              </label>
-            ))}
+            <LanguageFields>
+              {(language, labelId) => (
+                <label key={language} className="grid gap-1">
+                  <span id={`${labelId}-link-${index}`}>{t("assistance_links")}</span>
+                  <input
+                    className="min-h-11 rounded-lg border border-input px-3"
+                    aria-labelledby={`${labelId} ${labelId}-link-${index}`}
+                    lang={language}
+                    value={link.label[language] ?? ""}
+                    onChange={(event) =>
+                      update({
+                        links: guide.links.map((item, position) =>
+                          position === index
+                            ? { ...item, label: { ...item.label, [language]: event.target.value } }
+                            : item,
+                        ),
+                      })
+                    }
+                  />
+                </label>
+              )}
+            </LanguageFields>
             <label className="grid gap-1">
               URL
               <input

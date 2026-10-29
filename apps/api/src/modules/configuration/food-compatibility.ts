@@ -5,6 +5,7 @@ import {
   readFoodProfile,
   unknownFoodProfile,
 } from "../catalog/food-model";
+import { localizedSchema } from "../catalog/localization";
 import { configurationSchema } from "./model";
 
 const legacyAllergensSchema = z
@@ -13,7 +14,7 @@ const legacyAllergensSchema = z
     evidence: z.enum(["verified", "unknown"]),
     crossContact: z.enum(["possible", "unknown", "controlled"]),
     vegan: z.enum(["yes", "no", "unknown"]),
-    note: z.object({ ja: z.string(), en: z.string() }),
+    note: localizedSchema(z.string()),
   })
   .strict();
 

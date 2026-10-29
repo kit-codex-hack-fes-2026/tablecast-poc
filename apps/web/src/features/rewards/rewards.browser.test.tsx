@@ -229,3 +229,118 @@ it("申請された券を会計に適用し、理由付き取消で割引とフ�
     },
   ]);
 });
+
+it("複合条件と券面を編集して対象を確認し、プレビュー失敗と条件変更で入力を保持する", async () => {
+  const audienceRequests: unknown[] = [];
+  const couponWrites: unknown[] = [];
+  let failAudience = false;
+  const coupon = couponDefinitionSchema.parse({
+    id: crypto.randomUUID(),
+    expectedVersion: 1,
+    active: true,
+    rules: {
+      title: { ja: "会員割引", en: "Member discount" },
+      description: { ja: "100円引き", en: "JPY 100 off" },
+      imageKey: `tablecast/uploads/${"a".repeat(64)}.webp`,
+      imageKind: "illustration",
+      imageSource: { generated: false, description: "店舗が利用を許可した券面" },
+      startsAt: Date.now() - 10000,
+      endsAt: Date.now() + 86400000,
+      minimumYen: 0,
+      discountKind: "fixed",
+      discountValue: 100,
+      maximumYen: 1000,
+      trigger: "manual",
+      threshold: 1,
+    },
+  });
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const path = new URL(request.url).pathname;
+    if (path === `${api}/coupons/audience`) {
+      audienceRequests.push(await request.json());
+      return failAudience
+        ? Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 })
+        : Response.json({
+            totalMembers: 6,
+            eligible: 2,
+            alreadyIssued: 1,
+            notMatching: 3,
+            evaluatedAt: Date.now(),
+            issuance: "manual",
+          });
+    }
+    if (path === `${api}/coupons/rules`) {
+      couponWrites.push(await request.json());
+      return Response.json({ id: coupon.id, version: 2 });
+    }
+    throw new Error(`未定義の要求: ${path}`);
+  });
+  const saved = vi.fn<() => void>();
+  await show(<CouponRuleForm storeId="tablecast-store" initial={coupon} onSaved={saved} />);
+  const all = page.getByRole("region", { name: ja.coupon_conditions_all });
+  const any = page.getByRole("region", { name: ja.coupon_conditions_any });
+  await all.getByRole("button", { name: ja.coupon_condition_add }).click();
+  await all.getByRole("spinbutton", { name: ja.coupon_condition_value }).fill("2");
+  await all.getByRole("button", { name: ja.coupon_condition_add }).click();
+  await all.getByRole("spinbutton", { name: ja.coupon_condition_value }).nth(1).fill("2");
+  await all.getByRole("button", { name: ja.common_remove, exact: true }).nth(0).click();
+  await expect
+    .element(all.getByRole("spinbutton", { name: ja.coupon_condition_value }))
+    .toHaveValue(2);
+  await any.getByRole("button", { name: ja.coupon_condition_add }).click();
+  await any.getByRole("combobox", { name: ja.coupon_condition_field }).selectOptions("spend");
+  await any.getByRole("spinbutton", { name: ja.coupon_condition_value }).fill("1000");
+  await page.getByRole("combobox", { name: ja.coupon_layout }).selectOptions("portrait");
+  await page.getByRole("combobox", { name: ja.coupon_image_fit }).selectOptions("contain");
+  const preview = page.getByRole("button", { name: ja.coupon_audience, exact: true });
+  const audience = page.getByRole("region", { name: ja.coupon_audience, exact: true });
+  failAudience = true;
+  await preview.click();
+  await expect.element(page.getByRole("alert")).toBeVisible();
+  await expect
+    .element(all.getByRole("spinbutton", { name: ja.coupon_condition_value }))
+    .toHaveValue(2);
+  failAudience = false;
+  await preview.click();
+  await expect
+    .element(audience.getByText(`${ja.coupon_audience_eligible}: 2 / 6`, { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(
+      audience.getByText(`${ja.coupon_audience_issued}: 1 · ${ja.coupon_audience_unmatched}: 3`, {
+        exact: true,
+      }),
+    )
+    .toBeVisible();
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
+  await all.getByRole("spinbutton", { name: ja.coupon_condition_value }).fill("3");
+  await expect.element(audience.getByRole("status")).not.toBeInTheDocument();
+  await preview.click();
+  await expect.element(audience.getByRole("status")).toBeVisible();
+  expect(audienceRequests).toMatchObject([
+    {
+      ruleId: coupon.id,
+      rules: {
+        conditions: {
+          all: [{ field: "visits", operator: "gte", value: 2 }],
+          any: [{ field: "spend", operator: "gte", value: 1000 }],
+        },
+        presentation: { layout: "portrait", imageFit: "contain" },
+      },
+    },
+    { rules: { conditions: { all: [{ value: 2 }] } } },
+    { rules: { conditions: { all: [{ value: 3 }] } } },
+  ]);
+  await page.getByRole("button", { name: ja.account_save, exact: true }).click();
+  await expect.poll(() => saved.mock.calls.length).toBe(1);
+  expect(couponWrites).toMatchObject([
+    {
+      expectedVersion: 1,
+      rules: {
+        conditions: { all: [{ value: 3 }], any: [{ value: 1000 }] },
+        presentation: { layout: "portrait", imageFit: "contain" },
+      },
+    },
+  ]);
+});

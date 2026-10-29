@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { id, localeSchema } from "../../platform/model";
 import { foodResultSchema } from "../catalog/food-model";
+import { localizedSchema } from "../catalog/localization";
 
 export const maxCartLines = 20;
 
@@ -58,13 +59,14 @@ export const submitSchema = z
   .strict();
 
 const pricedLineSchema = cartLineSchema.extend({
-  name: z.object({ ja: z.string(), en: z.string() }),
-  speechName: z.object({ ja: z.string(), en: z.string() }),
+  name: localizedSchema(z.string()),
+  transliteration: localizedSchema(z.string()).optional(),
+  speechName: localizedSchema(z.string()),
   options: z.array(
     z.object({
       id: z.string(),
-      name: z.object({ ja: z.string(), en: z.string() }),
-      speechName: z.object({ ja: z.string(), en: z.string() }),
+      name: localizedSchema(z.string()),
+      speechName: localizedSchema(z.string()),
       quantity: z.number().int(),
       priceDelta: z.number().int(),
     }),
@@ -90,7 +92,7 @@ export const snapshotSchema = z.object({
   channel: z.enum(["gui", "voice"]),
   status: z.enum(["pending", "read", "invalid", "submitted"]),
   createdTurnId: z.string().nullable(),
-  plan: z.object({ id: z.string(), name: z.object({ ja: z.string(), en: z.string() }) }).nullable(),
+  plan: z.object({ id: z.string(), name: localizedSchema(z.string()) }).nullable(),
 });
 
 export const cartSchema = z.object({

@@ -274,6 +274,8 @@ bun run test:browser
 bun run test:e2e
 ```
 
+翻訳の出力先・言語解決順・`tablecast_locale` Cookie名は`apps/web/project.inlang/paraglide.config.ts`を正本として公式CLIとViteで共用する。CLI再生成でCookie名を既定値へ戻さず、SSRの再読込・redirectでも選択言語を維持する。
+
 `test:browser`は実行前にParaglideの`locale-modules`を公式CLIで生成し、翻訳のmodule数を減らす。通常のcodegenと公開buildは`message-modules`を使い、`build:storybook`も自身でこの形式へ戻してからbuildする。同じ`src/paraglide`を共有するため、Browser試験・codegen・dev/watch・buildを同じcheckoutで重ねない。テストだけを直接`vitest`で起動する場合は、先に`bun run --cwd apps/web i18n:compile --output-structure locale-modules`で準備する。
 
 ローカルの`check`と各`test`コマンドは通常どおり全件を実行する。PRのCIはGitHub Compare APIで検証した差分から対象を選び、通常のWeb変更にはVitest標準の`related --run`を使う。共有入口や不明な差分、選択結果が0件のソース変更は全件へ戻す。選択範囲と実行しないjobの扱いは[CIの実行対象](testing.md#ciのジョブとキャッシュ)を参照する。
@@ -403,3 +405,13 @@ CIの全検査はActionsの`CI`で作業branchを選択し、`catalog_pr`を空�
 ## 画像の生成依存
 
 画像取込・既存画像の索引移行は既存`TABLECAST_IMAGES` bindingを使い、`@unpic/pixels` 1.3.0と`blurhash` 2.0.5で6×4のBlurHashを生成する。WebのSSR表示は`@unpic/placeholder` 0.1.2を使う。新しいsecret・外部画像サービスは不要で、依存の正本はrootの`bun.lock`である。seed用の生成configにもImages bindingを含める。D1 migrationと再実行可能な索引化の順序は[画像の移行](deployment.md#画像の表示情報の移行)に従う。
+
+## 多言語seedの店舗設定を再作成する
+
+最新seedは3店舗・102商品を`ja`・`en`・`zh-Hans`・`ko`で用意する。通常の`db:seed`は既存の編集内容を保持する。旧設定との自動変換は行わず、開発用の既存店舗設定を置き換える場合は自worktreeのdev serverを止めて次を実行する。
+
+```sh
+bun run db:seed -- --rebuild-configuration
+```
+
+このオプションはdevelopmentだけで利用する。対象seed店舗の公開設定を新しい版へ更新し、下書き・設定release履歴・デモの固定設定を再作成する。既存の注文・決済・注文スナップショット・会員は保持する。確認待ちの注文確認と音声状態は無効化する。全DBを消す`demo:reset`とは別の操作であり、本番・stagingの全体リセット手順へ置き換えない。実行後は各言語の商品名・説明と店舗名を確認する。

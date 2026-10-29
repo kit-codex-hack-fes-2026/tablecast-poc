@@ -1,5 +1,6 @@
 import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
+import { resolveLocalized, resolveText } from "@tablecast/api/localization";
 import { castInstructionSchema, foodClassification } from "@tablecast/api/schema";
 import { ArrowRight, Minus, Pencil, Plus } from "lucide-react";
 import { Children } from "react";
@@ -30,13 +31,13 @@ export function ConfigurationChanges({
       ...configuration.products.flatMap((product) =>
         product.modifiers.flatMap((group) => [group, ...group.options]),
       ),
-    ].map((item) => [item.id, item.text[locale].displayName]),
+    ].map((item) => [item.id, resolveText(item.text, locale).displayName]),
   );
   for (const product of configuration.products)
     for (const component of product.foodInfo.components)
-      names.set(component.id, component.name[locale]);
+      names.set(component.id, resolveLocalized(component.name, locale));
   const allergenNames = new Map<string, string>(
-    foodClassification.allergens.map((item) => [item.id, item.name[locale]]),
+    foodClassification.allergens.map((item) => [item.id, resolveLocalized(item.name, locale)]),
   );
   const labelKeys = new Map(
     Object.entries({
@@ -78,9 +79,15 @@ export function ConfigurationChanges({
             ? configuration.plans[Number(index)]
             : undefined;
     if (wholeObject)
-      return previousName ?? item?.text[locale].displayName ?? fieldLabel(collection ?? "");
+      return (
+        previousName ??
+        (item ? resolveText(item.text, locale).displayName : undefined) ??
+        fieldLabel(collection ?? "")
+      );
     return [
-      previousName ?? item?.text[locale].displayName ?? fieldLabel(collection ?? ""),
+      previousName ??
+        (item ? resolveText(item.text, locale).displayName : undefined) ??
+        fieldLabel(collection ?? ""),
       ...parts
         .slice(item ? 2 : 1)
         .flatMap((part) =>

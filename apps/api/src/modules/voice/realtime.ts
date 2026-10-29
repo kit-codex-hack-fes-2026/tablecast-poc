@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { ApiServices } from "../../platform/context";
 import * as business from "../../db/business-schema";
 import { DomainError, ensure } from "../../platform/errors";
+import { localeSchema } from "../../platform/model";
 import { observeOperation } from "../../platform/telemetry";
 import { llmSessionId } from "../../platform/telemetry-llm";
 import { displayCurrencyActionSchema } from "../currency/model";
@@ -141,7 +142,7 @@ export async function invokeVoiceTool(
           ...(input.toolName === "setLanguage"
             ? {
                 conversationAction: "language" as const,
-                locale: input.arguments.locale === "en" ? ("en" as const) : ("ja" as const),
+                locale: localeSchema.parse(input.arguments.locale),
               }
             : {}),
           result,

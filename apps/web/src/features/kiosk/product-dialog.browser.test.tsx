@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { type CartLine, productSchema } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, onTestFinished, vi } from "vitest";
@@ -12,8 +13,20 @@ import "../../styles.css";
 import { ProductPage } from "./product-dialog";
 
 const text = (jaName: string, enName: string, jaDescription = "", enDescription = "") => ({
-  ja: { displayName: jaName, speechName: jaName, description: jaDescription, aliases: [] },
-  en: { displayName: enName, speechName: enName, description: enDescription, aliases: [] },
+  ja: {
+    displayName: jaName,
+    speechName: jaName,
+    transliteration: jaName,
+    description: jaDescription,
+    aliases: [],
+  },
+  en: {
+    displayName: enName,
+    speechName: enName,
+    transliteration: enName,
+    description: enDescription,
+    aliases: [],
+  },
 });
 const pictured = productSchema.parse({
   ...product,
@@ -151,7 +164,7 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
   await expect
     .element(sesame)
     .toHaveAccessibleDescription(
-      `+${money(80, locale)}${ja.price_tax_included} ${fixtureValue(fixtureValue(pictured.modifiers[0]).options[0]).text[locale].description}`,
+      `+${money(80, locale)}${ja.price_tax_included} ${resolveLocalized(fixtureValue(fixtureValue(pictured.modifiers[0]).options[0]).text, locale).description}`,
     );
   await expect.poll(() => document.querySelectorAll("img").length).toBe(0);
   await expect.element(screen.getByText(labels.kiosk_sold_out, { exact: true })).toBeVisible();
@@ -181,12 +194,12 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
   await expect
     .element(increase)
     .toHaveAccessibleDescription(
-      `+${money(100, locale)}${ja.price_tax_included} ${fixtureValue(fixtureValue(pictured.modifiers[2]).options[0]).text[locale].description}`,
+      `+${money(100, locale)}${ja.price_tax_included} ${resolveLocalized(fixtureValue(fixtureValue(pictured.modifiers[2]).options[0]).text, locale).description}`,
     );
   await expect
     .element(screen.getByRole("checkbox", { name: "レタス", exact: true }))
     .toHaveAccessibleDescription(
-      `+${money(40, locale)}${ja.price_tax_included} ${fixtureValue(fixtureValue(pictured.modifiers[1]).options[0]).text[locale].description}`,
+      `+${money(40, locale)}${ja.price_tax_included} ${resolveLocalized(fixtureValue(fixtureValue(pictured.modifiers[1]).options[0]).text, locale).description}`,
     );
   await increase.click();
   await increase.click();
@@ -214,7 +227,10 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
   ] as const) {
     await page.viewport(width, height);
     const region = screen
-      .getByRole("region", { name: pictured.text[locale].displayName, exact: true })
+      .getByRole("region", {
+        name: resolveLocalized(pictured.text, locale).displayName,
+        exact: true,
+      })
       .element();
     expect(region.scrollWidth).toBeLessThanOrEqual(region.clientWidth);
     const add = screen.getByRole("button", { name: labels.kiosk_add, exact: true });

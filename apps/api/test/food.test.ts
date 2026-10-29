@@ -186,7 +186,7 @@ describe("食事制限の集合とenumの判定理由", () => {
             evidence: "verified",
             crossContact: "unknown",
             vegan: "no",
-            note: { ja: "乳と魚を登録", en: "Milk and fish recorded" },
+            note: { ja: "乳と魚を登録", en: "Milk and fish recorded", fr: "Lait et poisson" },
           },
         },
       ],

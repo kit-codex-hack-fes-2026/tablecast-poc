@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import type { useI18n } from "../../i18n/locale";
 
 const yen = {
@@ -19,4 +20,4 @@ export const months = {
 };
 
 export const billingMoney = (value: number, locale: ReturnType<typeof useI18n>["locale"]) =>
-  yen[locale].format(value).replace("￥", "¥");
+  resolveLocalized(yen, locale).format(value).replace("￥", "¥");

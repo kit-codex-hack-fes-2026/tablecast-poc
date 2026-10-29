@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import app from "../src/app";
 import * as business from "../src/db/business-schema";
+import { resolveLocalized } from "../src/modules/catalog/localization";
 import { updateCart } from "../src/modules/orders/use-cases/cart";
 import { getEvents } from "../src/modules/stores/queries";
 import { getTableState } from "../src/modules/tables/queries";
@@ -238,9 +239,22 @@ it.each([
         },
         transport: { type: "webrtc", sdp: "tablecast-sdp-offer" },
       });
+      expect(JSON.parse(init.body)).toHaveProperty(
+        "session.instructions",
+        expect.stringContaining("現在の会員文脈を確認してから話します"),
+      );
+      expect(JSON.parse(init.body)).toHaveProperty(
+        "session.delegation.responses.instructions",
+        expect.stringContaining("その委任の初めにgetCustomerContext"),
+      );
+      expect(JSON.parse(init.body)).toHaveProperty(
+        "session.input.0.content.0.text",
+        expect.stringContaining("getCustomerContextで現在の接客対象と同意を確認"),
+      );
       for (const path of ["session.instructions", "session.delegation.responses.instructions"]) {
         const instructions =
-          selected.cast.systemInstructions?.[locale] ?? defaultCastInstructions[locale];
+          selected.cast.systemInstructions?.[locale] ??
+          resolveLocalized(defaultCastInstructions, locale);
         expect(JSON.parse(init.body)).toHaveProperty(path, expect.stringContaining(instructions));
         expect(JSON.parse(init.body)).toHaveProperty(
           path,
@@ -279,13 +293,15 @@ it.each([
         expect(JSON.parse(init.body)).toHaveProperty(
           path,
           expect.stringContaining(
-            JSON.stringify(instructionText(selected.cast.instructions[locale])),
+            JSON.stringify(instructionText(resolveLocalized(selected.cast.instructions, locale))),
           ),
         );
         expect(JSON.parse(init.body)).toHaveProperty(
           path,
           expect.not.stringContaining(
-            instructionText(selected.cast.instructions[locale === "ja" ? "en" : "ja"]),
+            instructionText(
+              resolveLocalized(selected.cast.instructions, locale === "ja" ? "en" : "ja"),
+            ),
           ),
         );
       }

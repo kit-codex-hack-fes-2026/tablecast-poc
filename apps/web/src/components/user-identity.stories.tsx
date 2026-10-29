@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { expect, within } from "storybook/test";
-import { ParticipantIdentity, UserIdentity } from "./user-identity";
+import { ParticipantAvatar, ParticipantIdentity, UserIdentity } from "./user-identity";
 const meta = {
   title: "共通表示/UserIdentity",
   component: UserIdentity,
@@ -44,6 +44,16 @@ export const 同席者: Story = {
     <div className="space-y-4">
       <ParticipantIdentity name="佐藤 晴香" />
       <ParticipantIdentity name={null} />
+    </div>
+  ),
+};
+
+export const 現在参加中の会員アイコン: Story = {
+  render: () => (
+    <div className="flex -space-x-3">
+      <ParticipantAvatar image="/icons/tablecast-192.png" />
+      <ParticipantAvatar image={null} />
+      <ParticipantAvatar />
     </div>
   ),
 };

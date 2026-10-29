@@ -12,6 +12,7 @@ import { BannersEditor } from "./design-banners";
 import { ThemeImageEditor } from "./design-image-editor";
 import { emptyImage } from "./design-image-model";
 import { ThemePartsEditor } from "./design-theme-parts";
+import { MemberDesignEditor } from "./member-design-editor";
 import { configurationImageUploadKey } from "./menu-query";
 import { ThemeCompositionEditor } from "./theme-composition-editor";
 
@@ -158,6 +159,13 @@ export function DesignEditor({
           ))}
         </div>
       </section>
+      <MemberDesignEditor
+        storeId={storeId}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        onStagedChange={onStagedChange}
+      />
       <section className="space-y-3 rounded-lg border border-border p-4">
         <h2>{t("theme_assets")}</h2>
         <p>{t("theme_assets_hint")}</p>

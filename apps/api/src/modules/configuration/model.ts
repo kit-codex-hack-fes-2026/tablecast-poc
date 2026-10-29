@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { decimalQuerySchema, id, localeSchema } from "../../platform/model";
 import { appearanceSchema, bannerSchema, brandingSchema } from "../appearance/model";
+import { localizedSchema } from "../catalog/localization";
 import {
   bilingualSchema,
   conditionLimits,
@@ -21,9 +22,7 @@ export const guideSchema = z
       .array(
         z
           .object({
-            label: z
-              .object({ ja: z.string().min(1).max(150), en: z.string().min(1).max(150) })
-              .strict(),
+            label: localizedSchema(z.string().min(1).max(150)),
             url: z
               .url()
               .max(2048)
@@ -40,6 +39,18 @@ export const maxConfigurationProducts = 2000;
 export const configurationSchema = z
   .object({
     guides: z.array(guideSchema).max(100).optional(),
+    languages: z
+      .array(localeSchema)
+      .min(2)
+      .max(100)
+      .refine(
+        (languages) =>
+          languages.includes("ja") &&
+          languages.includes("en") &&
+          new Set(languages).size === languages.length,
+        { message: "日本語・英語を含む重複のない言語を指定してください。" },
+      )
+      .default(["ja", "en"]),
     branding: brandingSchema.optional(),
     appearance: appearanceSchema.optional(),
     banners: z.array(bannerSchema).max(12).optional(),
@@ -57,25 +68,12 @@ export const configurationSchema = z
     plans: z.array(planSchema).max(30),
     cast: z
       .object({
-        systemInstructions: z
-          .object({
-            ja: z.string().trim().min(1).max(instructionLimit).nullable(),
-            en: z.string().trim().min(1).max(instructionLimit).nullable(),
-          })
-          .strict()
-          .optional(),
-        instructions: z.object({ ja: castInstructionSchema, en: castInstructionSchema }),
-        voice: z.object({
-          ja: z.string().min(1).max(100).nullable(),
-          en: z.string().min(1).max(100).nullable(),
-        }),
-        openingInstructions: z
-          .object({
-            ja: z.string().max(2000),
-            en: z.string().max(2000),
-          })
-          .strict()
-          .optional(),
+        systemInstructions: localizedSchema(
+          z.string().trim().min(1).max(instructionLimit).nullable(),
+        ).optional(),
+        instructions: localizedSchema(castInstructionSchema),
+        voice: localizedSchema(z.string().min(1).max(100).nullable()),
+        openingInstructions: localizedSchema(z.string().max(2000)).optional(),
         proactive: z.boolean(),
       })
       .strict(),
@@ -187,6 +185,7 @@ export const draftChoiceSchema = z.object({
   changeCount: z.number().int(),
   sections: z.array(
     z.enum([
+      "languages",
       "guides",
       "products",
       "categories",

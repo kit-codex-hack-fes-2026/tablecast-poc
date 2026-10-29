@@ -1,5 +1,6 @@
 import { confirmationText, type PlanContext, priceCart } from "@tablecast/api/bootstrap";
 import { business, type Database } from "@tablecast/api/db";
+import { resolveText } from "@tablecast/api/localization";
 import { type CartLine, type Configuration, type Snapshot } from "@tablecast/api/schema";
 import { and, eq, inArray, like, or } from "drizzle-orm";
 import { type BatchItem } from "drizzle-orm/batch";
@@ -91,7 +92,7 @@ function snapshotFor(
         id: plan.id,
         name: {
           ja: plan.rules.text.ja.displayName,
-          en: plan.rules.text.en.displayName,
+          en: resolveText(plan.rules.text, "en").displayName,
         },
       }
     : null;
@@ -253,7 +254,7 @@ export async function seedCurrentTables(
         },
         {
           role: "assistant",
-          text: `${product.text[locale].displayName}${locale === "ja" ? "。" : ". "}${product.text[locale].description}`,
+          text: `${resolveText(product.text, locale).displayName}${locale === "ja" ? "。" : ". "}${resolveText(product.text, locale).description}`,
         },
         {
           role: "user",
@@ -273,7 +274,7 @@ export async function seedCurrentTables(
           text:
             locale === "ja"
               ? `${product.text.ja.displayName}は一つでカートに入っています。注文はまだ送信していません。`
-              : `There is one ${product.text.en.displayName} in your basket. The order has not been sent yet.`,
+              : `There is one ${resolveText(product.text, "en").displayName} in your basket. The order has not been sent yet.`,
         },
         {
           role: "user",

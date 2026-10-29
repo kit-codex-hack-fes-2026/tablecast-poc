@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { foodClassification, type JapaneseAllergen } from "@tablecast/api/schema";
 import { CircleHelp } from "lucide-react";
 import { useI18n } from "../i18n/locale";
@@ -17,7 +18,7 @@ export function AllergenBadges({
   const ids = new Set(contains);
   const items = foodClassification.allergens.filter((item) => ids.has(item.id));
   const names = [
-    ...items.map((item) => item.name[locale]),
+    ...items.map((item) => resolveLocalized(item.name, locale)),
     ...(unverified ? [t("food_unknown")] : []),
   ];
   return (
@@ -35,11 +36,11 @@ export function AllergenBadges({
             variant="inactive"
             data-food-allergen={item.id}
             data-status="contains"
-            aria-label={`${item.name[locale]}: ${t("food_contains")}`}
+            aria-label={`${resolveLocalized(item.name, locale)}: ${t("food_contains")}`}
             className="gap-1 rounded-full px-2 py-0.5 text-xs"
           >
             <span aria-hidden="true">{allergenEmoji[item.id]}</span>
-            {item.name[locale]}
+            {resolveLocalized(item.name, locale)}
           </Badge>
         </li>
       ))}

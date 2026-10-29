@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { barY, defineChart } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
@@ -32,12 +33,12 @@ const formats = {
     }),
   },
 };
-function formatValue(amount: number, charge: boolean, locale: "en" | "ja", minutes: string) {
-  if (!charge) return `${formats[locale].number.format(amount)} ${minutes}`;
+function formatValue(amount: number, charge: boolean, locale: string, minutes: string) {
+  if (!charge) return `${resolveLocalized(formats, locale).number.format(amount)} ${minutes}`;
   const belowPrecision = Math.abs(amount) > 0 && Math.abs(amount) < 0.01;
   const prefix = belowPrecision ? (amount < 0 ? "> " : "< ") : "";
   const displayed = belowPrecision ? Math.sign(amount) * 0.01 : amount;
-  return `${prefix}${formats[locale].currency.format(displayed).replace("￥", "¥")}`;
+  return `${prefix}${resolveLocalized(formats, locale).currency.format(displayed).replace("￥", "¥")}`;
 }
 
 export function BillingUsageChart({
@@ -219,7 +220,7 @@ function DailyPlot({
           nice: true,
           grid: true,
           axis: {
-            ticks: { format: (value) => formats[locale].number.format(value) },
+            ticks: { format: (value) => resolveLocalized(formats, locale).number.format(value) },
           },
         },
       },

@@ -5,6 +5,7 @@ import type {
   StaffCallInput,
   TableEvent,
 } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { VoiceConnection } from "./voice-connection";
@@ -28,6 +29,7 @@ export type AssistanceProps = {
   events: TableEvent[];
   onChoose: (product: Product) => void;
   voice: VoiceConnection;
+  voiceBlocked?: boolean;
 };
 export function useStaffAssistance({
   data,
@@ -36,6 +38,7 @@ export function useStaffAssistance({
   events,
   voice,
   onChoose,
+  voiceBlocked = false,
 }: AssistanceProps) {
   const { locale } = useI18n();
   const client = useQueryClient();
@@ -77,7 +80,7 @@ export function useStaffAssistance({
           .filter((product) => shownIds.has(product.id))
           .map((product) => ({
             id: product.id,
-            text: product.text[locale],
+            text: resolveText(product.text, locale),
             price: product.price,
             available: product.available,
           })) ?? []),
@@ -135,6 +138,7 @@ export function useStaffAssistance({
       dismissedAt: 0,
     }));
     requestKey.current = crypto.randomUUID();
+    if (voiceBlocked) return;
     if (["idle", "paused", "error"].includes(view.status)) {
       ownedVoice.current = data.cursor;
       void voice.start(locale, data.speechSpeed, "assistance");
@@ -159,7 +163,7 @@ export function useStaffAssistance({
       voiceProductIds: [],
       selection: { query },
     }));
-    voice.requestAssistance(query);
+    if (!voiceBlocked) voice.requestAssistance(query);
   }
   function directCall() {
     requestKey.current ||= crypto.randomUUID();
@@ -181,6 +185,7 @@ export function useStaffAssistance({
   const showCall = (id: string) =>
     setState((current) => ({ ...current, tab: "call", selectedCallId: id }));
   return {
+    voiceBlocked,
     state,
     view,
     guidance,

@@ -1,6 +1,7 @@
 import generate from "css-tree/generator";
 import parse from "css-tree/parser";
 import { z } from "zod";
+import { localizedSchema } from "../catalog/localization";
 import { imageMetadataSchema } from "../media/model";
 
 export const themeParts = [
@@ -23,9 +24,7 @@ export const themeFonts = {
   serif: '"Hiragino Mincho ProN", "Yu Mincho", Georgia, serif',
   rounded: '"Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", sans-serif',
 } as const;
-const text = z
-  .object({ ja: z.string().trim().min(1).max(200), en: z.string().trim().min(1).max(200) })
-  .strict();
+const text = localizedSchema(z.string().trim().min(1).max(200));
 const themeImageSchema = imageMetadataSchema
   .extend({
     imageKey: z.string().regex(/^tablecast\/uploads\/[a-f0-9]{64}\.webp$/),
@@ -221,5 +220,21 @@ export const bannerSchema = z
   .strict();
 export type Banner = z.infer<typeof bannerSchema>;
 export const brandingSchema = z
-  .object({ logo: themeImageSchema.nullable(), banner: themeImageSchema.nullable().optional() })
+  .object({
+    logo: themeImageSchema.nullable(),
+    banner: themeImageSchema.nullable().optional(),
+    memberIcon: themeImageSchema
+      .nullable()
+      .optional()
+      .describe("店舗会員PWAの公開アイコン。512px以上の正方形で個人情報を含めない。"),
+    membershipCard: z
+      .object({
+        image: themeImageSchema.nullable().optional(),
+        tone: z.enum(["neutral", "green", "amber", "violet"]),
+        imageFit: z.enum(["contain", "cover"]),
+      })
+      .strict()
+      .optional()
+      .describe("会員証の公開意匠。画像は個人情報を含めず、会員名や状態は画面で重ねる。"),
+  })
   .strict();

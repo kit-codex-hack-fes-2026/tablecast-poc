@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { legacyFoodInformation, type Product, productSchema } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
@@ -7,8 +8,8 @@ import { useI18n } from "../../i18n/locale";
 import { OptionConditionsEditor } from "./option-conditions-editor";
 
 const text = (ja: string, en: string) => ({
-  ja: { displayName: ja, speechName: ja, description: "", aliases: [] },
-  en: { displayName: en, speechName: en, description: "", aliases: [] },
+  ja: { displayName: ja, speechName: ja, transliteration: ja, description: "", aliases: [] },
+  en: { displayName: en, speechName: en, transliteration: en, description: "", aliases: [] },
 });
 const product = productSchema.parse({
   id: "tablecast-condition-coffee",
@@ -68,11 +69,19 @@ function Editor({ initial = product }: { initial?: Product }) {
   return (
     <QueryClientProvider client={client}>
       <main className="mx-auto max-w-4xl p-6">
-        <h1 className="mb-5 text-xl font-semibold">{value.text[locale].displayName} · X</h1>
+        <h1 className="mb-5 text-xl font-semibold">
+          {resolveLocalized(value.text, locale).displayName} · X
+        </h1>
         <h2 className="mb-3 font-semibold">{t("editor_modifiers")}</h2>
-        <h3 className="mb-3 font-semibold">{value.modifiers[0]?.text[locale].displayName}</h3>
+        <h3 className="mb-3 font-semibold">
+          {value.modifiers[0]
+            ? resolveLocalized(value.modifiers[0].text, locale).displayName
+            : undefined}
+        </h3>
         <h4 className="mb-3 font-semibold">
-          {value.modifiers[0]?.options[0]?.text[locale].displayName}
+          {value.modifiers[0]?.options[0]
+            ? resolveLocalized(value.modifiers[0].options[0].text, locale).displayName
+            : undefined}
         </h4>
         <OptionConditionsEditor
           storeId="tablecast-story"

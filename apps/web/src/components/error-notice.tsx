@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { validationIssuesSchema } from "@tablecast/api/schema";
 import { AlertCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -9,6 +10,7 @@ function errorMessageKey(error: unknown): Parameters<ReturnType<typeof useI18n>[
   if (!failure) return error instanceof TypeError ? "common_connection_error" : "common_error";
   if (failure.code === "CART_LINE_LIMIT") return "kiosk_cart_limit_error";
   if (failure.code === "CONFIGURATION_FORMAT_UNSUPPORTED") return "condition_upgrade_error";
+  if (failure.code === "MEMBER_ICON_SIZE") return "customer_member_icon_size_error";
   switch (failure.status) {
     case undefined:
       return "common_error";
@@ -72,9 +74,11 @@ export function ErrorNotice({
         {validation?.success && validation.data.length > 0 && (
           <ul className="mt-2 list-disc pl-5">
             {validation.data.map((issue) => (
-              <li key={`${issue.path.join(".")}:${issue.code}:${issue.messages[locale]}`}>
+              <li
+                key={`${issue.path.join(".")}:${issue.code}:${resolveLocalized(issue.messages, locale)}`}
+              >
                 {issue.path.length > 0 && `${issue.path.join(" · ")}: `}
-                {issue.messages[locale]}
+                {resolveLocalized(issue.messages, locale)}
               </li>
             ))}
           </ul>

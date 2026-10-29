@@ -1,6 +1,8 @@
 import { accountRoutes } from "./modules/account/routes";
 import { authRoutes } from "./modules/auth/routes";
 import { billingRoutes, operatingBillingRoutes } from "./modules/billing/routes";
+import { memberVisitPublicRoutes } from "./modules/customer-visits/public-routes";
+import { memberStorePublicRoutes } from "./modules/customers/public-routes";
 import { customerRoutes } from "./modules/customers/routes";
 import { demoRoutes } from "./modules/demo/routes";
 import { devicesRoutes } from "./modules/devices/routes";
@@ -19,6 +21,8 @@ const rpcRoutes = apiFactory
   .route("/", billingRoutes)
   .route("/", accountRoutes)
   .route("/api/customer", customerRoutes)
+  .route("/api/member-visits", memberVisitPublicRoutes)
+  .route("/api/member-stores", memberStorePublicRoutes)
   .route("/", devicesRoutes)
   .route("/", storesRoutes)
   .route("/", initialRoutes)

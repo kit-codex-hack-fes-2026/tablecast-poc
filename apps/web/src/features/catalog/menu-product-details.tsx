@@ -1,4 +1,5 @@
 import type { Configuration } from "@tablecast/api/schema";
+import { resolveLocalized, resolveText } from "@tablecast/api/localization";
 import { Check, ImageOff, TriangleAlert } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
@@ -38,9 +39,9 @@ export function ProductDetails({ product }: { product: Configuration["products"]
           data={product.modifiers.flatMap((group) =>
             group.options.map((option) => ({
               id: option.id,
-              group: group.text[locale].displayName,
-              name: option.text[locale].displayName,
-              description: option.text[locale].description,
+              group: resolveText(group.text, locale).displayName,
+              name: resolveText(option.text, locale).displayName,
+              description: resolveText(option.text, locale).description,
               imageKey: option.imageKey,
               imageKind: option.imageKind,
               price: option.priceDelta,
@@ -73,7 +74,7 @@ export function ProductSummary({
           sizes="160px"
           className="size-40 rounded-xl object-cover"
           src={`/media/${product.imageKey}`}
-          alt={product.text[locale].displayName}
+          alt={resolveText(product.text, locale).displayName}
         />
       ) : (
         <div
@@ -93,10 +94,10 @@ export function ProductSummary({
           {t(product.available ? "editor_available" : "kiosk_sold_out")}
         </Badge>
         <p className="text-base text-muted-foreground">
-          {
-            categories.find((category) => category.id === product.categoryId)?.text[locale]
-              .displayName
-          }
+          {(() => {
+            const category = categories.find((item) => item.id === product.categoryId);
+            return category ? resolveText(category.text, locale).displayName : "";
+          })()}
         </p>
       </div>
     </div>
@@ -112,34 +113,34 @@ export function MenuDescription({
 }) {
   const { t } = useI18n();
   return (
-    <LanguageFields>
+    <LanguageFields languages={item ? Object.keys(item.text) : Object.keys(cast.instructions)}>
       {(language) => (
         <section className="space-y-3 rounded-xl bg-surface-subtle p-5" lang={language}>
           {item ? (
             <>
-              <p className="font-medium">{item.text[language].displayName}</p>
+              <p className="font-medium">{resolveText(item.text, language).displayName}</p>
               <p className="whitespace-pre-wrap text-base leading-relaxed">
-                {item.text[language].description || "—"}
+                {resolveText(item.text, language).description || "—"}
               </p>
               <dl className="space-y-3 border-t border-border pt-3">
                 <div>
                   <dt className="text-sm text-muted-foreground">{t("admin_speech_name")}</dt>
-                  <dd>{item.text[language].speechName}</dd>
+                  <dd>{resolveText(item.text, language).speechName}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">{t("editor_aliases")}</dt>
-                  <dd>{item.text[language].aliases.join(" · ") || "—"}</dd>
+                  <dd>{resolveText(item.text, language).aliases.join(" · ") || "—"}</dd>
                 </div>
               </dl>
             </>
           ) : (
             <>
               <div className="leading-relaxed">
-                <InstructionView value={cast.instructions[language]} />
+                <InstructionView value={resolveLocalized(cast.instructions, language)} />
               </div>
               <dl>
                 <dt className="text-sm text-muted-foreground">{t("editor_voice")}</dt>
-                <dd>{cast.voice[language] ?? t("editor_not_configured")}</dd>
+                <dd>{resolveLocalized(cast.voice, language) ?? t("editor_not_configured")}</dd>
               </dl>
             </>
           )}
@@ -164,14 +165,16 @@ export function PlanContents({
       <h2 className="font-semibold">{t("editor_included_products")}</h2>
       <p>
         {configuration.products
-          .flatMap((entry) => (planProducts.has(entry.id) ? [entry.text[locale].displayName] : []))
+          .flatMap((entry) =>
+            planProducts.has(entry.id) ? [resolveText(entry.text, locale).displayName] : [],
+          )
           .join(" · ") || "—"}
       </p>
       <h2 className="font-semibold">{t("editor_included_categories")}</h2>
       <p>
         {configuration.categories
           .flatMap((category) =>
-            planCategories.has(category.id) ? [category.text[locale].displayName] : [],
+            planCategories.has(category.id) ? [resolveText(category.text, locale).displayName] : [],
           )
           .join(" · ") || "—"}
       </p>

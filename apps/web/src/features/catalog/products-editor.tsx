@@ -1,6 +1,8 @@
+import { resolveText } from "@tablecast/api/localization";
 import { type Product } from "@tablecast/api/schema";
 import { Image, Info, Languages, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import type { EditorProps } from "../configuration/configuration-editor-model";
+import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
@@ -65,30 +67,72 @@ export function ProductsEditor({
         <div className="grid min-w-0 gap-4 @xl:grid-cols-2">
           <div className="col-span-full">
             <LanguageFields>
-              {(language, languageLabelId) => (
-                <label className="grid gap-2 text-sm">
-                  <span id={`product-name-${language}`}>{t("admin_display_name")}</span>
-                  <Input
-                    aria-labelledby={`${languageLabelId} product-name-${language}`}
-                    lang={language}
-                    required
-                    maxLength={150}
-                    disabled={disabled}
-                    value={product.text[language].displayName}
-                    onChange={(event) =>
-                      update({
-                        text: {
-                          ...product.text,
-                          [language]: {
-                            ...product.text[language],
-                            displayName: event.target.value,
-                          },
-                        },
-                      })
-                    }
-                  />
-                </label>
-              )}
+              {(language, languageLabelId) => {
+                const entry = product.text[language];
+                const empty = {
+                  displayName: "",
+                  transliteration: "",
+                  speechName: "",
+                  description: "",
+                  aliases: [],
+                };
+                if (!entry)
+                  return (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={disabled}
+                      onClick={() => update({ text: { ...product.text, [language]: empty } })}
+                    >
+                      {t("editor_add_translation")}
+                    </Button>
+                  );
+                return (
+                  <div className="grid gap-4">
+                    {(["displayName", "transliteration"] as const).map((field) => (
+                      <label key={field} className="grid gap-2 text-sm">
+                        <span id={`product-${field}-${language}`}>
+                          {t(
+                            field === "displayName"
+                              ? "admin_meaning_name"
+                              : "admin_transliteration",
+                          )}
+                        </span>
+                        <Input
+                          aria-labelledby={`${languageLabelId} product-${field}-${language}`}
+                          lang={language}
+                          required
+                          maxLength={150}
+                          disabled={disabled}
+                          value={entry[field]}
+                          onChange={(event) =>
+                            update({
+                              text: {
+                                ...product.text,
+                                [language]: { ...entry, [field]: event.target.value },
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    ))}
+                    {language !== "ja" && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={disabled}
+                        onClick={() => {
+                          const text = { ...product.text };
+                          delete text[language];
+                          update({ text });
+                        }}
+                      >
+                        {t("editor_remove_translation")}
+                      </Button>
+                    )}
+                  </div>
+                );
+              }}
             </LanguageFields>
           </div>
           <NumericField
@@ -118,7 +162,7 @@ export function ProductsEditor({
               )}
               {value.categories.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.text[locale].displayName}
+                  {resolveText(item.text, locale).displayName}
                 </option>
               ))}
             </NativeSelect>

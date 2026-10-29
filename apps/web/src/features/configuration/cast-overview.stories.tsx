@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import { uiLocale } from "@tablecast/api/localization";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -76,10 +77,10 @@ const meta = {
                 : target.startsWith("system")
                   ? `${t("cast_edit_system")} (${language})`
                   : target.startsWith("instructions")
-                    ? m.cast_edit_instructions({ language }, { locale })
+                    ? m.cast_edit_instructions({ language }, { locale: uiLocale(locale) })
                     : target.startsWith("opening")
                       ? `${t("cast_edit_opening")} (${language})`
-                      : m.cast_edit_voice({ language }, { locale });
+                      : m.cast_edit_voice({ language }, { locale: uiLocale(locale) });
             return (
               <Button type="button" variant="outline" onClick={() => edit(target)}>
                 <Pencil />
@@ -196,7 +197,7 @@ export const VoiceCatalogRetry: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const retry = await canvas.findAllByRole("button", { name: "再試行" });
+    const retry = await canvas.findAllByRole("button", { name: "もう一度試す" });
     await expect(canvas.queryByText("利用不可", { exact: true })).not.toBeInTheDocument();
     catalog.mockImplementation(() =>
       Response.json({

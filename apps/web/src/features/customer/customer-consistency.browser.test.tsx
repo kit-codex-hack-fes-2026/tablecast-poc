@@ -16,7 +16,7 @@ import "../../styles.css";
 import { PointVisit } from "../rewards/point-visit";
 import { CustomerMemberships } from "./customer-memberships";
 import { customerVisitOptions } from "./customer-visit-query";
-import { CustomerVisit } from "./customer-visits";
+import { CustomerVisit, CustomerVisits } from "./customer-visits";
 
 let client: QueryClient;
 afterEach(async () => {
@@ -75,6 +75,65 @@ it("会員証一覧の続きから101番目の店舗へ移動できる", async (
     .not.toBeInTheDocument();
 });
 
+it.each(["来店詳細", "来店履歴"])(
+  "スマホの%sは同席者の画像を表示し、共有撤回を再取得すると取り除く",
+  async (view) => {
+    const image = "/icons/tablecast-192.png";
+    const base = "/api/customer/stores/tablecast-store";
+    let shared = true;
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = new URL(new Request(input, init).url).pathname;
+      if (path === `${base}/coupons`) return Response.json({ coupons: [], nextCursor: null });
+      const visit = {
+        storeId: "tablecast-store",
+        storeName: "卓上喫茶",
+        tableName: "T10",
+        sessionId: "tablecast-visit",
+        status: "open",
+        openedAt: 1,
+        closedAt: null,
+        participantId: "person",
+        connected: true,
+        leftAt: null,
+        participants: [
+          {
+            id: "other",
+            name: shared ? "佐藤 花" : null,
+            image: shared ? image : null,
+            leftAt: null,
+          },
+        ],
+        orders: [],
+        nextOrderId: null,
+        nextOrderCursor: null,
+      };
+      if (path === `${base}/visits`) return Response.json({ visits: [visit], nextCursor: null });
+      if (path.startsWith(`${base}/visits/tablecast-visit`)) return Response.json(visit);
+      throw new Error(`未定義の要求: ${path}`);
+    });
+    await show(
+      view === "来店詳細" ? (
+        <CustomerVisit storeId="tablecast-store" sessionId="tablecast-visit" />
+      ) : (
+        <CustomerVisits storeId="tablecast-store" />
+      ),
+    );
+    await expect.element(page.getByText("佐藤 花", { exact: true })).toBeVisible();
+    await expect
+      .poll(
+        () => document.querySelector<HTMLImageElement>(`img[src="${image}"]`)?.naturalWidth ?? 0,
+      )
+      .toBeGreaterThan(0);
+    shared = false;
+    await client.invalidateQueries({
+      queryKey: ["tablecast-customer", "tablecast-store", "visits"],
+    });
+    await expect.element(page.getByText(ja.customer_anonymous, { exact: true })).toBeVisible();
+    await expect.element(page.getByText("佐藤 花", { exact: true })).not.toBeInTheDocument();
+    expect(document.querySelector(`img[src="${image}"]`)).toBeNull();
+  },
+);
+
 it("来店の再取得で追加注文と状態変更を注文欄へ反映する", async () => {
   const first = {
     id: "order-1",
@@ -87,6 +146,8 @@ it("来店の再取得で追加注文と状態変更を注文欄へ反映する"
   let orders = [first];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(new Request(input, init).url);
+    if (url.pathname === "/api/customer/stores/tablecast-store/coupons")
+      return Response.json({ coupons: [], nextCursor: null });
     if (!url.pathname.startsWith("/api/customer/stores/tablecast-store/visits/tablecast-visit"))
       throw new Error(`未定義の要求: ${url.pathname}`);
     return Response.json({

@@ -148,7 +148,7 @@ beforeEach(() => {
           base: "JPY",
           source: "currency-api",
           date: "2026-10-22",
-          rates: { USD: 0.0065, AUD: 0.00967 },
+          rates: { USD: 0.0065, AUD: 0.00967, CNY: 0.05, KRW: 9.12 },
         });
       if (request.method === "GET" && path === "/api/table/orders")
         return Response.json({
@@ -353,7 +353,12 @@ export async function mountKiosk() {
 }
 
 export function notify(
-  kind: "cart.updated" | "configuration.published" | "staff.resolved" | "table.ui",
+  kind:
+    | "cart.updated"
+    | "configuration.published"
+    | "customer.context-reset"
+    | "staff.resolved"
+    | "table.ui",
 ) {
   current.cursor += 1;
   current.events.push({

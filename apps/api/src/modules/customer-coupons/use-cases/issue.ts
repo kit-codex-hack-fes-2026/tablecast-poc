@@ -10,6 +10,7 @@ import { requireManager } from "../../auth/policy";
 import { pointEntryStatement } from "../../customer-points/mutations";
 import { pointBalance } from "../../customer-points/queries";
 import { requireCustomer } from "../../customers/queries";
+import { couponConditionMatch, couponMemberTotals } from "../conditions";
 import { couponRuleSchema, type issueCouponSchema } from "../model";
 import { couponEvent } from "../mutations";
 
@@ -57,6 +58,13 @@ async function issueOneCoupon(
   const id = `${now.toString().padStart(16, "0")}:${crypto.randomUUID()}`;
   const token = crypto.randomUUID();
   const balance = pointBalance(services, actor.storeId, membershipId);
+  const targets = services.db
+    .select({ id: customerMemberships.id })
+    .from(customerMemberships)
+    .where(
+      and(eq(customerMemberships.id, membershipId), eq(customerMemberships.storeId, actor.storeId)),
+    );
+  const totals = couponMemberTotals(services, actor.storeId, targets);
   const eligible = and(
     eq(customerMemberships.id, membershipId),
     eq(customerMemberships.storeId, actor.storeId),
@@ -75,6 +83,7 @@ async function issueOneCoupon(
         ),
     ),
     exchange ? sql`(${balance})>=${rules.threshold}` : undefined,
+    couponConditionMatch(services, sql`${rule.rulesJson}`, totals),
   );
   const issued = exists(
     services.db
@@ -101,6 +110,7 @@ async function issueOneCoupon(
             createdAt: sql<number>`${now}`.as("created_at"),
           })
           .from(customerMemberships)
+          .leftJoin(totals, eq(totals.membershipId, customerMemberships.id))
           .where(eligible),
       )
       .onConflictDoNothing(),

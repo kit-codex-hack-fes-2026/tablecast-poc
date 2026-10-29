@@ -11,12 +11,14 @@ import { legacyFoodInformation } from "@tablecast/api/schema";
 const text = (ja: string, en: string) => ({
   ja: {
     displayName: ja,
+    transliteration: ja,
     speechName: ja,
     description: "合成データによる表示確認用です。",
     aliases: [],
   },
   en: {
     displayName: en,
+    transliteration: en,
     speechName: en,
     description: "Synthetic content for interface testing.",
     aliases: [],
@@ -80,6 +82,7 @@ export const catalog: Catalog = {
   storeName: "こもれび",
   version: 1,
   configuration: {
+    languages: ["ja", "en"],
     categories: [{ id: "tablecast-sake-category", text: text("日本酒", "Sake") }],
     products: [
       product,

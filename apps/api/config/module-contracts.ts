@@ -7,6 +7,7 @@ const moduleContracts = {
   auth: ["middleware", "model", "policy", "token", "passkey-policy"],
   billing: ["credentials", "stripe", "usage"],
   catalog: [
+    "localization",
     "food-model",
     "food",
     "food-service",
@@ -24,7 +25,14 @@ const moduleContracts = {
     "queries",
     "use-cases/drafts",
   ],
-  "customer-coupons": ["issuance", "model", "queries", "use-cases/issue", "use-cases/rules"],
+  "customer-coupons": [
+    "audience",
+    "issuance",
+    "model",
+    "queries",
+    "use-cases/issue",
+    "use-cases/rules",
+  ],
   "customer-memory": [
     "context",
     "model",
@@ -81,6 +89,7 @@ const compositions = {
   ],
   "tables/ordering-routes": ["media/routes"],
   "customer-coupons/routes": ["media/routes"],
+  "customers/public-routes": ["media/routes"],
   "tables/operations-routes": ["games/routes", "voice/routes"],
   "demo/routes": ["tables/operations-routes"],
 };

@@ -1,3 +1,4 @@
+import { resolveText } from "@tablecast/api/localization";
 import {
   type ConfigDraft,
   type Configuration,
@@ -24,20 +25,22 @@ import { useI18n } from "../../i18n/locale";
 import { apiError } from "../../lib/api-error";
 import { CastEditor } from "../configuration/configuration-editor";
 import { type ImageStagedChange } from "../configuration/configuration-image-model";
+import { ConfigurationLanguages } from "../configuration/configuration-languages-context";
 import { SaveStatus } from "../configuration/configuration-status";
 import { ConfigurationToolbar } from "../configuration/configuration-toolbar";
 import {
   addMenuItem,
-  castTargets,
   menuLabels,
   type MenuListSearch,
   type MenuSection,
+  parseCastTarget,
 } from "../configuration/menu-model";
 import {
   configurationImageUploadKey,
   draftOptions,
   saveDraftOptions,
 } from "../configuration/menu-query";
+import { StoreLanguagesEditor } from "../configuration/store-languages-editor";
 import { useStore } from "../store/store-context";
 import { catalogOptions } from "./catalog-query";
 import { CategoriesEditor } from "./categories-editor";
@@ -368,7 +371,8 @@ export function ItemForm({
           title={
             itemId === "new"
               ? t("common_add")
-              : (item?.text[locale].displayName ?? t(menuLabels[section]))
+              : ((item ? resolveText(item.text, locale).displayName : undefined) ??
+                t(menuLabels[section]))
           }
         />
         {renderEditingStatus()}
@@ -417,7 +421,16 @@ export function ItemForm({
       </section>
     );
   }
-  return renderEditor();
+  return (
+    <ConfigurationLanguages value={configuration.languages}>
+      <StoreLanguagesEditor
+        value={configuration}
+        onChange={setConfiguration}
+        disabled={!editable || pending}
+      />
+      {renderEditor()}
+    </ConfigurationLanguages>
+  );
 }
 
 function ItemFields({
@@ -438,7 +451,7 @@ function ItemFields({
   if (section === "cast")
     return (
       <CastEditor
-        focusTarget={castTargets.find((target) => target === hash)}
+        focusTarget={parseCastTarget(hash)}
         storeId={props.storeId}
         value={props.value.cast}
         voices={[retainedVoice]}

@@ -1,4 +1,5 @@
 import { RadioGroup } from "@base-ui/react/radio-group";
+import { resolveText, uiLocale } from "@tablecast/api/localization";
 import { type CartLine, maxCartLines, type Product } from "@tablecast/api/schema";
 import { Minus, Plus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
@@ -6,6 +7,7 @@ import { ConditionSummary } from "../../components/condition-summary";
 import { ErrorNotice } from "../../components/error-notice";
 import { Money, PriceChange } from "../../components/money";
 import { ProductImage } from "../../components/product-image";
+import { ProductName } from "../../components/product-name";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -72,7 +74,7 @@ export function ProductPage({
     <section
       data-ui="product-detail"
       className="@container/product-dialog flex h-full min-h-0 flex-col"
-      aria-label={product.text[locale].displayName}
+      aria-label={resolveText(product.text, locale).displayName}
     >
       <div
         data-ui="product-detail-header"
@@ -86,7 +88,7 @@ export function ProductPage({
             sizes={`${imageSize}px`}
             className="col-start-1 row-start-1 size-16 rounded-lg object-top-left @min-[36rem]/product-dialog:row-span-2 @min-[36rem]/product-dialog:size-40"
             src={`/media/${product.imageKey}`}
-            alt={product.text[locale].displayName}
+            alt={resolveText(product.text, locale).displayName}
           />
         )}
         <div
@@ -97,7 +99,7 @@ export function ProductPage({
             tabIndex={-1}
             className="text-base font-semibold outline-none @min-[36rem]/product-dialog:text-lg"
           >
-            {product.text[locale].displayName}
+            <ProductName text={product.text} />
           </h2>
           <div data-ui="product-detail-price" className="mt-1 text-lg font-semibold">
             <Money taxIncluded value={product.price} />
@@ -134,7 +136,7 @@ export function ProductPage({
           {product.modifiers.map((group, groupIndex) => (
             <fieldset className="min-w-0 space-y-2" key={group.id}>
               <legend className="flex items-center justify-between gap-3 w-full pb-1 text-sm font-semibold">
-                {group.text[locale].displayName}
+                {resolveText(group.text, locale).displayName}
                 <Badge
                   variant="secondary"
                   data-required={group.min > 0 || undefined}
@@ -142,10 +144,13 @@ export function ProductPage({
                 >
                   {group.min > 0 ? t("kiosk_required") : t("kiosk_optional")} ·{" "}
                   {group.min === group.max
-                    ? m.kiosk_select_exact({ count: group.min }, { locale })
+                    ? m.kiosk_select_exact({ count: group.min }, { locale: uiLocale(locale) })
                     : group.min === 0
-                      ? m.kiosk_select_at_most({ count: group.max }, { locale })
-                      : m.kiosk_select_range({ min: group.min, max: group.max }, { locale })}
+                      ? m.kiosk_select_at_most({ count: group.max }, { locale: uiLocale(locale) })
+                      : m.kiosk_select_range(
+                          { min: group.min, max: group.max },
+                          { locale: uiLocale(locale) },
+                        )}
                 </Badge>
               </legend>
               {group.kind === "single" ? (
@@ -163,7 +168,7 @@ export function ProductPage({
                         group.options.map((option) => option.id),
                       );
                   }}
-                  aria-label={group.text[locale].displayName}
+                  aria-label={resolveText(group.text, locale).displayName}
                   className="grid gap-1"
                 >
                   {group.min === 0 && (
@@ -183,7 +188,7 @@ export function ProductPage({
                         value={option.id}
                         disabled={!option.available || busy}
                         aria-labelledby={`${id}-${groupIndex}-${optionIndex}-name`}
-                        aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
+                        aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${resolveText(option.text, locale).description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                       ></RadioGroupItem>
                       <OptionContent
                         option={option}
@@ -227,7 +232,7 @@ export function ProductPage({
                             onCheckedChange={(checked) => select(option.id, checked ? 1 : 0)}
                             disabled={!option.available || busy}
                             aria-labelledby={`${id}-${groupIndex}-${optionIndex}-name`}
-                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
+                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${resolveText(option.text, locale).description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                           ></Checkbox>
                           <OptionContent
                             option={option}
@@ -264,8 +269,8 @@ export function ProductPage({
                             size="icon-sm"
                             variant="outline"
                             type="button"
-                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
-                            aria-label={`${option.text[locale].displayName}: ${t("common_decrease")}`}
+                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${resolveText(option.text, locale).description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
+                            aria-label={`${resolveText(option.text, locale).displayName}: ${t("common_decrease")}`}
                             disabled={amount === 0 || busy}
                             onClick={() => select(option.id, amount - 1)}
                           >
@@ -282,8 +287,8 @@ export function ProductPage({
                             size="icon-sm"
                             variant="outline"
                             type="button"
-                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
-                            aria-label={`${option.text[locale].displayName}: ${t("common_increase")}`}
+                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${resolveText(option.text, locale).description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
+                            aria-label={`${resolveText(option.text, locale).displayName}: ${t("common_increase")}`}
                             disabled={amount >= option.maxQuantity || !option.available || busy}
                             onClick={() => select(option.id, amount + 1)}
                           >
@@ -299,13 +304,15 @@ export function ProductPage({
           ))}
         </div>
 
-        <p className="mt-4 text-sm leading-relaxed">{product.text[locale].description}</p>
+        <p className="mt-4 text-sm leading-relaxed">
+          {resolveText(product.text, locale).description}
+        </p>
         {product.modifiers.flatMap((group) =>
           group.options.map((option) =>
             option.conditions &&
             selections.some((selection) => selection.optionId === option.id) ? (
               <div key={option.id} className="my-3 space-y-2 rounded-lg bg-muted p-3 text-sm">
-                <p className="font-semibold">{option.text[locale].displayName}</p>
+                <p className="font-semibold">{resolveText(option.text, locale).displayName}</p>
                 {option.conditions?.requires && (
                   <p>
                     {t("condition_requires")}：
@@ -326,7 +333,7 @@ export function ProductPage({
       </div>
       {cartLimitReached && (
         <p role="status" className="bg-card px-4 py-2 text-sm text-muted-foreground">
-          {m.kiosk_cart_limit({ count: maxCartLines }, { locale })}
+          {m.kiosk_cart_limit({ count: maxCartLines }, { locale: uiLocale(locale) })}
         </p>
       )}
       <div

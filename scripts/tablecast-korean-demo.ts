@@ -523,11 +523,18 @@ const koreanDemoStoreName = "韓国食堂ハヌル三条店";
 
 const koreanDemoMenu: KoreanMenuItem[] = [...mains, ...sides, ...drinks];
 
-function text(ja: string, en: string, descriptionJa = "", descriptionEn = ""): Product["text"] {
+function text(ja: string, en: string, descriptionJa = "", descriptionEn = "") {
   return {
-    ja: { displayName: ja, speechName: ja, description: descriptionJa, aliases: [ja] },
+    ja: {
+      displayName: ja,
+      transliteration: ja,
+      speechName: ja,
+      description: descriptionJa,
+      aliases: [ja],
+    },
     en: {
       displayName: en,
+      transliteration: en,
       speechName: en,
       description: descriptionEn,
       aliases: [en.toLowerCase()],

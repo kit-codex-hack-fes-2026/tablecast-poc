@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { type Configuration, instructionText, type Locale } from "@tablecast/api/schema";
 import { defaultCastInstructions } from "@tablecast/api/speech";
 import { ShieldCheck } from "lucide-react";
@@ -51,7 +52,7 @@ export function CastSystemSettings({
                 ja: null,
                 en: null,
                 ...value.systemInstructions,
-                [language]: next ? defaultCastInstructions[language] : null,
+                [language]: next ? resolveLocalized(defaultCastInstructions, language) : null,
               },
             })
           }
@@ -83,7 +84,7 @@ export function CastSystemSettings({
           readOnly
           rows={6}
           className="block w-full resize-y rounded-xl border border-border bg-muted/30 p-3 text-sm leading-relaxed text-foreground"
-          value={override ?? defaultCastInstructions[language]}
+          value={override ?? resolveLocalized(defaultCastInstructions, language)}
         />
       )}
       {enabled && !override.trim() && (

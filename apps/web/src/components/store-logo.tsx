@@ -1,4 +1,5 @@
 import type { ThemeImage } from "@tablecast/api/schema";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { useState } from "react";
 import { useI18n } from "../i18n/locale";
 import { ProductImage } from "./product-image";
@@ -7,9 +8,11 @@ export function StoreLogo({
   fallbackLogo,
   width = 96,
   height = 40,
+  imageBasePath = "/media",
 }: {
   fallbackLogo?: null | ThemeImage;
   height?: number;
+  imageBasePath?: string;
   logo?: null | ThemeImage;
   width?: number;
 }) {
@@ -20,9 +23,9 @@ export function StoreLogo({
   if (!current) return null;
   return (
     <ProductImage
-      src={`/media/${current.imageKey}`}
+      src={`${imageBasePath}/${current.imageKey}`}
       sizes={`${width}px`}
-      alt={current.alt[locale]}
+      alt={resolveLocalized(current.alt, locale)}
       className="max-w-full shrink-0 object-contain"
       width={width}
       height={height}

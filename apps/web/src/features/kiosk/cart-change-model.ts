@@ -1,3 +1,4 @@
+import { resolveText } from "@tablecast/api/localization";
 import {
   type CartLine,
   cartLineSchema,
@@ -56,11 +57,11 @@ export function pendingCartLines(
       ...line,
       name: previous?.name ?? {
         ja: product?.text.ja.displayName ?? "商品",
-        en: product?.text.en.displayName ?? "Item",
+        en: (product ? resolveText(product.text, "en").displayName : undefined) ?? "Item",
       },
       speechName: previous?.speechName ?? {
         ja: product?.text.ja.speechName ?? "商品",
-        en: product?.text.en.speechName ?? "Item",
+        en: (product ? resolveText(product.text, "en").speechName : undefined) ?? "Item",
       },
       options: line.selections.flatMap((selection) => {
         const option = product?.modifiers
@@ -70,8 +71,14 @@ export function pendingCartLines(
         return [
           {
             id: option.id,
-            name: { ja: option.text.ja.displayName, en: option.text.en.displayName },
-            speechName: { ja: option.text.ja.speechName, en: option.text.en.speechName },
+            name: {
+              ja: option.text.ja.displayName,
+              en: resolveText(option.text, "en").displayName,
+            },
+            speechName: {
+              ja: option.text.ja.speechName,
+              en: resolveText(option.text, "en").speechName,
+            },
             quantity: selection.quantity,
             priceDelta: option.priceDelta,
           },

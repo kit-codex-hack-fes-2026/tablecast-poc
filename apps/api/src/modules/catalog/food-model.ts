@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { id } from "../../platform/model";
+import { localizedSchema } from "./localization";
 
 // 消費者庁の2026年4月版。アレルゲンIDはこの29品目だけを受け付ける。
 const required = {
@@ -158,9 +159,9 @@ export const foodInformationSchema = z
         z
           .object({
             id,
-            name: z
-              .object({ ja: z.string().min(1).max(150), en: z.string().min(1).max(150) })
-              .strict(),
+            name: localizedSchema(z.string().min(1).max(150)).safeExtend({
+              en: z.string().min(1).max(150),
+            }),
             profile: foodProfileSchema,
           })
           .strict(),

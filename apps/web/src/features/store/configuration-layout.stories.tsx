@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { configurationSchema, legacyFoodInformation } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Save } from "lucide-react";
@@ -15,17 +16,20 @@ const text = (ja: string, en: string) => ({
   ja: {
     displayName: ja,
     speechName: ja,
+    transliteration: ja,
     description: "原材料や提供方法について、スタッフへご相談ください。".repeat(8),
     aliases: [],
   },
   en: {
     displayName: en,
     speechName: en,
+    transliteration: en,
     description: "Please ask a member of staff about ingredients and serving options. ".repeat(8),
     aliases: [],
   },
 });
 const configuration = configurationSchema.parse({
+  languages: ["ja", "en"],
   categories: [{ id: "drinks", text: text("飲み物", "Drinks") }],
   products: [
     {
@@ -108,7 +112,9 @@ function ConfigurationLayout({
   return (
     <QueryClientProvider client={client}>
       <main className="mx-auto max-w-4xl space-y-8 p-6">
-        <h1 className="text-2xl font-semibold">{item.text[locale].displayName}</h1>
+        <h1 className="text-2xl font-semibold">
+          {resolveLocalized(item.text, locale).displayName}
+        </h1>
         <form
           className="space-y-6"
           onSubmit={(event) => {
@@ -183,20 +189,20 @@ export const RepeatedRows: Story = {
 
     const details = option.getByText("名称・説明・画像・組合せ条件", { exact: true });
     await userEvent.click(details);
-    const speechName = option.getByRole("textbox", {
-      name: "グループ 1：ミルク 選択肢 1：ミルク 日本語 読上げ名",
+    const displayName = option.getByRole("textbox", {
+      name: "グループ 1：ミルク 選択肢 1：ミルク 日本語 表示名",
     });
-    await userEvent.clear(speechName);
+    await userEvent.clear(displayName);
     await userEvent.click(details);
     await waitFor(async () => {
-      await expect(speechName).not.toBeVisible();
+      await expect(displayName).not.toBeVisible();
     });
     await userEvent.click(canvas.getByRole("button", { name: "保存する" }));
     await waitFor(async () => {
-      await expect(speechName).toBeVisible();
+      await expect(displayName).toBeVisible();
     });
-    await expect(speechName).toHaveFocus();
-    await expect(speechName).toBeInvalid();
+    await expect(displayName).toHaveFocus();
+    await expect(displayName).toBeInvalid();
     await expect(price).toHaveValue(275);
     await userEvent.paste("ミルク");
     await userEvent.click(canvas.getByRole("button", { name: "保存する" }));

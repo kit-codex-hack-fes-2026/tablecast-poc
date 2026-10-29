@@ -1,4 +1,5 @@
 import type { StatisticsResult } from "@tablecast/api/schema";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { Hash, Layers, Package, Percent, Users } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
@@ -92,7 +93,7 @@ function statisticsColumns(
       cell: ({ row }) =>
         row.original.orderRate === null
           ? t("statistics_unavailable")
-          : percentages[locale].format(row.original.orderRate),
+          : resolveLocalized(percentages, locale).format(row.original.orderRate),
     },
     {
       accessorKey: "planCoveredQuantity",

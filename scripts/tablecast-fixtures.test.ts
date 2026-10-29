@@ -1,9 +1,10 @@
 import { configurationErrors, priceCart } from "@tablecast/api/bootstrap";
+import { resolveText } from "@tablecast/api/localization";
 import { describe, expect, it } from "vitest";
 import { demoStores } from "./tablecast-fixtures.ts";
 
 describe("デモの構成データ", () => {
-  it("同じプロファイルから和食・バーガー・韓国料理店の日英102商品と個別写真を作る", () => {
+  it("同じプロファイルから和食・バーガー・韓国料理店の4言語の102商品と個別写真を作る", () => {
     const stores = demoStores("demo");
     expect(stores).toEqual(demoStores("demo"));
     expect(new Set(stores.map((store) => store.id)).size).toBe(3);
@@ -47,10 +48,12 @@ describe("デモの構成データ", () => {
       const { products } = store.configuration;
       expect(products.some((product) => /small|sharing|coffee|latte/.test(product.id))).toBe(false);
       for (const product of products) {
-        for (const locale of ["ja", "en"] as const) {
-          expect(product.text[locale].speechName.length).toBeGreaterThan(0);
-          expect(product.text[locale].description.length).toBeGreaterThan(0);
-          expect(product.text[locale].aliases.length).toBeGreaterThan(0);
+        for (const language of ["ja", "en"])
+          expect(resolveText(product.text, language).aliases.length).toBeGreaterThan(0);
+        for (const locale of ["ja", "en", "zh-Hans", "ko"] as const) {
+          expect(product.text[locale]?.transliteration?.trim()).toBeTruthy();
+          expect(resolveText(product.text, locale).speechName.length).toBeGreaterThan(0);
+          expect(resolveText(product.text, locale).description.length).toBeGreaterThan(0);
         }
       }
     }

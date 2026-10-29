@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { type Configuration, instructionText, type Locale } from "@tablecast/api/schema";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { MessageSquareText, Mic, Sparkles } from "lucide-react";
@@ -25,7 +26,7 @@ export function CastOverview({
   const { t } = useI18n();
   return (
     <div className="max-w-5xl space-y-8">
-      <LanguageFields>
+      <LanguageFields languages={Object.keys(value.instructions)}>
         {(language) => (
           <>
             <CastSystemSettings
@@ -36,8 +37,8 @@ export function CastOverview({
             <h2 className="text-lg font-semibold">{t("cast_store_layer")}</h2>
             <ConfigurationSection title={t("editor_cast_instructions")} icon={MessageSquareText}>
               <div lang={language} className="min-w-0">
-                {instructionText(value.instructions[language]).trim() ? (
-                  <InstructionView value={value.instructions[language]} />
+                {instructionText(resolveLocalized(value.instructions, language)).trim() ? (
+                  <InstructionView value={resolveLocalized(value.instructions, language)} />
                 ) : (
                   <p className="text-muted-foreground">{t("cast_instructions_unset")}</p>
                 )}
@@ -51,7 +52,11 @@ export function CastOverview({
               <div className="flex">{renderEdit?.(`opening-${language}`)}</div>
             </ConfigurationSection>
             <ConfigurationSection title={t("editor_cast_voice_group")} icon={Mic}>
-              <VoiceOverview storeId={storeId} language={language} value={value.voice[language]} />
+              <VoiceOverview
+                storeId={storeId}
+                language={language}
+                value={resolveLocalized(value.voice, language)}
+              />
               <div className="flex">{renderEdit?.(`voice-${language}`)}</div>
             </ConfigurationSection>
           </>

@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import {
   crossContactSourceSchema,
   dietaryAssessmentSchema,
@@ -108,9 +109,9 @@ export function FoodProfileEditor({
                       }}
                     >
                       <SelectTrigger
-                        aria-label={item.name[locale]}
+                        aria-label={resolveLocalized(item.name, locale)}
                         aria-description={t(state.label)}
-                        title={`${item.name[locale]}: ${t(state.label)}`}
+                        title={`${resolveLocalized(item.name, locale)}: ${t(state.label)}`}
                         className={badgeVariants({
                           variant: state.variant,
                           class:
@@ -118,7 +119,7 @@ export function FoodProfileEditor({
                         })}
                       >
                         <span aria-hidden="true">{allergenEmoji[item.id]}</span>
-                        <span>{item.name[locale]}</span>
+                        <span>{resolveLocalized(item.name, locale)}</span>
                         <Icon className="size-3.5" aria-hidden="true" />
                         <span className="sr-only">{t(state.label)}</span>
                       </SelectTrigger>

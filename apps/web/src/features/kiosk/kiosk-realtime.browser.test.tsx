@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -145,7 +146,7 @@ it("日本語の商品取得失敗は空状態にせず再試行できる", asyn
   await expect
     .element(
       page.getByRole("button", {
-        name: new RegExp(product.text[locale].displayName),
+        name: new RegExp(resolveLocalized(product.text, locale).displayName),
       }),
     )
     .toBeEnabled();
@@ -171,7 +172,11 @@ it.each(["ja", "en"] as const)(
     fixture.current.selectedProductId = product.id;
     notify("table.ui");
     await expect
-      .element(screen.getByRole("heading", { name: product.text[locale].displayName, exact: true }))
+      .element(
+        screen.getByRole("heading", {
+          name: new RegExp(resolveLocalized(product.text, locale).displayName),
+        }),
+      )
       .toBeVisible();
     fixture.current.uiSection = "cart";
     fixture.current.selectedProductId = null;

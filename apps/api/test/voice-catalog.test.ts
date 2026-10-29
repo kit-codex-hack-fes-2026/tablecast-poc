@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { voiceToolNameSchema } from "../src/modules/voice/model";
 import type { Product } from "../src/schema";
 import * as business from "../src/db/business-schema";
+import { resolveLocalized } from "../src/modules/catalog/localization";
 import { configurationSchema } from "../src/modules/configuration/model";
 import { getTableState } from "../src/modules/tables/queries";
 import { invokeVoiceTool } from "../src/modules/voice/realtime";
@@ -45,6 +46,7 @@ describe("Responses functionと共通業務の認可", () => {
     tea.text.ja = {
       displayName: "唐揚げ",
       speechName: "からあげ",
+      transliteration: "からあげ",
       aliases: [],
       description: "柚子を添えた温かい料理",
     };
@@ -90,6 +92,7 @@ describe("Responses functionと共通業務の認可", () => {
                   ...product.text.ja,
                   displayName: "烏龍茶",
                   speechName: "うーろん茶",
+                  transliteration: "うーろん茶",
                   aliases: ["ウーロンティー", ""],
                 }
               : { ...product.text.ja, aliases: ["", " "] },
@@ -167,8 +170,8 @@ describe("Responses functionと共通業務の認可", () => {
     const sake: Product["text"] = configurationText("日本酒", "Rice wine");
     sake.ja.speechName = "にほんしゅ";
     sake.ja.aliases.push("清酒");
-    sake.en.speechName = "Sah keh";
-    sake.en.aliases.push("Japanese alcoholic drink");
+    resolveLocalized(sake, "en").speechName = "Sah keh";
+    resolveLocalized(sake, "en").aliases.push("Japanese alcoholic drink");
     const sashimi = configurationText("刺身", "Raw fish");
     sashimi.ja.speechName = "さしみ";
     const products = configuration.products.map((product) => ({
@@ -238,7 +241,7 @@ describe("Responses functionと共通業務の認可", () => {
     );
     tsukinagi.ja.speechName = "こもれび つきなぎ 純米吟醸";
     tsukinagi.ja.aliases.push("つきなぎ");
-    tsukinagi.en.aliases.push("Tsukinagi");
+    resolveLocalized(tsukinagi, "en").aliases.push("Tsukinagi");
     const yukiakari = configurationText("こもれび 雪灯 純米酒", "Komorebi Yukiakari Junmai");
     const products = [
       { ...base, id: "sake-tsukinagi", text: tsukinagi, price: 620 },
@@ -294,13 +297,15 @@ describe("Responses functionと共通業務の認可", () => {
           ...base.text.ja,
           displayName: `日本酒銘柄${index}`,
           speechName: `にほんしゅめいがら${index}`,
+          transliteration: `にほんしゅめいがら${index}`,
           description: "辛口。表示価格は60mlです。",
           aliases: [`別名${index}`],
         },
         en: {
-          ...base.text.en,
+          ...resolveLocalized(base.text, "en"),
           displayName: `Sake ${index}`,
           speechName: `Sake ${index}`,
+          transliteration: `Sake ${index}`,
           description: "Dry. The displayed price is for 60ml.",
           aliases: [`Alias ${index}`],
         },

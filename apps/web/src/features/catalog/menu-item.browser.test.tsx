@@ -34,7 +34,7 @@ it("画像取込中の保存を止め、取込後の画像を含めて保存し�
     const form = page.getByRole("main");
     await form
       .getByRole("textbox", {
-        name: `${ja.common_language_native_ja} ${ja.admin_display_name}`,
+        name: `${ja.common_language_native_ja} ${ja.admin_meaning_name}`,
         exact: true,
       })
       .fill("柚子ソーダ");

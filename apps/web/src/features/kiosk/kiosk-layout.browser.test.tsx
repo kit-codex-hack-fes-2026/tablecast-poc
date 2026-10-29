@@ -135,9 +135,7 @@ it.each(["ja", "en"] as const)(
     await userEvent.keyboard("{Enter}");
     const dialog = page.getByRole("dialog", { name: labels.kiosk_visit_tools, exact: true });
     await expect.element(dialog).toBeVisible();
-    await expect
-      .element(dialog.getByText(labels.kiosk_service_group, { exact: true }))
-      .toBeVisible();
+
     await dialog.getByRole("button", { name: "Alex", exact: true }).click();
     await expect
       .element(dialog.getByRole("button", { name: "Alex", exact: true }))

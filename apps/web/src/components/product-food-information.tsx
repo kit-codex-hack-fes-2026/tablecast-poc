@@ -1,4 +1,5 @@
 import type { Product } from "@tablecast/api/schema";
+import { resolveLocalized } from "@tablecast/api/localization";
 import { useI18n } from "../i18n/locale";
 import { FoodInformationView } from "./food-information";
 
@@ -13,7 +14,7 @@ export function ProductFoodInformationSources({ product }: { product: Product })
       {product.foodInfo.components.map((component) => (
         <section key={component.id}>
           <h4 className="py-2 font-medium">
-            {component.name[locale]}
+            {resolveLocalized(component.name, locale)}
             {defaults.has(component.id) ? ` · ${t("food_default_component")}` : ""}
           </h4>
           <FoodInformationView value={component.profile} />

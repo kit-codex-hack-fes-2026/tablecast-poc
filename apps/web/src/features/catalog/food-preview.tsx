@@ -1,4 +1,5 @@
 import type { CartLine, Product } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
@@ -35,12 +36,14 @@ export function FoodPreview({ product, storeId }: { product: Product; storeId: s
       <div className="grid gap-4">
         {product.modifiers.map((group) => (
           <fieldset key={group.id}>
-            <legend className="mb-2 font-medium">{group.text[locale].displayName}</legend>
+            <legend className="mb-2 font-medium">
+              {resolveText(group.text, locale).displayName}
+            </legend>
             {group.options.map((option) =>
               group.kind === "quantity" ? (
                 <NumericField
                   key={option.id}
-                  label={option.text[locale].displayName}
+                  label={resolveText(option.text, locale).displayName}
                   min={0}
                   max={option.maxQuantity}
                   value={
@@ -74,7 +77,7 @@ export function FoodPreview({ product, storeId }: { product: Product; storeId: s
                       )
                     }
                   />
-                  {option.text[locale].displayName}
+                  {resolveText(option.text, locale).displayName}
                 </label>
               ),
             )}

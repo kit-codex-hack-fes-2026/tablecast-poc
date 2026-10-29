@@ -3,6 +3,8 @@ import { expect } from "@playwright/test";
 import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
 import en from "../messages/en.json" with { type: "json" };
 import ja from "../messages/ja.json" with { type: "json" };
+import ko from "../messages/ko.json" with { type: "json" };
+import zh from "../messages/zh-Hans.json" with { type: "json" };
 import { fixtureValue } from "../src/test-support/fixture-value";
 import { signInFromLogin } from "./support/session";
 import { test } from "./support/test";
@@ -11,7 +13,7 @@ import { test } from "./support/test";
 test.use({ trace: "off", actionTimeout: 15_000, serviceWorkers: "block" });
 
 const labels = ja;
-test("英語の客が端末認可後に日本語へ切り替え、スタッフと注文・提供・会計を実DBへ反映する", async ({
+test("端末認可後に4言語を切り替え、スタッフと注文・提供・会計を実DBへ反映する", async ({
   page: staff,
   browser,
   baseURL,
@@ -64,6 +66,22 @@ test("英語の客が端末認可後に日本語へ切り替え、スタッフ�
     await staff.getByRole("button", { name: labels.admin_approve, exact: true }).click();
     await expect(guest.getByRole("banner").getByText(vacant.name, { exact: true })).toBeVisible();
     await expect(guest.getByRole("tab", { name: en.kiosk_menu, exact: true })).toBeVisible();
+    for (const language of [
+      { code: "zh-Hans", name: "简体中文", labels: zh },
+      { code: "ko", name: "한국어", labels: ko },
+    ]) {
+      await guest.locator('[data-ui="language-switch"]').getByRole("combobox").click();
+      await guest.getByRole("option", { name: language.name, exact: true }).click();
+      await expect(
+        guest.getByRole("tab", { name: language.labels.kiosk_menu, exact: true }),
+      ).toBeVisible();
+      await guest.reload();
+      await expect(
+        guest.getByRole("tab", { name: language.labels.kiosk_menu, exact: true }),
+      ).toBeVisible();
+      const state = tableStateSchema.parse(await (await guest.request.get("/api/table")).json());
+      expect(state.locale).toBe(language.code);
+    }
     await guest.getByRole("button", { name: "日本語", exact: true }).click();
     await expect(guest.getByRole("tab", { name: ja.kiosk_menu, exact: true })).toBeVisible();
     await guest.getByRole("combobox", { name: ja.currency_select, exact: true }).click();

@@ -112,8 +112,20 @@ it("取得済みの時間制を開始時刻から計算し、終了・超過と�
     rules: {
       id: "tablecast-plan",
       text: {
-        ja: { displayName: "90分", speechName: "90分", description: "", aliases: [] },
-        en: { displayName: "90 minutes", speechName: "90 minutes", description: "", aliases: [] },
+        ja: {
+          displayName: "90分",
+          speechName: "90分",
+          transliteration: "90分",
+          description: "",
+          aliases: [],
+        },
+        en: {
+          displayName: "90 minutes",
+          speechName: "90 minutes",
+          transliteration: "90 minutes",
+          description: "",
+          aliases: [],
+        },
       },
       pricePerPerson: 2000,
       durationMinutes: 90,

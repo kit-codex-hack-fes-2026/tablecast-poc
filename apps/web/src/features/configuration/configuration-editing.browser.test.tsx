@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { instructionText } from "@tablecast/api/schema";
 import { defaultCastInstructions } from "@tablecast/api/speech";
 import { expect, it, vi } from "vitest";
@@ -109,9 +110,9 @@ it.each([503, 409])(
     expect(instructionText(fixture.current.configuration.cast.instructions.ja)).toBe(
       "## 接客方針を保持",
     );
-    expect(instructionText(fixture.current.configuration.cast.instructions.en)).toBe(
-      "Keep English instructions",
-    );
+    expect(
+      instructionText(resolveLocalized(fixture.current.configuration.cast.instructions, "en")),
+    ).toBe("Keep English instructions");
   },
 );
 
@@ -153,18 +154,19 @@ it("日本語の商品編集で価格・売切・両言語の本文を保存し�
       .click();
     const group = content.getByRole("group", { name: language, exact: true });
     for (const field of [
-      { key: "displayName", label: labels.admin_display_name },
+      { key: "displayName", label: labels.admin_meaning_name },
       { key: "speechName", label: labels.admin_speech_name },
       { key: "description", label: labels.admin_description },
     ] as const) {
-      expected.text[contentLocale][field.key] = `${contentLocale} ${field.key} の保存内容`;
+      resolveLocalized(expected.text, contentLocale)[field.key] =
+        `${contentLocale} ${field.key} の保存内容`;
       const target =
         field.key === "displayName"
           ? screen.getByRole("region", { name: labels.editor_product_basics, exact: true })
           : group;
       await target
         .getByRole("textbox", { name: `${language} ${field.label}`, exact: true })
-        .fill(expected.text[contentLocale][field.key]);
+        .fill(resolveLocalized(expected.text, contentLocale)[field.key]);
     }
   }
   await screen.getByRole("button", { name: labels.common_save, exact: true }).click();
@@ -198,7 +200,7 @@ it("日本語の商品編集で価格・売切・両言語の本文を保存し�
           exact: true,
         }),
       )
-      .toHaveValue(expected.text[contentLocale].description);
+      .toHaveValue(resolveLocalized(expected.text, contentLocale).description);
   }
 });
 
@@ -280,9 +282,9 @@ it("日本語の接客概要から既存下書きの各入力へ移り、音声�
   await screen.getByRole("button", { name: labels.common_save, exact: true }).click();
   await expect.element(screen.getByText(labels.account_saved, { exact: true })).toBeVisible();
   expect(fixture.current.configuration.cast.voice).toEqual({ ja: "marin", en: "cedar" });
-  expect(instructionText(fixture.current.configuration.cast.instructions.en)).toBe(
-    "Keep these service instructions after saving.",
-  );
+  expect(
+    instructionText(resolveLocalized(fixture.current.configuration.cast.instructions, "en")),
+  ).toBe("Keep these service instructions after saving.");
   await cleanup();
   fixture.client.removeQueries({ queryKey: draftOptions(storeId, draftId).queryKey });
   const reopened = await open(editPath, locale);
@@ -395,4 +397,28 @@ it("開始案内の編集先へfocusし、日英の案内を同じ下書きへ�
     ja: "ようこそ。温かいお茶はいかがですか？",
     en: "Welcome. Would you like some tea?",
   });
+});
+
+it("追加言語は商品名の意味訳と転写を揃えて保存し、不足中は保存を止める", async () => {
+  const product = fixture.current.configuration.products[0];
+  if (!product) throw new Error("商品fixtureが必要です。");
+  const { screen } = await open(`${base}/changes/${draftId}/products/${product.id}`);
+  await screen.getByRole("textbox", { name: ja.editor_language_code, exact: true }).fill("fr");
+  await screen.getByRole("button", { name: ja.common_add, exact: true }).click();
+  const basics = screen.getByRole("region", { name: ja.editor_product_basics, exact: true });
+  await basics.getByRole("tab", { name: "français", exact: true }).click();
+  await basics.getByRole("button", { name: ja.editor_add_translation, exact: true }).click();
+  const meaning = basics.getByRole("textbox", { name: new RegExp(ja.admin_meaning_name) });
+  const phonetic = basics.getByRole("textbox", { name: new RegExp(ja.admin_transliteration) });
+  await meaning.fill("Thé vert grillé");
+  await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
+  await expect.element(phonetic).toBeInvalid();
+  expect(fixture.current.configuration.languages).not.toContain("fr");
+  await phonetic.fill("Hōjicha");
+  await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
+  await expect.element(screen.getByText(ja.account_saved, { exact: true })).toBeVisible();
+  expect(fixture.current.configuration.languages).toContain("fr");
+  expect(
+    fixture.current.configuration.products.find((item) => item.id === product.id)?.text.fr,
+  ).toMatchObject({ displayName: "Thé vert grillé", transliteration: "Hōjicha" });
 });

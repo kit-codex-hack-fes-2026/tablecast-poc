@@ -1,5 +1,6 @@
 import type { PricedLine, Product } from "@tablecast/api/schema";
 import { NumberField } from "@base-ui/react/number-field";
+import { resolveLocalized, resolveText } from "@tablecast/api/localization";
 import { useHydrated } from "@tanstack/react-router";
 import { Minus, Pencil, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { AnimatePresence, useIsPresent, useReducedMotion } from "motion/react";
@@ -11,6 +12,7 @@ import { FoodInformationView } from "./food-information";
 import { IllustrationNotice } from "./illustration-notice";
 import { Money, PriceChange } from "./money";
 import { ProductImage } from "./product-image";
+import { SnapshotProductName } from "./product-name";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { quantityControl } from "./ui/quantity-control-variants";
@@ -101,7 +103,7 @@ export function CartLines({
                 <div className="min-w-0 space-y-4 pl-4">
                   <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 text-base">
                     <h3 className="min-w-0 flex-1 basis-40 wrap-anywhere font-semibold">
-                      {line.name[locale]}
+                      <SnapshotProductName line={line} />
                     </h3>
                     <span className="ml-auto whitespace-nowrap font-semibold">
                       {line.total === undefined ? (
@@ -145,8 +147,9 @@ export function CartLines({
                                   className="inline-flex min-h-12.5 max-w-full flex-wrap items-center gap-2 rounded-2xl bg-muted p-2 text-sm"
                                 >
                                   <span className="font-medium">
-                                    {context?.group.text[locale].displayName ??
-                                      t("kiosk_customisations")}
+                                    {(context
+                                      ? resolveText(context.group.text, locale).displayName
+                                      : undefined) ?? t("kiosk_customisations")}
                                     :{" "}
                                   </span>
                                   {context?.option.imageKey && (
@@ -160,7 +163,7 @@ export function CartLines({
                                     />
                                   )}
                                   <span className="min-w-0 wrap-anywhere">
-                                    {option.name[locale]}
+                                    {resolveLocalized(option.name, locale)}
                                     {option.quantity > 1 && ` × ${option.quantity}`}
                                   </span>
                                   {option.priceDelta !== 0 && (
@@ -328,7 +331,7 @@ function LineQuantity({
         </label>
         <NumberField.Decrement
           render={<Button size="icon-sm" variant="outline" />}
-          aria-label={`${line.name[locale]}: ${t("common_decrease")}`}
+          aria-label={`${resolveLocalized(line.name, locale)}: ${t("common_decrease")}`}
         >
           <Minus aria-hidden />
         </NumberField.Decrement>
@@ -336,12 +339,12 @@ function LineQuantity({
           onKeyDown={(event) => {
             if (event.key === "Enter") event.currentTarget.blur();
           }}
-          aria-label={`${line.name[locale]}: ${t("common_quantity")}`}
+          aria-label={`${resolveLocalized(line.name, locale)}: ${t("common_quantity")}`}
           className={quantityControl().value()}
         />
         <NumberField.Increment
           render={<Button size="icon-sm" variant="outline" />}
-          aria-label={`${line.name[locale]}: ${t("common_increase")}`}
+          aria-label={`${resolveLocalized(line.name, locale)}: ${t("common_increase")}`}
         >
           <Plus aria-hidden />
         </NumberField.Increment>

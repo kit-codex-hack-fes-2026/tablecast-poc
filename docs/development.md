@@ -183,3 +183,13 @@ Docs内のMarkdown表は公式の `remark-gfm@4.0.1` で描画する。propsの�
 `@inference-net/otel-cf-workers`は設定のcontext keyをmodule内に持つ。Viteの依存再最適化などでWorker全体を再評価する際は、共有telemetryの`vite:beforeFullReload`でOpenTelemetryのtrace・context・propagation登録を解除し、新しいSDK評価に合わせて登録し直す。通常のリクエストで計測を停止したり、例外後に業務処理を再実行したりしない。production buildにはこの開発用hookを含めない。
 
 回帰確認はWebの`src/server/telemetry-hmr.test.ts`で実ViteとCloudflare Workerを起動し、複数回の全再評価後にもHTTP 200、要求ごとのtrace分離、親子spanの相関を確認する。デモDBや稼働中の開発サーバーは使わない。
+
+## 多言語seedの店舗設定を再作成する
+
+最新seedは3店舗・102商品を`ja`・`en`・`zh-Hans`・`ko`で用意する。通常の`db:seed`は既存の編集内容を保持する。旧設定との自動変換は行わず、開発用の既存店舗設定を置き換える場合は自worktreeのdev serverを止めて次を実行する。
+
+```sh
+bun run db:seed -- --rebuild-configuration
+```
+
+このオプションはdevelopmentだけで利用する。対象seed店舗の公開設定を新しい版へ更新し、下書き・設定release履歴・デモの固定設定を再作成する。既存の注文・決済・注文スナップショット・会員は保持する。確認待ちの注文確認と音声状態は無効化する。全DBを消す`demo:reset`とは別の操作であり、本番・stagingの全体リセット手順へ置き換えない。実行後は各言語の商品名・説明と店舗名を確認する。

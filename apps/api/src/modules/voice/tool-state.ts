@@ -2,6 +2,7 @@ import type { Locale } from "../../platform/model";
 import type { Product } from "../catalog/model";
 import type { DisplayCurrencyCode, ExchangeRates } from "../currency/model";
 import type { TableState } from "../tables/model";
+import { resolveLocalized, resolveText } from "../catalog/localization";
 import { approximateAmounts, currencyMetadata } from "../currency/display";
 import { showProductsSchema } from "./model";
 
@@ -31,8 +32,8 @@ export function voiceTableState(
         productId: line.productId,
         quantity: line.quantity,
         selections: line.selections,
-        name: line.name[state.locale],
-        speechName: line.speechName[state.locale],
+        name: resolveLocalized(line.name, state.locale),
+        speechName: resolveLocalized(line.speechName, state.locale),
         ...approximateAmounts({ unitPrice: line.unitPrice, total: line.total }, currency, rates),
         unitPrice: line.unitPrice,
         total: line.total,
@@ -48,7 +49,7 @@ export function voiceTableState(
         planCovered: line.planCovered,
         options: line.options.map((option) => ({
           id: option.id,
-          name: option.name[state.locale],
+          name: resolveLocalized(option.name, state.locale),
           quantity: option.quantity,
           priceDelta: option.priceDelta,
           ...approximateAmounts({ priceDelta: option.priceDelta }, currency, rates),
@@ -93,7 +94,7 @@ export function voiceTableState(
           ...state.plan,
           rules: {
             ...state.plan.rules,
-            text: state.plan.rules.text[state.locale],
+            text: resolveText(state.plan.rules.text, state.locale),
             ...approximateAmounts(
               { pricePerPerson: state.plan.rules.pricePerPerson },
               currency,
@@ -119,15 +120,16 @@ export function voiceCatalogProduct(
     price: product.price,
     ...approximateAmounts({ price: product.price }, currency, rates),
     available: product.available,
-    displayName: product.text[locale].displayName,
-    speechName: product.text[locale].speechName,
-    description: product.text[locale].description,
+    displayName: resolveText(product.text, locale).displayName,
+    transliteration: resolveText(product.text, locale).transliteration,
+    speechName: resolveText(product.text, locale).speechName,
+    description: resolveText(product.text, locale).description,
     requiredSelections:
       product.modifiers
         ?.filter((modifier) => modifier.min > 0)
         .map((modifier) => ({
           id: modifier.id,
-          displayName: modifier.text[locale].displayName,
+          displayName: resolveText(modifier.text, locale).displayName,
           min: modifier.min,
           max: modifier.max,
         })) ?? [],
@@ -139,9 +141,9 @@ export function voiceCatalogProduct(
             kind: modifier.kind,
             min: modifier.min,
             max: modifier.max,
-            displayName: modifier.text[locale].displayName,
-            speechName: modifier.text[locale].speechName,
-            description: modifier.text[locale].description,
+            displayName: resolveText(modifier.text, locale).displayName,
+            speechName: resolveText(modifier.text, locale).speechName,
+            description: resolveText(modifier.text, locale).description,
             options: modifier.options.map((option) => ({
               id: option.id,
               priceDelta: option.priceDelta,
@@ -152,9 +154,9 @@ export function voiceCatalogProduct(
               ...(option.conditions
                 ? { conditions: option.conditions }
                 : { requires: option.requires, excludes: option.excludes }),
-              displayName: option.text[locale].displayName,
-              speechName: option.text[locale].speechName,
-              description: option.text[locale].description,
+              displayName: resolveText(option.text, locale).displayName,
+              speechName: resolveText(option.text, locale).speechName,
+              description: resolveText(option.text, locale).description,
             })),
           })),
         }

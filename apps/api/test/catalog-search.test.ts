@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { resolveLocalized } from "../src/modules/catalog/localization";
 import { createMenuSearch, menuSearchPage } from "../src/modules/catalog/search";
 import { configurationSchema } from "../src/modules/configuration/model";
 import { legacyFoodInformation } from "../src/schema";
 
 const text = (ja: string, en: string, description = "") => ({
-  ja: { displayName: ja, speechName: ja, aliases: [], description },
-  en: { displayName: en, speechName: en, aliases: [], description: "" },
+  ja: { displayName: ja, speechName: ja, transliteration: ja, aliases: [], description },
+  en: { displayName: en, speechName: en, transliteration: en, aliases: [], description: "" },
 });
 const product = (id: string, ja: string, en: string, description = "") => ({
   id,
@@ -104,7 +105,7 @@ describe("音声と店側で共有するメニュー検索", () => {
     const category = configuration.categories[0];
     const salad = configuration.products[1];
     if (!category || !salad) throw new Error("カテゴリfixtureがありません");
-    category.text.en.aliases.push("Sah keh");
+    resolveLocalized(category.text, "en").aliases.push("Sah keh");
     configuration.categories.push({ id: "tablecast-sashimi", text: text("刺身", "Sashimi") });
     salad.categoryId = "tablecast-sashimi";
     expect(createMenuSearch(configuration)("SAH KEH")).toEqual({

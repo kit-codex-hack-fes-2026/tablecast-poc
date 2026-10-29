@@ -2,6 +2,7 @@ import type { Order } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActionFeedback } from "../../components/action-feedback";
 import { useAppForm } from "../../components/form";
+import { SnapshotProductName } from "../../components/product-name";
 import { Checkbox } from "../../components/ui/checkbox";
 import * as Disclosure from "../../components/ui/disclosure";
 import { NativeSelect } from "../../components/ui/native-select";
@@ -15,7 +16,7 @@ export function CustomerOrderAttribution({
   endpoint: TableEndpoint;
   order: Order;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const client = useQueryClient();
   const participants = useQuery({
     queryKey: ["tablecast-participants", order.tableSessionId, endpoint.key],
@@ -87,7 +88,7 @@ export function CustomerOrderAttribution({
                   >
                     {order.snapshot.lines.map((line) => (
                       <option key={line.id} value={line.id}>
-                        {line.name[locale]}
+                        <SnapshotProductName line={line} />
                       </option>
                     ))}
                   </NativeSelect>

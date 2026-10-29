@@ -139,3 +139,7 @@ stagingの管理画面に表示される固定URLを`tablecast-staging`名で直
 agent向けに`/llms.txt`で日英の索引とページ単位のMarkdown URL、`/llms-full.txt`で全章、`/help/content/:lang/:slug.md`で必要な章だけを返す。すべて公開説明だけを含み、実店舗情報・認証情報・業務操作は含めない。MCPの初期化結果も現在環境のヘルプと索引を案内する。
 
 章は通常のMarkdownとfrontmatterの`title`・`description`で記述し、同じ言語の章へは`./configuration.md`のような相対リンクを使う。WebとMarkdown配信はFumadocsの`getPageByHref`で言語内の仮想ディレクトリから同じ章を解決し、各形式の公開URLへ変換する。これによりskill同梱版でも公開版でも関連章へ到達できる。表示順は各言語の`meta.json`で管理する。追加時は両言語、目次、関連章へのリンクを揃え、Web buildと代表ヘルプE2Eを確認する。
+
+## 多言語メニューの設定指針
+
+製品plugin 0.6.0は`tablecast` skillへ[多言語メニューの設定指針](../plugins/tablecast/skills/tablecast/references/localization.md)を同梱する。商品名の意味訳と転写、固有名と長音記号の保持、sentence case、料理が何か分かる説明、情報を省略しない編集、言語と参考通貨の扱いを説明する。言語・名称・翻訳は既存MCPの下書き・検証・差分・公開申請で設定する。配布元の更新と、利用者がインストールしたpluginへの更新反映は分けて確認する。

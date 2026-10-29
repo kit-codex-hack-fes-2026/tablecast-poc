@@ -151,6 +151,8 @@ it("MCPのテーマ制作を商品を保持した検証済み下書きへ保存�
     "background",
     "logo",
     "header-banner",
+    "membership-card",
+    "member-app-icon",
     "banner",
   ]);
   expect(new URL(spec.editorUrl).pathname).toBe("/admin/stores/tablecast-store/design");
@@ -315,6 +317,7 @@ it("架空の二郎系店舗を店名・生成画像・マシマシ・日英接�
     configDraftSchema,
   );
   const configuration = configurationSchema.parse({
+    languages: ["ja", "en"],
     storeName: "麺屋 マシの頂",
     categories: [{ id: "ramen", text: text("ラーメン", "Ramen") }],
     products: [

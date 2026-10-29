@@ -1,3 +1,4 @@
+import { resolveText } from "@tablecast/api/localization";
 import {
   dietaryKeys,
   type FoodInformation,
@@ -74,7 +75,7 @@ export function withDemoFoodChanges(input: Product): Product {
     const id = `tablecast-food-${entry[0].slice(1)}`;
     product.foodInfo.components.push({
       id,
-      name: { ja: option.text.ja.displayName, en: option.text.en.displayName },
+      name: { ja: option.text.ja.displayName, en: resolveText(option.text, "en").displayName },
       profile: entry[1],
     });
     option.foodChanges = { add: [id], remove: [] };

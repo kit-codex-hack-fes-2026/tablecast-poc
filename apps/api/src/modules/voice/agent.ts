@@ -6,6 +6,7 @@ import type { DisplayCurrencyContext } from "../currency/model";
 import { ensure } from "../../platform/errors";
 import { localeSchema, id as productIdSchema } from "../../platform/model";
 import { getProductFoodInformation } from "../catalog/food-service";
+import { resolveText } from "../catalog/localization";
 import { foodQuerySchema } from "../catalog/model";
 import { getCatalog } from "../catalog/queries";
 import { menuSearchPage } from "../catalog/search";
@@ -192,14 +193,14 @@ export function createCastTools(
             ? {
                 plans: catalog.configuration.plans.map((plan) => ({
                   ...plan,
-                  text: plan.text[locale],
+                  text: resolveText(plan.text, locale),
                   ...approximateAmounts({ pricePerPerson: plan.pricePerPerson }, currency, rates),
                 })),
               }
             : {}),
           categories: catalog.configuration.categories.map((category) => ({
             id: category.id,
-            displayName: category.text[locale].displayName,
+            displayName: resolveText(category.text, locale).displayName,
           })),
           detail,
           products: products.map((product) =>

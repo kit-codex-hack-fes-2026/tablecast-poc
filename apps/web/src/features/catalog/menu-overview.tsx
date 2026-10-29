@@ -1,4 +1,5 @@
 import type { Configuration } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "../../components/page-header";
@@ -61,7 +62,9 @@ export function MenuOverview({
         {t(menuLabels[section])}
       </Button>
       <PageHeader
-        title={item?.text[locale].displayName ?? t(menuLabels[section])}
+        title={
+          (item ? resolveText(item.text, locale).displayName : undefined) ?? t(menuLabels[section])
+        }
         actions={
           (role === "owner" || role === "admin") && (
             <StartConfigurationEditing
@@ -122,7 +125,7 @@ export function MenuOverview({
                             params={{ storeId, section: "products", itemId: entry.id }}
                             search={{ category: itemId }}
                           >
-                            {entry.text[locale].displayName}
+                            {resolveText(entry.text, locale).displayName}
                           </Link>
                         </li>,
                       ]

@@ -1,5 +1,6 @@
 import type { Configuration } from "@tablecast/api/schema";
-import { unknownFoodProfile } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
+import { localeSchema, unknownFoodProfile } from "@tablecast/api/schema";
 import { z } from "zod";
 import { collectionSearchFields, collectionSearchSchema } from "../shell/collection-model";
 import { emptyText } from "./configuration-defaults";
@@ -32,7 +33,9 @@ export function menuDocument(configuration: Configuration, section: MenuSection,
       : undefined;
   return {
     title: menuLabels[section],
-    name: item ? { ja: item.text.ja.displayName, en: item.text.en.displayName } : undefined,
+    name: item
+      ? { ja: item.text.ja.displayName, en: resolveText(item.text, "en").displayName }
+      : undefined,
   };
 }
 
@@ -98,18 +101,32 @@ export function addMenuItem(
   return configuration;
 }
 
-export const castTargets = [
-  "system-ja",
-  "system-en",
-  "opening-ja",
-  "opening-en",
-  "instructions-ja",
-  "instructions-en",
-  "voice-ja",
-  "voice-en",
-  "proactive",
-] as const;
-export type CastTarget = (typeof castTargets)[number];
+export type CastTarget =
+  | "proactive"
+  | `instructions-${string}`
+  | `opening-${string}`
+  | `system-${string}`
+  | `voice-${string}`;
+
+export function parseCastTarget(value: string): CastTarget | undefined {
+  if (value === "proactive") return value;
+  const match = /^(system|instructions|opening|voice)-(.+)$/.exec(value);
+  const language = localeSchema.safeParse(match?.[2]);
+  const prefix = match?.[1];
+  if (!prefix || !language.success) return undefined;
+  switch (prefix) {
+    case "system":
+      return `system-${language.data}`;
+    case "instructions":
+      return `instructions-${language.data}`;
+    case "opening":
+      return `opening-${language.data}`;
+    case "voice":
+      return `voice-${language.data}`;
+    default:
+      return undefined;
+  }
+}
 
 export function findMenuItem(configuration: Configuration, section: MenuSection, itemId: string) {
   if (section === "cast") return undefined;

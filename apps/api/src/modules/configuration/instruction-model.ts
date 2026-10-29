@@ -13,7 +13,7 @@ const inlineSchema = z
       .strict(),
     z.object({ type: z.literal("hardBreak") }).strict(),
   ])
-  .meta({ id: "tablecastInstructionInline" });
+  .meta({ id: "tablecastInline" });
 type Inline = z.infer<typeof inlineSchema>;
 type TextBlock =
   | { attrs: { level: number }; content?: Inline[]; type: "heading" }
@@ -32,7 +32,7 @@ export type InstructionBlock = ListBlock<2> | TextBlock;
 const paragraphSchema = z
   .object({ type: z.literal("paragraph"), content: z.array(inlineSchema).optional() })
   .strict()
-  .meta({ id: "tablecastInstructionParagraph" });
+  .meta({ id: "tablecastParagraph" });
 const textBlockSchema = z
   .discriminatedUnion("type", [
     paragraphSchema,
@@ -44,7 +44,7 @@ const textBlockSchema = z
       })
       .strict(),
   ])
-  .meta({ id: "tablecastInstructionTextBlock" });
+  .meta({ id: "tablecastTextBlock" });
 function listSchema<Child extends z.ZodType>(child: Child) {
   const items = z
     .array(
@@ -68,13 +68,13 @@ function listSchema<Child extends z.ZodType>(child: Child) {
   ]);
 }
 // JSON Schemaでは同じ深さのリストを参照し、日英・入れ子ごとの展開を避ける。
-const firstListSchema = listSchema(textBlockSchema).meta({ id: "tablecastInstructionListDepth1" });
+const firstListSchema = listSchema(textBlockSchema).meta({ id: "tablecastListDepth1" });
 const secondListSchema = listSchema(z.union([textBlockSchema, firstListSchema])).meta({
-  id: "tablecastInstructionListDepth2",
+  id: "tablecastListDepth2",
 });
 const blockSchema: z.ZodType<InstructionBlock> = z
   .union([textBlockSchema, listSchema(z.union([textBlockSchema, secondListSchema]))])
-  .meta({ id: "tablecastInstructionBlock" });
+  .meta({ id: "tablecastBlock" });
 // 再帰schemaの評価前に、大量の空ノードと過度の入れ子を止める。
 const boundedDocument = z.unknown().superRefine((value, ctx) => {
   const pending = [{ value, depth: 0 }];
@@ -144,4 +144,5 @@ export const castInstructionSchema = z
         code: "custom",
         message: "接客方針は書式と改行を含め5000文字以内にしてください。",
       });
-  });
+  })
+  .meta({ id: "tablecastCastInstruction" });

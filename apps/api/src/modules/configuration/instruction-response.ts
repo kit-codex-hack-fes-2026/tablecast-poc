@@ -1,4 +1,5 @@
 import type { ConfigDraft, Configuration } from "./model";
+import { mapLocalized } from "../catalog/localization";
 import { castInstructionSchema, instructionText } from "./instruction-model";
 
 /** 旧画面には文字列、構造対応を宣言した画面には保存文書を返す。 */
@@ -13,16 +14,13 @@ export function instructionResponse<
       ...value.configuration,
       cast: {
         ...value.configuration.cast,
-        instructions: {
-          ja: instructionText(instructions.ja),
-          en: instructionText(instructions.en),
-        },
+        instructions: mapLocalized(instructions, instructionText),
       },
     },
     ...(value.changes
       ? {
           changes: value.changes.map((change) => {
-            if (!/^cast\.instructions\.(ja|en)$/.test(change.path)) return change;
+            if (!/^cast\.instructions\.[^.]+$/.test(change.path)) return change;
             const before = castInstructionSchema.safeParse(change.before);
             const after = castInstructionSchema.safeParse(change.after);
             return {

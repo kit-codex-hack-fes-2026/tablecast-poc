@@ -3,24 +3,51 @@ import { and, desc, eq, lt, or } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { CustomerActor, customerMembershipPageSchema } from "./model";
 import { customerMemberships } from "../../db/customer-schema";
+import { user } from "../../db/identity-schema";
 import { stores } from "../../db/table-schema";
 import { ensure } from "../../platform/errors";
+import { configurationSchema } from "../configuration/model";
 
 export async function getCustomerStore(services: ApiServices, actor: CustomerActor) {
   const row = await services.db
     .select({
       store: { id: stores.id, name: stores.name },
       membership: customerMemberships,
+      memberName: user.name,
+      configuration: stores.config_json,
     })
     .from(stores)
     .leftJoin(
       customerMemberships,
       and(eq(customerMemberships.storeId, stores.id), eq(customerMemberships.userId, actor.userId)),
     )
+    .leftJoin(user, eq(user.id, customerMemberships.userId))
     .where(eq(stores.id, actor.storeId))
     .get();
   ensure(row, "STORE_NOT_FOUND", 404);
-  return row;
+  const { configuration, ...value } = row;
+  return {
+    ...value,
+    store: {
+      ...value.store,
+      branding: configurationSchema.parse(JSON.parse(configuration)).branding,
+    },
+  };
+}
+
+/** 公開済みの会員意匠だけを返し、会員・同意・来店情報を公開経路へ渡さない。 */
+export async function getMemberStoreBranding(services: ApiServices, storeId: string) {
+  const row = await services.db
+    .select({ id: stores.id, name: stores.name, configuration: stores.config_json })
+    .from(stores)
+    .where(eq(stores.id, storeId))
+    .get();
+  ensure(row, "STORE_NOT_FOUND", 404);
+  return {
+    id: row.id,
+    name: row.name,
+    branding: configurationSchema.parse(JSON.parse(row.configuration)).branding,
+  };
 }
 
 export async function requireCustomer(services: ApiServices, actor: CustomerActor) {

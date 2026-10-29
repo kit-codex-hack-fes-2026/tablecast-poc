@@ -1,4 +1,5 @@
 import type { Configuration, ConfigurationIssue, Locale } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
 import { useI18n } from "../../i18n/locale";
 
 const messages = {
@@ -20,9 +21,10 @@ const messages = {
 function subject(configuration: Configuration, path: ConfigurationIssue["path"], locale: Locale) {
   const [collection, index, section, groupIndex, options, optionIndex] = path;
   if (typeof index !== "number") return null;
-  if (collection === "guides") return configuration.guides?.[index]?.text[locale].displayName;
-  if (collection === "categories") return configuration.categories[index]?.text[locale].displayName;
-  if (collection === "plans") return configuration.plans[index]?.text[locale].displayName;
+  if (collection === "guides" || collection === "categories" || collection === "plans") {
+    const item = configuration[collection]?.[index];
+    return item ? resolveText(item.text, locale).displayName : undefined;
+  }
   if (collection !== "products") return null;
   const product = configuration.products[index];
   const group =
@@ -34,7 +36,7 @@ function subject(configuration: Configuration, path: ConfigurationIssue["path"],
       ? group?.options[optionIndex]
       : undefined;
   return [product, group, option]
-    .flatMap((item) => (item ? [item.text[locale].displayName] : []))
+    .flatMap((item) => (item ? [resolveText(item.text, locale).displayName] : []))
     .join(" / ");
 }
 

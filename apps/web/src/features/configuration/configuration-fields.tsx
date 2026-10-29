@@ -1,6 +1,7 @@
-import type { Product } from "@tablecast/api/schema";
+import type { Configuration } from "@tablecast/api/schema";
 import type { LucideIcon } from "lucide-react";
 import { type ReactNode, useId } from "react";
+import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Input } from "../../components/ui/input";
 import { NativeSelect } from "../../components/ui/native-select";
@@ -181,7 +182,9 @@ export function ReferencesField({
   );
 }
 
-export function BilingualFields({
+type LocalizedContent = Configuration["categories"][number]["text"];
+
+export function BilingualFields<T extends LocalizedContent>({
   value,
   onChange,
   disabled,
@@ -191,8 +194,8 @@ export function BilingualFields({
   disabled?: boolean;
   includeName?: boolean;
   labelledBy?: string;
-  onChange: (value: Product["text"]) => void;
-  value: Product["text"];
+  onChange: (value: T) => void;
+  value: T;
 }) {
   const id = useId();
   const { t } = useI18n();
@@ -201,48 +204,69 @@ export function BilingualFields({
     { key: "speechName", label: t("admin_speech_name") },
     { key: "description", label: t("admin_description") },
   ] as const;
-  function updateText(language: keyof Product["text"], change: Partial<Product["text"]["ja"]>) {
-    onChange({ ...value, [language]: { ...value[language], ...change } });
+  function updateText(language: string, change: Partial<LocalizedContent["ja"]>) {
+    onChange({
+      ...value,
+      [language]: {
+        displayName: "",
+        speechName: "",
+        description: "",
+        aliases: [],
+        ...value[language],
+        ...change,
+      },
+    });
   }
   return (
     <LanguageFields>
-      {(language, languageLabelId) => (
-        <fieldset className="grid min-w-0 gap-4" disabled={disabled}>
-          {fields
-            .filter(({ key }) => includeName || key !== "displayName")
-            .map(({ key, label }) => (
-              <label className="grid min-w-0 gap-2 text-sm" key={key}>
-                <span id={`${id}-${language}-${key}`}>{label}</span>
-                {key === "description" ? (
-                  <textarea
-                    lang={language}
-                    aria-labelledby={`${labelledBy ?? ""} ${languageLabelId} ${id}-${language}-${key}`}
-                    className="field-sizing-content min-h-24 w-full resize-y rounded-lg border border-input bg-background p-3 text-base"
-                    maxLength={3000}
-                    value={value[language][key]}
-                    onChange={(event) => updateText(language, { [key]: event.target.value })}
-                  />
-                ) : (
-                  <Input
-                    lang={language}
-                    aria-labelledby={`${labelledBy ?? ""} ${languageLabelId} ${id}-${language}-${key}`}
-                    required
-                    maxLength={150}
-                    value={value[language][key]}
-                    onChange={(event) => updateText(language, { [key]: event.target.value })}
-                  />
-                )}
-              </label>
-            ))}
-          <StringListField
-            labelledBy={`${labelledBy ?? ""} ${languageLabelId}`}
-            label={t("editor_aliases")}
-            value={value[language].aliases}
+      {(language, languageLabelId) =>
+        !value[language] ? (
+          <Button
+            type="button"
+            variant="outline"
             disabled={disabled}
-            onChange={(aliases) => updateText(language, { aliases })}
-          />
-        </fieldset>
-      )}
+            onClick={() => updateText(language, {})}
+          >
+            {t("editor_add_translation")}
+          </Button>
+        ) : (
+          <fieldset className="grid min-w-0 gap-4" disabled={disabled}>
+            {fields
+              .filter(({ key }) => includeName || key !== "displayName")
+              .map(({ key, label }) => (
+                <label className="grid min-w-0 gap-2 text-sm" key={key}>
+                  <span id={`${id}-${language}-${key}`}>{label}</span>
+                  {key === "description" ? (
+                    <textarea
+                      lang={language}
+                      aria-labelledby={`${labelledBy ?? ""} ${languageLabelId} ${id}-${language}-${key}`}
+                      className="field-sizing-content min-h-24 w-full resize-y rounded-lg border border-input bg-background p-3 text-base"
+                      maxLength={3000}
+                      value={value[language]?.[key] ?? ""}
+                      onChange={(event) => updateText(language, { [key]: event.target.value })}
+                    />
+                  ) : (
+                    <Input
+                      lang={language}
+                      aria-labelledby={`${labelledBy ?? ""} ${languageLabelId} ${id}-${language}-${key}`}
+                      required={key === "displayName"}
+                      maxLength={150}
+                      value={value[language]?.[key] ?? ""}
+                      onChange={(event) => updateText(language, { [key]: event.target.value })}
+                    />
+                  )}
+                </label>
+              ))}
+            <StringListField
+              labelledBy={`${labelledBy ?? ""} ${languageLabelId}`}
+              label={t("editor_aliases")}
+              value={value[language]?.aliases ?? []}
+              disabled={disabled}
+              onChange={(aliases) => updateText(language, { aliases })}
+            />
+          </fieldset>
+        )
+      }
     </LanguageFields>
   );
 }

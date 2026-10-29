@@ -1,4 +1,5 @@
 import type { Product } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
 import type { ProductOptionAllergens } from "./product-food-query";
 import { AllergenBadges } from "../../components/allergen-badges";
 import { MenuOptionImage } from "../../components/menu-option-image";
@@ -13,7 +14,7 @@ export function OptionContent({
 }: {
   allergens?: ProductOptionAllergens;
   id: string;
-  locale: "en" | "ja";
+  locale: string;
   option: Product["modifiers"][number]["options"][number];
   showAllergens?: boolean;
 }) {
@@ -31,7 +32,7 @@ export function OptionContent({
       />
       <div className="min-w-0">
         <span id={`${id}-name`} className="block font-medium wrap-break-word">
-          {option.text[locale].displayName}
+          {resolveText(option.text, locale).displayName}
         </span>
         {showAllergens && (
           <div id={`${id}-allergens`} className={hasAllergens ? "mt-0.5" : undefined}>
@@ -44,12 +45,12 @@ export function OptionContent({
             )}
           </div>
         )}
-        {option.text[locale].description && (
+        {resolveText(option.text, locale).description && (
           <span
             id={`${id}-description`}
             className="mt-1 block text-sm leading-relaxed text-muted-foreground wrap-break-word"
           >
-            {option.text[locale].description}
+            {resolveText(option.text, locale).description}
           </span>
         )}
       </div>

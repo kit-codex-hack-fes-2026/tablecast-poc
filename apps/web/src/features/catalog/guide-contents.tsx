@@ -1,4 +1,5 @@
 import type { Configuration } from "@tablecast/api/schema";
+import { resolveLocalized, resolveText } from "@tablecast/api/localization";
 import type { MenuSection } from "../configuration/menu-model";
 import { useI18n } from "../../i18n/locale";
 
@@ -24,7 +25,7 @@ export function GuideContents({
           {configuration.products
             .filter((product) => ids.has(product.id))
             .map((product) => (
-              <li key={product.id}>{product.text[locale].displayName}</li>
+              <li key={product.id}>{resolveText(product.text, locale).displayName}</li>
             ))}
         </ul>
       </section>
@@ -38,7 +39,7 @@ export function GuideContents({
             rel="noreferrer"
             className="block min-h-11 py-2 underline wrap-anywhere"
           >
-            {link.label[locale]}
+            {resolveLocalized(link.label, locale)}
           </a>
         ))}
       </section>

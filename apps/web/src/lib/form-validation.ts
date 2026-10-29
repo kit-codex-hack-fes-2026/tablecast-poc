@@ -9,5 +9,7 @@ export const zodFieldValidator =
   ({ value }: { value: unknown }) =>
     schema.safeParse(value, {
       error: (issue) =>
-        issue.code === "invalid_format" && formatMessage ? formatMessage : locales[locale](issue),
+        issue.code === "invalid_format" && formatMessage
+          ? formatMessage
+          : locales[locale === "ja" ? "ja" : "en"](issue),
     }).error?.issues;

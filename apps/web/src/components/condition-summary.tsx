@@ -1,4 +1,5 @@
 import type { OptionCondition, Product } from "@tablecast/api/schema";
+import { resolveText } from "@tablecast/api/localization";
 import { useI18n } from "../i18n/locale";
 
 /**
@@ -21,7 +22,7 @@ export function ConditionSummary({
         (option) =>
           [
             option.id,
-            `${group.text[locale].displayName} / ${option.text[locale].displayName}`,
+            `${resolveText(group.text, locale).displayName} / ${resolveText(option.text, locale).displayName}`,
           ] as const,
       ),
     ),

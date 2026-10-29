@@ -1,4 +1,5 @@
 import type { TableState } from "@tablecast/api/schema";
+import { uiLocale } from "@tablecast/api/localization";
 import {
   Bell,
   ChevronRight,
@@ -150,7 +151,7 @@ export function TableTimeline({
                         <Clock3 className="size-4 text-muted-foreground" aria-hidden="true" />
                         {m.floor_elapsed(
                           { minutes: Math.max(0, Math.floor((now - visit.openedAt) / 60_000)) },
-                          { locale },
+                          { locale: uiLocale(locale) },
                         )}
                       </span>
                       <span className="text-muted-foreground">

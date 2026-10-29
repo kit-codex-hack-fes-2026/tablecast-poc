@@ -1,4 +1,5 @@
 import { business, createDatabase } from "@tablecast/api/db";
+import { configurationSchema } from "@tablecast/api/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -160,6 +161,30 @@ it("再投入で別IDの営業中卓と閉じた初期卓と未会計を保ち�
           .get(),
       ).toEqual({ status: "open" });
       expect(await seedDemoDatabase(platform.env, next)).toEqual(repeated);
+      const savedOrders = await db.select().from(orders).orderBy(orders.id);
+      const savedPayments = await db.select().from(payments).orderBy(payments.id);
+      const stored = await db
+        .select()
+        .from(business.stores)
+        .where(eq(business.stores.id, "tablecast-komorebi"))
+        .get();
+      if (!stored) throw new Error("再作成対象のseed店舗がありません。");
+      await db
+        .update(business.stores)
+        .set({ config_json: "{}" })
+        .where(eq(business.stores.id, stored.id));
+      await seedDemoDatabase(platform.env, next, { rebuildConfiguration: true });
+      const rebuilt = await db
+        .select()
+        .from(business.stores)
+        .where(eq(business.stores.id, stored.id))
+        .get();
+      expect(rebuilt?.config_version).toBe(stored.config_version + 1);
+      expect(configurationSchema.parse(JSON.parse(rebuilt?.config_json ?? "{}")).languages).toEqual(
+        ["ja", "en", "zh-Hans", "ko"],
+      );
+      expect(await db.select().from(orders).orderBy(orders.id)).toEqual(savedOrders);
+      expect(await db.select().from(payments).orderBy(payments.id)).toEqual(savedPayments);
       expect(await db.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
     } finally {
       await platform.dispose();

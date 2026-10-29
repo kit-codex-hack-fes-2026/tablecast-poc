@@ -1,4 +1,6 @@
 export const labels = {
+  languages: "editor_store_languages",
+  transliteration: "admin_transliteration",
   branding: "theme_logo",
   logo: "theme_logo",
   banner: "theme_header_banner",

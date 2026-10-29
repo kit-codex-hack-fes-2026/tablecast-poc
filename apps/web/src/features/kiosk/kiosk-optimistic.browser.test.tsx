@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { expect, it } from "vitest";
 import { page } from "vitest/browser";
 import ja from "../../../messages/ja.json";
@@ -69,7 +70,7 @@ it("409と他端末の更新が重なっても後続の削除と新しく開い�
     modifiers: [],
     text: {
       ja: { ...product.text.ja, displayName: "次の商品" },
-      en: { ...product.text.en, displayName: "Next item" },
+      en: { ...resolveLocalized(product.text, "en"), displayName: "Next item" },
     },
   };
   fixture.catalogResponse = Response.json({

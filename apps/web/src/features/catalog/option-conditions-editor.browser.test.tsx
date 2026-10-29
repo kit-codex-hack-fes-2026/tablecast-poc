@@ -15,8 +15,8 @@ import "../../styles.css";
 import { OptionConditionsEditor } from "./option-conditions-editor";
 
 const text = (name: string) => ({
-  ja: { displayName: name, speechName: name, description: "", aliases: [] },
-  en: { displayName: name, speechName: name, description: "", aliases: [] },
+  ja: { displayName: name, speechName: name, transliteration: name, description: "", aliases: [] },
+  en: { displayName: name, speechName: name, transliteration: name, description: "", aliases: [] },
 });
 const product = productSchema.parse({
   id: "coffee",

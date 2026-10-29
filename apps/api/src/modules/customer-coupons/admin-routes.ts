@@ -1,9 +1,11 @@
 import { apiFactory } from "../../platform/http";
 import { validate, validateQuery } from "../../platform/validation";
 import { tableScope } from "../auth/middleware";
+import { previewCouponAudience } from "./audience";
 import {
   applyCouponSchema,
   cancelCouponUseSchema,
+  couponAudienceSchema,
   couponDefinitionSchema,
   couponPageSchema,
   issueCouponSchema,
@@ -24,6 +26,12 @@ export const couponsAdminRoutes = apiFactory
   )
   .post("/coupons/rules", validate(couponDefinitionSchema), async (c) =>
     c.json(await saveCouponRule(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
+  )
+  .post("/coupons/audience", validate(couponAudienceSchema), async (c) =>
+    c.json(
+      await previewCouponAudience(c.get("services"), c.get("actor"), c.req.valid("json")),
+      200,
+    ),
   )
   .get("/coupons/members", validateQuery(rewardMembersSchema), async (c) =>
     c.json(await listRewardMembers(c.get("services"), c.get("actor"), c.req.valid("query")), 200),

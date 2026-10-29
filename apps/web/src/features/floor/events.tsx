@@ -1,4 +1,5 @@
 import type { TableEvent } from "@tablecast/api/schema";
+import { localeSchema } from "@tablecast/api/schema";
 import {
   Bell,
   CircleCheck,
@@ -65,6 +66,8 @@ export function ActivityLog({
       data-with-date={includeDate || undefined}
     >
       {events.map((event) => {
+        const eventLocale = localeSchema.safeParse(event.data.locale);
+        const language = eventLocale.success ? eventLocale.data : "ja";
         const group = event.kind.split(".")[0];
         const Icon =
           group === "order" || group === "cart"
@@ -115,12 +118,12 @@ export function ActivityLog({
               {typeof event.data.text === "string" && (
                 <p
                   className="text-sm mt-2 text-muted-foreground leading-relaxed whitespace-pre-wrap"
-                  lang={event.data.locale === "en" ? "en" : "ja"}
+                  lang={language}
                 >
                   {event.data.role === "user" ? t("kiosk_guest") : t("kiosk_assistant")}:{" "}
                   {event.data.text}
                   <small className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <LanguageLabel locale={event.data.locale === "en" ? "en" : "ja"} />
+                    <LanguageLabel locale={language} />
                     {typeof event.data.source === "string" &&
                       event.data.source.startsWith("synthetic-") &&
                       ` · ${t("common_synthetic")}`}

@@ -1,3 +1,4 @@
+import { resolveLocalized } from "@tablecast/api/localization";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -140,7 +141,7 @@ it("日本語で検証・実iframeの準備完了・人の試遊確認後に公�
     .element(page.getByRole("button", { name: labels.games_preview, exact: true }))
     .toBeEnabled();
   await page.getByRole("button", { name: labels.games_preview, exact: true }).click();
-  await expect.element(page.getByTitle(manifest.name[locale])).toBeVisible();
+  await expect.element(page.getByTitle(resolveLocalized(manifest.name, locale))).toBeVisible();
   await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
   await expect
     .element(page.getByRole("button", { name: labels.games_preview_confirm, exact: true }))
@@ -150,7 +151,9 @@ it("日本語で検証・実iframeの準備完了・人の試遊確認後に公�
     .element(page.getByRole("button", { name: labels.games_preview, exact: true }))
     .toBeDisabled();
   await page.getByRole("button", { name: labels.games_preview_confirm, exact: true }).click();
-  await expect.element(page.getByTitle(manifest.name[locale])).not.toBeInTheDocument();
+  await expect
+    .element(page.getByTitle(resolveLocalized(manifest.name, locale)))
+    .not.toBeInTheDocument();
   await page.getByRole("button", { name: labels.games_publish, exact: true }).click();
   await page
     .getByRole("alertdialog")

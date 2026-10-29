@@ -246,6 +246,53 @@ it("特典MCPは会員の表示名と券の状態だけをページ取得し、�
       memberPageSchema,
     ),
   ).toEqual({ members: [{ id: "tablecast-reward-0", name: "会員0" }], nextCursor: null });
+  const audience = toolData(
+    await client.callTool({
+      name: "preview_coupon_audience",
+      arguments: {
+        rules: {
+          ...rules,
+          conditions: { all: [{ field: "visits", operator: "lte", value: 0 }], any: [] },
+        },
+      },
+    }),
+    z.strictObject({
+      totalMembers: z.number(),
+      eligible: z.number(),
+      alreadyIssued: z.number(),
+      notMatching: z.number(),
+      evaluatedAt: z.number(),
+      issuance: z.literal("manual"),
+    }),
+  );
+  expect(audience).toMatchObject({
+    totalMembers: 2,
+    eligible: 2,
+    alreadyIssued: 0,
+    notMatching: 0,
+  });
+  expect(
+    (await client.listTools()).tools.find((tool) => tool.name === "preview_coupon_audience")
+      ?.annotations?.readOnlyHint,
+  ).toBe(true);
+  const previewHttp = await post(
+    "/api/admin/stores/tablecast-store/coupons/audience",
+    {
+      rules: {
+        ...rules,
+        conditions: { all: [{ field: "visits", operator: "lte", value: 0 }], any: [] },
+      },
+    },
+    { Cookie: cookie },
+  );
+  expect(previewHttp.status).toBe(200);
+  expect(await previewHttp.json()).toMatchObject({
+    totalMembers: 2,
+    eligible: 2,
+    alreadyIssued: 0,
+    notMatching: 0,
+    issuance: "manual",
+  });
   for (const [path, key] of [
     ["members", "members"],
     ["issued", "coupons"],

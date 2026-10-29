@@ -52,17 +52,21 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
     "get_configuration",
     {
       description:
-        "対象店舗・現在の公開設定・日英データ・入力schemaを取得する。資料の取り込み、設定提案、下書き作成の前に確認する。設定は変更しない。",
+        "対象店舗・現在の公開設定・登録言語・意味訳と転写・入力schemaを取得する。資料の取り込み、設定提案、下書き作成の前に確認する。設定は変更しない。",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
-    async () =>
-      result({
-        ...(await getCatalog(services, actor.storeId)),
+    async () => {
+      const catalog = await getCatalog(services, actor.storeId);
+      return result({
+        ...catalog,
         schema: z.toJSONSchema(configurationSchema),
-        locales: ["ja", "en"],
+        locales: catalog.configuration.languages,
+        uiLocales: ["ja", "en", "zh-Hans", "ko"],
+        fallback: ["en", "ja"],
         foodClassification: { ...foodClassification, dietaryReasons: dietaryReasonsByKind },
-      }),
+      });
+    },
   );
 
   server.registerTool(
@@ -130,6 +134,24 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
               "注文画面のヘッダーで画像全体を元の比率のまま表示する。バナー・店名・卓名は同じ横一列に表示する。",
           },
           {
+            role: "membership-card",
+            target: "branding.membershipCard.image",
+            suggestedSize: "1600×640（5:2）",
+            brief:
+              "店舗会員カードの公開意匠。会員名・会員番号・認証用QRなどの個人情報は含めない。提供画像を優先し、会員名と入会日は画面側で表示する。",
+            placement:
+              "カード上部へ配置し、imageFit=containで全体表示、coverで枠いっぱいにする。toneはneutral/green/amber/violetの淡い背景と読める文字色を選ぶ。店舗デザインの下書きに保存し、通常の確認・承認後に反映する。",
+          },
+          {
+            role: "member-app-icon",
+            target: "branding.memberIcon",
+            suggestedSize: "1024×1024（512px以上の正方形）",
+            brief:
+              "店舗別会員PWAの公開アイコン。小さくても識別できる店舗ロゴを使い、個人情報を含めない。",
+            placement:
+              "店舗会員証からホーム画面へ追加すると店舗名とこのアイコンを使い、同じ店舗の会員証を開く。未設定時はTableCastアイコンへ戻る。",
+          },
+          {
             role: "banner",
             target: "banners[].image",
             suggestedSize: "1536×1024 または 1536×768",
@@ -153,7 +175,7 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
     "upload_image",
     {
       description:
-        "店舗設定用の商品・店舗ロゴ・テーマ装飾・チラシ画像・クーポン券面を取り込む。画像テーマは先にget_theme_specで素材別の寸法と配置を確認し、クライアントの画像生成機能で別々に制作する。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品、branding.logo、branding.banner、appearance.assets、bannersの画像へ設定する。ロゴ・装飾・チラシにはaltの日英説明も設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
+        "店舗設定用の商品・店舗ロゴ・テーマ装飾・チラシ画像・会員カード・会員PWAアイコン・クーポン券面を取り込む。画像テーマは先にget_theme_specで素材別の寸法と配置を確認し、クライアントの画像生成機能で別々に制作する。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品、branding.logo、branding.banner、branding.membershipCard.image、branding.memberIcon、appearance.assets、bannersの画像へ設定する。ロゴ・装飾・チラシにはaltの日英説明も設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
       inputSchema: uploadImageSchema.shape,
       outputSchema: uploadedImageSchema.shape,
       _meta: { "openai/fileParams": ["file"] },
@@ -185,7 +207,7 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
     "update_draft",
     {
       description:
-        "依頼された店名・店舗ロゴ（branding）・テーマ（appearance）・チラシ（banners）・商品・価格・売切・画像・選択肢・翻訳・プラン・接客の変更を、最新expectedVersionと全configurationで下書きへ保存する。部分patchではないため他の商品と日英データを保持する。食事制限はfoodInfoのbase・components・defaultComponentIdsと選択肢のfoodChanges.add/removeで設定する。アレルゲンIDは日本の29品目のenumだけで、未登録はunknown。分類外IDと自由文basisは受け付けない。4食事区分のyes/noにはreasonsのenumを指定し、認証はhalalCertification、共用設備はcrossContactSourcesで設定する。削除した具材以外に残る成分を消さない。条件は選択肢のconditions.version=2とrequires/excludesのoption・and・or・notで表す。既存conditionsを落とさず、解除はrequires/excludesをnullにする。conditionsと非空の旧requires/excludes配列は併記しない。次にvalidate_draftとget_draft_diffで確認する。提供資料と設定値に従い、価格や食事制限の情報は推測しない。公開設定は変更しない。",
+        "依頼された店名・店舗ロゴ（branding）・テーマ（appearance）・チラシ（banners）・商品・価格・売切・画像・選択肢・翻訳・プラン・接客の変更を、最新expectedVersionと全configurationで下書きへ保存する。部分patchではないため他の商品と言語データを保持する。languagesにBCP 47コードを登録でき、商品のtextの各言語にはdisplayName（意味訳）とtransliteration（転写）の両方が必須。英語の日本語転写は長音記号付きヘボン式とし、銘柄は固有名を保持し、分類や調理法は意味を訳す。料理名・材料・調理法・個数等を独断で短縮・省略せず、日本酒や刺身などには何か分かる説明を加える。英語の商品名と転写はsentence caseに揃え、固有名詞と略語の正式表記は保持する。精米歩合や製法の詳細もdescriptionに保持する。食事制限はfoodInfoのbase・components・defaultComponentIdsと選択肢のfoodChanges.add/removeで設定する。アレルゲンIDは日本の29品目のenumだけで、未登録はunknown。分類外IDと自由文basisは受け付けない。4食事区分のyes/noにはreasonsのenumを指定し、認証はhalalCertification、共用設備はcrossContactSourcesで設定する。削除した具材以外に残る成分を消さない。条件は選択肢のconditions.version=2とrequires/excludesのoption・and・or・notで表す。既存conditionsを落とさず、解除はrequires/excludesをnullにする。conditionsと非空の旧requires/excludes配列は併記しない。次にvalidate_draftとget_draft_diffで確認する。提供資料と設定値に従い、価格や食事制限の情報は推測しない。公開設定は変更しない。",
       inputSchema: {
         draftId: z.string(),
         expectedVersion: z.number().int(),
