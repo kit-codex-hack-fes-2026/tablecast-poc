@@ -15,7 +15,12 @@ const meta = {
         after: product.price + 100,
         sensitive: true,
       },
-      { path: "products.0.allergens.vegan", before: "unknown", after: "no", sensitive: true },
+      {
+        path: "products.0.foodInfo.base.dietary.vegan.status",
+        before: "unknown",
+        after: "no",
+        sensitive: true,
+      },
       {
         path: "products.0.modifiers.0.options.0",
         before: null,

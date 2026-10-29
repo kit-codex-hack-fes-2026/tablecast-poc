@@ -1,5 +1,4 @@
 import { business, createDatabase } from "@tablecast/api/db";
-import { resolveText } from "@tablecast/api/localization";
 import { configurationSchema } from "@tablecast/api/schema";
 import { eq, sql } from "drizzle-orm";
 import { expect } from "vitest";
@@ -31,33 +30,15 @@ export async function seedIntegrity(env: TablecastEnv, credentials: DemoCredenti
     expect(product.imageKey).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.webp$/);
   for (const product of products) {
     expect(product.imageKind).toBe("illustration");
-    expect(product.allergens.note.ja).toMatch(/(?:混入|交差接触)は未確認/);
-    expect(product.allergens.note.en).toContain("cross-contact");
-    expect(product.allergens.note.en).toContain("unverified");
-  }
-  for (const product of products.filter((item) => item.categoryId !== "sake")) {
-    expect(product.allergens.note.ja).toContain(product.text.ja.description);
-    expect(product.allergens.note.en).toContain(resolveText(product.text, "en").description);
   }
   expect(
-    products.find((product) => product.id === "tablecast-komorebi-karaage")?.allergens,
-  ).toMatchObject({
-    contains: ["wheat", "soya"],
-    evidence: "verified",
-    crossContact: "unknown",
-    vegan: "unknown",
-  });
+    products.find((product) => product.id === "tablecast-komorebi-karaage")?.foodInfo.base,
+  ).toMatchObject({ allergens: { wheat: "contains", soya: "contains" }, crossContact: "unknown" });
   expect(
-    products.find((product) => product.id === "tablecast-komorebi-pickles")?.allergens,
-  ).toMatchObject({
-    contains: [],
-    evidence: "unknown",
-    crossContact: "unknown",
-    vegan: "unknown",
-  });
-  expect(
-    products.find((product) => product.id === "tablecast-komorebi-pickles")?.allergens.note.ja,
-  ).toContain("詳しい原材料は未登録");
+    products.find((product) => product.id === "tablecast-komorebi-pickles")?.foodInfo.base
+      .allergens,
+  ).toEqual({});
+  expect(products.some((product) => product.foodInfo.components.length > 0)).toBe(true);
   expect(await db.get(sql`SELECT COUNT(DISTINCT organization_id) AS count FROM stores`)).toEqual({
     count: 3,
   });

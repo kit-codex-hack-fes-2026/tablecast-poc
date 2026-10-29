@@ -5,12 +5,17 @@ import { expect, it } from "vitest";
 import app from "../src/app";
 import * as business from "../src/db/business-schema";
 import { createApiServices } from "../src/platform/context";
-import { configurationSchema, type OptionCondition, tableStateSchema } from "../src/schema";
+import {
+  configurationSchema,
+  maxCartLines,
+  type OptionCondition,
+  tableStateSchema,
+} from "../src/schema";
 import { configuration, device, deviceToken, setupFixture, text } from "./fixture";
 import { measuredDatabase } from "./measured-database";
 
 it.each([true, false])(
-  "条件充足=%sで商品上限の1024節と100行の金額・未充足・応答量を検証する",
+  "条件充足=%sで商品上限の1024節とカート上限の行数の金額・未充足・応答量を検証する",
   async (complete) => {
     await setupFixture();
     const normal = createApiServices(env);
@@ -57,7 +62,7 @@ it.each([true, false])(
       .where(eq(business.stores.id, device.storeId));
     const measurements = [];
     let version = 0;
-    for (const count of [1, 100]) {
+    for (const count of [1, maxCartLines]) {
       const measured = measuredDatabase(env.TABLECAST_DB);
       const context = createExecutionContext();
       const started = performance.now();

@@ -8,6 +8,21 @@ export {
 } from "./modules/appearance/model";
 export type { Appearance, Banner, ThemeImage, ThemePart } from "./modules/appearance/model";
 export {
+  crossContactSourceSchema,
+  dietaryAssessmentSchema,
+  dietaryKeys,
+  dietaryReasonsByKind,
+  dietaryReasonSchema,
+  foodChangesSchema,
+  foodClassification,
+  foodInformationSchema,
+  foodProfileSchema,
+  halalCertificationSchema,
+  japaneseAllergenSchema,
+  unknownFoodProfile,
+} from "./modules/catalog/food-model";
+export type { FoodInformation, FoodProfile, JapaneseAllergen } from "./modules/catalog/food-model";
+export {
   conditionLimits,
   optionConditionSchema,
   optionConditionsSchema,
@@ -22,6 +37,10 @@ export type {
   Plan,
   Product,
 } from "./modules/catalog/model";
+export {
+  legacyFoodInformation,
+  readConfiguration,
+} from "./modules/configuration/food-compatibility";
 export {
   type CastInstruction,
   castInstructionSchema,
@@ -72,6 +91,7 @@ export { customerConsentVersion, customerPreferencesSchema } from "./modules/cus
 export { type Demo, demoSchema, type DemoUpdate, demoUpdateSchema } from "./modules/demo/model";
 export { gameMessageSchema, gamePackageSchema, gameStateSchema } from "./modules/games/model";
 export type { GamePackage, GameState } from "./modules/games/model";
+
 export {
   imageAssetSchema,
   imageAssetsSchema,
@@ -80,7 +100,9 @@ export {
   maxImageBytes,
   uploadedImageSchema,
 } from "./modules/media/model";
+
 export type { ImageAsset, ImageAssets } from "./modules/media/model";
+
 export {
   cartLineSchema,
   cartUpdateSchema,
@@ -88,6 +110,7 @@ export {
   snapshotSchema,
   submitSchema,
 } from "./modules/orders/model";
+export { maxCartLines } from "./modules/orders/model";
 export type { CartLine, CartUpdate, Order, PricedLine, Snapshot } from "./modules/orders/model";
 // Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
 export {
@@ -121,7 +144,6 @@ export {
 } from "./modules/statistics/model";
 
 export { adminStateSchema, createStoreSchema } from "./modules/stores/model";
-
 export type { StoreSummary } from "./modules/stores/model";
 
 export {
@@ -138,7 +160,6 @@ export {
   timelinePageSchema,
   uiSectionInputSchema,
 } from "./modules/tables/model";
-
 export type {
   ClosedSessionSummary,
   CoreState,
@@ -151,6 +172,7 @@ export type {
   UiSection,
   UiSectionInput,
 } from "./modules/tables/model";
+
 export {
   serviceGuidanceQuerySchema,
   staffCallInputSchema,

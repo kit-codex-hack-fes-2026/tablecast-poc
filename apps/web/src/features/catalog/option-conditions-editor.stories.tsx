@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { resolveLocalized } from "@tablecast/api/localization";
-import { type Product, productSchema } from "@tablecast/api/schema";
+import { legacyFoodInformation, type Product, productSchema } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { userEvent, within } from "storybook/test";
@@ -17,13 +17,13 @@ const product = productSchema.parse({
   text: text("コーヒーのカスタマイズ", "Coffee customisation"),
   price: 500,
   available: true,
-  allergens: {
+  foodInfo: legacyFoodInformation({
     contains: [],
     evidence: "unknown",
     crossContact: "unknown",
     vegan: "unknown",
     note: { ja: "", en: "" },
-  },
+  }),
   modifiers: [
     {
       id: "toppings",

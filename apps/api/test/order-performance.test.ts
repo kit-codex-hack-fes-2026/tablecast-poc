@@ -6,11 +6,11 @@ import { updateCart } from "../src/modules/orders/use-cases/cart";
 import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
 import { getTableState } from "../src/modules/tables/queries";
 import { createApiServices } from "../src/platform/context";
-import { orderSchema } from "../src/schema";
+import { maxCartLines, orderSchema } from "../src/schema";
 import { device, deviceToken, setupFixture } from "./fixture";
 import { measuredDatabase } from "./measured-database";
 
-it.each([1, 100])(
+it.each([1, maxCartLines])(
   "%i行の実HTTP注文が金額・版・冪等性を保ち件数比例のDB往復を発生させない",
   async (count) => {
     await setupFixture();

@@ -6,6 +6,7 @@ import {
   type CoreState,
   type Locale,
   localeSchema,
+  maxCartLines,
   type Product,
   type Snapshot,
   submittedCoreOrderSchema,
@@ -846,7 +847,9 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                     className="@container/tablecast-order relative isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
                   >
                     {renderPlanSummary()}
-                    <ErrorNotice error={screen.variables?.search ? null : screen.error} />
+                    <ErrorNotice
+                      error={screen.variables?.search !== undefined ? null : screen.error}
+                    />
                     <Tabs.Root
                       className="flex flex-col min-h-0 flex-1"
                       value={section === "bill" ? "orders" : section}
@@ -910,11 +913,18 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                         >
                           {selection && (
                             <ProductPage
+                              endpoint={endpoint}
+                              configVersion={data.configVersion}
+                              tableSessionId={data.id}
                               imageSize={orderWidth && orderWidth < 576 ? 128 : 160}
                               key={selection.line?.id ?? selection.product.id}
                               product={selection.product}
                               initial={selection.line}
                               editing={selection.editing}
+                              cartLimitReached={
+                                cartLines.length >= maxCartLines &&
+                                !(selection.editing ?? Boolean(selection.line))
+                              }
                               busy={false}
                               error={selection.error}
                               onClose={() => setSection("menu")}

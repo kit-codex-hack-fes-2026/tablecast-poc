@@ -202,6 +202,7 @@ export function PosCheckoutSummary({
               quantity: line.quantity,
               unitPrice: line.unitPrice,
               total: line.total,
+              foodInformation: line.foodInformation,
               options: line.options.map((option) => ({
                 id: option.id,
                 name: option.displayName ?? { ja: option.name, en: option.name },

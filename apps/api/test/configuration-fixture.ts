@@ -1,4 +1,4 @@
-import { type Configuration, configurationSchema } from "../src/schema";
+import { type Configuration, configurationSchema, legacyFoodInformation } from "../src/schema";
 
 export const text = (ja: string, en: string) => ({
   ja: {
@@ -16,13 +16,13 @@ export const text = (ja: string, en: string) => ({
     aliases: [],
   },
 });
-const allergens = {
+const foodInfo = legacyFoodInformation({
   contains: [] as string[],
   evidence: "unknown" as const,
   crossContact: "unknown" as const,
   vegan: "unknown" as const,
   note: { ja: "スタッフにご確認ください", en: "Please ask a member of staff" },
-};
+});
 export const configuration: Configuration = configurationSchema.parse({
   languages: ["ja", "en"],
   categories: [{ id: "drinks", text: text("飲み物", "Drinks") }],
@@ -33,7 +33,7 @@ export const configuration: Configuration = configurationSchema.parse({
       text: text("ほうじ茶", "Roasted green tea"),
       price: 400,
       available: true,
-      allergens,
+      foodInfo,
     },
     {
       id: "coffee",
@@ -41,7 +41,7 @@ export const configuration: Configuration = configurationSchema.parse({
       text: text("カフェラテ", "Caffè latte"),
       price: 500,
       available: true,
-      allergens,
+      foodInfo,
       modifiers: [
         {
           id: "milk",

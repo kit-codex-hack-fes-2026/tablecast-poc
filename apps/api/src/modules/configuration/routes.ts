@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { apiFactory } from "../../platform/http";
 import { validate, validateQuery } from "../../platform/validation";
+import { requireManager } from "../auth/policy";
+import { previewProductFoodInformation } from "../catalog/food-service";
 import { withImageAssets } from "../media/queries";
 import { previewConditions } from "./conditions";
 import { instructionResponse } from "./instruction-response";
@@ -11,6 +13,7 @@ import {
   draftChoicesQuerySchema,
   draftPublishSchema,
   draftUpdateSchema,
+  foodPreviewSchema,
 } from "./model";
 import {
   getConfigurationHistory,
@@ -60,6 +63,10 @@ export const configurationAdminRoutes = apiFactory
         200,
       ),
   )
+  .post("/food-information/preview", validate(foodPreviewSchema), (c) => {
+    requireManager(c.var.actor);
+    return c.json(previewProductFoodInformation(c.req.valid("json")), 200);
+  })
   .post("/conditions/preview", validate(conditionPreviewSchema), (c) =>
     c.json(previewConditions(c.get("actor"), c.req.valid("json")), 200),
   )

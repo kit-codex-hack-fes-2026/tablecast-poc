@@ -1,4 +1,4 @@
-import type { CoreState } from "@tablecast/api/schema";
+import { type CoreState, maxCartLines } from "@tablecast/api/schema";
 import { useMutation, useMutationState, useQueryClient } from "@tanstack/react-query";
 import { DetailedError, parseResponse, type TableEndpoint } from "../../lib/api";
 import { applyCartChange, type CartSubmission, cartSubmissionSchema } from "./cart-change-model";
@@ -61,19 +61,20 @@ export function useCartUpdates({
       const changedId = "line" in change ? change.line.id : change.id;
       if (change.type !== "add" && !current.cart.lines.some((line) => line.id === changedId))
         throw new DetailedError("CART_CONFLICT", { statusCode: 409 });
+      const lines = applyCartChange(current.cart.lines, input);
+      if (lines.length > maxCartLines)
+        throw new DetailedError("CART_LINE_LIMIT", { statusCode: 422 });
       return parseResponse(
         endpoint.client.cart.$put({
           query: { view: "core" },
           json: {
             expectedVersion: current.cart.version,
-            lines: applyCartChange(current.cart.lines, input).map(
-              ({ id, productId, quantity, selections }) => ({
-                id,
-                productId,
-                quantity,
-                selections,
-              }),
-            ),
+            lines: lines.map(({ id, productId, quantity, selections }) => ({
+              id,
+              productId,
+              quantity,
+              selections,
+            })),
             ...(input.dismissProductId ? { dismissProductId: input.dismissProductId } : {}),
           },
         }),

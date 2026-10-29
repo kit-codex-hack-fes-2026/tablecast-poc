@@ -1,9 +1,14 @@
 import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
-import { resolveText } from "@tablecast/api/localization";
-import { castInstructionSchema } from "@tablecast/api/schema";
+import { resolveLocalized, resolveText } from "@tablecast/api/localization";
+import { castInstructionSchema, foodClassification } from "@tablecast/api/schema";
 import { ArrowRight, Minus, Pencil, Plus } from "lucide-react";
 import { Children } from "react";
+import {
+  crossContactSourceLabels,
+  dietaryReasonLabels,
+  halalCertificationLabels,
+} from "../../components/food-information-model";
 import { Badge } from "../../components/ui/badge";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
@@ -28,10 +33,23 @@ export function ConfigurationChanges({
       ),
     ].map((item) => [item.id, resolveText(item.text, locale).displayName]),
   );
-  const labelKeys = new Map(Object.entries(labels));
+  for (const product of configuration.products)
+    for (const component of product.foodInfo.components)
+      names.set(component.id, resolveLocalized(component.name, locale));
+  const allergenNames = new Map<string, string>(
+    foodClassification.allergens.map((item) => [item.id, resolveLocalized(item.name, locale)]),
+  );
+  const labelKeys = new Map(
+    Object.entries({
+      ...labels,
+      ...crossContactSourceLabels,
+      ...dietaryReasonLabels,
+      ...halalCertificationLabels,
+    }),
+  );
   function fieldLabel(key: string) {
     const translation = labelKeys.get(key);
-    return translation ? t(translation) : key;
+    return translation ? t(translation) : (allergenNames.get(key) ?? key);
   }
   function title(path: string, wholeObject = false) {
     const parts = path.split(".");
@@ -95,6 +113,8 @@ export function ConfigurationChanges({
         : String(value);
     if (typeof value === "string") {
       if (key === "id") return t("config_change_identifier");
+      if (["reasons", "crossContactSources", "halalCertification"].includes(key))
+        return fieldLabel(value);
       if (
         [
           "categoryId",
@@ -104,6 +124,9 @@ export function ConfigurationChanges({
           "optionId",
           "requires",
           "excludes",
+          "defaultComponentIds",
+          "add",
+          "remove",
         ].includes(key)
       )
         return names.get(value) ?? t("editor_missing_reference");
@@ -117,6 +140,13 @@ export function ConfigurationChanges({
         if (value === "or") return t("condition_any");
         if (value === "not") return t("condition_not_scope");
         if (value === "option") return t("condition_leaf");
+      }
+      if (key === "status" || allergenNames.has(key)) {
+        if (value === "unknown") return t("editor_unknown");
+        if (value === "contains") return t("food_contains");
+        if (value === "not_used") return t("food_not_used");
+        if (value === "yes") return t("food_yes");
+        if (value === "no") return t("food_no");
       }
       if (["evidence", "crossContact", "vegan"].includes(key)) {
         if (value === "unknown") return t("editor_unknown");

@@ -8,6 +8,7 @@ import { ensure } from "../../../platform/errors";
 import { observeOperation } from "../../../platform/telemetry";
 import { requireManager } from "../../auth/policy";
 import { losesConditions } from "../../catalog/conditions";
+import { losesFoodChanges } from "../../catalog/food";
 import { configurationErrors } from "../../catalog/pricing";
 import { getCatalog } from "../../catalog/queries";
 import { requireConfigurationImages } from "../../media/service";
@@ -65,7 +66,8 @@ export async function publishDraft(
       ensure(draft.status === "ready", "DRAFT_CONFLICT");
       const catalog = await getCatalog(services, actor.storeId);
       ensure(
-        !losesConditions(catalog.configuration, draft.configuration),
+        !losesConditions(catalog.configuration, draft.configuration) &&
+          !losesFoodChanges(catalog.configuration, draft.configuration),
         "CONFIGURATION_FORMAT_UNSUPPORTED",
         422,
       );

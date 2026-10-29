@@ -279,4 +279,4 @@ preview/stagingでLangfuse Cloud日本リージョンを使う場合は、同じ
 
 `0033_tablecast_content_languages.sql`は`table_sessions`・`voice_turns`の言語制約を拡張する。テーブルをコピーして再作成し、既存行・索引・timeline用生成列を保持する。注文・決済・保存済み注文スナップショットは更新しない。
 
-商品設定は意味訳`displayName`と転写`transliteration`の組が必須となる。旧configurationの自動補完は行わないため、既存環境へ配備する前に対象店舗の設定を新schemaに揃える。ローカルseed店舗は[設定の再作成](setup.md#多言語seedの店舗設定を再作成する)で置き換えられる。公開環境のデータをローカル専用オプションや全体リセットで変換したことにしない。通常配備のseedは既存設定を保持する。
+新規保存する商品設定は意味訳`displayName`と転写`transliteration`の組を必須とする。保存済みの旧configurationは、共通の`readConfiguration`で未定義の転写だけ同じ翻訳の`displayName`を補って読む。既存の転写は保持し、明示された空文字・null・不正な型は補修せず拒否する。配備前の画像索引移行もこの読取境界を使い、公開設定・下書き・過去release・デモの原本JSONを変更しない。既存設定の再保存や過去releaseの削除を配備条件にせず、新規作成・編集・公開の必須schemaも緩めない。ローカルseed店舗を新しいfixtureへ揃える場合だけ[設定の再作成](setup.md#多言語seedの店舗設定を再作成する)を使う。公開環境のデータをローカル専用オプションや全体リセットで変換したことにしない。通常配備のseedは既存設定を保持する。

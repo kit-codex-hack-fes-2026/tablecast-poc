@@ -1,5 +1,5 @@
 import { resolveText } from "@tablecast/api/localization";
-import { type Product, productSchema } from "@tablecast/api/schema";
+import { type Product } from "@tablecast/api/schema";
 import { Image, Info, Languages, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import type { EditorProps } from "../configuration/configuration-editor-model";
 import { Button } from "../../components/ui/button";
@@ -17,16 +17,8 @@ import {
 import { ConfigurationImageField } from "../configuration/configuration-image-field";
 import { type ImageStagedChange } from "../configuration/configuration-image-model";
 import { LanguageFields } from "../configuration/language-fields";
+import { FoodInformationEditor } from "./food-information-editor";
 import { ModifiersEditor } from "./modifiers-editor";
-
-const allergenLabels = {
-  unknown: "editor_unknown",
-  verified: "editor_verified",
-  possible: "editor_possible",
-  controlled: "editor_controlled",
-  yes: "editor_yes",
-  no: "editor_no",
-} as const;
 
 export function ProductsEditor({
   storeId,
@@ -211,68 +203,13 @@ export function ProductsEditor({
           }
         />
       </ConfigurationSection>
-      <ConfigurationSection title={t("kiosk_allergens")} icon={ShieldCheck}>
-        <div className="grid min-w-0 gap-4 @xl:grid-cols-2">
-          <StringListField
-            label={t("editor_contains")}
-            value={product.allergens.contains}
-            disabled={disabled}
-            onChange={(contains) => update({ allergens: { ...product.allergens, contains } })}
-          />
-          {(
-            [
-              ["evidence", "editor_evidence"],
-              ["crossContact", "editor_cross_contact"],
-              ["vegan", "editor_vegan"],
-            ] as const
-          ).map(([key, label]) => (
-            <label className="flex flex-col gap-2 text-sm" key={key}>
-              {t(label)}
-              <NativeSelect
-                className={selectClass}
-                value={product.allergens[key]}
-                onChange={(event) =>
-                  update({
-                    allergens: {
-                      ...product.allergens,
-                      [key]: productSchema.shape.allergens.shape[key].parse(event.target.value),
-                    },
-                  })
-                }
-              >
-                {productSchema.shape.allergens.shape[key].options.map((option) => (
-                  <option key={option} value={option}>
-                    {t(allergenLabels[option])}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-          ))}
-          <div className="col-span-full">
-            <LanguageFields>
-              {(language, languageLabelId) => (
-                <label className="grid gap-2 text-sm">
-                  <span id={`safety-note-${language}`}>{t("editor_safety_note")}</span>
-                  <textarea
-                    aria-labelledby={`${languageLabelId} safety-note-${language}`}
-                    lang={language}
-                    disabled={disabled}
-                    className="field-sizing-content min-h-24 w-full resize-y rounded-lg border border-input bg-background p-3 text-base"
-                    value={product.allergens.note[language] ?? ""}
-                    onChange={(event) =>
-                      update({
-                        allergens: {
-                          ...product.allergens,
-                          note: { ...product.allergens.note, [language]: event.target.value },
-                        },
-                      })
-                    }
-                  />
-                </label>
-              )}
-            </LanguageFields>
-          </div>
-        </div>
+      <ConfigurationSection title={t("food_title")} icon={ShieldCheck}>
+        <FoodInformationEditor
+          product={product}
+          storeId={storeId}
+          disabled={disabled}
+          onChange={update}
+        />
       </ConfigurationSection>
       <ConfigurationSection
         id="product-content"

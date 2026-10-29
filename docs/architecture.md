@@ -85,6 +85,8 @@ Webは機能単位のfeature、APIは業務単位のmoduleを基本にする。�
 APIではroute・音声のfunction・MCPが同じ注文操作関数を呼び、必要なDrizzle queryと純粋な価格・条件判定をそこから利用する。
 HTTPはHono公式のfactoryでEnvとmiddlewareの型を共有し、パスと操作を登録するchainからHono Clientへ型を伝える。共通のrequest準備はrootだけで行い、入力検証と認証の順序は各入口の契約として維持する。店舗・卓・本人のscopeを確定するguardを再利用し、GUI・音声・MCPから直に呼ばれる業務側の認可も保つ。
 価格計算等を `pricing.ts` に切り出すことは有用だが、そのための共有domain packageは不要。
+
+食事制限のschema・分類はcatalogの`food-model.ts`、集合と判定の合算・参照検証は純粋な`food.ts`、現在設定の取得と選択previewは`food-service.ts`が所有する。route・音声・カートは同じ処理を使い、ブラウザーへ合算処理を公開しない。configurationの`food-compatibility.ts`は保存済みJSONのschema変換を所有するモデル境界で、新しいHTTP/MCP入力は現行schemaで検証する。各ファイルを既存のmodel・pure・service分類とmodule公開入口へ登録し、DBや認証への依存許可を広げない。
 DB queryが十分短ければ操作関数内に置いてよい。複雑なqueryの所有ファイルを分ける場合も、単なる引数の中継層を追加しない。
 
 `platform/app.ts`は計測・request依存・security・body制限とprotocolエラーを共有する。`worker.ts`は通常端末とplaygroundの注文要求だけを`ordering-app.ts`へ振り分け、それ以外で全体の`app.ts`を遅延読込する。両入口は同じ`tables/ordering-routes.ts`と業務処理を使う。MCP・ゲーム・音声生成・課金は注文の初回要求で初期化しない。WebのAPI転送もSSR入口を読まず、ページ要求だけで`ssr.ts`を遅延読込する。`platform/context.ts`の`requestServices`がHTTPリクエストごとにDrizzleを一度生成し、同じ`ApiServices`をroute・service・Agentツールへ渡す。`db/client.ts`のDB factoryが認証schemaの関連queryを有効にする。schemaとfactoryはHonoや認証runtimeへ依存せず、D1 handleの寿命はWorkerまたは運用CLIが所有する。Better Authは最初の利用時に同じDBで生成する。GUIの`getIdentity()`は標準のsession検証とorganizationだけを使い、ログイン・OAuth・MCP等の`getAuth()`とCookie・追加fieldの設定を共有する。OAuth resource初期化をGUI認証へ含めず、スタッフsessionの取得PromiseはHono Contextで共有する。次のリクエストへDB・Auth・sessionを持ち越さず、healthや画像はAuth設定に依存しない。

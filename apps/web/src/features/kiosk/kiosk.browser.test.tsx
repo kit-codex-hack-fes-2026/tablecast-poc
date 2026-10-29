@@ -1,4 +1,4 @@
-import { type TableState } from "@tablecast/api/schema";
+import { maxCartLines, type TableState } from "@tablecast/api/schema";
 import { expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import ja from "../../../messages/ja.json";
@@ -263,4 +263,43 @@ it("会計依頼後は操作を依頼済みの表示へ替え、画面を戻し�
         request.method === "POST" && new URL(request.url).pathname.endsWith("/table/bill/request"),
     ),
   ).toHaveLength(1);
+});
+
+it("カートが上限なら商品を閲覧できても追加せず、既存行の編集は続けられる", async () => {
+  await page.viewport(1280, 1000);
+  const line = fixtureValue(table.cart.lines[0]);
+  const lines = Array.from({ length: maxCartLines }, (_, index) => ({
+    ...structuredClone(line),
+    id: `tablecast-capacity-${index}`,
+  }));
+  fixture.current = {
+    ...structuredClone(table),
+    cart: {
+      ...structuredClone(table.cart),
+      complete: true,
+      lines,
+      total: line.total * maxCartLines,
+    },
+  };
+  fixture.savedCart = fixture.current.cart;
+  await mountKiosk();
+  await page.getByRole("button", { name: new RegExp(product.text.ja.displayName) }).click();
+  const detail = page.getByRole("region", { name: product.text.ja.displayName, exact: true });
+  await expect
+    .element(detail.getByRole("button", { name: ja.kiosk_add, exact: true }))
+    .toBeDisabled();
+  await expect
+    .element(
+      detail.getByText(ja.kiosk_cart_limit.replace("{count}", String(maxCartLines)), {
+        exact: true,
+      }),
+    )
+    .toBeVisible();
+  expect(cartWrites).toHaveLength(0);
+  await detail.getByRole("button", { name: ja.common_close, exact: true }).click();
+  await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
+  await page.getByRole("button", { name: ja.kiosk_edit, exact: true }).first().click();
+  await expect
+    .element(page.getByRole("button", { name: ja.common_update, exact: true }))
+    .toBeEnabled();
 });

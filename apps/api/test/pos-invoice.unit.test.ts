@@ -205,6 +205,22 @@ it("全額割引で0円になっても空会計として拒否せずクーポン
   ]);
 });
 
+it("食事情報は注文snapshotから凍結保持し、古いinvoiceの省略も受け付ける", () => {
+  const order = servedOrder(priceCart(configuration, coffee, 1).lines);
+  const snapshotLine = order.snapshot.lines[0];
+  if (!snapshotLine?.foodInformation) throw new Error("食事情報のsnapshotがありません");
+  snapshotLine.foodInformation.allergens.milk = "contains";
+  const expected = structuredClone(snapshotLine.foodInformation);
+  const invoice = buildPosInvoice(invoiceInput([order])).invoice;
+  expect(invoice.lines[0]?.foodInformation).toEqual(expected);
+  expect(posInvoiceSchema.parse(invoice).lines[0]?.foodInformation).toEqual(expected);
+  const legacy = structuredClone(invoice);
+  const line = legacy.lines[0];
+  if (!line) throw new Error("請求明細がありません");
+  delete line.foodInformation;
+  expect(posInvoiceSchema.parse(legacy)).toEqual(legacy);
+});
+
 it("現行価格が変わっても注文時の設定版から通常価格を参照する", () => {
   const input = invoiceInput([servedOrder(priceCart(configuration, tea, 1).lines)]);
   const current = structuredClone(configuration);

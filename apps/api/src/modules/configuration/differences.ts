@@ -3,7 +3,7 @@ import { type ConfigDraft } from "./model";
 
 function hasSensitiveField(value: unknown, path: string): boolean {
   return (
-    /price|allergen|vegan|crossContact|plans/.test(path) ||
+    /price|allergen|vegan|crossContact|plans|foodInfo|foodChanges/.test(path) ||
     (value !== null &&
       typeof value === "object" &&
       Object.entries(value).some(([key, child]) => hasSensitiveField(child, key)))

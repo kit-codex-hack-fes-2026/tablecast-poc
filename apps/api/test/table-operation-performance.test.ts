@@ -14,6 +14,7 @@ import {
   type CartLine,
   type CoreState,
   coreStateSchema,
+  maxCartLines,
   snapshotSchema,
   submittedCoreOrderSchema,
   tableStateSchema,
@@ -24,9 +25,9 @@ import { measuredDatabase } from "./measured-database";
 
 it.each([
   { kind: "table", count: 1, products: 8 },
-  { kind: "table", count: 100, products: 120 },
+  { kind: "table", count: maxCartLines, products: 120 },
   { kind: "demo", count: 1, products: 8 },
-  { kind: "demo", count: 100, products: 120 },
+  { kind: "demo", count: maxCartLines, products: 120 },
 ] as const)(
   "$kindの商品$products件・カゴ履歴$count件でもHTTP操作の価格・原子性と性能予算を保つ",
   async ({ kind, count, products }) => {
@@ -120,9 +121,7 @@ it.each([
       expect(measured.stats.roundtrips).toBeLessThanOrEqual(
         businessBudget + (kind === "demo" ? 1 : 0),
       );
-      expect(new TextEncoder().encode(body).byteLength).toBeLessThanOrEqual(
-        count === 100 ? 1024 * 1024 : 64 * 1024,
-      );
+      expect(new TextEncoder().encode(body).byteLength).toBeLessThanOrEqual(64 * 1024);
       measurements.push({ operation, sample, elapsedMs });
       console.info(
         "tablecast.operation.performance",
@@ -292,7 +291,10 @@ it("2000商品の検索ページも実HTTPで8件・2往復・300msの予算を�
       {
         method: "PATCH",
         headers: { Cookie: `tablecast.device=${deviceToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ section: "menu", search: { query: "", offset: 1992 } }),
+        body: JSON.stringify({
+          section: "menu",
+          search: { query: product.text.ja.displayName, offset: 1992 },
+        }),
       },
       { ...env, TABLECAST_DB: measured.database },
       context,

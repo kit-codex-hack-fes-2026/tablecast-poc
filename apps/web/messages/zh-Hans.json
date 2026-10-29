@@ -435,5 +435,7 @@
   "pwa_install_title": "添加到iPad主屏幕",
   "pwa_install_steps": "在Safari中打开所需页面，轻点共享，然后选择添加到主屏幕。打开安装后的应用，注册设备或登录。",
   "pwa_kiosk": "打开餐桌应用",
-  "pwa_staff": "打开员工应用"
+  "pwa_staff": "打开员工应用",
+  "kiosk_cart_limit": "购物车最多可加入{count}个项目。如需添加更多，请先提交本次订单。",
+  "kiosk_cart_limit_error": "购物车已满。请先提交订单或移除一个项目。"
 }

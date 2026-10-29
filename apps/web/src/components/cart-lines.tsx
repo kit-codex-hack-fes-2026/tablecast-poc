@@ -9,6 +9,7 @@ import { forwardRef, type ReactNode, useId, useState } from "react";
 import { useI18n } from "../i18n/locale";
 import { ConditionSummary } from "./condition-summary";
 import { CustomisationContent, CustomisationPrice } from "./customisation-content";
+import { FoodInformationView } from "./food-information";
 import { IllustrationNotice } from "./illustration-notice";
 import { Money } from "./money";
 import { ProductImage } from "./product-image";
@@ -20,7 +21,13 @@ import { quantityControl } from "./ui/quantity-control-variants";
 export type CartDisplayLine = Partial<
   Pick<
     PricedLine,
-    "conditionIssues" | "missing" | "planCovered" | "total" | "transliteration" | "unitPrice"
+    | "conditionIssues"
+    | "foodInformation"
+    | "missing"
+    | "planCovered"
+    | "total"
+    | "transliteration"
+    | "unitPrice"
   >
 > &
   Pick<PricedLine, "id" | "name" | "quantity"> & {
@@ -150,7 +157,7 @@ export function CartLines<Line extends CartDisplayLine>({
                             {line.options.map((option) => {
                               const context = optionsById.get(option.id);
                               return (
-                                <span
+                                <div
                                   key={option.id}
                                   className="inline-flex min-h-12.5 max-w-full flex-wrap items-center gap-2 rounded-2xl bg-surface-subtle p-2 text-sm"
                                 >
@@ -171,7 +178,7 @@ export function CartLines<Line extends CartDisplayLine>({
                                       (<CustomisationPrice value={option.priceDelta} />)
                                     </span>
                                   )}
-                                </span>
+                                </div>
                               );
                             })}
                           </div>
@@ -215,6 +222,13 @@ export function CartLines<Line extends CartDisplayLine>({
                       </div>
                     )}
                   </div>
+                  <section aria-label={t("food_title")}>
+                    {line.total === undefined ? (
+                      <p role="status">{t("food_updating")}</p>
+                    ) : (
+                      <FoodInformationView value={line.foodInformation} />
+                    )}
+                  </section>
                   {line.conditionIssues?.map((issue) => {
                     const expression = product?.modifiers
                       .flatMap((group) => group.options)

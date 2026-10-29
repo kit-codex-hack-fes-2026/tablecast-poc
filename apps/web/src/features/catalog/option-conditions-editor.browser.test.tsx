@@ -1,4 +1,9 @@
-import { optionConditionsSchema, type Product, productSchema } from "@tablecast/api/schema";
+import {
+  legacyFoodInformation,
+  optionConditionsSchema,
+  type Product,
+  productSchema,
+} from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -19,13 +24,13 @@ const product = productSchema.parse({
   text: text("Coffee"),
   price: 500,
   available: true,
-  allergens: {
+  foodInfo: legacyFoodInformation({
     contains: [],
     evidence: "unknown",
     crossContact: "unknown",
     vegan: "unknown",
     note: { ja: "", en: "" },
-  },
+  }),
   modifiers: [
     {
       id: "toppings",

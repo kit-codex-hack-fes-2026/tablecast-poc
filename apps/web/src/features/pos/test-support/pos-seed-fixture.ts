@@ -66,6 +66,7 @@ export const posSeedCheckout = (locale: Locale): PosCheckoutView => ({
       name: resolveLocalized(line.name, locale),
       displayName: line.name,
       transliteration: line.transliteration,
+      foodInformation: line.foodInformation,
       quantity: line.quantity,
       unitPrice: line.unitPrice,
       referencePrice: line.unitPrice,

@@ -1,5 +1,7 @@
+import type { ComponentProps } from "react";
 import { cn } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
+import { AllergenBadges } from "./allergen-badges";
 import { MenuOptionImage } from "./menu-option-image";
 import { Money, PriceChange } from "./money";
 
@@ -15,8 +17,11 @@ export function CustomisationContent({
   compact = true,
   showIllustration = true,
   reserveImageSpace = false,
+  allergens,
+  showAllergens = false,
   className,
 }: {
+  allergens?: Pick<ComponentProps<typeof AllergenBadges>, "contains" | "unverified">;
   className?: string;
   compact?: boolean;
   description?: string;
@@ -27,10 +32,15 @@ export function CustomisationContent({
   name: string;
   quantity?: number;
   reserveImageSpace?: boolean;
+  showAllergens?: boolean;
   showIllustration?: boolean;
 }) {
+  const { t } = useI18n();
+  const hasAllergens = Boolean(
+    allergens && (allergens.contains.length > 0 || allergens.unverified),
+  );
   return (
-    <span className={cn("flex min-w-0 max-w-full items-center gap-2", className)}>
+    <div className={cn("flex min-w-0 max-w-full items-center gap-2", className)}>
       {group && <span className="font-medium">{group}: </span>}
       <MenuOptionImage
         imageKey={imageKey}
@@ -39,11 +49,21 @@ export function CustomisationContent({
         showIllustration={showIllustration}
         reserveImageSpace={reserveImageSpace}
       />
-      <span className="min-w-0">
+      <div className="min-w-0">
         <span id={id ? `${id}-name` : undefined} className="block font-medium wrap-anywhere">
           {name}
           {quantity !== undefined && quantity > 1 && ` × ${quantity}`}
         </span>
+        {showAllergens && (
+          <div
+            id={id ? `${id}-allergens` : undefined}
+            className={hasAllergens ? "mt-0.5" : undefined}
+          >
+            {allergens && hasAllergens && (
+              <AllergenBadges {...allergens} label={t("food_option_allergens")} />
+            )}
+          </div>
+        )}
         {description && (
           <span
             id={id ? `${id}-description` : undefined}
@@ -52,8 +72,8 @@ export function CustomisationContent({
             {description}
           </span>
         )}
-      </span>
-    </span>
+      </div>
+    </div>
   );
 }
 

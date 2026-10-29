@@ -1,7 +1,14 @@
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { beforeEach, expect, it } from "vitest";
-import { demoSessions, devices, mediaAssets, stores } from "../src/db/business-schema";
+import {
+  configDrafts,
+  configReleases,
+  demoSessions,
+  devices,
+  mediaAssets,
+  stores,
+} from "../src/db/business-schema";
 import { member } from "../src/db/identity-schema";
 import { createAuth } from "../src/modules/auth/service";
 import { getCatalog } from "../src/modules/catalog/queries";
@@ -197,4 +204,70 @@ it("既存画像の移行は寸法・BlurHashと店舗別索引だけを生成�
   expect(await getCatalog(createApiServices(env), fixture.staff.storeId)).not.toHaveProperty(
     "imageAssets",
   );
+});
+
+it("公開・下書き・過去release・デモの旧商品名を読み、原本を変えず画像索引を移行する", async () => {
+  const demo = await createDemo(createApiServices(env), fixture.staff);
+  const keys = ["b", "c", "d", "e"].map((value) => `tablecast/images/${value.repeat(64)}.png`);
+  const records = keys.map((imageKey) =>
+    JSON.stringify({
+      ...configuration,
+      products: configuration.products.map((product) => ({
+        ...product,
+        imageKey,
+        text: Object.fromEntries(
+          Object.entries(product.text).map(([language, value]) => {
+            const { transliteration: _transliteration, ...text } = value;
+            return [language, text];
+          }),
+        ),
+      })),
+    }),
+  );
+  const [published, draft, release, demoConfig] = records;
+  if (!published || !draft || !release || !demoConfig) throw new Error("旧設定がありません");
+  for (const imageKey of keys) await env.TABLECAST_MEDIA.put(imageKey, png);
+  await fixtureDb.batch([
+    fixtureDb.update(stores).set({ config_json: published }),
+    fixtureDb.insert(configDrafts).values({
+      id: "tablecast-legacy-names-draft",
+      store_id: fixture.staff.storeId,
+      base_version: 1,
+      status: "draft",
+      config_json: draft,
+      created_by: fixture.staff.userId,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    }),
+    fixtureDb.insert(configReleases).values({
+      store_id: fixture.staff.storeId,
+      version: 2,
+      config_json: release,
+      published_by: fixture.staff.userId,
+      created_at: Date.now(),
+    }),
+    fixtureDb
+      .update(demoSessions)
+      .set({ config_json: demoConfig })
+      .where(eq(demoSessions.session_id, demo.id)),
+  ]);
+  const before = await fixtureDb.batch([
+    fixtureDb.select().from(stores),
+    fixtureDb.select().from(configDrafts),
+    fixtureDb.select().from(configReleases),
+    fixtureDb.select().from(demoSessions),
+  ]);
+  expect(await migrateImageAssets(env)).toEqual({ inserted: 4, updated: 0, missing: [] });
+  expect(await migrateImageAssets(env)).toEqual({ inserted: 0, updated: 0, missing: [] });
+  const assets = await fixtureDb.select().from(mediaAssets);
+  expect(assets.map((asset) => asset.image_key).toSorted()).toEqual(keys);
+  expect(assets.every((asset) => asset.blurhash.length === 52)).toBe(true);
+  expect(
+    await fixtureDb.batch([
+      fixtureDb.select().from(stores),
+      fixtureDb.select().from(configDrafts),
+      fixtureDb.select().from(configReleases),
+      fixtureDb.select().from(demoSessions),
+    ]),
+  ).toEqual(before);
 });

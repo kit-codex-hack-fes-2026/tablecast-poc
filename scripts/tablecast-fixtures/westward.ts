@@ -1,6 +1,7 @@
-import type { Modifier, Product } from "@tablecast/api/schema";
+import type { JapaneseAllergen, Modifier, Product } from "@tablecast/api/schema";
 import { configurationSchema } from "@tablecast/api/schema";
 import { demoImageKey } from "../tablecast-seed-media.ts";
+import { westwardFoodInformation } from "./food.ts";
 import { allergenRecord, bilingual } from "./text.ts";
 import { westwardModifiers } from "./westward-modifiers.ts";
 
@@ -9,7 +10,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
   const menu: {
     available?: boolean;
     category: string;
-    contains: null | string[];
+    contains: JapaneseAllergen[] | null;
     en: string;
     image?: string;
     ingredients: readonly [string, string];
@@ -28,7 +29,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "ブリオッシュ、ビーフ、チェダー、レタス、トマト、玉ねぎ、ピクルス、卵入りソース。パティは十分に加熱します",
         "Brioche, fully cooked beef, cheddar, lettuce, tomato, onion, pickles and an egg-based sauce",
       ],
-      contains: ["wheat", "egg", "milk", "mustard"],
+      contains: ["wheat", "egg", "milk"],
       modifiers: [bun, patty, cheese, omit, sauce, extras],
       image: "westward-burger.png",
     },
@@ -42,7 +43,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "ブリオッシュ、十分に加熱した鶏肉、チェダー、野菜、卵入りソース",
         "Brioche, fully cooked chicken, cheddar, vegetables and an egg-based sauce",
       ],
-      contains: ["wheat", "egg", "milk", "mustard"],
+      contains: ["wheat", "egg", "milk"],
       modifiers: [bun, cheese, omit, sauce, extras],
     },
     {
@@ -108,10 +109,10 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
       price: 880,
       category: "craft-beer",
       ingredients: [
-        "架空銘柄。麦芽とホップ、柑橘を思わせる香りと明瞭な苦味。アルコール6.5%。基本容量280ml",
-        "Fictional beer brewed with malt and hops, citrus-like aromas and a firm bitterness; 6.5% ABV, base serving 280ml",
+        "麦芽とホップ、柑橘を思わせる香りと明瞭な苦味。アルコール6.5%。基本容量280ml",
+        "beer brewed with malt and hops, citrus-like aromas and a firm bitterness; 6.5% ABV, base serving 280ml",
       ],
-      contains: ["barley"],
+      contains: [],
       modifiers: [serving],
       image: "westward-ipa.png",
     },
@@ -122,10 +123,10 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
       price: 820,
       category: "craft-beer",
       ingredients: [
-        "架空銘柄。麦芽とホップ、穏やかな苦味。アルコール5.0%。基本容量280ml",
-        "Fictional beer brewed with malt and hops, with a gentle bitterness; 5.0% ABV, base serving 280ml",
+        "麦芽とホップ、穏やかな苦味。アルコール5.0%。基本容量280ml",
+        "beer brewed with malt and hops, with a gentle bitterness; 5.0% ABV, base serving 280ml",
       ],
-      contains: ["barley"],
+      contains: [],
       modifiers: [serving],
     },
     {
@@ -135,10 +136,10 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
       price: 920,
       category: "craft-beer",
       ingredients: [
-        "架空銘柄。焙煎麦芽の香り。アルコール6.0%。基本容量280ml。本日は売切です",
-        "Fictional beer with roasted-malt aromas; 6.0% ABV, base serving 280ml. Sold out today",
+        "焙煎麦芽の香り。アルコール6.0%。基本容量280ml。本日は売切です",
+        "beer with roasted-malt aromas; 6.0% ABV, base serving 280ml. Sold out today",
       ],
-      contains: ["barley"],
+      contains: [],
       modifiers: [serving],
       available: false,
     },
@@ -176,7 +177,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         ...(item.key === "westward-classic" ? ["ハンバーガー", "カスタムバーガー"] : []),
       ];
       text.en.aliases = [item.en.toLowerCase()];
-      return {
+      return westwardFoodInformation({
         id: `${storeId}-${item.key}`,
         categoryId: item.category,
         text,
@@ -186,8 +187,8 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         imageKey: demoImageKey(`westward-${item.key}.webp`),
         imageKind: "illustration",
         modifiers: item.modifiers ?? [],
-        allergens: allergenRecord(item.contains, item.ingredients),
-      };
+        foodInfo: allergenRecord(item.contains),
+      });
     });
   return configurationSchema.parse({
     categories: (
@@ -223,8 +224,8 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
     ],
     cast: {
       instructions: {
-        ja: "西海岸のタップルームのように親しみやすく案内します。バーガーの必須選択を一つずつ確認し、同じ卓の別の注文は別行に保ち、誰の訂正か曖昧なら確認します。ビールの苦味の好みを聞き、飲まない客にはソフトドリンクを案内します。合計と有料追加を明示し、明示承認後に注文します。宗教や食習慣、植物由来パティだけを根拠に適合を断言せず、不明な原材料や交差接触はスタッフへ引き継ぎます。銘柄とレシピは合成デモです。",
-        en: "Offer a friendly West Coast taproom welcome. Ask for required burger choices one at a time. Keep different burgers on separate lines in the shared table order and clarify ambiguous corrections. Ask about preferred bitterness and offer soft drinks to guests who do not drink alcohol. State extras and totals before explicit order approval. Do not infer dietary or religious suitability from identity or a plant-based patty; refer unverified ingredients and cross-contact to staff. Brands and recipes are fictional demo data.",
+        ja: "西海岸のタップルームのように親しみやすく案内します。バーガーの必須選択を一つずつ確認し、同じ卓の別の注文は別行に保ち、誰の訂正か曖昧なら確認します。ビールの苦味の好みを聞き、飲まない客にはソフトドリンクを案内します。合計と有料追加を明示し、明示承認後に注文します。宗教や食習慣、植物由来パティだけを根拠に適合を断言せず、不明な原材料や交差接触はスタッフへ引き継ぎます。",
+        en: "Offer a friendly West Coast taproom welcome. Ask for required burger choices one at a time. Keep different burgers on separate lines in the shared table order and clarify ambiguous corrections. Ask about preferred bitterness and offer soft drinks to guests who do not drink alcohol. State extras and totals before explicit order approval. Do not infer dietary or religious suitability from identity or a plant-based patty; refer unverified ingredients and cross-contact to staff.",
       },
       voice: { ja: null, en: null },
       proactive: false,

@@ -3,7 +3,7 @@ import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import { posCheckouts, posConnections } from "../../db/pos-schema";
 import { configReleases, payments, stores } from "../../db/table-schema";
-import { configurationSchema } from "../configuration/model";
+import { readConfiguration } from "../configuration/food-compatibility";
 import { getTableState } from "../tables/queries";
 import { buildPosInvoice } from "./invoice";
 import { posMappingSchema } from "./model";
@@ -64,7 +64,7 @@ export async function currentPosInvoice(
       ),
   ]);
   const configurations = new Map(
-    releases.map((row) => [row.version, configurationSchema.parse(JSON.parse(row.config_json))]),
+    releases.map((row) => [row.version, readConfiguration(JSON.parse(row.config_json))]),
   );
   const result = buildPosInvoice({
     table,

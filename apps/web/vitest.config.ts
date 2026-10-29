@@ -135,6 +135,8 @@ const browser = (performance = false) =>
                   "src/features/kiosk/kiosk-seed-preview.browser.test.tsx",
                   "src/features/kiosk/kiosk-voice.browser.test.tsx",
                   "src/features/kiosk/kiosk-realtime.browser.test.tsx",
+                  "src/features/kiosk/menu-search.browser.test.tsx",
+                  "src/features/kiosk/menu-search-sync.browser.test.tsx",
                   "src/features/kiosk/staff-assistance.browser.test.tsx",
                   "src/features/kiosk/local-camera.browser.test.tsx",
                   "src/features/kiosk/local-camera-reading.browser.test.tsx",

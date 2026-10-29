@@ -1,5 +1,6 @@
+import type { Configuration } from "@tablecast/api/schema";
 import { resolveText } from "@tablecast/api/localization";
-import { type Configuration, localeSchema } from "@tablecast/api/schema";
+import { localeSchema, unknownFoodProfile } from "@tablecast/api/schema";
 import { z } from "zod";
 import { collectionSearchFields, collectionSearchSchema } from "../shell/collection-model";
 import { emptyText } from "./configuration-defaults";
@@ -66,13 +67,7 @@ export function addMenuItem(
           imageKey: null,
           imageKind: "illustration",
           modifiers: [],
-          allergens: {
-            contains: [],
-            evidence: "unknown",
-            crossContact: "unknown",
-            vegan: "unknown",
-            note: { ja: "", en: "" },
-          },
+          foodInfo: { base: unknownFoodProfile(), components: [], defaultComponentIds: [] },
         },
       ],
     };

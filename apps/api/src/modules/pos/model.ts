@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { foodResultSchema } from "../catalog/food-model";
 import { localizedSchema } from "../catalog/localization";
 
 const posProviderSchema = z.literal("square");
@@ -117,6 +118,7 @@ const posInvoiceLineSchema = z.object({
   name: z.string(),
   displayName: localizedSchema(z.string()).optional(),
   transliteration: localizedSchema(z.string()).optional(),
+  foodInformation: foodResultSchema.optional(),
   quantity: z.number().int().positive(),
   unitPrice: z.number().int().nonnegative(),
   referencePrice: z.number().int().nonnegative(),

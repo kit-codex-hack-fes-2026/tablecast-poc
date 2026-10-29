@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { id, money } from "../../platform/model";
 import { imageSourceSchema } from "../media/model";
+import { selectionSchema } from "../orders/model";
+import { foodChangesSchema, foodInformationSchema } from "./food-model";
 import { localizedSchema } from "./localization";
 const nameSchema = z.string().min(1).max(150).regex(/\S/).meta({ id: "tablecastName" });
 const contentSchema = z
@@ -57,13 +59,7 @@ function conditionAtDepth(depth: number): z.ZodType<OptionCondition> {
     conditionOptionSchema,
     z
       .object({
-        kind: z.literal("and"),
-        children: z.array(child).min(2).max(conditionLimits.children),
-      })
-      .strict(),
-    z
-      .object({
-        kind: z.literal("or"),
+        kind: z.enum(["and", "or"]),
         children: z.array(child).min(2).max(conditionLimits.children),
       })
       .strict(),
@@ -111,6 +107,7 @@ export const optionSchema = z
     requires: z.array(id).default([]),
     excludes: z.array(id).default([]),
     conditions: optionConditionsSchema.optional(),
+    foodChanges: foodChangesSchema.optional(),
   })
   .strict()
   .refine((option) => !option.conditions || (!option.requires.length && !option.excludes.length), {
@@ -147,15 +144,7 @@ export const productSchema = z
         (modifiers) => productConditionNodeCount({ modifiers }) <= conditionLimits.productNodes,
         { message: "CONDITION_PRODUCT_LIMIT" },
       ),
-    allergens: z
-      .object({
-        contains: z.array(z.string()),
-        evidence: z.enum(["verified", "unknown"]),
-        crossContact: z.enum(["possible", "unknown", "controlled"]),
-        vegan: z.enum(["yes", "no", "unknown"]),
-        note: localizedSchema(z.string()),
-      })
-      .strict(),
+    foodInfo: foodInformationSchema,
   })
   .strict();
 
@@ -199,3 +188,7 @@ export function productConditionNodeCount(product: {
 export type Modifier = z.infer<typeof modifierSchema>;
 
 export type Plan = z.infer<typeof planSchema>;
+
+export const foodQuerySchema = z
+  .object({ productId: id, selections: z.array(selectionSchema).max(100) })
+  .strict();

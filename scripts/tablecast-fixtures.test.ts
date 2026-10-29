@@ -62,19 +62,19 @@ describe("デモの構成データ", () => {
     const products = demoStores("demo").flatMap((store) => store.configuration.products);
     expect(products.some((product) => !product.available)).toBe(true);
     expect(products.some((product) => product.modifiers.some((group) => group.min > 0))).toBe(true);
+    expect(products.some((product) => product.foodInfo.base.crossContact === "unknown")).toBe(true);
+    expect(products.some((product) => product.foodInfo.base.allergens.salmon === "contains")).toBe(
+      true,
+    );
     expect(
-      products.every(
-        (product) =>
-          product.allergens.crossContact === "unknown" && product.allergens.vegan === "unknown",
-      ),
+      products.some((product) => product.foodInfo.base.dietary.vegan.status === "unknown"),
     ).toBe(true);
-    expect(
-      products.some(
-        (product) =>
-          product.allergens.evidence === "verified" && product.allergens.contains.includes("fish"),
-      ),
-    ).toBe(true);
-    expect(products.some((product) => product.allergens.evidence === "unknown")).toBe(true);
+    expect(products.some((product) => product.foodInfo.base.dietary.vegan.status === "yes")).toBe(
+      true,
+    );
+    expect(products.some((product) => product.foodInfo.base.dietary.halal.status === "no")).toBe(
+      true,
+    );
   });
   it("韓国店の台本で器三人分を一本分の酒とし、チヂミの訂正後は4740円になる", () => {
     const config = demoStores("demo").find(

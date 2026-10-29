@@ -115,6 +115,7 @@ export function buildPosInvoice(input: {
         name: resolveLocalized(line.name, table.locale),
         displayName: line.name,
         transliteration: line.transliteration,
+        foodInformation: line.foodInformation,
         quantity: line.quantity,
         unitPrice,
         referencePrice: product.price,

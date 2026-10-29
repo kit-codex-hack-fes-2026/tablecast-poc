@@ -9,7 +9,7 @@ import { ensure } from "../../platform/errors";
 import { observeOperation } from "../../platform/telemetry";
 import { type PlanContext } from "../catalog/pricing";
 import { catalogQuery, catalogValue, getCatalog } from "../catalog/queries";
-import { configurationSchema } from "../configuration/model";
+import { readConfiguration } from "../configuration/food-compatibility";
 import { getDemoRecord } from "../demo/queries";
 import { planUsageQuery } from "../orders/queries";
 import { type TableState } from "./model";
@@ -216,7 +216,7 @@ export async function getPricingContext(
         storeId: row.store_id,
         storeName: authorised.configuration.storeName,
         version: authorised.configuration.config_version,
-        configuration: configurationSchema.parse(JSON.parse(authorised.configuration.config_json)),
+        configuration: readConfiguration(JSON.parse(authorised.configuration.config_json)),
       },
       plan: planFromUsage(row, authorised.planUsage),
     };

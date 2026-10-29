@@ -4,6 +4,7 @@ import type { GroupKey } from "./types.ts";
 import { demoOptionImageKey } from "../tablecast-demo-option-images.ts";
 import { koreanDemoStore } from "../tablecast-korean-demo.ts";
 import { demoImageKey, demoStoreBanner, demoStoreLogo } from "../tablecast-seed-media.ts";
+import { withDemoFoodChanges } from "./food.ts";
 import { localizeSeedConfiguration } from "./localize.ts";
 import { groupDefinitions } from "./modifiers.ts";
 import { sakeKinds, sakes } from "./sake.ts";
@@ -65,13 +66,7 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
           imageKey: demoImageKey(`komorebi-sake-${id}.webp`),
           imageKind: "illustration",
           modifiers: modifiers(kind === "sparkling" ? ["serving"] : ["temperature", "serving"]),
-          allergens: allergenRecord(
-            [],
-            [
-              `${kindJa}。製造原材料の詳細は未登録です`,
-              `${kindEn}; detailed production ingredients are not recorded`,
-            ],
-          ),
+          foodInfo: allergenRecord([]),
         };
       },
     );
@@ -91,7 +86,7 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
         ]),
       ];
       text.en.aliases = [item.en.toLowerCase(), item.id.replaceAll("-", " ")];
-      return {
+      return withDemoFoodChanges({
         id: `${store.id}-${item.id}`,
         categoryId: item.category,
         text,
@@ -104,8 +99,8 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
         imageKey: demoImageKey(`komorebi-${item.id}.webp`),
         imageKind: "illustration",
         modifiers: modifiers(item.groups),
-        allergens: allergenRecord(item.contains, item.ingredients),
-      };
+        foodInfo: allergenRecord(item.contains),
+      });
     });
     const featuredIds = [
       `${store.id}-sake-tsukinagi`,
@@ -199,8 +194,8 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
       ],
       cast: {
         instructions: {
-          ja: "和食と多彩な日本酒を、香り・味わい・好みを一つずつ確かめながら丁寧に案内してください。銘柄は架空のデモ設定です。注文確認は正確に読み、原材料や交差接触が不明な場合は安全と断言せずスタッフへ案内してください。",
-          en: "Guide guests courteously through Japanese dishes and a varied sake list, asking about aroma, flavour and preferences one at a time. Brands are fictional demonstration data. Confirm orders accurately and refer unverified ingredients or cross-contact questions to staff without promising safety.",
+          ja: "和食と多彩な日本酒を、香り・味わい・好みを一つずつ確かめながら丁寧に案内してください。注文確認は正確に読み、原材料や交差接触が不明な場合は安全と断言せずスタッフへ案内してください。",
+          en: "Guide guests courteously through Japanese dishes and a varied sake list, asking about aroma, flavour and preferences one at a time. Confirm orders accurately and refer unverified ingredients or cross-contact questions to staff without promising safety.",
         },
         voice: { ja: null, en: null },
         proactive: false,

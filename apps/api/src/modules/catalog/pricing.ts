@@ -3,7 +3,9 @@ import type { Configuration, ConfigurationIssue } from "../configuration/model";
 import type { Cart, CartLine, PricedLine, Snapshot } from "../orders/model";
 import type { Plan } from "./model";
 import { ensure } from "../../platform/errors";
+import { maxCartLines } from "../orders/model";
 import { evaluateCondition, productConditionErrors } from "./conditions";
+import { productFoodErrors, productFoodInformation } from "./food";
 import { localizedNames, resolveLocalized, uiLocale } from "./localization";
 export function configurationErrors(config: Configuration): ConfigurationIssue[] {
   const errors: ConfigurationIssue[] = [];
@@ -50,7 +52,10 @@ export function configurationErrors(config: Configuration): ConfigurationIssue[]
   }
   for (const [productIndex, product] of config.products.entries()) {
     const productPath = ["products", productIndex];
-    errors.push(...productConditionErrors(product, productPath));
+    errors.push(
+      ...productConditionErrors(product, productPath),
+      ...productFoodErrors(product, productPath),
+    );
     if (!categories.has(product.categoryId))
       errors.push({
         code: "CATEGORY_NOT_FOUND",
@@ -155,6 +160,7 @@ export function priceCart(
   plan?: null | PlanContext,
   now = Date.now(),
 ): Cart {
+  ensure(lines.length <= maxCartLines, "CART_LINE_LIMIT", 422, { max: maxCartLines });
   ensure(new Set(lines.map((line) => line.id)).size === lines.length, "DUPLICATE_LINE", 422);
   const priced: PricedLine[] = lines.map((line) => {
     const product = config.products.find((item) => item.id === line.productId);
@@ -241,6 +247,7 @@ export function priceCart(
       missing: [...new Set(missing)],
       ...(conditionIssues.length ? { conditionIssues } : {}),
       planCovered: covered,
+      foodInformation: productFoodInformation(product, line.selections),
     };
   });
   const coveredQuantity = priced

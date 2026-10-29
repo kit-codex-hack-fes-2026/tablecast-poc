@@ -9,6 +9,7 @@ function errorMessageKey(error: unknown): Parameters<ReturnType<typeof useI18n>[
   const failure = apiError(error);
   if (!failure) return error instanceof TypeError ? "common_connection_error" : "common_error";
   if (failure.code === "POS_CHECKOUT_LOCKED") return "pos_locked";
+  if (failure.code === "CART_LINE_LIMIT") return "kiosk_cart_limit_error";
   if (failure.code === "CONFIGURATION_FORMAT_UNSUPPORTED") return "condition_upgrade_error";
   if (failure.code === "MEMBER_ICON_SIZE") return "customer_member_icon_size_error";
   switch (failure.status) {

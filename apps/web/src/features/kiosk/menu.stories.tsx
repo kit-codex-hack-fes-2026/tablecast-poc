@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { resolveLocalized } from "@tablecast/api/localization";
 import { type CartLine, type Product, productSchema } from "@tablecast/api/schema";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { expect, fn, userEvent, within } from "storybook/test";
 import {
   catalog as seedCatalog,
@@ -16,11 +18,17 @@ const meta = {
   title: "客向け/メニューと注文",
   component: ProductMenu,
   decorators: [
-    (Story) => (
-      <div className="max-w-md pt-5 min-w-0 min-h-0 flex flex-col border-l border-l-border bg-card max-lg:border-l-0 max-lg:border-t max-lg:border-t-border max-lg:min-h-160">
-        <Story />
-      </div>
-    ),
+    (Story) => {
+      const [client] = useState(() => new QueryClient());
+      useEffect(() => () => client.clear(), [client]);
+      return (
+        <QueryClientProvider client={client}>
+          <div className="max-w-md pt-5 min-w-0 min-h-0 flex flex-col border-l border-l-border bg-card max-lg:border-l-0 max-lg:border-t max-lg:border-t-border max-lg:min-h-160">
+            <Story />
+          </div>
+        </QueryClientProvider>
+      );
+    },
   ],
   args: { catalog: seedCatalog, onChoose: fn() },
 } satisfies Meta<typeof ProductMenu>;
