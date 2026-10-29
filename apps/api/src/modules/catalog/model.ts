@@ -59,13 +59,7 @@ function conditionAtDepth(depth: number): z.ZodType<OptionCondition> {
     conditionOptionSchema,
     z
       .object({
-        kind: z.literal("and"),
-        children: z.array(child).min(2).max(conditionLimits.children),
-      })
-      .strict(),
-    z
-      .object({
-        kind: z.literal("or"),
+        kind: z.enum(["and", "or"]),
         children: z.array(child).min(2).max(conditionLimits.children),
       })
       .strict(),
