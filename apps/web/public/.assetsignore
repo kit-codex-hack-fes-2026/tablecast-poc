@@ -1,0 +1,2 @@
+# 待受のONNX WASMは版固定CDNから取得する。bundlerが残す未使用の同梱fallbackは配布しない。
+/assets/ort-wasm-simd-threaded.asyncify-*.wasm

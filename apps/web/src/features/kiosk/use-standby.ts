@@ -1,4 +1,5 @@
 import type { Locale } from "@tablecast/api/schema";
+import { createClientOnlyFn } from "@tanstack/react-start";
 import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
 import type { LocalStandby } from "./standby-capture";
 import type { StandbyStatus } from "./standby-model";
@@ -12,6 +13,8 @@ type StandbyContext = {
   locale: Locale;
   speechSpeed: number;
 };
+
+const loadStandby = createClientOnlyFn(() => import("./standby-capture"));
 
 class StandbyController {
   private status: StandbyStatus = "off";
@@ -48,7 +51,7 @@ class StandbyController {
     const version = ++this.generation;
     this.emit("preparing");
     try {
-      const { LocalStandby: Capture } = await import("./standby-capture");
+      const { LocalStandby: Capture } = await loadStandby();
       if (!this.enabled || version !== this.generation) {
         void audioContext?.close();
         return;

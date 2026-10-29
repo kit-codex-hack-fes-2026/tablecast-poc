@@ -441,3 +441,5 @@ Issue #279の待受は初期OFFの試験機能。M1以降・iPadOS 26以降のiP
 呼出句はWebのstandby-model.tsで言語別に管理する。すみません／すいません、Excuse me、服务员／服務員／不好意思、저기요／실례합니다、Excusez-moi、Disculpe／Perdone、Entschuldigung、Mi scusi、Com licença、لو سمحت、सुनिएを初期登録する。追加句は通常の会話と衝突しない短い定型句に限定し、辞書のunitと実音声をそれぞれ検証する。検出した言語への接客変更と、画面の翻訳fallbackを区別する。
 
 閾値は調整前の初期値であり、自卓の所属や注視を確実に判定できることを意味しない。検出精度と60秒後の再開を実機で確認してから本運用への採用を判断する。利用中の生メディアを学習用に集めず、端末・OS・SHA・試行数・成功／誤起動・遅延・発熱だけを記録する。仕様と受入の詳細は[音声接続](voice/integration.md#端末内の呼び出し待受試験)を参照する。
+
+待受の推論moduleはTanStack StartのcreateClientOnlyFnでブラウザーに限定し、SSRのWorkerへ含めない。VADのWASMは上表の版固定CDNから取得するため、bundlerが残す未使用の同梱fallbackはpublic/.assetsignoreでStatic Assetsの配布から除く。25 MiBを超えるバイナリをWorkerへ添付しない。NNの追加や版変更時はブラウザーでCDN取得と実推論、SSR bundleへの混入がないことを確認する。
