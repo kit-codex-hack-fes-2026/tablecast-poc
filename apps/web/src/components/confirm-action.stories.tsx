@@ -23,7 +23,7 @@ export const 標準: Story = {
     const trigger = within(canvasElement).getByRole("button");
     await userEvent.click(trigger);
     const dialog = within(canvasElement.ownerDocument.body).getByRole("alertdialog");
-    await userEvent.click(within(dialog).getByRole("button", { name: "キャンセル" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "やめる" }));
     await expect(args.onConfirm).not.toHaveBeenCalled();
     await waitFor(() => expect(trigger).toHaveFocus());
     await userEvent.click(trigger);
