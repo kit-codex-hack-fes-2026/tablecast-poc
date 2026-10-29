@@ -2,10 +2,9 @@ import type { CartLine, CoreState, Product } from "@tablecast/api/schema";
 import type { ReactNode, RefObject } from "react";
 import { Popover } from "@base-ui/react/popover";
 import { useHydrated } from "@tanstack/react-router";
-import { LoaderCircle, ReceiptText, ShoppingBag, Utensils, X } from "lucide-react";
+import { LoaderCircle, ReceiptText, ShoppingBag, Utensils } from "lucide-react";
 import { Money } from "../../components/money";
 import { ProductImage } from "../../components/product-image";
-import { Button } from "../../components/ui/button";
 import { surfaceMotion } from "../../components/ui/motion-variants";
 import * as Tabs from "../../components/ui/tabs";
 import { useI18n } from "../../i18n/locale";
@@ -18,20 +17,16 @@ export function KioskMenuTabs({
   cartActions,
   checkoutOpen,
   onCheckoutOpenChange,
-  reviewing,
-  confirmationHeading,
   orderPane,
 }: {
   cartActions: ReactNode;
   cartLines: CartLine[];
   cartPending: boolean;
   checkoutOpen: boolean;
-  confirmationHeading: RefObject<HTMLHeadingElement | null>;
   data: CoreState;
   onCheckoutOpenChange: (open: boolean) => void;
   orderPane: RefObject<HTMLElement | null>;
   products?: Product[];
-  reviewing: boolean;
 }) {
   const hydrated = useHydrated();
   const { t } = useI18n();
@@ -107,6 +102,7 @@ export function KioskMenuTabs({
               className="z-40"
             >
               <Popover.Popup
+                aria-label={t("kiosk_cart")}
                 data-ui="order-actions"
                 data-theme-part="checkout"
                 render={(popupProps, state) => (
@@ -115,35 +111,9 @@ export function KioskMenuTabs({
                 className={surfaceMotion({
                   kind: "popup",
                   className:
-                    "w-80 max-w-[var(--available-width)] max-h-[var(--available-height)] overflow-y-auto rounded-2xl border border-border bg-card p-4 shadow-xl scrollbar-thin",
+                    "w-max max-w-[var(--available-width)] max-h-[var(--available-height)] overflow-y-auto rounded-2xl border border-border bg-card p-2 shadow-xl scrollbar-thin",
                 })}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <Popover.Title
-                    ref={confirmationHeading}
-                    tabIndex={-1}
-                    className="text-base font-semibold outline-none"
-                  >
-                    {reviewing ? t("kiosk_review_title") : t("kiosk_cart")}
-                  </Popover.Title>
-                  <Popover.Close
-                    render={<Button variant="ghost" size="icon-sm" />}
-                    aria-label={t("common_close")}
-                  >
-                    <X aria-hidden />
-                  </Popover.Close>
-                </div>
-                <div className="my-3 flex items-center justify-between gap-3 text-sm">
-                  <span className="text-muted-foreground">{t("kiosk_cart_total")}</span>
-                  <strong>
-                    <Money taxIncluded value={data.cart.total} />
-                  </strong>
-                </div>
-                {reviewing && (
-                  <Popover.Description className="mb-4 text-sm text-muted-foreground">
-                    {t("kiosk_review_note")}
-                  </Popover.Description>
-                )}
                 <div role="group" aria-label={t("kiosk_cart")}>
                   {cartActions}
                 </div>

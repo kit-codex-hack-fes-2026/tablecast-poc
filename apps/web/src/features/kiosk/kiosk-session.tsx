@@ -19,8 +19,9 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Check, ClipboardCheck, LoaderCircle, Pencil, Send } from "lucide-react";
+import { Check, LoaderCircle, Pencil, Send } from "lucide-react";
 import { AnimatePresence, useReducedMotion } from "motion/react";
+import * as motion from "motion/react-m";
 import {
   type ReactNode,
   useCallback,
@@ -155,7 +156,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   const [prepared, setSnapshot] = useState<Snapshot>();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [menuCategory, setMenuCategory] = useState("all");
-  const confirmationHeading = useRef<HTMLHeadingElement>(null);
+  const confirmationAction = useRef<HTMLButtonElement>(null);
   const toasts = Toast.useToastManager<ActionToastData>();
   const [flights, setFlights] = useState<CartFlight[]>([]);
   const reducedMotion = useReducedMotion();
@@ -293,7 +294,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       : undefined;
   const snapshotId = snapshot?.id;
   useEffect(() => {
-    if (snapshotId && checkoutOpen) confirmationHeading.current?.focus({ preventScroll: true });
+    if (snapshotId && checkoutOpen) confirmationAction.current?.focus({ preventScroll: true });
   }, [snapshotId, checkoutOpen]);
   useEffect(() => {
     setLocale(displayLocale);
@@ -508,12 +509,27 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           label={t("kiosk_cart_total")}
           pending={cartPending}
         />
+        <ErrorNotice error={prepare.error || submit.error} />
         {snapshot ? (
           <section
             className="p-4 motion-safe:animate-tablecast-state"
             aria-label={t("kiosk_review_title")}
           >
-            <p className="mt-2 text-sm">{t("kiosk_review_note")}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm">{t("kiosk_review_note")}</p>
+              <Button
+                variant="outline"
+                className="min-h-14"
+                disabled={submit.isPending || cartPending}
+                onClick={() => {
+                  setSnapshot(undefined);
+                  setCheckoutOpen(false);
+                }}
+              >
+                <Pencil aria-hidden />
+                {t("kiosk_edit")}
+              </Button>
+            </div>
             <CartLines lines={snapshot.lines} products={catalog.data?.configuration.products} />
             {snapshot.plan && (
               <p>
@@ -578,68 +594,33 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   }
   function renderOrderActions() {
     const reviewing = snapshot && section === "cart";
+    const pending = prepare.isPending || submit.isPending;
     return (
-      <div className="min-w-0 space-y-2">
-        <ErrorNotice error={prepare.error || submit.error} />
-        {reviewing ? (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              className="h-auto min-h-14 min-w-0 whitespace-normal px-3 py-2"
-              disabled={submit.isPending || cartPending}
-              onClick={() => {
-                setSnapshot(undefined);
-                setCheckoutOpen(false);
-              }}
-            >
-              <Pencil aria-hidden />
-              {t("kiosk_edit")}
-            </Button>
-            <Button
-              variant="default"
-              className="h-auto min-h-14 min-w-0 whitespace-normal px-3 py-2"
-              aria-busy={submit.isPending}
-              disabled={submit.isPending || cartPending}
-              onClick={(event) =>
-                submit.mutate({ confirmation: snapshot, pointer: event.detail > 0 })
-              }
-            >
-              {t("kiosk_confirm")}
-              {submit.isPending ? (
-                <LoaderCircle aria-hidden className="motion-safe:animate-spin" />
-              ) : (
-                <Send aria-hidden />
-              )}
-            </Button>
-          </div>
+      <Button
+        ref={confirmationAction}
+        type="button"
+        variant="default"
+        className="h-auto min-h-14 min-w-0 whitespace-normal px-4 py-2"
+        aria-busy={pending}
+        disabled={
+          pending || cartPending || (!snapshot && (!data.cart.complete || !data.cart.lines.length))
+        }
+        onClick={(event) => {
+          if (reviewing) submit.mutate({ confirmation: snapshot, pointer: event.detail > 0 });
+          else if (snapshot) setSection("cart");
+          else prepare.mutate();
+        }}
+      >
+        {t("kiosk_confirm")}
+        {pending ? (
+          <LoaderCircle aria-hidden className="motion-safe:animate-spin" />
         ) : (
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              variant="default"
-              className="ml-auto h-auto min-h-14 min-w-0 whitespace-normal px-3 py-2"
-              aria-busy={prepare.isPending}
-              disabled={
-                !snapshot &&
-                (!data.cart.complete ||
-                  data.cart.lines.length === 0 ||
-                  prepare.isPending ||
-                  cartPending)
-              }
-              onClick={() => (snapshot ? setSection("cart") : prepare.mutate())}
-            >
-              {t("kiosk_review")}
-              {prepare.isPending ? (
-                <LoaderCircle className="motion-safe:animate-spin" aria-hidden />
-              ) : (
-                <ClipboardCheck size={20} aria-hidden="true" />
-              )}
-            </Button>
-          </div>
+          <Send aria-hidden />
         )}
-      </div>
+      </Button>
     );
   }
+
   function renderHeader() {
     const { storeName, branding } = catalog.data?.configuration ?? {};
     return (
@@ -978,8 +959,6 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                           cartActions={renderOrderActions()}
                           checkoutOpen={checkoutOpen && !selection}
                           onCheckoutOpenChange={setCheckoutOpen}
-                          reviewing={Boolean(snapshot && section === "cart")}
-                          confirmationHeading={confirmationHeading}
                           orderPane={orderPane}
                         />
                       </div>
@@ -1003,13 +982,18 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                               />
                               <PaneDialog.Popup
                                 key="product"
-                                render={(popupProps, state) => (
-                                  <div
-                                    {...popupProps}
-                                    inert={!state.open}
-                                    aria-hidden={!state.open || undefined}
+                                inert={!selection}
+                                render={
+                                  <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{
+                                      duration: reducedMotion ? 0 : 0.22,
+                                      ease: [0.23, 1, 0.32, 1],
+                                    }}
                                   />
-                                )}
+                                }
                                 aria-label={
                                   selection
                                     ? resolveText(selection.product.text, locale).displayName
@@ -1024,11 +1008,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                                       ) ?? false)
                                 }
                                 data-theme-part="dialog"
-                                className={surfaceMotion({
-                                  kind: "dialog",
-                                  className:
-                                    "absolute inset-x-6 top-1/2 z-30 flex max-h-[calc(100%-2rem)] min-h-0 -translate-y-1/2 flex-col rounded-3xl sm:inset-x-9 sm:max-h-[calc(100%-3rem)]",
-                                })}
+                                className="absolute inset-x-4 top-1/2 z-30 flex max-h-[calc(100%-2rem)] min-h-0 -translate-y-1/2 flex-col rounded-3xl sm:inset-x-6 sm:max-h-[calc(100%-3rem)]"
                               >
                                 {selection && (
                                   <ProductPage

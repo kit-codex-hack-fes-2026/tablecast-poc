@@ -13,82 +13,7 @@ it.each(["ja", "en", "zh-Hans", "ko"] as const)(
   "%sの代表画面はseedの店舗設定・商品・価格・実画像を使い、画像読込後に記録する",
   async (locale) => {
     const labels = languages[locale];
-    fixture.current = structuredClone(table);
-    fixture.current.locale = locale;
-    fixture.catalogResponse = Response.json(catalog);
-    vi.spyOn(navigator.mediaDevices, "enumerateDevices").mockResolvedValue([
-      {
-        deviceId: "default",
-        groupId: "tablecast-ipad",
-        kind: "audioinput",
-        label: "iPad microphone",
-        toJSON: () => ({}),
-      },
-    ]);
-    fixture.current.events = [
-      {
-        cursor: 1,
-        kind: "voice.user",
-        data: {
-          role: "user",
-          locale,
-          text:
-            locale === "ja"
-              ? "お刺身に合う日本酒はありますか？"
-              : locale === "zh-Hans"
-                ? "有什么适合搭配生鱼片的清酒？"
-                : locale === "ko"
-                  ? "사시미에 어울리는 사케가 있나요?"
-                  : "Which sake goes well with sashimi?",
-        },
-      },
-      {
-        cursor: 2,
-        kind: "voice.tool",
-        data: {
-          turnId: "tablecast-seed-turn",
-          toolCallId: "tablecast-seed-call",
-          toolName: "getCatalog",
-          state: "completed",
-          query: product.id,
-        },
-      },
-      {
-        cursor: 3,
-        kind: "voice.products",
-        data: {
-          turnId: "tablecast-seed-turn",
-          productIds: catalog.configuration.products
-            .filter((item) => item.available)
-            .slice(0, 4)
-            .map((item) => item.id),
-        },
-      },
-      {
-        cursor: 4,
-        kind: "voice.assistant",
-        data: {
-          role: "assistant",
-          locale,
-          text:
-            locale === "ja"
-              ? "お造りには月凪がおすすめです。気になる料理はありますか？"
-              : locale === "zh-Hans"
-                ? "月凪很适合搭配生鱼片。想了解一下吗？"
-                : locale === "ko"
-                  ? "쓰키나기는 사시미와 잘 어울려요. 설명해 드릴까요?"
-                  : "Tsukinagi pairs well with sashimi. Would you like to hear about it?",
-        },
-      },
-    ].map((event) => ({
-      ...event,
-      storeId: table.storeId,
-      tableSessionId: table.id,
-      createdAt: table.openedAt + event.cursor * 1000,
-    }));
-    fixture.current.cursor = 4;
-    await page.viewport(1180, 820);
-    await mountKiosk();
+    await mountSeed(locale);
     const conversation = page.getByRole("region", { name: labels.kiosk_conversation, exact: true });
     await expect
       .element(
@@ -158,6 +83,14 @@ it.each(["ja", "en", "zh-Hans", "ko"] as const)(
         path: `../../../test-results/tablecast-seed-${locale}-${width}.png`,
       });
     }
+  },
+);
+
+it.each(["ja", "en", "zh-Hans", "ko"] as const)(
+  "%sの商品DialogとカゴPopoverをseed実画像で記録する",
+  async (locale) => {
+    const labels = languages[locale];
+    await mountSeed(locale);
     for (const [width, height] of [
       [1512, 982],
       [1180, 820],
@@ -197,3 +130,82 @@ it.each(["ja", "en", "zh-Hans", "ko"] as const)(
     });
   },
 );
+
+async function mountSeed(locale: keyof typeof languages) {
+  fixture.current = structuredClone(table);
+  fixture.current.locale = locale;
+  fixture.catalogResponse = Response.json(catalog);
+  vi.spyOn(navigator.mediaDevices, "enumerateDevices").mockResolvedValue([
+    {
+      deviceId: "default",
+      groupId: "tablecast-ipad",
+      kind: "audioinput",
+      label: "iPad microphone",
+      toJSON: () => ({}),
+    },
+  ]);
+  fixture.current.events = [
+    {
+      cursor: 1,
+      kind: "voice.user",
+      data: {
+        role: "user",
+        locale,
+        text:
+          locale === "ja"
+            ? "お刺身に合う日本酒はありますか？"
+            : locale === "zh-Hans"
+              ? "有什么适合搭配生鱼片的清酒？"
+              : locale === "ko"
+                ? "사시미에 어울리는 사케가 있나요?"
+                : "Which sake goes well with sashimi?",
+      },
+    },
+    {
+      cursor: 2,
+      kind: "voice.tool",
+      data: {
+        turnId: "tablecast-seed-turn",
+        toolCallId: "tablecast-seed-call",
+        toolName: "getCatalog",
+        state: "completed",
+        query: product.id,
+      },
+    },
+    {
+      cursor: 3,
+      kind: "voice.products",
+      data: {
+        turnId: "tablecast-seed-turn",
+        productIds: catalog.configuration.products
+          .filter((item) => item.available)
+          .slice(0, 4)
+          .map((item) => item.id),
+      },
+    },
+    {
+      cursor: 4,
+      kind: "voice.assistant",
+      data: {
+        role: "assistant",
+        locale,
+        text:
+          locale === "ja"
+            ? "お造りには月凪がおすすめです。気になる料理はありますか？"
+            : locale === "zh-Hans"
+              ? "月凪很适合搭配生鱼片。想了解一下吗？"
+              : locale === "ko"
+                ? "쓰키나기는 사시미와 잘 어울려요. 설명해 드릴까요?"
+                : "Tsukinagi pairs well with sashimi. Would you like to hear about it?",
+      },
+    },
+  ].map((event) => ({
+    ...event,
+    storeId: table.storeId,
+    tableSessionId: table.id,
+    createdAt: table.openedAt + event.cursor * 1000,
+  }));
+  fixture.current.cursor = 4;
+  await page.viewport(1180, 820);
+  await mountKiosk();
+}

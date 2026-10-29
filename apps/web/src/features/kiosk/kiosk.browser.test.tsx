@@ -180,9 +180,9 @@ it("注文操作は確認から修正・明示確定へ一箇所で切り替わ�
   await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
   await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
   await expect.element(page.getByRole("region", { name: ja.kiosk_review_title })).toBeVisible();
-  await expect
-    .element(page.getByRole("button", { name: ja.kiosk_review, exact: true }))
-    .not.toBeInTheDocument();
+  expect(page.getByRole("button", { name: ja.kiosk_confirm, exact: true }).elements()).toHaveLength(
+    1,
+  );
   expect(
     requests.filter(
       (request) =>

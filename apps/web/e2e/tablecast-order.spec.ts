@@ -234,14 +234,20 @@ test("端末認可後に4言語を切り替え、スタッフと注文・提供�
         chosen.push({ productId: product.id, quantity, selections });
       });
     }
-    await guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
-    await expect(guest.getByText(ja.kiosk_cart_added, { exact: true }).first()).toBeVisible();
+    const cartTab = guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) });
+    await cartTab.click();
+    const lastProduct = products.at(-1);
+    if (!lastProduct) throw new Error("追加した商品が必要です");
+    const addedMessage = ja.kiosk_cart_added_product
+      .replace("{product}", lastProduct.text.ja.displayName)
+      .replace("{count}", "1");
+    await expect(guest.getByText(addedMessage, { exact: true })).toBeVisible();
     await expect(guest.getByText(ja.kiosk_cart_empty, { exact: true })).not.toBeVisible();
     await guest.screenshot({ path: testInfo.outputPath("tablecast-basket-toast.png") });
     await expect(guest.getByRole("button", { name: ja.kiosk_review, exact: true })).toBeEnabled();
     // 通信完了を待ち、退出中・表示制限中の通知を操作対象にしない。
     const basketToasts = guest
-      .getByRole("dialog", { name: ja.kiosk_cart_added, exact: true })
+      .getByRole("dialog", { name: addedMessage, exact: true })
       .and(guest.locator(":not([data-ending-style]):visible"));
     while (await basketToasts.count()) {
       await basketToasts
@@ -268,6 +274,7 @@ test("端末認可後に4言語を切り替え、スタッフと注文・提供�
           const responsive = await preview.newPage();
           await responsive.goto("/");
           await expect(responsive.getByRole("tab")).toHaveCount(3);
+          await responsive.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
           await expect(
             responsive.getByRole("button", { name: ja.kiosk_review, exact: true }),
           ).toBeVisible();
@@ -323,19 +330,25 @@ test("端末認可後に4言語を切り替え、スタッフと注文・提供�
     await expect(
       guest.getByRole("textbox", { name: new RegExp(`${ja.common_quantity}$`) }).first(),
     ).toHaveValue("1");
+    if ((await cartTab.getAttribute("aria-expanded")) !== "true") await cartTab.click();
     await expect(guest.getByRole("button", { name: ja.kiosk_review, exact: true })).toBeEnabled();
     await staff.goto(`/admin/stores/${storeId}/floor`);
     await expect(
       staff.getByRole("heading", { name: labels.admin_live, exact: true }),
     ).toBeVisible();
-    await guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
     await guest.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
     const review = guest.getByRole("region", { name: ja.kiosk_review_title, exact: true });
     await expect(review).toBeVisible();
     await expect(guest.locator('[data-theme-part="dialog"]')).toHaveCount(0);
     for (const product of products) await expect(review).toContainText(product.text.ja.displayName);
     await guest.getByRole("button", { name: ja.kiosk_confirm, exact: true }).click();
-    const orderNotice = guest.getByRole("dialog", { name: ja.kiosk_ordered, exact: true });
+    const orderNotice = guest.getByRole("dialog", {
+      name: ja.kiosk_ordered_items.replace(
+        "{count}",
+        String(chosen.reduce((sum, line) => sum + line.quantity, 0)),
+      ),
+      exact: true,
+    });
     await expect(orderNotice).toBeVisible();
     expect(
       await guest.evaluate(() => Number(document.documentElement.dataset.tablecastOrderFlights)),

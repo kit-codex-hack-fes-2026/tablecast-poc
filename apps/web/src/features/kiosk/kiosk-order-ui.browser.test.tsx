@@ -75,8 +75,10 @@ it.each(["ja", "en"] as const)(
     await cart.click();
     const callout = page.getByRole("group", { name: labels.kiosk_cart, exact: true });
     await expect
-      .element(callout.getByRole("button", { name: labels.kiosk_review, exact: true }))
+      .element(callout.getByRole("button", { name: labels.kiosk_confirm, exact: true }))
       .toBeVisible();
+    expect(callout.getByRole("button").elements()).toHaveLength(1);
+    expect(callout.element().textContent).toBe(labels.kiosk_confirm);
     await expect
       .poll(
         () =>
@@ -151,6 +153,14 @@ it.each(["ja", "en"] as const)(
     await expect
       .element(page.getByRole("tab", { name: labels.kiosk_menu, exact: true }))
       .toHaveAttribute("aria-selected", "true");
+    await expect.element(page.getByText(addedMessage, { exact: true })).toBeVisible();
+    await page
+      .getByRole("dialog", { name: addedMessage, exact: true })
+      .getByRole("button", { name: labels.common_close, exact: true })
+      .click();
+    await expect
+      .element(page.getByRole("dialog", { name: addedMessage, exact: true }))
+      .not.toBeInTheDocument();
     await cart.click();
     await expect.element(cart).toHaveAttribute("aria-selected", "true");
     await expect
@@ -169,16 +179,12 @@ it.each(["ja", "en"] as const)(
     await expect
       .element(callout.getByRole("button", { name: labels.kiosk_confirm, exact: true }))
       .toBeVisible();
-    await callout.getByRole("button", { name: labels.kiosk_edit, exact: true }).click();
-    await expect.element(callout).not.toBeInTheDocument();
-    await expect.element(page.getByText(addedMessage, { exact: true })).toBeVisible();
+    expect(callout.getByRole("button").elements()).toHaveLength(1);
     await page
-      .getByRole("dialog", { name: addedMessage, exact: true })
-      .getByRole("button", { name: labels.common_close, exact: true })
+      .getByRole("region", { name: labels.kiosk_review_title, exact: true })
+      .getByRole("button", { name: labels.kiosk_edit, exact: true })
       .click();
-    await expect
-      .element(page.getByRole("dialog", { name: addedMessage, exact: true }))
-      .not.toBeInTheDocument();
+    await expect.element(callout).not.toBeInTheDocument();
     expect(cart.element().querySelectorAll("img")).toHaveLength(1);
     expect(
       pane.querySelector('[data-ui="cart-lines"] img[src*="tablecast-option"]'),

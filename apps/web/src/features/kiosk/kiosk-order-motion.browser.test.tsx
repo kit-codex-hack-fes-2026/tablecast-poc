@@ -99,11 +99,12 @@ it("食品情報の初回待機を示し、badgeと選択肢を同時表示し�
     await expect.poll(() => getComputedStyle(detail).transform).toBe("none");
     const pane = orderPanel();
     if (!pane) throw new Error("注文ペインが必要です");
+    await expect.poll(() => getComputedStyle(dialog.element()).transform).toBe("none");
     const bounds = dialog.element().getBoundingClientRect();
     const paneBounds = pane.getBoundingClientRect();
     expect(bounds.height).toBeLessThan(paneBounds.height - 48);
-    expect(bounds.left - paneBounds.left).toBeCloseTo(36, 0);
-    expect(paneBounds.right - bounds.right).toBeCloseTo(36, 0);
+    expect(bounds.left - paneBounds.left).toBeCloseTo(24, 0);
+    expect(paneBounds.right - bounds.right).toBeCloseTo(24, 0);
     const before = groups.getBoundingClientRect();
     await choice.click();
     await reached.promise;
@@ -137,7 +138,7 @@ it("注文失敗の対象と件数をtoastへ示し、進捗の一時停止と�
   await mountKiosk();
   await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
   await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
-  const confirmation = page.getByRole("dialog", { name: ja.kiosk_review_title, exact: true });
+  const confirmation = page.getByRole("group", { name: ja.kiosk_cart, exact: true });
   await confirmation.getByRole("button", { name: ja.kiosk_confirm, exact: true }).click();
   const failure = page.getByRole("dialog", {
     name: ja.kiosk_order_failed_items.replace("{count}", "3"),

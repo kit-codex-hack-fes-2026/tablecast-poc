@@ -96,7 +96,7 @@
   "kiosk_vegan": "登记为纯素",
   "kiosk_cart_empty": "购物篮为空",
   "kiosk_missing": "请完成选项选择",
-  "kiosk_review": "提交订单",
+  "kiosk_review": "发送订单",
   "kiosk_review_title": "请确认订单内容",
   "kiosk_review_note": "确认后将把此订单发送至餐厅。",
   "kiosk_confirm": "发送订单",

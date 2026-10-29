@@ -119,7 +119,7 @@
   "kiosk_vegan": "ヴィーガン対応の登録あり",
   "kiosk_cart_empty": "注文かごは空です",
   "kiosk_missing": "選択が必要です",
-  "kiosk_review": "注文を確定する",
+  "kiosk_review": "注文を送信する",
   "kiosk_review_title": "こちらの内容でよろしいですか？",
   "kiosk_review_note": "確定すると注文がお店へ送信されます。",
   "kiosk_confirm": "注文を送信する",
