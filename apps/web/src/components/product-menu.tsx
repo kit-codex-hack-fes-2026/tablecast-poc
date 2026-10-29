@@ -8,7 +8,6 @@ import { IllustrationNotice } from "./illustration-notice";
 import { MenuBanners } from "./menu-banners";
 import { Money } from "./money";
 import { ProductImage } from "./product-image";
-import { ProductImageTransition } from "./product-image-transition";
 import { ProductName } from "./product-name";
 import { StoreLogo } from "./store-logo";
 import { Button } from "./ui/button";
@@ -39,19 +38,19 @@ export const ProductMenu = memo(function ProductMenu({
   onCategoryChange,
   searchControl,
   searchStatus,
+  searchOpen = false,
   searchResults = false,
   imageSizes,
-  imageTransition = false,
 }: {
   catalog: Catalog;
   category?: string;
   compact?: boolean;
   imageSizes?: string;
-  imageTransition?: boolean;
   onCategoryChange?: (category: string) => void;
   onChoose: (product: Product) => void;
   productIds?: string[];
   searchControl?: ReactNode;
+  searchOpen?: boolean;
   searchResults?: boolean;
   searchStatus?: ReactNode;
 }) {
@@ -99,10 +98,10 @@ export const ProductMenu = memo(function ProductMenu({
             category={category}
             onCategoryChange={setCategory}
             searchControl={searchControl}
+            searchOpen={searchOpen}
           />
         </>
       )}
-      {searchStatus}
       {!productIds && products.length === 0 && (
         <p role="status" className="py-12 px-6 text-muted-foreground text-center">
           {t(
@@ -130,12 +129,7 @@ export const ProductMenu = memo(function ProductMenu({
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <ProductMenuPhoto
-              product={product}
-              compact={compact}
-              imageSizes={imageSizes}
-              imageTransition={imageTransition}
-            />
+            <ProductMenuPhoto product={product} compact={compact} imageSizes={imageSizes} />
             <span className={cn("flex flex-1 flex-col px-1 pt-4 pb-1", compact && "pt-2")}>
               {!product.available && (
                 <span className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
@@ -165,6 +159,7 @@ export const ProductMenu = memo(function ProductMenu({
           </Button>
         ))}
       </div>
+      {searchStatus}
     </div>
   );
 });
@@ -173,18 +168,14 @@ function ProductMenuPhoto({
   product,
   compact,
   imageSizes,
-  imageTransition,
 }: {
   compact: boolean;
   imageSizes?: string;
-  imageTransition: boolean;
   product: Product;
 }) {
   const { t } = useI18n();
   return (
-    <ProductImageTransition
-      enabled={imageTransition}
-      productId={product.id}
+    <span
       className={cn(
         "relative flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-xl bg-muted",
         compact && "h-24 aspect-auto",
@@ -213,7 +204,7 @@ function ProductMenuPhoto({
       >
         <Plus size={16} />
       </span>
-    </ProductImageTransition>
+    </span>
   );
 }
 
@@ -222,18 +213,22 @@ function MenuCategories({
   category,
   onCategoryChange,
   searchControl,
+  searchOpen,
 }: {
   catalog: Catalog;
   category: string;
   onCategoryChange: (category: string) => void;
   searchControl?: ReactNode;
+  searchOpen: boolean;
 }) {
   const { locale, t } = useI18n();
   return (
-    <div data-ui="menu-toolbar" className="space-y-3 p-4">
+    <div data-ui="menu-toolbar" className="relative flex items-start gap-2 px-4 pt-4 pb-6">
       {searchControl}
       <fieldset
         data-ui="menu-categories"
+        inert={searchOpen}
+        aria-hidden={searchOpen || undefined}
         className="-m-1.5 flex min-w-0 gap-2 overflow-x-auto p-1.5 scrollbar-thin"
         aria-label={t("kiosk_menu")}
       >

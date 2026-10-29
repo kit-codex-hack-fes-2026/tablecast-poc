@@ -1,5 +1,5 @@
 import { resolveLocalized } from "@tablecast/api/localization";
-import { expect, it, onTestFinished } from "vitest";
+import { expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
@@ -95,17 +95,6 @@ it.each(["ja", "en"] as const)(
     await expect.element(callout).not.toBeInTheDocument();
     await expect.element(cart).toHaveFocus();
     await page.getByRole("tab", { name: labels.kiosk_menu, exact: true }).click();
-    const movement = { opening: 0, closing: 0 };
-    let phase: "closing" | "opening" = "opening";
-    const observer = new MutationObserver(() => {
-      for (const frame of pane.querySelectorAll<HTMLElement>(
-        '[data-ui="product-image-transition"]',
-      )) {
-        if (frame.style.transform && frame.style.transform !== "none") movement[phase] += 1;
-      }
-    });
-    observer.observe(pane, { subtree: true, attributes: true, attributeFilter: ["style"] });
-    onTestFinished(() => observer.disconnect());
     const choose = page.getByRole("button").filter({
       has: page.getByText(resolveLocalized(pictured.text, locale).displayName, { exact: true }),
     });
@@ -132,19 +121,21 @@ it.each(["ja", "en"] as const)(
       .getBoundingClientRect();
     expect(close.right).toBeCloseTo(bounds.right - 16, 0);
     expect(close.top).toBeCloseTo(bounds.top + 16, 0);
-    const overlay = pane.querySelector('[data-ui="product-overlay"]');
+    const overlay = pane.querySelector('[data-slot="dialog-backdrop"]');
     expect(overlay?.getBoundingClientRect().width).toBe(pane.getBoundingClientRect().width);
     expect(dialog.element().querySelector('[data-ui="illustration-label"]')).toBeNull();
     await expect
       .element(dialog.getByRole("button", { name: labels.kiosk_add, exact: true }))
       .toBeVisible();
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    expect(movement.opening > 0).toBe(!reduced);
-    phase = "closing";
     await userEvent.keyboard("{Escape}");
     await expect.element(dialog).not.toBeInTheDocument();
-    expect(movement.closing > 0).toBe(!reduced);
-    observer.disconnect();
+    await expect.element(choose).toHaveFocus();
+    await choose.click();
+    await expect.element(dialog).toBeVisible();
+    const viewport = pane.querySelector('[data-slot="dialog-viewport"]');
+    if (!(viewport instanceof HTMLElement)) throw new Error("Dialogの背景操作領域が必要です");
+    await userEvent.click(viewport, { position: { x: 4, y: 4 } });
+    await expect.element(dialog).not.toBeInTheDocument();
     await expect.element(choose).toHaveFocus();
     await choose.click();
     await dialog.getByRole("radio", { name: "90 mL", exact: true }).click();

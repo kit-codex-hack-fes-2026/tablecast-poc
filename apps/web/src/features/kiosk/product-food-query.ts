@@ -4,15 +4,15 @@ import { parseResponse, type TableEndpoint } from "../../lib/api";
 
 export function useProductFoodInformation({
   productId,
-  selections,
+  selections = [],
   endpoint,
   configVersion,
   tableSessionId,
 }: {
   configVersion: number;
   endpoint?: TableEndpoint;
-  productId: string;
-  selections: CartLine["selections"];
+  productId?: string;
+  selections?: CartLine["selections"];
   tableSessionId: string;
 }) {
   return useQuery({
@@ -24,15 +24,16 @@ export function useProductFoodInformation({
       productId,
       selections,
     ],
-    queryFn: endpoint
-      ? ({ signal }) =>
-          parseResponse(
-            endpoint.client.catalog["food-information"].$post(
-              { json: { productId, selections } },
-              { init: { signal } },
-            ),
-          )
-      : skipToken,
+    queryFn:
+      endpoint && productId
+        ? ({ signal }) =>
+            parseResponse(
+              endpoint.client.catalog["food-information"].$post(
+                { json: { productId, selections } },
+                { init: { signal } },
+              ),
+            )
+        : skipToken,
     placeholderData: (previous, query) =>
       query !== undefined &&
       endpoint !== undefined &&

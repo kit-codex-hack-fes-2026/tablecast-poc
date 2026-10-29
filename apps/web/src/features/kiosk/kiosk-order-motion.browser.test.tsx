@@ -22,7 +22,9 @@ it.each(["入力変更", "クリア"])(
     const cardTop = firstCard.getBoundingClientRect().top;
     expect(parseFloat(getComputedStyle(categories).paddingTop)).toBeGreaterThanOrEqual(6);
     expect(parseFloat(getComputedStyle(categories).paddingBottom)).toBeGreaterThanOrEqual(6);
-    await page.getByRole("button", { name: ja.kiosk_menu_search, exact: true }).click();
+    const trigger = page.getByRole("button", { name: ja.kiosk_menu_search, exact: true });
+    expect(trigger.element().getBoundingClientRect().width).toBeLessThan(160);
+    await trigger.click();
     expect(document.querySelector('[data-ui="menu-categories"]')).toBe(categories);
     expect(categories.getBoundingClientRect().top).toBeCloseTo(before.top, 1);
     expect(firstCard.getBoundingClientRect().top).toBeCloseTo(cardTop, 1);
@@ -32,6 +34,7 @@ it.each(["入力変更", "クリア"])(
     await expect.poll(() => fixture.current.menuSearch?.total).toBe(1);
     const result = page.getByRole("button", { name: new RegExp(product.text.ja.displayName) });
     await expect.element(result).toBeVisible();
+    const resultTop = result.element().getBoundingClientRect().top;
     const release = Promise.withResolvers<void>();
     const reached = Promise.withResolvers<void>();
     fixture.beforeRequest = async (request) => {
@@ -47,8 +50,9 @@ it.each(["入力変更", "クリア"])(
       await reached.promise;
       await expect.element(result).toBeVisible();
       await expect
-        .element(page.getByRole("status").filter({ hasText: ja.kiosk_menu_search_updating }))
+        .element(page.getByRole("status", { name: ja.kiosk_menu_search_updating, exact: true }))
         .toBeVisible();
+      expect(result.element().getBoundingClientRect().top).toBeCloseTo(resultTop, 1);
       expect(fixture.client.isMutating()).toBeGreaterThan(0);
       expect(categories.getBoundingClientRect().top).toBeCloseTo(before.top, 1);
       release.resolve();
@@ -68,7 +72,7 @@ it.each(["入力変更", "クリア"])(
   },
 );
 
-it("食品情報の初回待機を示し、badgeと選択肢を同時表示して再取得中の位置と自然高を保つ", async () => {
+it("初回の食品情報が揃ったDialogを開き、再取得中の位置と自然高を保つ", async () => {
   fixture.current.uiSection = "menu";
   const first = Promise.withResolvers<void>();
   const second = Promise.withResolvers<void>();
@@ -88,8 +92,10 @@ it("食品情報の初回待機を示し、badgeと選択肢を同時表示し�
   try {
     await page.getByRole("button", { name: new RegExp(product.text.ja.displayName) }).click();
     const dialog = page.getByRole("dialog", { name: product.text.ja.displayName, exact: true });
-    await expect.element(dialog.getByRole("status")).toHaveTextContent(ja.food_updating);
-    expect(dialog.element().querySelector('[data-ui="customisation-groups"]')).toBeNull();
+    await expect
+      .element(page.getByRole("status", { name: ja.food_updating, exact: true }))
+      .toBeVisible();
+    await expect.element(dialog).not.toBeInTheDocument();
     first.resolve();
     const choice = dialog.getByRole("radio", { name: "90 mL", exact: true });
     await expect.element(choice).toBeVisible();
@@ -175,4 +181,32 @@ it("注文失敗の対象と件数をtoastへ示し、進捗の一時停止と�
   expect(orderWrites[0]?.approved).toBe(true);
   // キーボードでtoastへ移動しない限り、Base UIの4秒の期限で消える。
   await expect.element(success).not.toBeInTheDocument();
+});
+
+it("商品Dialogを閉じる画面更新を検索中として表示しない", async () => {
+  fixture.current.uiSection = "menu";
+  await mountKiosk();
+  await page.getByRole("button", { name: new RegExp(product.text.ja.displayName) }).click();
+  const dialog = page.getByRole("dialog", { name: product.text.ja.displayName, exact: true });
+  await expect.element(dialog).toBeVisible();
+  const reached = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  fixture.beforeRequest = async (request) => {
+    if (request.method === "PATCH" && new URL(request.url).pathname.endsWith("/ui")) {
+      reached.resolve();
+      await release.promise;
+    }
+  };
+  try {
+    await dialog.getByRole("button", { name: ja.common_close, exact: true }).click();
+    await reached.promise;
+    expect(fixture.client.isMutating()).toBeGreaterThan(0);
+    await expect
+      .element(page.getByRole("status", { name: ja.kiosk_menu_search_updating, exact: true }))
+      .not.toBeInTheDocument();
+    await expect.element(page.getByRole("searchbox")).not.toBeInTheDocument();
+  } finally {
+    fixture.beforeRequest = undefined;
+    release.resolve();
+  }
 });

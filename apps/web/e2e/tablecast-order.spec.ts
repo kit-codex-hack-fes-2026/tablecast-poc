@@ -113,41 +113,7 @@ test("端末認可後に4言語を切り替え、スタッフと注文・提供�
       }
       await route.continue();
     });
-    await guest.evaluate(() => {
-      document.documentElement.dataset.tablecastCartFlights = "0";
-      document.documentElement.dataset.tablecastOrderFlights = "0";
-      document.documentElement.dataset.tablecastFlightsInViewport = "true";
-      new MutationObserver((records) => {
-        for (const record of records)
-          for (const node of record.addedNodes) {
-            if (
-              node instanceof Element &&
-              node.matches('[data-ui="cart-flight"], [data-ui="order-flight"]')
-            ) {
-              const key = node.matches('[data-ui="cart-flight"]')
-                ? "tablecastCartFlights"
-                : "tablecastOrderFlights";
-              document.documentElement.dataset[key] = String(
-                Number(document.documentElement.dataset[key]) + 1,
-              );
-              const bounds = node.getBoundingClientRect();
-              if (
-                bounds.left < 0 ||
-                bounds.top < 0 ||
-                bounds.right > innerWidth ||
-                bounds.bottom > innerHeight
-              ) {
-                document.documentElement.dataset.tablecastFlightsInViewport = "false";
-                document.documentElement.dataset.tablecastFlightViolation = JSON.stringify({
-                  kind: node.getAttribute("data-ui"),
-                  bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
-                  viewport: [innerWidth, innerHeight],
-                });
-              }
-            }
-          }
-      }).observe(document.body, { childList: true, subtree: true });
-    });
+
     await expect(guest.getByRole("tab", { name: ja.kiosk_menu, exact: true })).toBeVisible();
     await expect(guest.locator('[data-ui="store-logo-banner"] img')).toBeVisible();
     await expect(guest.locator('[data-ui="store-logo-banner"] img')).toHaveJSProperty(
@@ -311,10 +277,6 @@ test("端末認可後に4言語を切り替え、スタッフと注文・提供�
         }
       }
     }
-    const flights = await guest.evaluate(() =>
-      Number(document.documentElement.dataset.tablecastCartFlights),
-    );
-    expect(flights).toBe(browserName === "webkit" ? 0 : products.length);
     const basket = tableStateSchema.parse(
       await (await guest.request.get("/api/table")).json(),
     ).cart;
@@ -350,13 +312,6 @@ test("端末認可後に4言語を切り替え、スタッフと注文・提供�
       exact: true,
     });
     await expect(orderNotice).toBeVisible();
-    expect(
-      await guest.evaluate(() => Number(document.documentElement.dataset.tablecastOrderFlights)),
-    ).toBe(browserName === "webkit" ? 0 : products.length);
-    expect(
-      await guest.evaluate(() => document.documentElement.dataset.tablecastFlightsInViewport),
-      await guest.evaluate(() => document.documentElement.dataset.tablecastFlightViolation),
-    ).toBe("true");
     await expect(guest.locator('[data-ui="orders-preview"] img')).toHaveCount(products.length);
     await orderNotice.getByRole("button", { name: ja.common_close, exact: true }).click();
     const ordered = tableStateSchema.parse(await (await guest.request.get("/api/table")).json());

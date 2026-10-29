@@ -112,9 +112,9 @@ it.each(["ja", "en", "zh-Hans", "ko"] as const)(
       const images = [...dialog.element().querySelectorAll("img")];
       for (const image of images) image.loading = "eager";
       await Promise.all(images.map((image) => image.decode()));
-      const photo = dialog.element().querySelector('[data-ui="product-image-transition"]');
-      if (!photo) throw new Error("共有する商品写真が必要です");
-      await expect.poll(() => getComputedStyle(photo).transform).toBe("none");
+      const photo = dialog.element().querySelector('[data-ui="product-detail-image"]');
+      if (!photo) throw new Error("商品写真が必要です");
+      await expect.poll(() => getComputedStyle(dialog.element()).transform).toBe("none");
       await page.screenshot({
         path: `../../../test-results/tablecast-order-dialog-${locale}-${width}.png`,
       });

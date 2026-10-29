@@ -1,6 +1,5 @@
 import type { Catalog, CoreState, Product, UiSectionInput } from "@tablecast/api/schema";
 import { ArrowLeft, ChevronLeft, ChevronRight, LoaderCircle, Search, X } from "lucide-react";
-import { useReducedMotion } from "motion/react";
 import * as motion from "motion/react-m";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
@@ -12,7 +11,6 @@ import { useI18n } from "../../i18n/locale";
 export function KioskMenu({
   catalog,
   imageSizes,
-  imageTransition = false,
   category,
   onCategoryChange,
   onChoose,
@@ -28,7 +26,6 @@ export function KioskMenu({
   category: string;
   error: unknown;
   imageSizes?: string;
-  imageTransition?: boolean;
   onCategoryChange: (category: string) => void;
   onChange: (input: UiSectionInput) => void;
   onChoose: (product: Product) => void;
@@ -37,7 +34,6 @@ export function KioskMenu({
   search: UiSectionInput["search"];
 }) {
   const { t } = useI18n();
-  const reduced = useReducedMotion();
   const [draft, setDraft] = useState(search?.query ?? "");
   const [locallyOpened, setLocallyOpened] = useState(false);
   const opened = locallyOpened || Boolean(search) || Boolean(error);
@@ -148,11 +144,16 @@ export function KioskMenu({
   const hasQuery = Boolean(draft.trim());
   const updating = pending || (hasQuery && (composing || draft.trim() !== search?.query));
   const products = result && (search || pending || error) ? result.productIds : undefined;
+  const closeSearch = () => {
+    focusTrigger.current = true;
+    setLocallyOpened(false);
+    setDraft("");
+    send("");
+  };
   return (
     <ProductMenu
       catalog={catalog}
       imageSizes={imageSizes}
-      imageTransition={imageTransition}
       category={category}
       onCategoryChange={(next) => {
         onCategoryChange(next);
@@ -164,28 +165,47 @@ export function KioskMenu({
       onChoose={onChoose}
       productIds={products}
       searchResults={Boolean(products)}
+      searchOpen={opened}
       searchControl={
-        <motion.div
-          key={opened ? "input" : "trigger"}
-          data-ui="menu-search-control"
-          initial={{ opacity: 0, transform: reduced ? "none" : "translateX(8px)" }}
-          animate={{ opacity: 1, transform: "translateX(0px)" }}
-          transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-          className="h-14"
-        >
-          {opened ? (
-            <div className="flex items-center gap-2">
+        <>
+          <Button
+            ref={trigger}
+            className="shrink-0"
+            aria-hidden={opened}
+            inert={opened}
+            variant="outline"
+            size="lg"
+            type="button"
+            onClick={() => {
+              editedQuery.current = undefined;
+              focusInput.current = true;
+              setLocallyOpened(true);
+              setDraft("");
+            }}
+          >
+            <Search aria-hidden />
+            {t("kiosk_menu_search")}
+          </Button>
+          {opened && (
+            <motion.div
+              data-ui="menu-search-control"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+              className="absolute inset-x-4 top-4 z-10 flex h-14 items-center gap-2 bg-card"
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.stopPropagation();
+                  closeSearch();
+                }
+              }}
+            >
               <Button
                 type="button"
                 variant="outline"
                 size="icon-lg"
                 aria-label={t("common_back")}
-                onClick={() => {
-                  focusTrigger.current = true;
-                  setLocallyOpened(false);
-                  setDraft("");
-                  send("");
-                }}
+                onClick={closeSearch}
               >
                 <ArrowLeft aria-hidden />
               </Button>
@@ -230,6 +250,16 @@ export function KioskMenu({
                   }
                 }}
               />
+
+              <span
+                role="status"
+                aria-label={updating ? t("kiosk_menu_search_updating") : undefined}
+                className="inline-flex size-5 shrink-0 items-center justify-center"
+              >
+                {updating && (
+                  <LoaderCircle aria-hidden className="size-5 motion-safe:animate-spin" />
+                )}
+              </span>
               <Button
                 type="button"
                 variant="outline"
@@ -243,31 +273,14 @@ export function KioskMenu({
                   input.current?.focus();
                 }}
               >
-                <X aria-hidden="true" size={20} />
+                <X aria-hidden />
               </Button>
-            </div>
-          ) : (
-            <Button
-              ref={trigger}
-              className="h-14 w-full justify-start"
-              variant="outline"
-              type="button"
-              onClick={() => {
-                editedQuery.current = undefined;
-                focusInput.current = true;
-                setLocallyOpened(true);
-                setDraft("");
-              }}
-            >
-              <Search aria-hidden />
-              {t("kiosk_menu_search")}
-            </Button>
+            </motion.div>
           )}
-        </motion.div>
+        </>
       }
       searchStatus={
         <MenuSearchStatus
-          hasQuery={hasQuery}
           result={result}
           updating={updating}
           pending={pending}
@@ -285,7 +298,6 @@ export function KioskMenu({
 }
 
 function MenuSearchStatus({
-  hasQuery,
   result,
   updating,
   pending,
@@ -294,7 +306,6 @@ function MenuSearchStatus({
   onRetry,
 }: {
   error: unknown;
-  hasQuery: boolean;
   onPage: (offset: number) => void;
   onRetry: () => void;
   pending: boolean;
@@ -302,12 +313,10 @@ function MenuSearchStatus({
   updating: boolean;
 }) {
   const { t } = useI18n();
-  if (!hasQuery && !updating && !error) return null;
+  if (!result && !error) return null;
   return (
     <section aria-label={t("kiosk_menu_search_results")} aria-busy={updating} className="px-4 pb-4">
-      {(hasQuery || updating) && (
-        <SearchPageActions result={result} updating={updating} onPage={onPage} />
-      )}
+      {result && <SearchPageActions result={result} updating={updating} onPage={onPage} />}
       <ErrorNotice error={error} retrying={pending} onRetry={onRetry} />
     </section>
   );
@@ -328,17 +337,7 @@ function SearchPageActions({
     <>
       <div className="flex min-h-12 flex-wrap items-center justify-between gap-2">
         <p role="status" className="flex items-center gap-2 text-sm">
-          {updating && (
-            <>
-              <LoaderCircle
-                aria-hidden="true"
-                className="animate-spin motion-reduce:animate-none"
-                size={18}
-              />
-              {t("kiosk_menu_search_updating")}
-            </>
-          )}
-          {!updating && result && (
+          {result && (
             <>
               {t("kiosk_menu_search_results")}
               {result.query && ` · ${result.query}`} ·{" "}

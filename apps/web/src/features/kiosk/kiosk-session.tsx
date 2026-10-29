@@ -1,4 +1,3 @@
-import { Dialog as PaneDialog } from "@base-ui/react/dialog";
 import { Toast } from "@base-ui/react/toast";
 import { resolveLocalized, resolveText, uiLocale } from "@tablecast/api/localization";
 import {
@@ -20,8 +19,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { Check, LoaderCircle, Pencil, Send } from "lucide-react";
-import { AnimatePresence, useReducedMotion } from "motion/react";
-import * as motion from "motion/react-m";
 import {
   type ReactNode,
   useCallback,
@@ -48,7 +45,7 @@ import { StoreLogo } from "../../components/store-logo";
 import { StoreTheme } from "../../components/store-theme";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { surfaceMotion } from "../../components/ui/motion-variants";
+import { Dialog, DialogContent } from "../../components/ui/dialog";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -63,7 +60,6 @@ import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
 import { m } from "../../paraglide/messages.js";
 import { pendingCartLines } from "./cart-change-model";
-import { type CartFlight, CartFlightImage } from "./cart-flight";
 import { useCartUpdates } from "./cart-updates-query";
 import { conversationLines } from "./conversation-model";
 import { CurrencySelector } from "./currency-selector";
@@ -76,6 +72,7 @@ import { KioskVoicePanel } from "./kiosk-voice-panel";
 import { KioskMenu } from "./menu-search";
 import { useTablePresentation } from "./presentation-query";
 import { ProductPage } from "./product-dialog";
+import { useProductFoodInformation } from "./product-food-query";
 import { StaffAssistance } from "./staff-assistance";
 import { latestTable } from "./table-cache";
 import {
@@ -158,8 +155,6 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   const [menuCategory, setMenuCategory] = useState("all");
   const confirmationAction = useRef<HTMLButtonElement>(null);
   const toasts = Toast.useToastManager<ActionToastData>();
-  const [flights, setFlights] = useState<CartFlight[]>([]);
-  const reducedMotion = useReducedMotion();
   const orderPane = useRef<HTMLElement>(null);
   const detailTrigger = useRef<HTMLElement | null>(null);
   const billingSummary = useRef<HTMLElement>(null);
@@ -173,18 +168,6 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
         current?.product.id === input.dismissProductId ? undefined : current,
       );
       setSnapshot(undefined);
-      const target = orderPane.current?.querySelector('[data-ui="cart-icon"]');
-      const addition = input.addition;
-      if (addition && target && !reducedMotion)
-        setFlights((current) => [
-          ...current,
-          {
-            ...addition,
-            destination: "cart",
-            to: target.getBoundingClientRect(),
-            id: crypto.randomUUID(),
-          },
-        ]);
     },
     onSuccess: ({ change }) => {
       if (change.type === "add" || change.type === "edit") {
@@ -228,7 +211,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     updateCart.pending,
     catalog.data?.configuration.products ?? [],
   );
-  const { screen, presentation } = useTablePresentation({
+  const { screen, presentation, searchPending } = useTablePresentation({
     data,
     endpoint,
     refresh,
@@ -273,6 +256,15 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     };
   }
   const selection = selectedItem();
+  // 初回の食品情報が揃ってからDialogを開き、途中の小さい代替画面を表示しない。
+  const productFood = useProductFoodInformation({
+    productId: selection?.product.id,
+    selections: selection?.line?.selections,
+    endpoint,
+    configVersion: data.configVersion,
+    tableSessionId: data.id,
+  });
+  const productOpen = productFood.status !== "pending";
   const speed = useMutation({
     scope: { id: `tablecast-speed-${data.id}` },
     mutationFn: (value: number) =>
@@ -389,32 +381,11 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
         }),
       );
     },
-    onMutate: async ({ pointer }) => {
+    onMutate: async () => {
       await client.cancelQueries({ queryKey: tableOrdersKey(endpoint, data.id) });
-      const target = orderPane.current?.querySelector('[data-ui="orders-icon"]');
-      if (!pointer || reducedMotion || !target) return [];
-      const to = target.getBoundingClientRect();
-      return Array.from(
-        orderPane.current?.querySelectorAll<HTMLElement>('[data-ui="cart-preview"] > span') ?? [],
-      ).flatMap((frame, index) => {
-        const imageKey = frame.dataset.imageKey;
-        return imageKey
-          ? [
-              {
-                destination: "orders" as const,
-                from: frame.getBoundingClientRect(),
-                to,
-                imageKey,
-                id: crypto.randomUUID(),
-                delay: index * 0.035,
-              },
-            ]
-          : [];
-      });
     },
-    onSuccess: (result, _input, images) => {
+    onSuccess: (result) => {
       const { order, state } = submittedCoreOrderSchema.parse(result);
-      setFlights(images ?? []);
       setCheckoutOpen(false);
       setSnapshot(undefined);
       toasts.add({
@@ -570,7 +541,6 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       <Tabs.Panel value="menu">
         {catalog.data ? (
           <KioskMenu
-            imageTransition
             imageSizes={menuImageSizes(orderWidth)}
             catalog={catalog.data}
             category={menuCategory}
@@ -579,7 +549,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             search={presentation.search ?? null}
             result={data.menuSearch}
             active={section === "menu" && !selectedProductId}
-            pending={screen.isPending}
+            pending={searchPending}
             error={screen.variables?.search !== undefined ? screen.error : null}
             onChange={changeScreen}
           />
@@ -943,14 +913,14 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                       }}
                     >
                       <div
-                        inert={Boolean(selection)}
+                        inert={productOpen}
                         className="flex-1 min-h-0 overflow-y-auto scrollbar-thin"
                       >
                         {renderMenu()}
                         {renderCart()}
                         {renderOrders()}
                       </div>
-                      <div inert={Boolean(selection)} className="sticky bottom-0 shrink-0 bg-card">
+                      <div inert={productOpen} className="sticky bottom-0 shrink-0 bg-card">
                         <KioskMenuTabs
                           data={data}
                           cartLines={cartLines}
@@ -962,126 +932,76 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                           orderPane={orderPane}
                         />
                       </div>
-                      <PaneDialog.Root
-                        open={Boolean(selection)}
+                      {productFood.isLoading && (
+                        <span
+                          role="status"
+                          aria-label={t("food_updating")}
+                          className="absolute right-4 top-4 z-20 rounded-lg bg-card p-2 shadow-sm"
+                        >
+                          <LoaderCircle aria-hidden className="size-5 motion-safe:animate-spin" />
+                        </span>
+                      )}
+                      <Dialog
+                        open={productOpen}
                         modal={false}
-                        disablePointerDismissal
                         onOpenChange={(open) => {
                           if (!open) setSection("menu");
                         }}
                       >
-                        <AnimatePresence>
+                        <DialogContent
+                          side="pane"
+                          container={orderPane}
+                          aria-label={
+                            selection
+                              ? resolveText(selection.product.text, locale).displayName
+                              : undefined
+                          }
+                          initialFocus={false}
+                          finalFocus={() =>
+                            detailTrigger.current?.isConnected
+                              ? detailTrigger.current
+                              : (orderPane.current?.querySelector<HTMLElement>(
+                                  '[data-ui="cart-tab"]',
+                                ) ?? false)
+                          }
+                        >
                           {selection && (
-                            <PaneDialog.Portal key="product" container={orderPane} keepMounted>
-                              <PaneDialog.Backdrop
-                                data-ui="product-overlay"
-                                className={surfaceMotion({
-                                  kind: "backdrop",
-                                  className: "absolute inset-0 z-20 bg-overlay/30",
-                                })}
-                              />
-                              <PaneDialog.Popup
-                                key="product"
-                                inert={!selection}
-                                render={
-                                  <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    transition={{
-                                      duration: reducedMotion ? 0 : 0.22,
-                                      ease: [0.23, 1, 0.32, 1],
-                                    }}
-                                  />
-                                }
-                                aria-label={
-                                  selection
-                                    ? resolveText(selection.product.text, locale).displayName
-                                    : undefined
-                                }
-                                initialFocus={false}
-                                finalFocus={() =>
-                                  detailTrigger.current?.isConnected
-                                    ? detailTrigger.current
-                                    : (orderPane.current?.querySelector<HTMLElement>(
-                                        '[data-ui="cart-tab"]',
-                                      ) ?? false)
-                                }
-                                data-theme-part="dialog"
-                                className="absolute inset-x-4 top-1/2 z-30 flex max-h-[calc(100%-2rem)] min-h-0 -translate-y-1/2 flex-col rounded-3xl sm:inset-x-6 sm:max-h-[calc(100%-3rem)]"
-                              >
-                                {selection && (
-                                  <ProductPage
-                                    imageTransition
-                                    endpoint={endpoint}
-                                    configVersion={data.configVersion}
-                                    tableSessionId={data.id}
-                                    imageSize={orderWidth && orderWidth < 576 ? 128 : 160}
-                                    key={selection.line?.id ?? selection.product.id}
-                                    product={selection.product}
-                                    initial={selection.line}
-                                    editing={selection.editing}
-                                    cartLimitReached={
-                                      cartLines.length >= maxCartLines &&
-                                      !(selection.editing ?? Boolean(selection.line))
-                                    }
-                                    busy={false}
-                                    error={selection.error}
-                                    onClose={() => setSection("menu")}
-                                    onSave={(line, pointer, origin) => {
-                                      if (selection.failureId !== undefined)
-                                        updateCart.clearFailure(selection.failureId);
-                                      const image = orderPane.current?.querySelector(
-                                        '[data-ui="product-detail"] img',
-                                      );
-                                      const imageBounds = image?.getBoundingClientRect();
-                                      const paneBounds = orderPane.current?.getBoundingClientRect();
-                                      // 詳細をスクロールして写真が見えないときは、押した追加ボタンから運ぶ。
-                                      const from =
-                                        imageBounds &&
-                                        paneBounds &&
-                                        imageBounds.top >= paneBounds.top &&
-                                        imageBounds.bottom <= paneBounds.bottom
-                                          ? imageBounds
-                                          : origin;
-                                      updateCart.mutate({
-                                        change: {
-                                          type:
-                                            (selection.editing ?? Boolean(selection.line))
-                                              ? "edit"
-                                              : "add",
-                                          line,
-                                        },
-                                        configVersion: selection.configVersion,
-                                        dismissProductId: selection.product.id,
-                                        addition:
-                                          pointer &&
-                                          !(selection.editing ?? Boolean(selection.line)) &&
-                                          selection.product.imageKey
-                                            ? {
-                                                imageKey: selection.product.imageKey,
-                                                from,
-                                              }
-                                            : undefined,
-                                      });
-                                    }}
-                                  />
-                                )}
-                              </PaneDialog.Popup>
-                            </PaneDialog.Portal>
+                            <ProductPage
+                              endpoint={endpoint}
+                              configVersion={data.configVersion}
+                              tableSessionId={data.id}
+                              imageSize={orderWidth && orderWidth < 576 ? 128 : 160}
+                              key={selection.line?.id ?? selection.product.id}
+                              product={selection.product}
+                              initial={selection.line}
+                              editing={selection.editing}
+                              cartLimitReached={
+                                cartLines.length >= maxCartLines &&
+                                !(selection.editing ?? Boolean(selection.line))
+                              }
+                              busy={false}
+                              error={selection.error}
+                              onClose={() => setSection("menu")}
+                              onSave={(line) => {
+                                if (selection.failureId !== undefined)
+                                  updateCart.clearFailure(selection.failureId);
+                                updateCart.mutate({
+                                  change: {
+                                    type:
+                                      (selection.editing ?? Boolean(selection.line))
+                                        ? "edit"
+                                        : "add",
+                                    line,
+                                  },
+                                  configVersion: selection.configVersion,
+                                  dismissProductId: selection.product.id,
+                                });
+                              }}
+                            />
                           )}
-                        </AnimatePresence>
-                      </PaneDialog.Root>
+                        </DialogContent>
+                      </Dialog>
                     </Tabs.Root>
-                    {flights.map((flight) => (
-                      <CartFlightImage
-                        key={flight.id}
-                        flight={flight}
-                        onComplete={() =>
-                          setFlights((current) => current.filter((item) => item.id !== flight.id))
-                        }
-                      />
-                    ))}
                     <ActionToasts container={orderPane} />
                     {updateCart.failures.map((failure) => (
                       <div key={failure.mutationId} className="space-y-2 p-3">

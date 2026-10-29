@@ -5,7 +5,6 @@ import { useEffect, useRef } from "react";
 import type { ProductFoodQuery } from "./product-food-query";
 import { Money } from "../../components/money";
 import { ProductImage } from "../../components/product-image";
-import { ProductImageTransition } from "../../components/product-image-transition";
 import { ProductName } from "../../components/product-name";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -13,7 +12,6 @@ import { ProductAllergens } from "./product-allergens";
 
 export function ProductDetailHeader({
   product,
-  imageTransition,
   imageSize,
   busy,
   onClose,
@@ -22,7 +20,6 @@ export function ProductDetailHeader({
   busy: boolean;
   food?: ProductFoodQuery;
   imageSize: number;
-  imageTransition: boolean;
   onClose: () => void;
   product: Product;
 }) {
@@ -37,11 +34,9 @@ export function ProductDetailHeader({
       className={`grid shrink-0 items-start gap-x-3 gap-y-4 rounded-t-3xl bg-card p-3 pb-1 @min-[36rem]/product-dialog:gap-x-5 @min-[36rem]/product-dialog:p-4 ${product.imageKey ? "grid-cols-[4rem_minmax(0,1fr)_auto] @min-[36rem]/product-dialog:grid-cols-[10rem_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}
     >
       {product.imageKey && (
-        <ProductImageTransition
-          enabled={imageTransition}
-          productId={product.id}
-          radius={8}
-          className="col-start-1 row-start-1 size-16 overflow-hidden bg-muted @min-[36rem]/product-dialog:row-span-2 @min-[36rem]/product-dialog:size-40"
+        <div
+          data-ui="product-detail-image"
+          className="col-start-1 row-start-1 size-16 overflow-hidden rounded-lg bg-muted @min-[36rem]/product-dialog:row-span-2 @min-[36rem]/product-dialog:size-40"
         >
           <ProductImage
             priority
@@ -52,7 +47,7 @@ export function ProductDetailHeader({
             src={`/media/${product.imageKey}`}
             alt={resolveText(product.text, locale).displayName}
           />
-        </ProductImageTransition>
+        </div>
       )}
       <div
         className={`min-w-0 ${product.imageKey ? "col-start-2 row-start-1" : "col-start-1 row-start-1"}`}

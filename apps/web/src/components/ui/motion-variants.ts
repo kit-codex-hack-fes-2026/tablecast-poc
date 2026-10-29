@@ -17,6 +17,7 @@ export const surfaceMotion = tv({
         "duration-(--motion-dialog) motion-safe:data-starting-style:[transform:translateX(24px)] motion-safe:data-ending-style:[transform:translateX(24px)]",
       left: "duration-(--motion-dialog) motion-safe:data-starting-style:[transform:translateX(-24px)] motion-safe:data-ending-style:[transform:translateX(-24px)]",
       backdrop: "duration-(--motion-dialog)",
+      fade: "duration-(--motion-dialog)",
     },
   },
   defaultVariants: { kind: "popup" },
