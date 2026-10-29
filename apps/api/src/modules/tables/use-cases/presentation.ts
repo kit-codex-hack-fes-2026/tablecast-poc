@@ -207,7 +207,6 @@ async function requestStaffAssistance(
           ...queries,
         ] as const);
         const decoded = await decode(state);
-        if (!updated.meta.changes) await getSession(services, actor);
         ensure(
           updated.meta.changes === 1 ||
             (kind === "bill.requested" && decoded.billRequested && decoded.staffCalled),
