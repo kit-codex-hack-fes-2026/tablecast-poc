@@ -275,6 +275,29 @@ it("無効なCSSの保存では項目を示すエラーへfocusし、入力を�
   await expect.element(errors).not.toBeInTheDocument();
 });
 
+it("会員カードの配色と画像表示を保存し、競合しても未保存の選択を保持する", async () => {
+  await openDesign();
+  const tone = page.getByRole("combobox", { name: ja.customer_card_tone, exact: true });
+  const fit = page.getByRole("combobox", { name: ja.customer_card_fit, exact: true });
+  await tone.selectOptions("violet");
+  await fit.selectOptions("cover");
+  const card = page.getByRole("region", { name: ja.customer_card, exact: true });
+  expect(getComputedStyle(card.element()).backgroundColor).toBe("rgb(250, 248, 255)");
+  await page.getByRole("button", { name: ja.common_save, exact: true }).click();
+  await expect.poll(() => savedVersions).toEqual([1]);
+  expect(draft.configuration.branding?.membershipCard).toMatchObject({
+    tone: "violet",
+    imageFit: "cover",
+  });
+  conflict = true;
+  await tone.selectOptions("green");
+  await fit.selectOptions("contain");
+  await page.getByRole("button", { name: ja.common_save, exact: true }).click();
+  await expect.element(page.getByRole("alert")).toMatchTextContent(ja.common_conflict);
+  await expect.element(tone).toHaveValue("green");
+  await expect.element(fit).toHaveValue("contain");
+});
+
 it("未保存のテーマをプレビューすると先に保存し、その下書きを選んだデモへ移動する", async () => {
   const { router } = await openDesign();
   await page.getByLabelText(ja.theme_logo_width, { exact: true }).fill("300");

@@ -457,7 +457,7 @@ it("MCPは有限条件schemaを公開し、条件を往復保存して旧形式�
   const { token } = await authorise(cookie);
   const client = await connect(token);
   const descriptor = (await client.listTools()).tools.find((item) => item.name === "update_draft");
-  expect(JSON.stringify(descriptor?.inputSchema)).toContain("tablecastCondition8");
+  expect(JSON.stringify(descriptor?.inputSchema)).toContain("tablecastConditionDepth8");
   expect(JSON.stringify(descriptor?.inputSchema).length).toBeLessThan(30000);
   let draft = toolData(
     await client.callTool({ name: "create_draft", arguments: {} }),

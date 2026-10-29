@@ -1,3 +1,23 @@
+export function memberVisitLoginCode(returnTo: unknown) {
+  if (typeof returnTo !== "string" || !returnTo.startsWith("/member/join?")) return undefined;
+  const code = new URL(returnTo, "https://tablecast.invalid").searchParams.get("code");
+  return code && /^[a-f0-9]{64}$/.test(code) ? code : undefined;
+}
+
+export function memberStoreLoginId(returnTo: unknown) {
+  if (typeof returnTo !== "string" || !returnTo.startsWith("/member/")) return undefined;
+  const segment = /^\/member\/([^/]+)/.exec(
+    new URL(returnTo, "https://tablecast.invalid").pathname,
+  )?.[1];
+  if (!segment || segment === "join") return undefined;
+  try {
+    const storeId = decodeURIComponent(segment);
+    return storeId.length <= 128 && !/[\\/]/.test(storeId) ? storeId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function loginReturnUrl(search: string, origin: string) {
   const query = new URLSearchParams(search);
   if (query.has("sig")) return `/consent${search}`;

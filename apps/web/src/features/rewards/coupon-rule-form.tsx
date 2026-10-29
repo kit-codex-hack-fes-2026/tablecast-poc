@@ -10,6 +10,7 @@ import {
 import { Ticket } from "lucide-react";
 import { useCallback, useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
+import { CouponCard } from "../../components/coupon-card";
 import { ErrorNotice } from "../../components/error-notice";
 import { useAppForm } from "../../components/form";
 import { Button } from "../../components/ui/button";
@@ -21,6 +22,8 @@ import { apiError } from "../../lib/api-error";
 import { ConfigurationImageField } from "../configuration/configuration-image-field";
 import { LanguageFields } from "../configuration/language-fields";
 import { configurationImageUploadKey } from "../configuration/menu-query";
+import { CouponAudiencePreview } from "./coupon-audience-preview";
+import { CouponConditionsField } from "./coupon-conditions-field";
 import { couponRulesOptions } from "./coupon-query";
 import { RewardEditorStatus } from "./reward-editor-status";
 const dateInput = (time: number) => new Date(time + 9 * 3600000).toISOString().slice(0, 16);
@@ -256,6 +259,51 @@ export function CouponRuleForm({
               </label>
             )}
           </form.Field>
+          <form.Field name="rules.conditions">
+            {(field) => (
+              <CouponConditionsField
+                key={imageRevision}
+                value={field.state.value}
+                onChange={field.handleChange}
+              />
+            )}
+          </form.Field>
+          <form.Field name="rules.presentation">
+            {(field) => (
+              <>
+                <label className="grid gap-2">
+                  {t("coupon_layout")}
+                  <NativeSelect
+                    value={field.state.value?.layout ?? "landscape"}
+                    onChange={(event) =>
+                      field.handleChange({
+                        imageFit: field.state.value?.imageFit ?? "cover",
+                        layout: event.target.value === "portrait" ? "portrait" : "landscape",
+                      })
+                    }
+                  >
+                    <option value="landscape">{t("coupon_layout_landscape")}</option>
+                    <option value="portrait">{t("coupon_layout_portrait")}</option>
+                  </NativeSelect>
+                </label>
+                <label className="grid gap-2">
+                  {t("coupon_image_fit")}
+                  <NativeSelect
+                    value={field.state.value?.imageFit ?? "cover"}
+                    onChange={(event) =>
+                      field.handleChange({
+                        layout: field.state.value?.layout ?? "landscape",
+                        imageFit: event.target.value === "contain" ? "contain" : "cover",
+                      })
+                    }
+                  >
+                    <option value="cover">{t("coupon_image_cover")}</option>
+                    <option value="contain">{t("coupon_image_contain")}</option>
+                  </NativeSelect>
+                </label>
+              </>
+            )}
+          </form.Field>
           <div className="col-span-full">
             <form.Field name="rules">
               {(field) => (
@@ -278,6 +326,41 @@ export function CouponRuleForm({
               )}
             </form.Field>
           </div>
+
+          <form.Subscribe selector={(state) => state.values}>
+            {({ rules, start, end }) => {
+              const previewRules = {
+                ...rules,
+                startsAt: Date.parse(start + "+09:00"),
+                endsAt: Date.parse(end + "+09:00"),
+              };
+              return (
+                <>
+                  {rules.imageKey &&
+                    Number.isFinite(previewRules.startsAt) &&
+                    Number.isFinite(previewRules.endsAt) && (
+                      <section
+                        className="col-span-full max-w-md space-y-3"
+                        aria-label={t("coupon_face_preview")}
+                      >
+                        <h3 className="font-medium">{t("coupon_face_preview")}</h3>
+                        <CouponCard
+                          storeId={storeId}
+                          imageBasePath={`/api/admin/stores/${storeId}`}
+                          rules={previewRules}
+                        />
+                      </section>
+                    )}
+                  <CouponAudiencePreview
+                    storeId={storeId}
+                    ruleId={defaults.expectedVersion > 0 ? defaults.id : undefined}
+                    rules={previewRules}
+                    disabled={pending || staged || !!uploads}
+                  />
+                </>
+              );
+            }}
+          </form.Subscribe>
 
           <form.SubmitButton disabled={staged || !!uploads}>{t("account_save")}</form.SubmitButton>
         </fieldset>

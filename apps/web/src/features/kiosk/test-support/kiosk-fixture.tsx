@@ -345,7 +345,12 @@ export async function mountKiosk() {
 }
 
 export function notify(
-  kind: "cart.updated" | "configuration.published" | "staff.resolved" | "table.ui",
+  kind:
+    | "cart.updated"
+    | "configuration.published"
+    | "customer.context-reset"
+    | "staff.resolved"
+    | "table.ui",
 ) {
   current.cursor += 1;
   current.events.push({

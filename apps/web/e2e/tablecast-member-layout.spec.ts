@@ -12,6 +12,9 @@ for (const locale of ["ja", "en"] as const) {
     baseURL,
   }) => {
     const labels = locale === "ja" ? ja : en;
+    const balance = page
+      .getByRole("region", { name: labels.customer_card, exact: true })
+      .getByText(labels.customer_points_balance, { exact: true });
     const hydrationErrors: string[] = [];
     // WebKitは再読込で破棄された旧documentの先読み通信もpageerrorとして報告する。
     // ここではSSRの文言不一致による再描画を検出し、遷移自体は見出しと操作で検証する。
@@ -29,26 +32,24 @@ for (const locale of ["ja", "en"] as const) {
     await expect(
       page.getByRole("button", { name: labels.customer_enrol, exact: true }),
     ).toBeVisible();
-    await expect(page.getByRole("heading", { name: labels.customer_points_balance })).toHaveCount(
-      0,
-    );
+    await expect(balance).toHaveCount(0);
     await page.getByRole("button", { name: labels.customer_enrol, exact: true }).click();
-    await expect(page.getByRole("heading", { name: labels.customer_points_balance })).toBeVisible();
+    await expect(balance).toBeVisible();
     expect(hydrationErrors).toEqual([]);
     await expect(page.getByText("0 pt", { exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: labels.customer_owned_coupons })).toBeVisible();
+    await expect(page.getByRole("heading", { name: labels.customer_coupons_owned })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       390,
     );
     await page.reload();
-    await page.getByRole("link", { name: labels.customer_memories, exact: true }).click();
+    await page.getByRole("link", { name: labels.customer_memories_view, exact: true }).click();
     await expect(
       page.getByRole("heading", { name: labels.customer_memories, exact: true }),
     ).toBeVisible();
     const back = page.getByRole("link", { name: new RegExp(labels.customer_back_to_store) });
     await expect(back).toContainText("京料理こもれび");
     await back.click();
-    await expect(page.getByRole("heading", { name: labels.customer_points_balance })).toBeVisible();
+    await expect(balance).toBeVisible();
     expect(hydrationErrors).toEqual([]);
   });
 }

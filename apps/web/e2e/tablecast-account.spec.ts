@@ -204,7 +204,7 @@ test("仮想パスキーで登録と再ログインができる", async ({ page,
     });
   const keyName = `TableCast Chromium ${Date.now()}`;
   await passkeys.getByLabel("パスキーの名前", { exact: true }).fill(keyName);
-  await passkeys.getByRole("button", { name: "パスキーを追加", exact: true }).click();
+  await passkeys.getByRole("button", { name: "パスキーを追加する", exact: true }).click();
   await expect(passkeys.getByRole("cell").filter({ hasText: keyName })).toBeVisible();
   // APIで認証方式を切り替える間は、元の画面のセッション監視を停止する。
   await page.goto("about:blank");
@@ -260,7 +260,7 @@ test("招待から登録したユーザーはパスキーを後回しにして�
   const permitted = await page.request.get("/api/admin/stores");
   expect(permitted.status()).toBe(200);
   await page.screenshot({ path: testInfo.outputPath("tablecast-passkey-optional.png") });
-  await page.getByRole("button", { name: "あとで設定", exact: true }).click();
+  await page.getByRole("button", { name: "あとで設定する", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/invitations/${invitation.id}$`));
   await page.getByRole("button", { name: "参加する", exact: true }).click();
   await expect(page).toHaveURL(/\/organisations$/);

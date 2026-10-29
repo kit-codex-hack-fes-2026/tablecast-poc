@@ -12,9 +12,11 @@ const contentSchema = z
     transliteration: nameSchema.optional(),
   })
   .strict()
-  .meta({ id: "tablecastText" });
+  .meta({ id: "tablecastLocalizedContent" });
 
-export const bilingualSchema = localizedSchema(contentSchema).meta({ id: "tablecastTexts" });
+export const bilingualSchema = localizedSchema(contentSchema).meta({
+  id: "tablecastBilingualContent",
+});
 const productTextSchema = localizedSchema(
   contentSchema.extend({ transliteration: nameSchema }).meta({ id: "tablecastProductName" }),
 ).meta({ id: "tablecastProductTexts" });
@@ -42,13 +44,17 @@ export const conditionLimits = {
   configurationNodes: 65536,
 } as const;
 
-// 深さをschema自体で有限にし、過剰なネストを再帰parseする前に拒否する。
+const conditionOptionSchema = z
+  .object({ kind: z.literal("option"), optionId: id })
+  .strict()
+  .meta({ id: "tablecastConditionOption" });
+
+// 深さをschema自体で有限にし、共通の選択肢節をMCP schemaでも再利用する。
 function conditionAtDepth(depth: number): z.ZodType<OptionCondition> {
-  const leaf = z.object({ kind: z.literal("option"), optionId: id }).strict();
-  if (depth === conditionLimits.depth) return leaf;
-  const child = conditionAtDepth(depth + 1).meta({ id: `tablecastCondition${depth + 1}` });
+  if (depth === conditionLimits.depth) return conditionOptionSchema;
+  const child = conditionAtDepth(depth + 1).meta({ id: `tablecastConditionDepth${depth + 1}` });
   return z.discriminatedUnion("kind", [
-    leaf,
+    conditionOptionSchema,
     z
       .object({
         kind: z.literal("and"),
@@ -83,7 +89,7 @@ export const optionConditionSchema = conditionAtDepth(1)
   .refine((condition) => conditionNodeCount(condition) <= conditionLimits.nodes, {
     message: "CONDITION_NODE_LIMIT",
   })
-  .meta({ id: "tablecastCondition1" });
+  .meta({ id: "tablecastConditionDepth1" });
 export const optionConditionsSchema = z
   .object({
     version: z.literal(2),

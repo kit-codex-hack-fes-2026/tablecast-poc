@@ -9,8 +9,12 @@ export function AuthLayout({
   children,
   footer,
   onLocaleChange,
+  brand,
+  eyebrow,
 }: {
+  brand?: ReactNode;
   children: ReactNode;
+  eyebrow?: ReactNode;
   footer?: ReactNode;
   onLocaleChange?: (locale: "en" | "ja") => void;
   title: ReactNode;
@@ -20,17 +24,20 @@ export function AuthLayout({
     <main className="min-h-dvh px-5 py-6 sm:px-8 sm:py-10">
       <div className="mx-auto w-full max-w-112">
         <header className="flex min-w-0 flex-wrap items-center justify-between gap-4">
-          <Link to="/" className="inline-flex shrink-0 items-center" data-ui="brand">
-            <Brand />
-          </Link>
+          {brand ?? (
+            <Link to="/" className="inline-flex shrink-0 items-center" data-ui="brand">
+              <Brand />
+            </Link>
+          )}
           <LanguageSwitch
             onChange={(next) => (onLocaleChange ?? setLocale)(next === "ja" ? "ja" : "en")}
           />
         </header>
         <section
           data-page-motion
-          className="min-w-0 pt-10 sm:pt-14 [view-transition-name:tablecast-page]"
+          className={`min-w-0 [view-transition-name:tablecast-page] ${brand ? "pt-6 sm:pt-8" : "pt-10 sm:pt-14"}`}
         >
+          {eyebrow && <p className="mb-3 font-medium text-muted-foreground">{eyebrow}</p>}
           <h1 className="mb-7 text-2xl font-semibold tracking-tight">{title}</h1>
           {children}
         </section>

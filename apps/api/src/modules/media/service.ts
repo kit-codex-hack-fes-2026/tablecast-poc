@@ -9,6 +9,7 @@ import { byteStream } from "../../platform/streams";
 import { requireManager } from "../auth/policy";
 import { imageMetadataSchema, maxImageBytes, uploadImageSchema } from "./model";
 import { generateImageAsset } from "./placeholder";
+import { getImageMetadata } from "./queries";
 
 export async function uploadImage(
   services: ApiServices,
@@ -198,6 +199,8 @@ export async function requireConfigurationImages(
     ...[
       configuration.branding?.logo,
       configuration.branding?.banner,
+      configuration.branding?.memberIcon,
+      configuration.branding?.membershipCard?.image,
       ...Object.values(configuration.appearance?.assets ?? {}),
       ...(configuration.banners ?? []).map((banner) => banner.image),
     ]
@@ -214,7 +217,15 @@ export async function requireConfigurationImages(
       ),
     ),
   ].filter((image) => image.imageKey?.startsWith("tablecast/uploads/"));
-  return requireImageAssets(services, actor, images);
+  await requireImageAssets(services, actor, images);
+  if (configuration.branding?.memberIcon) {
+    const icon = await getImageMetadata(
+      services,
+      actor.storeId,
+      configuration.branding.memberIcon.imageKey,
+    );
+    ensure(icon.width === icon.height && icon.width >= 512, "MEMBER_ICON_SIZE", 422);
+  }
 }
 
 export async function requireImageAssets(

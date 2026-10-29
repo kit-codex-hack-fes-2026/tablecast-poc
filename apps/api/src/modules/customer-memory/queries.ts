@@ -1,5 +1,20 @@
 import type { z } from "zod";
-import { and, desc, eq, exists, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  max,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { CustomerActor } from "../customers/model";
@@ -12,10 +27,18 @@ import {
   customerMemorySources,
   customerVisitParticipants,
 } from "../../db/customer-schema";
+import { user } from "../../db/identity-schema";
+import {
+  customerCoupons,
+  customerPointAllocations,
+  customerPointVisits,
+} from "../../db/rewards-schema";
 import { orders, tableSessions } from "../../db/table-schema";
 import { ensure } from "../../platform/errors";
-import { resolveText } from "../catalog/localization";
+import { resolveLocalized, resolveText } from "../catalog/localization";
 import { getCatalog } from "../catalog/queries";
+import { couponRuleSchema } from "../customer-coupons/model";
+import { pointBalance } from "../customer-points/queries";
 import { requireCustomer } from "../customers/queries";
 import { snapshotSchema } from "../orders/model";
 import { getSession } from "../tables/queries";
@@ -213,56 +236,124 @@ export async function customerRecommendationContext(services: ApiServices, actor
       memories: [],
       consumption: [],
       source: null,
+      customer: null,
     };
   const gate = customerReadGate(services, actor, snapshot);
-  const [valid, memories, consumption, sources] = await services.db.batch([
-    customerReadProof(services, gate),
-    services.db
-      .select({ content: customerMemories.content })
-      .from(customerMemories)
-      .where(
-        and(
-          gate,
-          eq(customerMemories.membershipId, target.membership.id),
-          sql`${target.membership.useMemories}=1`,
-          eq(customerMemories.storeId, actor.storeId),
-          eq(customerMemories.deleted, false),
+  const personalGate = and(gate, sql`${target.membership.useMemories}=1`);
+  const now = Date.now();
+  const [valid, memories, consumption, sources, profiles, visits, coupons] =
+    await services.db.batch([
+      customerReadProof(services, gate),
+      services.db
+        .select({ content: customerMemories.content })
+        .from(customerMemories)
+        .where(
+          and(
+            gate,
+            eq(customerMemories.membershipId, target.membership.id),
+            sql`${target.membership.useMemories}=1`,
+            eq(customerMemories.storeId, actor.storeId),
+            eq(customerMemories.deleted, false),
+          ),
+        )
+        .orderBy(desc(customerMemories.updatedAt))
+        .limit(21),
+      services.db
+        .select({
+          productId: customerConsumption.productId,
+          quantity: sql<number>`sum(${customerConsumption.quantity})`.mapWith(Number),
+        })
+        .from(customerConsumption)
+        .innerJoin(orders, and(eq(orders.id, customerConsumption.orderId)))
+        .where(
+          and(
+            gate,
+            eq(customerConsumption.membershipId, target.membership.id),
+            sql`${target.membership.useMemories}=1`,
+            eq(customerConsumption.storeId, actor.storeId),
+          ),
+        )
+        .groupBy(customerConsumption.productId)
+        .orderBy(desc(sql`max(${customerConsumption.updatedAt})`))
+        .limit(51),
+      services.db
+        .select({ id: customerMemorySources.id, content: customerMemorySources.content })
+        .from(customerMemorySources)
+        .where(
+          and(
+            gate,
+            eq(customerMemorySources.membershipId, target.membership.id),
+            eq(customerMemorySources.contextToken, context.token),
+            eq(customerMemorySources.voiceSessionId, session.voice_session_id ?? ""),
+            eq(customerMemorySources.turnId, actor.turnId ?? ""),
+          ),
+        )
+        .limit(1),
+      services.db
+        .select({
+          displayName: user.name,
+          pointsBalance:
+            sql<number>`(${pointBalance(services, actor.storeId, target.membership.id)})`.mapWith(
+              Number,
+            ),
+        })
+        .from(user)
+        .where(and(personalGate, eq(user.id, target.membership.userId)))
+        .limit(1),
+      services.db
+        .select({
+          count: count(),
+          lastVisitedAt: max(tableSessions.opened_at),
+        })
+        .from(customerPointAllocations)
+        .innerJoin(
+          customerPointVisits,
+          and(
+            eq(customerPointVisits.sessionId, customerPointAllocations.sessionId),
+            eq(customerPointVisits.storeId, actor.storeId),
+            isNotNull(customerPointVisits.confirmedAt),
+          ),
+        )
+        .innerJoin(
+          tableSessions,
+          and(
+            eq(tableSessions.id, customerPointVisits.sessionId),
+            eq(tableSessions.store_id, actor.storeId),
+          ),
+        )
+        .where(
+          and(
+            personalGate,
+            eq(customerPointAllocations.storeId, actor.storeId),
+            eq(customerPointAllocations.membershipId, target.membership.id),
+            ne(customerPointAllocations.sessionId, session.id),
+          ),
         ),
-      )
-      .orderBy(desc(customerMemories.updatedAt))
-      .limit(21),
-    services.db
-      .select({
-        productId: customerConsumption.productId,
-        quantity: sql<number>`sum(${customerConsumption.quantity})`.mapWith(Number),
-      })
-      .from(customerConsumption)
-      .innerJoin(orders, and(eq(orders.id, customerConsumption.orderId)))
-      .where(
-        and(
-          gate,
-          eq(customerConsumption.membershipId, target.membership.id),
-          sql`${target.membership.useMemories}=1`,
-          eq(customerConsumption.storeId, actor.storeId),
-        ),
-      )
-      .groupBy(customerConsumption.productId)
-      .orderBy(desc(sql`max(${customerConsumption.updatedAt})`))
-      .limit(51),
-    services.db
-      .select({ id: customerMemorySources.id, content: customerMemorySources.content })
-      .from(customerMemorySources)
-      .where(
-        and(
-          gate,
-          eq(customerMemorySources.membershipId, target.membership.id),
-          eq(customerMemorySources.contextToken, context.token),
-          eq(customerMemorySources.voiceSessionId, session.voice_session_id ?? ""),
-          eq(customerMemorySources.turnId, actor.turnId ?? ""),
-        ),
-      )
-      .limit(1),
-  ]);
+      services.db
+        .select({ snapshot: customerCoupons.snapshotJson })
+        .from(customerCoupons)
+        .where(
+          and(
+            personalGate,
+            eq(customerCoupons.storeId, actor.storeId),
+            eq(customerCoupons.membershipId, target.membership.id),
+            or(
+              eq(customerCoupons.state, "available"),
+              and(
+                eq(customerCoupons.state, "requested"),
+                eq(customerCoupons.requestedSessionId, session.id),
+              ),
+            ),
+            sql`json_extract(${customerCoupons.snapshotJson},'$.startsAt')<=${now}`,
+            sql`json_extract(${customerCoupons.snapshotJson},'$.endsAt')>${now}`,
+          ),
+        )
+        .orderBy(
+          asc(sql`json_extract(${customerCoupons.snapshotJson},'$.endsAt')`),
+          asc(customerCoupons.id),
+        )
+        .limit(6),
+    ]);
   ensure(valid.length === 1, "CUSTOMER_CONTEXT_STALE", 409);
   return {
     mode: target.membership.useMemories ? "personal" : "permission-disabled",
@@ -272,6 +363,26 @@ export async function customerRecommendationContext(services: ApiServices, actor
     moreMemories: memories.length > 20,
     moreConsumption: consumption.length > 50,
     source: target.membership.saveMemories ? (sources[0] ?? null) : null,
+    customer:
+      target.membership.useMemories && profiles[0]
+        ? {
+            ...profiles[0],
+            confirmedVisits: visits[0] ?? { count: 0, lastVisitedAt: null },
+            coupons: coupons.slice(0, 5).map(({ snapshot: couponSnapshot }) => {
+              const rules = couponRuleSchema.parse(JSON.parse(couponSnapshot));
+              return {
+                title: resolveLocalized(rules.title, session.locale),
+                description: resolveLocalized(rules.description, session.locale),
+                minimumYen: rules.minimumYen,
+                discountKind: rules.discountKind,
+                discountValue: rules.discountValue,
+                maximumYen: rules.maximumYen,
+                endsAt: rules.endsAt,
+              };
+            }),
+            moreCoupons: coupons.length > 5,
+          }
+        : null,
   };
 }
 

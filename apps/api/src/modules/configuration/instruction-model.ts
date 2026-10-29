@@ -144,4 +144,5 @@ export const castInstructionSchema = z
         code: "custom",
         message: "接客方針は書式と改行を含め5000文字以内にしてください。",
       });
-  });
+  })
+  .meta({ id: "tablecastCastInstruction" });

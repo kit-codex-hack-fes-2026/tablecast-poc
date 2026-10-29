@@ -32,6 +32,7 @@ export function CustomerMemberships() {
                   <p className="mt-1 text-sm text-muted-foreground">
                     {t("customer_since")} {calendarDate(membership.joinedAt, locale)}
                   </p>
+                  <p className="mt-1 text-sm font-medium">{t("customer_card_view")}</p>
                 </div>
                 <ArrowRight aria-hidden className="size-5 shrink-0" />
               </Link>
