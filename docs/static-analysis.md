@@ -175,9 +175,9 @@ cloc 2.10の`--git --by-file --json --skip-uniqueness --strip-str-comments`で�
 | lint・hooks・CI | 導入済みの標準ルールと実行依存・cache・検証              |
 | Issue・PR       | 要求と判断の根拠、実装差分と対象commitの検証結果         |
 
-過去の修正履歴はIssueへ残し、同じ原因・類似構造に効く判断だけをskillへ反映する。descriptionは用途が判別できる短い文にし、全作業への発動や全文書読込を要求しない。実際に使うPR本文は[PRテンプレート](../.github/pull_request_template.md)を正本とし、skill内へコピーを持たない。[Astra向けの公式指針](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)をこの分担へ適用する。
+過去の修正履歴はIssueへ残し、同じ原因・類似構造に効く判断だけを自作skillへ反映する。descriptionは用途が判別できる短い文にし、全作業への発動や全文書読込を要求しない。実際に使うPR本文は[PRテンプレート](../.github/pull_request_template.md)を正本とし、外部skill同梱の汎用テンプレートより優先する。TableCast固有の[証拠要件](development.md#prの検証と証拠)・[release運用](deployment.md#release-pr)はdocsで維持する。[Astra向けの公式指針](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)をこの分担へ適用する。
 
-自作・外部skillsは `.agents/skills` に直接置く。外部の `animate`、`emil-design-eng`、`mastra`、動画用の `hyperframes-core`・`hyperframes-animation`・`hyperframes-creative` の取得元は `skills-lock.json` で管理し、これらの上流本文・同梱スクリプトは整形・lintの対象外とする。動画スキルの固定版と採用範囲は[TOOLS.md](../apps/presentation/TOOLS.md#制作スキルの固定と復元)に記録する。導入は[セットアップ](setup.md#2c-agent開発環境)、更新は[tablecast-quality](../.agents/skills/tablecast-quality/SKILL.md)を参照する。個人設定やplugin同梱の同名skillをリポジトリから自動削除しない。
+自作・外部skillsは `.agents/skills` に直接置く。外部skillの取得元は `skills-lock.json` で管理し、上流本文はOxfmtの対象外とする。Git hookも外部skillを対象ファイルから除き、除外済みファイルだけをformatter・lintへ渡さない。製品・運用CLIへ含めない同梱サンプルは既存のOxlint除外に従う。上流への個別の追記・翻訳・整形を避け、リポジトリ固有の指示を外部skillへ戻さない。動画スキルの固定版と採用範囲は[TOOLS.md](../apps/presentation/TOOLS.md#制作スキルの固定と復元)に記録する。導入・更新は[セットアップ](setup.md#2c-agent開発環境)、判断は[tablecast-quality](../.agents/skills/tablecast-quality/SKILL.md)を参照する。個人設定やplugin同梱の同名skillをリポジトリから自動削除しない。
 
 Oxlintの [JS plugin機能](https://oxc.rs/docs/guide/usage/linter/js-plugins.html)で、WebのStorybook・Playwright、APIの [Drizzle](https://orm.drizzle.team/docs/eslint-plugin) とコミュニティの [Hono plugin](https://github.com/ouka-lab/eslint-plugin-hono) を使う。Storybookはstoryのみ、PlaywrightはE2Eのみへ適用する。Drizzleのwhere欠落、Honoの応答return漏れ・next重複・param不一致・process.env依存を検出する。HonoのDomainErrorは共通onErrorが処理するためHTTPExceptionへの一律置換は要求しない。Drizzle pluginはSQLリテラルの必要性や不要な直列読取を判定しない。これらは[API skill](../.agents/skills/tablecast-api/SKILL.md#db変更の設計と検証)に従い、新規実装時と差分レビューで呼出し経路・読取の依存関係・標準APIの採用を確認する。意味を推測するregexや独自の監査runnerを追加しない。
 

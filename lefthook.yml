@@ -7,9 +7,24 @@ pre-commit:
       glob: "*.{ts,tsx,js,json,jsonc,md,yml,yaml,css}"
       exclude:
         - "apps/presentation/assets/openscreen/**/*.json"
+        - ".agents/skills/animate/**"
+        - ".agents/skills/assistant-mcp/**"
+        - ".agents/skills/conventional-commit/**"
+        - ".agents/skills/dashboarding/**"
+        - ".agents/skills/emil-design-eng/**"
+        - ".agents/skills/fullstack-web-testing/**"
+        - ".agents/skills/github-issue-pr-ops/**"
+        - ".agents/skills/github-project-ops/**"
         - ".agents/skills/hyperframes-core/**"
         - ".agents/skills/hyperframes-animation/**"
         - ".agents/skills/hyperframes-creative/**"
+        - ".agents/skills/langfuse/**"
+        - ".agents/skills/loki/**"
+        - ".agents/skills/mastra/**"
+        - ".agents/skills/minimum-impl/**"
+        - ".agents/skills/openscreen-demo-video/**"
+        - ".agents/skills/promql/**"
+        - ".agents/skills/tempo/**"
       run: bunx --no-install oxfmt --check {staged_files}
     - name: analysis
       group:
@@ -24,9 +39,24 @@ pre-commit:
                 - name: lint
                   glob: "*.{ts,tsx,js}"
                   exclude:
+                    - ".agents/skills/animate/**"
+                    - ".agents/skills/assistant-mcp/**"
+                    - ".agents/skills/conventional-commit/**"
+                    - ".agents/skills/dashboarding/**"
+                    - ".agents/skills/emil-design-eng/**"
+                    - ".agents/skills/fullstack-web-testing/**"
+                    - ".agents/skills/github-issue-pr-ops/**"
+                    - ".agents/skills/github-project-ops/**"
                     - ".agents/skills/hyperframes-core/**"
                     - ".agents/skills/hyperframes-animation/**"
                     - ".agents/skills/hyperframes-creative/**"
+                    - ".agents/skills/langfuse/**"
+                    - ".agents/skills/loki/**"
+                    - ".agents/skills/mastra/**"
+                    - ".agents/skills/minimum-impl/**"
+                    - ".agents/skills/openscreen-demo-video/**"
+                    - ".agents/skills/promql/**"
+                    - ".agents/skills/tempo/**"
                   run: bunx --no-install oxlint --type-aware --deny-warnings {staged_files}
                 - name: fallow
                   run: bun run fallow:audit --base HEAD --quiet
