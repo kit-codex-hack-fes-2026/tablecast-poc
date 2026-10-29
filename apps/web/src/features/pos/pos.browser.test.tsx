@@ -314,18 +314,20 @@ it("解除要求が失敗しても解除処理中を再取得し、再接続と�
       ? { ...posSettingsFixture.connection, status: "disconnecting", revision: 3 }
       : null,
   };
+  let current = disconnecting;
   vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const path = new URL(request.url).pathname;
     if (path === "/api/admin/stores/tablecast-store/pos" && request.method === "DELETE") {
       deletes++;
-      return deletes === 1
-        ? Response.json({ error: { code: "POS_DISCONNECT_PENDING" } }, { status: 503 })
-        : Response.json({ ...published, connection: null, mappings: [] });
+      if (deletes === 1)
+        return Response.json({ error: { code: "POS_DISCONNECT_PENDING" } }, { status: 503 });
+      current = { ...published, connection: null, mappings: [] };
+      return Response.json(current);
     }
     if (path === "/api/admin/stores/tablecast-store/pos" && request.method === "GET") {
       settingsReads++;
-      return Response.json(disconnecting);
+      return Response.json(current);
     }
     unexpected.push(`${request.method} ${path}`);
     return Response.json({}, { status: 500 });
@@ -372,6 +374,7 @@ it("解除要求が失敗しても解除処理中を再取得し、再接続と�
     .element(page.getByRole("button", { name: ja.pos_connect, exact: true }))
     .toBeEnabled();
   await expect.element(disconnect).not.toBeInTheDocument();
+  await expect.poll(() => settingsReads).toBe(2);
   expect(deletes).toBe(2);
 });
 
