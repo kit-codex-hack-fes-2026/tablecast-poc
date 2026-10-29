@@ -94,11 +94,22 @@ export function storeOnboarding(
       tools: ["validate_draft", "get_draft_diff", "request_publication"],
     },
   ] as const;
+  const counts = { configured: 0, invalid: 0, missing: 0, optional: 0, review: 0 };
+  for (const step of steps) counts[step.status]++;
+  const nextStep =
+    steps.find((step) => step.status === "invalid") ??
+    steps.find((step) => step.status === "missing") ??
+    steps.find((step) => step.status === "review");
   return {
     storeId,
     version,
     draftId: draftId ?? null,
     steps,
+    progress: {
+      ...counts,
+      total: steps.length - counts.optional,
+      nextStepId: nextStep?.id ?? null,
+    },
     issues: issues.slice(0, 50),
     totalIssues: issues.length,
     errors: errors.slice(0, 50),

@@ -144,7 +144,7 @@ stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、�
 
 ### Skillファイルの個別操作とZIP
 
-`get_store_onboarding`は公開設定または指定した下書きの不足・確認事項、対応tool、管理画面を返す。GUIの店舗初期設定も同じ判定を使う。メニュー・言語・食事情報・選択肢・接客・テーマ・資料・特典を確認する。OAuth・認証情報・端末登録・顧客の同意・最終公開は人が行う。
+`get_store_onboarding`は公開設定または指定した下書きの不足・確認事項、対応tool、管理画面を返す。GUIの店舗初期設定も同じ判定を使う。`progress`は設定あり・要確認・未設定・要修正・任意の件数、任意を除く総数、次の設定項目IDを返す。設定ありは設定値の存在を表し、内容の事実確認や公開承認の完了を示さない。メニュー・言語・食事情報・選択肢・接客・テーマ・資料・特典を確認する。OAuth・認証情報・端末登録・顧客の同意・最終公開は人が行う。
 
 `list_store_skills`でmetadataとツリー、`read_store_skill_file`で4,000文字ずつ原文または画像の出所を取得する。続きを読むときは`expectedVersion`が必須。`edit_store_skill`は最新の下書き版を確認して、Skillの作成・改名・削除とファイルの作成／更新・改名・削除を行う。画像は`upload_image`の返却値を画像ファイルへ設定する。`SKILL.md`単体の改名・削除は拒否する。
 

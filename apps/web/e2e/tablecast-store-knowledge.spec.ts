@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { configDraftSchema } from "@tablecast/api/schema";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
+import { z } from "zod";
 import ja from "../messages/ja.json" with { type: "json" };
 import { signInStaff } from "./support/session";
 import { test } from "./support/test";
@@ -141,7 +142,35 @@ test("実店舗DBの資料をツリーで開き、画像とコードを表示し
   await page.goto(`/admin/stores/${storeId}/onboarding?draftId=${draft.id}`);
   await expect(page.getByRole("heading", { name: ja.onboarding_title, exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: ja.onboarding_open, exact: true })).toHaveCount(9);
+  const onboarding = await page.request.get(`${api}/onboarding?draftId=${draft.id}`);
+  expect(onboarding.ok()).toBe(true);
+  const { progress } = z
+    .object({ progress: z.object({ configured: z.number(), total: z.number() }) })
+    .parse(await onboarding.json());
+  await expect(
+    page.getByRole("progressbar", { name: ja.onboarding_data_progress }),
+  ).toHaveAttribute("aria-valuenow", String(progress.configured));
+  await expect(
+    page.getByRole("progressbar", { name: ja.onboarding_data_progress }),
+  ).toHaveAttribute("aria-valuemax", String(progress.total));
+  await writeFile(
+    testInfo.outputPath("tablecast-onboarding-layout.json"),
+    JSON.stringify({
+      viewport: page.viewportSize(),
+      progress: await page
+        .getByRole("region", { name: ja.onboarding_data_progress, exact: true })
+        .boundingBox(),
+    }),
+  );
   await page.screenshot({ path: testInfo.outputPath("tablecast-onboarding.png") });
+  await page.setViewportSize({ width: 402, height: 874 });
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+    .toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath("tablecast-onboarding-mobile.png"),
+    fullPage: true,
+  });
 });
 
 test("Tiptapから画像を実アップロードして相対参照を挿入し、保存後も表示する", async ({

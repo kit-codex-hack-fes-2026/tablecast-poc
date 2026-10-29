@@ -158,6 +158,7 @@ export const boundaryPolicies = [
     "configuration-image-model",
     "language-fields",
     "configuration-languages-context",
+    "store-knowledge-setup-banner",
   ]),
   {
     from: file(["feature", "composition"], "catalog"),

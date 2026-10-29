@@ -1845,5 +1845,11 @@
   "knowledge_setup_copy": "設定依頼をコピー",
   "knowledge_setup_store": "対象店舗ID",
   "knowledge_setup_draft": "編集中の下書きID",
-  "knowledge_setup_request": "TableCastでこの店舗の初期設定と店舗資料の整備を進めてください。現在設定と不足を確認し、渡した資料・画像・ZIPを使って同じ下書きへ反映してください。下書きIDがあれば必ず最新版を再取得して再利用してください。未確認の営業時間・価格・食事情報は創作せず、不足だけを質問してください。Skill lint・設定の検証・差分確認まで進め、保存した版と残る確認事項を報告してください。公開はまだしないでください。"
+  "knowledge_setup_request": "TableCastでこの店舗の初期設定と店舗資料の整備を進めてください。現在設定と不足を確認し、渡した資料・画像・ZIPを使って同じ下書きへ反映してください。下書きIDがあれば必ず最新版を再取得して再利用してください。未確認の営業時間・価格・食事情報は創作せず、不足だけを質問してください。Skill lint・設定の検証・差分確認まで進め、保存した版と残る確認事項を報告してください。公開はまだしないでください。",
+  "onboarding_data_progress": "設定データの登録状況",
+  "onboarding_progress_hint": "設定ありの項目を集計しています。事実確認や公開の完了とは別です。任意の項目は進捗に含めません。",
+  "onboarding_refresh": "最新の状態に更新",
+  "onboarding_steps": "設定チェックリスト",
+  "onboarding_next": "次の確認に進む",
+  "onboarding_human_checks": "接続・端末・公開の確認事項"
 }

@@ -272,9 +272,19 @@ it("Skill lintのエラーは公開前検証を止め、オンボーディング
       params: { skillId: "restaurant", file: "SKILL.md", issue: "NAME_MISMATCH" },
     }),
   );
+  const progressSchema = z.object({
+    configured: z.number(),
+    invalid: z.number(),
+    missing: z.number(),
+    optional: z.number(),
+    review: z.number(),
+    total: z.number(),
+    nextStepId: z.string().nullable(),
+  });
   const onboarding = toolData(
     await client.callTool({ name: "get_store_onboarding", arguments: { draftId: draft.id } }),
     z.object({
+      progress: progressSchema,
       steps: z.array(z.object({ id: z.string(), status: z.string() })),
       issues: z.array(z.unknown()),
     }),
@@ -285,7 +295,11 @@ it("Skill lintのエラーは公開前検証を止め、オンボーディング
       headers: { Cookie: cookie },
     }),
   );
-  const gui = z.object({ issues: z.array(z.unknown()) }).parse(await response.json());
+  const gui = z
+    .object({ issues: z.array(z.unknown()), progress: progressSchema })
+    .parse(await response.json());
+  expect(gui.progress).toEqual(onboarding.progress);
+  expect(gui.progress.nextStepId).toBe("knowledge");
   expect(gui.issues).toEqual(onboarding.issues);
 });
 

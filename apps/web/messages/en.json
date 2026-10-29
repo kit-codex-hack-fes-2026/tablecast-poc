@@ -1845,5 +1845,11 @@
   "knowledge_setup_copy": "Copy setup request",
   "knowledge_setup_store": "Store ID",
   "knowledge_setup_draft": "Current draft ID",
-  "knowledge_setup_request": "Set up this TableCast store and its store materials. Check existing settings and gaps, then use the supplied documents, images and ZIP files to update the same draft. If a draft ID is supplied, retrieve its latest version and reuse it. Do not invent unconfirmed opening hours, prices or dietary information; ask only for missing facts. Check Skills, validate the configuration and review the changes. Report the saved version and outstanding checks. Do not publish yet."
+  "knowledge_setup_request": "Set up this TableCast store and its store materials. Check existing settings and gaps, then use the supplied documents, images and ZIP files to update the same draft. If a draft ID is supplied, retrieve its latest version and reuse it. Do not invent unconfirmed opening hours, prices or dietary information; ask only for missing facts. Check Skills, validate the configuration and review the changes. Report the saved version and outstanding checks. Do not publish yet.",
+  "onboarding_data_progress": "Store settings progress",
+  "onboarding_progress_hint": "Counts configured items, separately from fact-checking or publication. Optional items are excluded.",
+  "onboarding_refresh": "Refresh setup status",
+  "onboarding_steps": "Setup checklist",
+  "onboarding_next": "Continue with the next check",
+  "onboarding_human_checks": "Connection, device and publication checks"
 }

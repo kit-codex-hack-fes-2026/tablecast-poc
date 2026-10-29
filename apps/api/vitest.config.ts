@@ -2,6 +2,7 @@ import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
 const unitTests = [
   "test/localization.test.ts",
+  "test/onboarding.test.ts",
   "test/store-knowledge.test.ts",
   "test/store-knowledge-files.test.ts",
   "test/catalog-search.test.ts",
