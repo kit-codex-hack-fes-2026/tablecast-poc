@@ -13,6 +13,7 @@ import {
 import { imageAssetsSchema } from "../media/model";
 import { selectionSchema } from "../orders/model";
 import { castInstructionSchema, instructionLimit } from "./instruction-model";
+import { storeSkillsSchema } from "./knowledge-model";
 export const guideSchema = z
   .object({
     id,
@@ -68,6 +69,7 @@ export const configurationSchema = z
     plans: z.array(planSchema).max(30),
     cast: z
       .object({
+        skills: storeSkillsSchema.optional(),
         systemInstructions: localizedSchema(
           z.string().trim().min(1).max(instructionLimit).nullable(),
         ).optional(),

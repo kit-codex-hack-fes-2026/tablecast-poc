@@ -45,14 +45,15 @@ const textBlockSchema = z
       .strict(),
   ])
   .meta({ id: "tablecastTextBlock" });
-function listSchema<Child extends z.ZodType>(child: Child) {
+function listSchema<Child extends z.ZodType>(child: Child, depth: 1 | 2 | 3) {
   const items = z
     .array(
       z
         .object({ type: z.literal("listItem"), content: z.tuple([paragraphSchema]).rest(child) })
         .strict(),
     )
-    .min(1);
+    .min(1)
+    .meta({ id: `tablecastListItems${depth}` });
   return z.discriminatedUnion("type", [
     z.object({ type: z.literal("bulletList"), content: items }).strict(),
     z
@@ -68,12 +69,12 @@ function listSchema<Child extends z.ZodType>(child: Child) {
   ]);
 }
 // JSON Schemaでは同じ深さのリストを参照し、日英・入れ子ごとの展開を避ける。
-const firstListSchema = listSchema(textBlockSchema).meta({ id: "tablecastListDepth1" });
-const secondListSchema = listSchema(z.union([textBlockSchema, firstListSchema])).meta({
+const firstListSchema = listSchema(textBlockSchema, 1).meta({ id: "tablecastListDepth1" });
+const secondListSchema = listSchema(z.union([textBlockSchema, firstListSchema]), 2).meta({
   id: "tablecastListDepth2",
 });
 const blockSchema: z.ZodType<InstructionBlock> = z
-  .union([textBlockSchema, listSchema(z.union([textBlockSchema, secondListSchema]))])
+  .union([textBlockSchema, listSchema(z.union([textBlockSchema, secondListSchema]), 3)])
   .meta({ id: "tablecastBlock" });
 // 再帰schemaの評価前に、大量の空ノードと過度の入れ子を止める。
 const boundedDocument = z.unknown().superRefine((value, ctx) => {

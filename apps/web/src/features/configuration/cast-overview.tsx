@@ -13,6 +13,7 @@ import { ConfigurationSection } from "./configuration-fields";
 import { InstructionView } from "./instruction-view";
 import { LanguageFields } from "./language-fields";
 import { standardVoicesOptions } from "./menu-query";
+import { StoreKnowledge } from "./store-knowledge";
 
 export function CastOverview({
   storeId,
@@ -62,6 +63,7 @@ export function CastOverview({
           </>
         )}
       </LanguageFields>
+      <StoreKnowledge value={value.skills ?? []} action={renderEdit?.("knowledge")} />
       <ConfigurationSection title={t("editor_proactive")} icon={Sparkles}>
         <Badge variant={value.proactive ? "success" : "inactive"}>
           {t(value.proactive ? "cast_proactive_on" : "cast_proactive_off")}

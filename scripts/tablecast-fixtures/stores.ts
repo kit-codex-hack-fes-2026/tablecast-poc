@@ -5,6 +5,7 @@ import { demoOptionImageKey } from "../tablecast-demo-option-images.ts";
 import { koreanDemoStore } from "../tablecast-korean-demo.ts";
 import { demoImageKey, demoStoreBanner, demoStoreLogo } from "../tablecast-seed-media.ts";
 import { withDemoFoodChanges } from "./food.ts";
+import { komorebiSkills } from "./komorebi-knowledge.ts";
 import { localizeSeedConfiguration } from "./localize.ts";
 import { groupDefinitions } from "./modifiers.ts";
 import { sakeKinds, sakes } from "./sake.ts";
@@ -193,6 +194,7 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
         },
       ],
       cast: {
+        skills: komorebiSkills,
         instructions: {
           ja: "和食と多彩な日本酒を、香り・味わい・好みを一つずつ確かめながら丁寧に案内してください。注文確認は正確に読み、原材料や交差接触が不明な場合は安全と断言せずスタッフへ案内してください。",
           en: "Guide guests courteously through Japanese dishes and a varied sake list, asking about aroma, flavour and preferences one at a time. Confirm orders accurately and refer unverified ingredients or cross-contact questions to staff without promising safety.",

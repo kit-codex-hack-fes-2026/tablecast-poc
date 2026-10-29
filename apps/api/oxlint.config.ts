@@ -112,7 +112,7 @@ export default defineConfig({
             allow: { to: { module: { source: "zod" } } },
           },
           {
-            from: { file: { path: "src/modules/catalog/search.ts" } },
+            from: { file: { path: "src/modules/{catalog/search,configuration/knowledge}.ts" } },
             allow: { to: { module: { source: "fuse.js" } } },
           },
           {

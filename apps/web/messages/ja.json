@@ -1730,5 +1730,20 @@
   "food_reason_pork_ingredients": "豚由来原料を使用",
   "food_reason_alcohol": "アルコール含有",
   "food_reason_origin_unknown": "原材料の由来が未確認",
-  "food_reason_previous_record": "保存された判定"
+  "food_reason_previous_record": "保存された判定",
+  "knowledge_title": "店舗資料",
+  "knowledge_hint": "公開した資料を接客が検索します。SKILL.mdと参照ファイルをまとめて登録できます。秘密情報や顧客の個人情報を含めないでください。",
+  "knowledge_empty": "店舗資料はまだ登録されていません。",
+  "knowledge_files": "資料のファイル一覧",
+  "knowledge_view": "ファイル表示",
+  "knowledge_skill_id": "Skill名",
+  "knowledge_path": "ファイルパス",
+  "knowledge_content": "ファイルの原文",
+  "knowledge_edit": "店舗資料を編集",
+  "knowledge_add_skill": "Skillを追加",
+  "knowledge_add_file": "ファイルを追加",
+  "knowledge_remove_file": "ファイルを削除",
+  "knowledge_remove_skill": "Skillを削除",
+  "knowledge_invalid": "Skill名は英小文字・数字・ハイフン、ファイルパスは相対パスにしてください。重複を避け、空でないSKILL.mdを含めてください。上限は8 Skill・各30ファイル・各32,000文字・全体256,000文字です。",
+  "knowledge_source": "原文"
 }

@@ -11,6 +11,7 @@ import {
   customerSuggestions,
   listCustomerConsumption,
   listCustomerMemories,
+  searchCustomerMemories,
 } from "../src/modules/customer-memory/queries";
 import { recordCustomerConsumption } from "../src/modules/customer-memory/use-cases/consumption";
 import {
@@ -303,7 +304,7 @@ it("個人の飲食編集は注文・会計原本を変更せず、未体験の�
   ).toBe(0);
 });
 
-it.each(["context", "usual", "untried"] as const)(
+it.each(["context", "usual", "untried", "memory-search"] as const)(
   "%sの対象取得後に同意を撤回したら最終読取りを拒否する",
   async (kind) => {
     const { services, customer } = await setup();
@@ -327,7 +328,9 @@ it.each(["context", "usual", "untried"] as const)(
     const reading =
       kind === "context"
         ? customerRecommendationContext(services, actor)
-        : customerSuggestions(services, actor, { kind, offset: 0 });
+        : kind === "memory-search"
+          ? searchCustomerMemories(services, actor, { query: "辛口" })
+          : customerSuggestions(services, actor, { kind, offset: 0 });
     const rejected = reading.then(
       () => null,
       (error: unknown) => error,
@@ -389,4 +392,55 @@ it("文脈解除のDB完了後に別の解除が入っても元の音声を一�
   expect(fetcher.mock.calls[0]?.[0]).toBe(
     "https://api.openai.com/v1/live/sessions/tablecast-memory-voice/attach",
   );
+});
+
+it("記憶検索は古い本人の記憶と編集後の原文を取得し、削除・同意撤回・店舗境界を守る", async () => {
+  const { services, customer, tablet } = await setup();
+  const specialId = crypto.randomUUID();
+  await writeCustomerMemory(services, customer, {
+    id: specialId,
+    revision: 0,
+    content: "私は日本酒よりお茶が好きです",
+  });
+  for (let index = 0; index < 24; index++)
+    await writeCustomerMemory(services, customer, {
+      id: crypto.randomUUID(),
+      revision: 0,
+      content: `私の好みの記録 ${index}`,
+    });
+  const first = await searchCustomerMemories(services, tablet, {});
+  expect(first.memories).toHaveLength(8);
+  assert(first.nextCursor);
+  const second = await searchCustomerMemories(services, tablet, { cursor: first.nextCursor });
+  expect(second.memories).toHaveLength(8);
+  expect(
+    second.memories.some((memory) => first.memories.some((previous) => previous.id === memory.id)),
+  ).toBe(false);
+  expect(await searchCustomerMemories(services, tablet, { query: "お茶" })).toMatchObject({
+    memories: [{ content: "私は日本酒よりお茶が好きです", sourceKind: "manual" }],
+    nextCursor: null,
+  });
+  expect((await searchCustomerMemories(services, tablet, { query: "%" })).memories).toEqual([]);
+  await writeCustomerMemory(services, customer, {
+    id: specialId,
+    revision: 1,
+    content: "お茶の中ではほうじ茶が好きです",
+  });
+  expect((await searchCustomerMemories(services, tablet, { query: "ほうじ茶" })).memories).toEqual([
+    expect.objectContaining({ id: specialId, edited: true }),
+  ]);
+  await deleteCustomerMemory(services, customer, specialId, 2);
+  expect((await searchCustomerMemories(services, tablet, { query: "ほうじ茶" })).memories).toEqual(
+    [],
+  );
+  await expect(
+    searchCustomerMemories(services, { ...tablet, storeId: "tablecast-other-store" }, {}),
+  ).rejects.toMatchObject({ code: "TABLE_NOT_FOUND" });
+  await updateCustomerPreferences(services, customer, {
+    revision: 1,
+    shareCompanions: true,
+    useMemories: false,
+    saveMemories: false,
+  });
+  expect((await searchCustomerMemories(services, tablet, {})).memories).toEqual([]);
 });

@@ -10,11 +10,20 @@ import { resolveText } from "../catalog/localization";
 import { foodQuerySchema } from "../catalog/model";
 import { getCatalog } from "../catalog/queries";
 import { menuSearchPage } from "../catalog/search";
+import { knowledgeReadSchema, knowledgeSearchSchema } from "../configuration/knowledge-model";
 import { maxConfigurationProducts } from "../configuration/model";
 import { approximateAmounts, currencyMetadata } from "../currency/display";
 import { displayCurrencyCodeSchema } from "../currency/model";
-import { customerSuggestionsSchema, saveCustomerMemorySchema } from "../customer-memory/model";
-import { customerRecommendationContext, customerSuggestions } from "../customer-memory/queries";
+import {
+  customerSuggestionsSchema,
+  memorySearchSchema,
+  saveCustomerMemorySchema,
+} from "../customer-memory/model";
+import {
+  customerRecommendationContext,
+  customerSuggestions,
+  searchCustomerMemories,
+} from "../customer-memory/queries";
 import { saveAutomaticCustomerMemory } from "../customer-memory/use-cases/sources";
 import { cartUpdateSchema, submitSchema } from "../orders/model";
 import { updateCart } from "../orders/use-cases/cart";
@@ -34,6 +43,7 @@ import { setSpeechSpeed } from "./service";
 import { castTool } from "./tool";
 import { voiceToolDescriptions } from "./tool-descriptions";
 import { voiceCatalogProduct, voiceTableState } from "./tool-state";
+import { readStoreKnowledge, searchStoreKnowledge } from "./use-cases/knowledge";
 import { showReference } from "./use-cases/references";
 
 export function createCastTools(
@@ -48,6 +58,33 @@ export function createCastTools(
   const rates = displayContext?.rates;
   const selectedCurrency = displayContext?.currency ?? null;
   return {
+    searchStoreKnowledge: castTool({
+      id: "searchStoreKnowledge",
+      description: voiceToolDescriptions.searchStoreKnowledge,
+      inputSchema: knowledgeSearchSchema,
+      execute: async (input) => {
+        guard();
+        return searchStoreKnowledge(services, actor, input);
+      },
+    }),
+    readStoreKnowledge: castTool({
+      id: "readStoreKnowledge",
+      description: voiceToolDescriptions.readStoreKnowledge,
+      inputSchema: knowledgeReadSchema,
+      execute: async (input) => {
+        guard();
+        return readStoreKnowledge(services, actor, input);
+      },
+    }),
+    searchCustomerMemories: castTool({
+      id: "searchCustomerMemories",
+      description: voiceToolDescriptions.searchCustomerMemories,
+      inputSchema: memorySearchSchema,
+      execute: async (input) => {
+        guard();
+        return searchCustomerMemories(services, actor, input);
+      },
+    }),
     getCustomerSuggestions: castTool({
       id: "getCustomerSuggestions",
       description: voiceToolDescriptions.getCustomerSuggestions,

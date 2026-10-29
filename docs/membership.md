@@ -125,3 +125,5 @@ iPadは個人情報のない変更通知で参加者APIを再検証する。会�
 ## UI再検討の参照
 
 MobbinのiOS事例を構造の参考にした。[Chipotleの会員証](https://mobbin.com/screens/0650c1c5-2f32-43f2-8173-37398dd10e57)と[Shangri-La Circleの会員証](https://mobbin.com/screens/1c46893c-c975-4b9a-854d-3839e3dc7d7f)から、会員情報を一枚の領域にまとめる構成を採用する。[Chipotleの特典交換](https://mobbin.com/flows/d568a79b-2a6d-4ea2-ab44-1a8f817faac7)は残高・交換先・確認を分け、[Panera Breadの特典利用](https://mobbin.com/flows/37f09209-aa14-41a4-8d2a-5eba45a7a026)は利用できる特典と利用後の状態を示す。TableCastではスタッフによる会計適用を維持する。共有端末にはQRと現在の参加者だけを置き、登録と利用の説明は本人のスマホ側へ分ける。
+
+接客用の`searchCustomerMemories`は、利用許可がある現在の対象本人の記憶だけを検索する。原文の部分一致で絞り、最大8件の本文・本人編集の有無・出所種別・更新日時を返す。続きは更新日時とIDのcursorを使い、取得ごとに対象・同意・音声文脈を検証する。本人用CRUDの一覧とは用途を分け、店舗MCPへは公開しない。最初の20件にない記憶も検索できるが、未取得・未記録から本人の嗜好や未体験を推測しない。

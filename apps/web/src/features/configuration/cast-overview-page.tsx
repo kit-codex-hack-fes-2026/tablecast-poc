@@ -89,19 +89,19 @@ function CastEditAction({
     [locale],
   );
   const language =
-    target === "proactive"
+    target === "proactive" || target === "knowledge"
       ? ""
       : (languageNames.of(target.slice(target.indexOf("-") + 1)) ?? target);
-  const label =
-    target === "proactive"
-      ? t("cast_edit_proactive")
-      : target.startsWith("system")
-        ? `${t("cast_edit_system")} (${language})`
-        : target.startsWith("instructions")
-          ? m.cast_edit_instructions({ language }, { locale: uiLocale(locale) })
-          : target.startsWith("opening")
-            ? `${t("cast_edit_opening")} (${language})`
-            : m.cast_edit_voice({ language }, { locale: uiLocale(locale) });
+  function editLabel() {
+    if (target === "knowledge") return t("knowledge_edit");
+    if (target === "proactive") return t("cast_edit_proactive");
+    if (target.startsWith("system")) return `${t("cast_edit_system")} (${language})`;
+    if (target.startsWith("instructions"))
+      return m.cast_edit_instructions({ language }, { locale: uiLocale(locale) });
+    if (target.startsWith("opening")) return `${t("cast_edit_opening")} (${language})`;
+    return m.cast_edit_voice({ language }, { locale: uiLocale(locale) });
+  }
+  const label = editLabel();
   return draftId ? (
     <Button
       nativeButton={false}

@@ -131,3 +131,11 @@ stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、�
 店舗の`languages`に`ja`・`en`を残し、正規のBCP 47コード（例`zh-Hans`・`ko`・`fr-CA`）を追加する。商品`text`には日本語が必須で、各言語の`displayName`と`transliteration`を同時に指定する。片方だけ・空文字・空白だけは422となる。未翻訳の言語は`text`のキー全体を省略できる。`speechName`・`description`・`aliases`は必要に応じて付ける。カテゴリ・選択肢・プラン・ガイド・接客指示・voice・画像altも言語コードのmapを使う。
 
 英語の転写は長音記号付きヘボン式にし、銘柄を残して酒の種別を意味訳する。中国語・韓国語の転写は各言語の文字で記す。商品名の例は`en: { displayName: "Japanese soy sauce fried chicken", transliteration: "Karaage" }`。転写を括弧で意味訳へ埋め込まない。原材料・宗教認証等の安全情報を翻訳で創作しない。追加言語の欠落は英語→日本語へ戻り、選択した接客言語は維持する。
+
+## 店舗資料の複数ファイルSkill
+
+`get_configuration`で入力schemaと現在設定を取得し、`cast.skills`へ`{ id, files: [{ path, content }] }`を保存できる。`id`は英小文字・数字・ハイフンの名前、`files`は空でない`SKILL.md`と任意の参照テキストファイルを持つ。frontmatter・Markdown・JSON・CSV・コードなどは原文保持する。ファイルパスはSkill内の相対パスで、絶対パス、親ディレクトリ、URL、重複を拒否する。最大8 Skill、各30ファイル、各32,000文字、店舗全体256,000文字に制限する。文字数はUTF-16単位とする。
+
+既存下書きがあれば`get_draft_diff`で再取得して使い、なければ`create_draft`する。全configurationと最新`expectedVersion`を`update_draft`へ送り、他の商品・言語・Skillを保持する。保存済みSkillがある下書きでskillsを省略すると旧形式として拒否する。全削除を意図する場合は空配列を明示する。`validate_draft`と差分確認後、公開申請を依頼された場合だけ`request_publication`し、人が管理画面で承認する。資料は公開後の接客から検索可能になる。読取scopeでは更新できず、個人の顧客記憶を取得・設定するMCP操作は設けない。
+
+管理画面の接客設定でSkill・ファイルを選び、Markdownプレビューと原文を確認できる。参照資料のスクリプトを実行する機能ではない。資料は客へ案内してよい店舗情報に限定し、認証情報・内部連絡先・個人記憶を含めない。営業時間などの運用案内と、現在の価格・在庫・食事対応を判定する業務APIを区別する。

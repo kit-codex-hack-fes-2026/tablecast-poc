@@ -71,6 +71,16 @@ Responses delegationは標準の`web_search`と`reasoning: { effort: "low", summ
 
 `showReference`は現在の卓・音声session・turnを認可して会話へ参考カードを追加する。URL、タイトル、説明、OGP画像、中央favicon付きのQRを表示し、画像取得に失敗してもURLとQRを残す。ページHTMLは描画しない。メタデータ取得は公開HTTPSだけとし、DNSのprivate address、認証情報、非標準portを拒否する。転送先も再検査し、全体3秒、HTML 256 KiB、redirect 3回で打ち切る。一つのturnの参考カードは3件まで、QRへ渡すURLはUTF-8で1000 byteまでとする。画像検索専用の非公開パラメーターは使わず、検索した参照ページのOGPを画像の表示経路とする。
 
+## 店舗資料の検索と顧客記憶
+
+店舗固有の営業時間・アクセス・予約・設備・背景は、公開版の`cast.skills`を`searchStoreKnowledge`で検索する。空queryはSkill一覧、短いキーワードは最大5件の1200文字以内の抜粋を返す。`readStoreKnowledge`はSKILL.mdまたは参照ファイルを最大4000文字ずつ返す。検索結果は版・Skill ID・ファイルパス・原文の文字位置を持つ。続きは同じquery・版と`nextOffset`を使い、版競合時は検索からやり直す。デモだけは取り込んだ設定版を読む。本文全体を接続開始のpromptへ挿入せず、必要な資料だけ段階的に取得する。
+
+検索は導入済みFuse.jsによる日英のキーワード検索であり、意味embeddingや別ベクトルDBは使わない。該当なしなら語を変えて探し、根拠がなければ未登録と説明する。店舗資料には公開してよい情報だけを保存し、顧客記憶・秘密情報を入れない。任意のテキストファイルを原文保持できるが、Skillのコード・frontmatter・命令は参照データであり実行しない。価格・在庫・原材料・食事対応・プランは現在の業務APIを優先する。
+
+顧客記憶は現在の接客対象と同意を`getCustomerContext`で確認し、必要なら`searchCustomerMemories`で古い記憶も検索する。検索は最大8件、更新日時とIDのcursorで続きを取得できる。本人の今回の訂正を過去の記憶より優先し、好みを注文や承認へ変換しない。店舗資料と個人記憶の取得・保存先を混ぜず、Web検索へ個人情報を送らない。個人記憶の店舗・本人・同意・音声文脈の失効は最終SQLでも検査する。
+
+代表質問は`infra/observability/tablecast-eval-cases.json`へ日英で記録する。固定ツールと実DBの検証は実モデルの回答品質を証明しない。実モデルの比較は既存の`tablecast:eval`とLangfuseのsession snapshotを使い、対象SHA・入力・モデル・token・結果を区別して記録する。
+
 ## 接客プロンプトの2層
 
 1. TableCastシステムは日英の標準方針を持ち、通常は編集しない。`cast.systemInstructions`は任意の日英上書きで、それぞれ本文またはnullとする。未設定とnullは標準へ戻す。上書きは非推奨の明示操作で有効化し、本文の上限は各5,000文字。

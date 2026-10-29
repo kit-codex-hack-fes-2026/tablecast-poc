@@ -1730,5 +1730,20 @@
   "food_reason_pork_ingredients": "Contains pork-derived ingredients",
   "food_reason_alcohol": "Contains alcohol",
   "food_reason_origin_unknown": "Ingredient provenance unverified",
-  "food_reason_previous_record": "Previously recorded assessment"
+  "food_reason_previous_record": "Previously recorded assessment",
+  "knowledge_title": "Store knowledge",
+  "knowledge_hint": "The assistant searches your published documents. Add SKILL.md with its reference files. Keep secrets and personal customer information out of these documents.",
+  "knowledge_empty": "No store documents have been added yet.",
+  "knowledge_files": "Document files",
+  "knowledge_view": "File view",
+  "knowledge_skill_id": "Skill name",
+  "knowledge_path": "File path",
+  "knowledge_content": "File source",
+  "knowledge_edit": "Edit store knowledge",
+  "knowledge_add_skill": "Add skill",
+  "knowledge_add_file": "Add file",
+  "knowledge_remove_file": "Delete file",
+  "knowledge_remove_skill": "Delete skill",
+  "knowledge_invalid": "Use lower-case letters, digits and hyphens for skill names and relative file paths. Avoid duplicates and include a non-empty SKILL.md. Limits: 8 skills, 30 files per skill, 32,000 characters per file and 256,000 characters in total.",
+  "knowledge_source": "Source"
 }

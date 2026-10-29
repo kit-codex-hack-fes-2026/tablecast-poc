@@ -102,6 +102,7 @@ export function addMenuItem(
 }
 
 export type CastTarget =
+  | "knowledge"
   | "proactive"
   | `instructions-${string}`
   | `opening-${string}`
@@ -109,7 +110,7 @@ export type CastTarget =
   | `voice-${string}`;
 
 export function parseCastTarget(value: string): CastTarget | undefined {
-  if (value === "proactive") return value;
+  if (value === "proactive" || value === "knowledge") return value;
   const match = /^(system|instructions|opening|voice)-(.+)$/.exec(value);
   const language = localeSchema.safeParse(match?.[2]);
   const prefix = match?.[1];

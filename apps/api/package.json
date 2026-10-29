@@ -12,7 +12,8 @@
     "./telemetry": "./src/platform/telemetry.ts",
     "./db": "./src/db/public.ts",
     "./bootstrap": "./src/bootstrap.ts",
-    "./media-migration": "./src/modules/media/migration.ts"
+    "./media-migration": "./src/modules/media/migration.ts",
+    "./store-knowledge": "./src/modules/configuration/knowledge.ts"
   },
   "scripts": {
     "typecheck": "node ../../node_modules/@tablecast/typescript-native/bin/tsc --noEmit",

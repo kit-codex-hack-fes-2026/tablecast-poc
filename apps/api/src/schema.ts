@@ -49,6 +49,12 @@ export {
   instructionText,
 } from "./modules/configuration/instruction-model";
 export {
+  storeSkillLimits,
+  storeSkillSchema,
+  storeSkillsSchema,
+} from "./modules/configuration/knowledge-model";
+export type { StoreSkill } from "./modules/configuration/knowledge-model";
+export {
   catalogSchema,
   configDraftSchema,
   configurationHistoryPageSchema,
@@ -90,7 +96,9 @@ export { pointPolicySchema, pointRulesSchema } from "./modules/customer-points/m
 // Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
 export { customerConsentVersion, customerPreferencesSchema } from "./modules/customers/model";
 export { type Demo, demoSchema, type DemoUpdate, demoUpdateSchema } from "./modules/demo/model";
+
 export { gameMessageSchema, gamePackageSchema, gameStateSchema } from "./modules/games/model";
+
 export type { GamePackage, GameState } from "./modules/games/model";
 
 export {
@@ -103,7 +111,6 @@ export {
 } from "./modules/media/model";
 
 export type { ImageAsset, ImageAssets } from "./modules/media/model";
-
 export {
   cartLineSchema,
   cartUpdateSchema,
@@ -113,8 +120,8 @@ export {
 } from "./modules/orders/model";
 
 export { maxCartLines } from "./modules/orders/model";
-export type { CartLine, CartUpdate, Order, PricedLine, Snapshot } from "./modules/orders/model";
 
+export type { CartLine, CartUpdate, Order, PricedLine, Snapshot } from "./modules/orders/model";
 export {
   statisticsQuerySchema,
   type StatisticsResult,
@@ -138,6 +145,7 @@ export {
   timelinePageSchema,
   uiSectionInputSchema,
 } from "./modules/tables/model";
+
 export type {
   ClosedSessionSummary,
   CoreState,
@@ -150,7 +158,6 @@ export type {
   UiSection,
   UiSectionInput,
 } from "./modules/tables/model";
-
 export {
   serviceGuidanceQuerySchema,
   staffCallInputSchema,
@@ -160,15 +167,14 @@ export {
 } from "./modules/tables/model";
 
 export type { StaffCall, StaffCallInput, StaffCallPage } from "./modules/tables/model";
+
 export {
   voiceObservationSchema,
   voicePageSchema,
   voiceReferenceEventSchema,
   voiceToolNameSchema,
 } from "./modules/voice/model";
-
 export type { VoiceReference } from "./modules/voice/model";
-
 export {
   apiErrorSchema,
   localeSchema,
@@ -176,5 +182,6 @@ export {
   uiLocaleSchema,
   validationIssuesSchema,
 } from "./platform/model";
+
 export type { StaffLocale, UiLocale } from "./platform/model";
 export type { ApiError, Locale } from "./platform/model";

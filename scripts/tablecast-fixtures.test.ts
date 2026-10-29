@@ -1,5 +1,6 @@
 import { configurationErrors, priceCart } from "@tablecast/api/bootstrap";
 import { resolveText } from "@tablecast/api/localization";
+import { searchStoreSkills } from "@tablecast/api/store-knowledge";
 import { describe, expect, it } from "vitest";
 import { demoStores } from "./tablecast-fixtures.ts";
 
@@ -155,4 +156,24 @@ describe("デモの構成データ", () => {
     expect(stores.reduce((sum, store) => sum + store.configuration.products.length, 0)).toBe(12);
     for (const store of stores) expect(configurationErrors(store.configuration)).toEqual([]);
   });
+});
+
+it.each([
+  ["営業時間", "references/visit.md", "17:00"],
+  ["予約", "references/reservations.md", "予約"],
+  ["wheelchairs", "references/facilities.md", "wheelchair"],
+  ["receipts", "references/service.md", "receipt"],
+  ["allergies", "references/dining.md", "allerg"],
+  ["pairings", "references/sake.md", "pairing"],
+  ["削除", "references/membership.md", "削除"],
+])("こもれびの公開用資料から%sの根拠を取得できる", (query, path, text) => {
+  const skills =
+    demoStores("demo").find((store) => store.id === "tablecast-komorebi")?.configuration.cast
+      .skills ?? [];
+  const result = searchStoreSkills(skills, query, 0);
+  expect(
+    result.matches.some(
+      (match) => match.path === path && match.excerpt.toLowerCase().includes(text.toLowerCase()),
+    ),
+  ).toBe(true);
 });

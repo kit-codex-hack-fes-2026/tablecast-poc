@@ -64,6 +64,11 @@ export async function updateDraft(
   ensure(previous, "DRAFT_CONFLICT");
   const previousConfiguration = readConfiguration(JSON.parse(previous.configuration));
   ensure(
+    !previousConfiguration.cast.skills?.length || configuration.cast.skills !== undefined,
+    "CONFIGURATION_FORMAT_UNSUPPORTED",
+    422,
+  );
+  ensure(
     !losesFoodChanges(previousConfiguration, configuration),
     "CONFIGURATION_FORMAT_UNSUPPORTED",
     422,

@@ -21,6 +21,8 @@ const moduleContracts = {
     "food-compatibility",
     "instruction-model",
     "instruction-response",
+    "knowledge",
+    "knowledge-model",
     "model",
     "queries",
     "use-cases/drafts",
