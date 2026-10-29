@@ -6,13 +6,13 @@ import { z } from "zod";
 import ja from "../messages/ja.json" with { type: "json" };
 import { credentials } from "./support/runtime";
 import { approveGuestDevice, signInFromLogin, signInStaff } from "./support/session";
-import { test } from "./support/test";
+import { test } from "./tablecast-customer.fixture";
 
 test.use({ viewport: { width: 402, height: 874 }, trace: "off", serviceWorkers: "block" });
 
 test("会員の券と交換候補の0件をJavaScriptなしの初期HTMLから表示する", async ({
   page,
-  browser,
+  members,
   baseURL,
 }) => {
   const storeId = "tablecast-komorebi";
@@ -22,13 +22,14 @@ test("会員の券と交換候補の0件をJavaScriptなしの初期HTMLから�
     data: { consentVersion: customerConsentVersion },
   });
   expect(enrolled.ok()).toBe(true);
-  const context = await browser.newContext({
+  const context = await members.context("ssr", {
     baseURL,
     viewport: { width: 402, height: 874 },
     javaScriptEnabled: false,
     storageState: await page.context().storageState(),
   });
-  try {
+  members.phase("ssr-coupons");
+  await test.step("JavaScriptなしの会員初期表示", async () => {
     const phone = await context.newPage();
     await phone.goto(`/member/${storeId}/coupons`);
     await expect(
@@ -41,17 +42,17 @@ test("会員の券と交換候補の0件をJavaScriptなしの初期HTMLから�
         .getByRole("region", { name: ja.coupon_exchange })
         .getByText(ja.customer_exchanges_empty),
     ).toBeVisible();
-  } finally {
-    await context.close();
-  }
+    members.phase("complete");
+  });
 });
 
 test("二人が来店QRから登録して特典を使い、再来店では追加操作なしで参加する", async ({
   page: staff,
-  browser,
+  members,
   baseURL,
 }, testInfo) => {
   if (!baseURL) throw new Error("runtime fixtureの専用originが必要です");
+  members.phase("setup");
   const capture = async (page: Page, name: string, fullPage = true) => {
     if (testInfo.project.name !== "tablecast-chromium") return;
     await page.evaluate(async () => {
@@ -71,27 +72,28 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
       animations: "disabled",
     });
   };
-  const contexts = await Promise.all([
-    browser.newContext({
-      baseURL,
-      viewport: { width: 1180, height: 820 },
-      serviceWorkers: "block",
-    }),
-    browser.newContext({
-      baseURL,
-      viewport: { width: 402, height: 874 },
-      serviceWorkers: "block",
-    }),
-    browser.newContext({ baseURL, viewport: { width: 402, height: 874 }, serviceWorkers: "block" }),
-  ]);
-  const [tabletContext, firstContext, secondContext] = contexts;
-  if (!tabletContext || !firstContext || !secondContext) throw new Error("試験用の端末が必要です");
+  const tabletContext = await members.context("tablet", {
+    baseURL,
+    viewport: { width: 1180, height: 820 },
+    serviceWorkers: "block",
+  });
+  const firstContext = await members.context("first", {
+    baseURL,
+    viewport: { width: 402, height: 874 },
+    serviceWorkers: "block",
+  });
+  const secondContext = await members.context("second", {
+    baseURL,
+    viewport: { width: 402, height: 874 },
+    serviceWorkers: "block",
+  });
+  const contexts = [tabletContext, firstContext, secondContext];
   const tablet = await tabletContext.newPage();
   const first = await firstContext.newPage();
   const second = await secondContext.newPage();
   const storeId = "tablecast-komorebi";
   const adminBase = `/api/admin/stores/${storeId}`;
-  try {
+  await test.step("会員利用の操作", async () => {
     await Promise.all(
       [...contexts, staff.context()].map((context) =>
         context.addCookies([{ name: "tablecast_locale", value: "ja", url: baseURL }]),
@@ -182,6 +184,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     const codeResponse = tablet
       .waitForResponse((response) => response.url().endsWith("/customer-code") && response.ok())
       .then(async (response) => z.object({ url: z.url() }).parse(await response.json()));
+    members.phase("qr");
     await tablet.goto("/");
     await tablet.getByRole("button", { name: new RegExp(`^${ja.kiosk_visit_tools}`) }).click();
     const code = await codeResponse;
@@ -195,6 +198,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     ).toBeVisible();
     await capture(tablet, "01-ipad-qr");
     // OSのカメラがQRのURLを開いた後から、実アプリの認証・同意・自動参加を検証する。
+    members.phase("first-registration");
     await first.goto(code.url);
     await expect(first).toHaveURL(/\/login\?returnTo=/);
     await expect(first.getByRole("heading", { name: ja.customer_login_title })).toBeVisible();
@@ -219,6 +223,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
       0,
     );
     await capture(first, "04-phone-joined", false);
+    members.phase("second-registration");
     await signInStaff(second.request, baseURL, credentials.otherEmail);
     await second.goto(code.url);
     await second.getByRole("button", { name: ja.customer_enrol, exact: true }).click();
@@ -274,6 +279,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
       `/api/member-stores/${storeId}/manifest.webmanifest`,
     );
     // 確認済みの来店ポイントを付与し、会員証・明細・本人編集の記憶を実データで表示する
+    members.phase("membership");
     const pointsPath = `${adminBase}/tables/${visit.id}/points`;
     const pointVisit = z
       .object({ expectedVersion: z.number(), participants: z.array(z.object({ id: z.string() })) })
@@ -312,6 +318,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     await capture(first, "08-phone-points");
     await first.getByRole("link", { name: new RegExp(ja.customer_back_to_store) }).click();
     await first.getByRole("link", { name: ja.customer_memories_view, exact: true }).click();
+    members.phase("memory");
     await expect(first.getByText(ja.customer_memories_note)).toBeVisible();
     await expect(first.getByRole("textbox")).toHaveCount(0);
     await capture(first, "09a-phone-automatic-memory");
@@ -324,6 +331,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     await capture(first, "10-phone-memories");
     await first.getByRole("link", { name: new RegExp(ja.customer_back_to_store) }).click();
     await first.getByRole("link", { name: new RegExp("T10") }).click();
+    members.phase("coupon");
     await expect(first).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));
     await expect(owned.getByRole("button", { name: ja.coupon_request, exact: true })).toBeVisible();
     await first.evaluate(() => scrollTo(0, 0));
@@ -341,6 +349,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     await capture(first, "12-phone-coupon-requested");
 
     // 店舗の会計を用意し、申請された券を実際の管理画面で適用する
+    members.phase("payment");
     expect(
       (
         await staff.request.post(`${adminBase}/tables/${visit.id}/payments`, {
@@ -396,10 +405,12 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
         .filter({ hasText: ja.customer_disconnected }),
     ).toBeVisible();
     await capture(first, "16-phone-visit-complete");
+    members.phase("history");
     await first.getByRole("link", { name: ja.customer_card_view, exact: true }).click();
     await expect(first.getByRole("heading", { name: ja.customer_previous_visits })).toBeVisible();
     await capture(first, "17-phone-visit-history");
     const next = await open();
+    members.phase("return");
     const nextCodeResponse = tablet
       .waitForResponse((response) => response.url().endsWith("/customer-code") && response.ok())
       .then(async (response) => z.object({ url: z.url() }).parse(await response.json()));
@@ -434,6 +445,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
       popover.getByRole("region", { name: ja.customer_joined_guests }).locator("li"),
     ).toHaveCount(2);
     await capture(tablet, "19-ipad-return-members");
+    members.phase("leave");
     await second.getByRole("button", { name: ja.customer_leave_visit }).click();
     await expect(
       second
@@ -446,26 +458,20 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
       tablet.getByRole("region", { name: ja.customer_joined_guests }).locator("li"),
     ).toHaveCount(1);
     await capture(tablet, "21-ipad-after-member-left");
-    const signedOut = await browser.newContext({
+    members.phase("pwa-sign-in");
+    const signedOut = await members.context("pwa", {
       baseURL,
       viewport: { width: 402, height: 874 },
       serviceWorkers: "block",
     });
-    try {
-      await signedOut.addCookies([{ name: "tablecast_locale", value: "ja", url: baseURL }]);
-      const pwa = await signedOut.newPage();
-      await pwa.goto(`/member/${storeId}`);
-      await expect(pwa).toHaveURL(/\/login\?returnTo=/);
-      await expect(
-        pwa.getByRole("heading", { name: ja.customer_member_login_title }),
-      ).toBeVisible();
-      await expect(pwa.getByText("京料理こもれび四条店", { exact: true })).toBeVisible();
-      await expect(pwa.locator('img[src^="/api/member-stores/"]')).toBeVisible();
-      await capture(pwa, "22-phone-pwa-sign-in");
-    } finally {
-      await signedOut.close();
-    }
-  } finally {
-    await Promise.all(contexts.map((context) => context.close()));
-  }
+    await signedOut.addCookies([{ name: "tablecast_locale", value: "ja", url: baseURL }]);
+    const pwa = await signedOut.newPage();
+    await pwa.goto(`/member/${storeId}`);
+    await expect(pwa).toHaveURL(/\/login\?returnTo=/);
+    await expect(pwa.getByRole("heading", { name: ja.customer_member_login_title })).toBeVisible();
+    await expect(pwa.getByText("京料理こもれび四条店", { exact: true })).toBeVisible();
+    await expect(pwa.locator('img[src^="/api/member-stores/"]')).toBeVisible();
+    await capture(pwa, "22-phone-pwa-sign-in");
+    members.phase("complete");
+  });
 });
