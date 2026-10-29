@@ -4,6 +4,7 @@ import type { GroupKey } from "./types.ts";
 import { demoOptionImageKey } from "../tablecast-demo-option-images.ts";
 import { koreanDemoStore } from "../tablecast-korean-demo.ts";
 import { demoImageKey, demoStoreBanner, demoStoreLogo } from "../tablecast-seed-media.ts";
+import { withDemoFoodChanges } from "./food.ts";
 import { groupDefinitions } from "./modifiers.ts";
 import { sakeKinds, sakes } from "./sake.ts";
 import { categories, drinks, foods, stores } from "./store-data.ts";
@@ -64,7 +65,7 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
           imageKey: demoImageKey(`komorebi-sake-${id}.webp`),
           imageKind: "illustration",
           modifiers: modifiers(kind === "sparkling" ? ["serving"] : ["temperature", "serving"]),
-          allergens: allergenRecord(
+          foodInfo: allergenRecord(
             [],
             [
               `${kindJa}。製造原材料の詳細は未登録です`,
@@ -90,7 +91,7 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
         ]),
       ];
       text.en.aliases = [item.en.toLowerCase(), item.id.replaceAll("-", " ")];
-      return {
+      return withDemoFoodChanges({
         id: `${store.id}-${item.id}`,
         categoryId: item.category,
         text,
@@ -103,8 +104,8 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
         imageKey: demoImageKey(`komorebi-${item.id}.webp`),
         imageKind: "illustration",
         modifiers: modifiers(item.groups),
-        allergens: allergenRecord(item.contains, item.ingredients),
-      };
+        foodInfo: allergenRecord(item.contains, item.ingredients),
+      });
     });
     const featuredIds = [
       `${store.id}-sake-tsukinagi`,

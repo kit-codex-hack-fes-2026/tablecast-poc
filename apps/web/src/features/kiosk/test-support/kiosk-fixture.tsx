@@ -134,6 +134,14 @@ beforeEach(() => {
           expiresAt: Date.now() + 300000,
           url: `${window.location.origin}/member/join?code=${"a".repeat(64)}`,
         });
+      if (request.method === "POST" && path === "/api/table/catalog/food-information")
+        return Response.json({
+          configVersion: current.configVersion,
+          productId: catalog.configuration.products[0]?.id,
+          complete: false,
+          selectionError: "CART_INCOMPLETE",
+          foodInformation: catalog.configuration.products[0]?.foodInfo.base,
+        });
       if (request.method === "GET" && path === "/api/table") return stateResponse();
       if (request.method === "GET" && path === "/api/table/exchange-rates")
         return Response.json({

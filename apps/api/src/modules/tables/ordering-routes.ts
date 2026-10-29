@@ -2,6 +2,8 @@ import { z } from "zod";
 import { apiFactory } from "../../platform/http";
 import { localeSchema } from "../../platform/model";
 import { validate, validateOptionalJson, validateQuery } from "../../platform/validation";
+import { getProductFoodInformation } from "../catalog/food-service";
+import { foodQuerySchema } from "../catalog/model";
 import { getCatalog } from "../catalog/queries";
 import { instructionResponse } from "../configuration/instruction-response";
 import { initialiseExchangeRates } from "../currency/service";
@@ -61,6 +63,9 @@ export const orderingOperations = apiFactory
   )
   .get("/exchange-rates", async (c) =>
     c.json(await initialiseExchangeRates(c.get("services"), c.get("actor")), 200),
+  )
+  .post("/catalog/food-information", validate(foodQuerySchema), async (c) =>
+    c.json(await getProductFoodInformation(c.var.services, c.var.actor, c.req.valid("json")), 200),
   )
   .get("/catalog", async (c) =>
     c.json(

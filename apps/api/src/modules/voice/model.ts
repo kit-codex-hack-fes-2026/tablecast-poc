@@ -12,6 +12,7 @@ export const voiceToolNameSchema = z.enum([
   "getCameraState",
   "endConversation",
   "getCatalog",
+  "getProductFoodInformation",
   "getServiceGuidance",
   "getCustomerContext",
   "getCustomerSuggestions",

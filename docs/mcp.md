@@ -12,6 +12,8 @@ UIそのものの翻訳はWebのメッセージファイル、商品・プラン
 
 `update_draft`のoptionには任意の`conditions: { version: 2, requires, excludes }`を渡せる。式は`{kind:"option", optionId}`、`{kind:"and"|"or", children}`、`{kind:"not", child}`で、条件なしは`null`とする。旧`requires` / `excludes`配列を持つ選択肢も混在できるが、一つの選択肢で新条件と空でない旧配列を併記しない。式は深さ8、各AND/ORは2〜8子、式64節、商品1,024節、設定65,536節まで。`get_configuration`のJSON Schemaは深さごとの参照を含む有限schemaを返し、節数合計はAPIが追加検証する。
 
+食事制限の設定も`get_configuration`・`update_draft`・`validate_draft`・`get_draft_diff`を使う。`get_configuration.foodClassification`に日本の29品目の固定ID・日英名称・区分・参照版を返す。`foodInfo`の固定部分、具材と調理条件、標準構成、選択肢の`foodChanges.add/remove`、各品目の含有・不使用・不明、4食事区分と根拠は全て同じconfigurationで保存できる。既知の判定には日英の根拠が必要で、参照切れ・重複・同一選択肢で同じ具材を追加かつ除去する設定は公開できない。増減の解除は空配列を明示する。詳細な意味は[食事制限仕様](product.md#アレルゲンと食事制限)に従う。
+
 取得した`conditions`を省略して全体保存すると`CONFIGURATION_FORMAT_UNSUPPORTED`となる。条件を削除するときは`version:2`と両式の`null`を明示する。実際の選択肢・商品削除は可能。既存draft・releaseの一括移行やDB migrationは不要。新形式を保存した環境へ旧APIを戻す場合は、先に条件を互換形式へ戻す移行が必要となる。
 
 ## 管理できるもの

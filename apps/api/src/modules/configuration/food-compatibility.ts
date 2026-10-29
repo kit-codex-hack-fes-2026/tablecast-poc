@@ -1,0 +1,54 @@
+import { z } from "zod";
+import {
+  type FoodInformation,
+  japaneseAllergenSchema,
+  unknownFoodProfile,
+} from "../catalog/food-model";
+import { configurationSchema } from "./model";
+
+const legacyAllergensSchema = z
+  .object({
+    contains: z.array(z.string()),
+    evidence: z.enum(["verified", "unknown"]),
+    crossContact: z.enum(["possible", "unknown", "controlled"]),
+    vegan: z.enum(["yes", "no", "unknown"]),
+    note: z.object({ ja: z.string(), en: z.string() }),
+  })
+  .strict();
+
+const storedConfigurationSchema = z.object({ products: z.array(z.unknown()) }).passthrough();
+const storedProductSchema = z
+  .object({ foodInfo: z.unknown().optional(), allergens: z.unknown().optional() })
+  .passthrough();
+
+// 旧記録の含有を保持し、分類全体の不使用確認へ読み替えない。
+export function legacyFoodInformation(
+  input: z.infer<typeof legacyAllergensSchema>,
+): FoodInformation {
+  const base = unknownFoodProfile();
+  base.basis = {
+    ja: input.note.ja || "旧設定の登録情報。未記載の成分は未確認です。",
+    en: input.note.en || "Previously recorded information. Unlisted ingredients are unverified.",
+  };
+  base.crossContact = input.crossContact;
+  base.dietary.vegan = { status: input.vegan, basis: base.basis };
+  for (const value of input.contains) {
+    const parsed = japaneseAllergenSchema.safeParse(value);
+    if (parsed.success) base.allergens[parsed.data] = "contains";
+    else base.otherAllergens.push(value);
+  }
+  return { base, components: [], defaultComponentIds: [] };
+}
+
+export function readConfiguration(value: unknown) {
+  const record = storedConfigurationSchema.parse(value);
+  return configurationSchema.parse({
+    ...record,
+    products: record.products.map((product) => {
+      const item = storedProductSchema.parse(product);
+      if (item.foodInfo !== undefined) return item;
+      const { allergens, ...rest } = item;
+      return { ...rest, foodInfo: legacyFoodInformation(legacyAllergensSchema.parse(allergens)) };
+    }),
+  });
+}

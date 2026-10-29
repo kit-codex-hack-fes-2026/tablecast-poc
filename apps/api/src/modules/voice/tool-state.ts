@@ -133,7 +133,7 @@ export function voiceCatalogProduct(
         })) ?? [],
     ...(detail
       ? {
-          allergens: product.allergens,
+          foodInfo: product.foodInfo,
           modifiers: product.modifiers?.map((modifier) => ({
             id: modifier.id,
             kind: modifier.kind,
@@ -147,6 +147,7 @@ export function voiceCatalogProduct(
               priceDelta: option.priceDelta,
               ...approximateAmounts({ priceDelta: option.priceDelta }, currency, rates),
               available: option.available,
+              foodChanges: option.foodChanges,
               maxQuantity: option.maxQuantity,
               ...(option.conditions
                 ? { conditions: option.conditions }

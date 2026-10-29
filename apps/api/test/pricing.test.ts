@@ -2,8 +2,10 @@ import { expect, it } from "vitest";
 import { z } from "zod";
 import { configurationErrors, type PlanContext, priceCart } from "../src/modules/catalog/pricing";
 import {
+  cartUpdateSchema,
   configurationIssueSchema,
   configurationSchema,
+  maxCartLines,
   type OptionCondition,
   optionConditionSchema,
   optionSchema,
@@ -450,4 +452,27 @@ it("参照切れと自己参照は正確な節を指し、相互参照は選択�
       0,
     ).complete,
   ).toBe(true);
+});
+
+it("カートは上限の20行まで計算でき、超過は入力検証と業務処理で拒否する", () => {
+  const lines = Array.from({ length: maxCartLines }, (_, index) => ({
+    id: `tablecast-capacity-${index}`,
+    productId: "tea",
+    quantity: 1,
+    selections: [],
+  }));
+  expect(cartUpdateSchema.safeParse({ expectedVersion: 0, lines }).success).toBe(true);
+  expect(priceCart(configuration, lines, 0).lines).toHaveLength(maxCartLines);
+  const tooMany = [
+    ...lines,
+    {
+      ...lines[0],
+      id: "tablecast-capacity-overflow",
+      productId: "tea",
+      quantity: 1,
+      selections: [],
+    },
+  ];
+  expect(cartUpdateSchema.safeParse({ expectedVersion: 0, lines: tooMany }).success).toBe(false);
+  expect(() => priceCart(configuration, tooMany, 0)).toThrow("CART_LINE_LIMIT");
 });

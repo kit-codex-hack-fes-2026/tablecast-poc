@@ -1,49 +1,67 @@
-import type { Product } from "@tablecast/api/schema";
+import type { CartLine, Product } from "@tablecast/api/schema";
+import { useQuery } from "@tanstack/react-query";
+import { ErrorNotice } from "../../components/error-notice";
+import { FoodInformationView } from "../../components/food-information";
+import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
+import { parseResponse, type TableEndpoint } from "../../lib/api";
 
-const allergenLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]>> = {
-  crustaceans: "kiosk_allergen_crustaceans",
-  molluscs: "kiosk_allergen_molluscs",
-  buckwheat: "kiosk_allergen_buckwheat",
-  peanuts: "kiosk_allergen_peanuts",
-  mustard: "kiosk_allergen_mustard",
-  fish: "kiosk_allergen_fish",
-  wheat: "kiosk_allergen_wheat",
-  soya: "kiosk_allergen_soya",
-  egg: "kiosk_allergen_egg",
-  sesame: "kiosk_allergen_sesame",
-  prawn: "kiosk_allergen_prawn",
-  barley: "kiosk_allergen_barley",
-  milk: "kiosk_allergen_milk",
-};
-
-export function ProductAllergens({ product }: { product: Product }) {
-  const { locale, t } = useI18n();
+export function ProductAllergens({
+  product,
+  selections,
+  endpoint,
+  configVersion,
+  tableSessionId,
+}: {
+  configVersion: number;
+  endpoint: TableEndpoint;
+  product: Product;
+  selections: CartLine["selections"];
+  tableSessionId: string;
+}) {
+  const { t } = useI18n();
+  const query = useQuery({
+    queryKey: [
+      "tablecast-food-information",
+      endpoint.key,
+      tableSessionId,
+      configVersion,
+      product.id,
+      selections,
+    ],
+    queryFn: ({ signal }) =>
+      parseResponse(
+        endpoint.client.catalog["food-information"].$post(
+          { json: { productId: product.id, selections } },
+          { init: { signal } },
+        ),
+      ),
+    staleTime: Infinity,
+    retry: false,
+  });
   return (
-    <div className="bg-surface-subtle rounded-2xl p-4 mt-6">
-      <h3 className="text-xs mb-2">{t("kiosk_allergens")}</h3>
-      <p className="mb-2 text-sm font-semibold">
-        {product.allergens.contains
-          .map((item) => {
-            const key = allergenLabels[item];
-            return key ? t(key) : item;
-          })
-          .join(t("kiosk_allergen_separator")) ||
-          (product.allergens.evidence === "verified"
-            ? t("kiosk_allergens_none")
-            : t("kiosk_unknown"))}
-      </p>
-      <p className="block text-xs leading-relaxed text-muted-foreground">
-        {product.allergens.note[locale] || t("kiosk_unknown")}
-      </p>
-      {product.allergens.vegan === "yes" && (
-        <p className="block text-xs leading-relaxed text-muted-foreground">{t("kiosk_vegan")}</p>
+    <section
+      className="mt-6 grid gap-4 rounded-2xl bg-surface-subtle p-4"
+      aria-label={t("food_title")}
+    >
+      <h3 className="text-sm font-semibold">{t("food_title")}</h3>
+      {(query.isPending || query.isFetching) && <p role="status">{t("food_updating")}</p>}
+      {query.isError && (
+        <>
+          <ErrorNotice error={query.error} />
+          <Button type="button" variant="outline" onClick={() => void query.refetch()}>
+            {t("food_retry")}
+          </Button>
+        </>
       )}
-      {product.allergens.crossContact !== "controlled" && !product.allergens.note[locale] && (
-        <p className="block text-xs leading-relaxed text-muted-foreground">
-          {t("kiosk_cross_contact")}
-        </p>
+      {query.data && !query.isFetching && !query.isError && (
+        <>
+          <p role="status">
+            {t(query.data.complete ? "food_selection_complete" : "food_selection_incomplete")}
+          </p>
+          <FoodInformationView value={query.data.foodInformation} />
+        </>
       )}
-    </div>
+    </section>
   );
 }

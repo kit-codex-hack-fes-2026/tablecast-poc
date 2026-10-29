@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { id, localeSchema } from "../../platform/model";
+import { foodResultSchema } from "../catalog/food-model";
+
+export const maxCartLines = 20;
 
 const conditionIssueSchema = z
   .object({
@@ -23,7 +26,7 @@ export const cartLineSchema = z
 export const cartUpdateSchema = z
   .object({
     expectedVersion: z.number().int().nonnegative(),
-    lines: z.array(cartLineSchema).max(100),
+    lines: z.array(cartLineSchema).max(maxCartLines),
     dismissProductId: id.optional(),
   })
   .strict();
@@ -71,6 +74,7 @@ const pricedLineSchema = cartLineSchema.extend({
   missing: z.array(z.string()),
   conditionIssues: z.array(conditionIssueSchema).optional(),
   planCovered: z.boolean(),
+  foodInformation: foodResultSchema.optional(),
 });
 
 export const snapshotSchema = z.object({

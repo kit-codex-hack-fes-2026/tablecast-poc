@@ -2,6 +2,7 @@ import type { Configuration } from "@tablecast/api/schema";
 import { Check, ImageOff, TriangleAlert } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
+import { ProductFoodInformationSources } from "../../components/product-food-information";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { money } from "../../i18n/format";
@@ -26,45 +27,7 @@ export function ProductDetails({ product }: { product: Configuration["products"]
           <TriangleAlert className="size-5" />
           {t("kiosk_allergens")}
         </h2>
-        <dl className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-sm text-muted-foreground">{t("editor_contains")}</dt>
-            <dd>{product.allergens.contains.join(" · ") || t("common_empty")}</dd>
-          </div>
-          <div>
-            <dt className="text-sm text-muted-foreground">{t("editor_evidence")}</dt>
-            <dd>
-              {t(product.allergens.evidence === "verified" ? "editor_verified" : "editor_unknown")}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-sm text-muted-foreground">{t("editor_cross_contact")}</dt>
-            <dd>
-              {t(
-                product.allergens.crossContact === "possible"
-                  ? "editor_possible"
-                  : product.allergens.crossContact === "controlled"
-                    ? "editor_controlled"
-                    : "editor_unknown",
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-sm text-muted-foreground">{t("editor_vegan")}</dt>
-            <dd>
-              {t(
-                product.allergens.vegan === "yes"
-                  ? "editor_yes"
-                  : product.allergens.vegan === "no"
-                    ? "editor_no"
-                    : "editor_unknown",
-              )}
-            </dd>
-          </div>
-        </dl>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {product.allergens.note[locale]}
-        </p>
+        <ProductFoodInformationSources product={product} />
       </section>
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">{t("editor_modifiers")}</h2>

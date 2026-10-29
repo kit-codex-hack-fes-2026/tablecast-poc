@@ -7,6 +7,7 @@ import * as m from "motion/react-m";
 import { forwardRef, type ReactNode, useId, useState } from "react";
 import { useI18n } from "../i18n/locale";
 import { ConditionSummary } from "./condition-summary";
+import { FoodInformationView } from "./food-information";
 import { IllustrationNotice } from "./illustration-notice";
 import { Money, PriceChange } from "./money";
 import { ProductImage } from "./product-image";
@@ -211,6 +212,16 @@ export function CartLines({
                       </div>
                     )}
                   </div>
+                  <details>
+                    <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">
+                      {t("food_title")}
+                    </summary>
+                    {line.total === undefined ? (
+                      <p role="status">{t("food_updating")}</p>
+                    ) : (
+                      <FoodInformationView value={line.foodInformation} />
+                    )}
+                  </details>
                   {line.conditionIssues?.map((issue) => {
                     const expression = product?.modifiers
                       .flatMap((group) => group.options)

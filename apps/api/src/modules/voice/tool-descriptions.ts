@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { voiceToolNameSchema } from "./model";
+import { maxCartLines } from "../orders/model";
 
 // 登録する関数とsystem promptで、用途の説明を同じ正本から参照する。
 export const voiceToolDescriptions = {
@@ -9,6 +10,8 @@ export const voiceToolDescriptions = {
     "現在の接客対象について許可された個人記憶と飲食記録を取得する。needsTargetならiPadで本人の選択を依頼し、声や名前から識別しない。記録にない商品を未体験と断定する前にmoreConsumptionを確認する。現在の商品価格・販売状態・必須選択はgetCatalogで再確認する。sourceは今回の発話だけ。",
   saveCustomerMemory:
     "接客対象本人の明確な一人称の好み・希望だけを自動保存する。getCustomerContextが返した今回のsourceの原文からquoteを抜き出す。話者が曖昧、複数人の混ざった発言、背景会話、他人についての推測は保存しない。保存許可がなくsourceがnullなら実行しない。",
+  getProductFoodInformation:
+    "商品IDと検討中のselectionsで選択後の食事制限情報と根拠を確認する。カートは変更しない。complete=false・unknown・交差接触不明を安全や適合と説明しない。",
   getCatalog:
     "商品検索。客が話した商品名・読み・別名・カテゴリ・説明文をqueryへ指定する。かな表記と全半角を同一視し、誤字・脱字も候補へ含める。複数対象は空白区切りのOR検索で、全語一致を上位へ返す。紹介時はshow=trueで候補カードも表示する。結果のdetail=falseは概要であり、選択肢を取得できないという意味ではない。注文対象が決まったら客の商品名や表示順を取得済みの結果に対応付けて、productIdsへ内部IDを最大8件まとめて指定し、必須・任意の選択肢、温度・容量・追加料金・販売状態・条件を含む詳細を取得する。IDは内部照合だけに使い、客に尋ねたり説明・発話・入力を求めない。requiredSelectionsは概要でも必須項目を示す。未取得の詳細は必ず照会し、画面で選んでもらう依頼へ逃げない。商品を選ぶ前に必須選択肢を先回りして尋ねない。more=trueならoffsetを進める。同じ委任で取得済みの詳細は再照会しない。",
   getTableState:
@@ -33,8 +36,7 @@ export const voiceToolDescriptions = {
     "メニューペインの画面遷移ツール。section=menu（メニュー）、cart（カート）、orders（注文履歴）、bill（会計）へ切り替える。紹介した商品を詳しく見せるときはsection=menuと取得済みproductIdを指定して詳細を開く。productId省略/nullなら詳細を閉じる。検索状態は保持し、通常のカテゴリ一覧を明示表示する場合はsearch=nullを指定する。検索結果を開く場合はshowMenuSearchを使う。menu以外では商品選択を解除する。客の画面遷移依頼に加え、選択肢の説明や注文確認の補助として適切な画面を表示する。操作は音声で完結させ、画面を押すよう求めない。表示だけでカート追加や注文・会計の確定は行わない。",
   showProducts:
     "商品紹介やおすすめを依頼されたら、getCatalogで確認した商品IDを最大4件指定して会話内に商品カードを表示する。カードは補助であり、候補の名前・違い・価格を同じ応答の音声でも伝える。表示だけでカート追加や注文を行わない。",
-  updateCart:
-    "現行expectedVersionに対してカートを更新する。既存行を保持し、客の選択をselectionsへ含める。指定のない必須項目は選ばず、返ったmissingとconditionIssuesを確認する。必要な詳細が未取得ならgetCatalog(productIds)で確実に取得し、利用可能な選択肢と追加料金を声で案内して1問ずつ選んでもらう。conditionIssuesのoptionIdの条件式は詳細カタログで確認する。requiresは式が成立する必要があり、andは全て、orはいずれか、notは未選択を表す。ORの全候補を必須と説明しない。条件のoptionIdの名称は取得済みの詳細カタログを使う。任意項目は指定がなければ未選択。数量不明の単品注文は1、追加数量が曖昧なら確認する。注文確定には別のprepareConfirmationと次発話の明示承認が必要。",
+  updateCart: `カートは最大${maxCartLines}行。上限なら先に現在の注文を送信するか商品を減らすよう案内する。現行expectedVersionに対してカートを更新する。既存行を保持し、客の選択をselectionsへ含める。指定のない必須項目は選ばず、返ったmissingとconditionIssuesを確認する。必要な詳細が未取得ならgetCatalog(productIds)で確実に取得し、利用可能な選択肢と追加料金を声で案内して1問ずつ選んでもらう。conditionIssuesのoptionIdの条件式は詳細カタログで確認する。requiresは式が成立する必要があり、andは全て、orはいずれか、notは未選択を表す。ORの全候補を必須と説明しない。条件のoptionIdの名称は取得済みの詳細カタログを使う。任意項目は指定がなければ未選択。数量不明の単品注文は1、追加数量が曖昧なら確認する。注文確定には別のprepareConfirmationと次発話の明示承認が必要。`,
   prepareConfirmation:
     "版付きの注文確認を作る。結果の内容を自然な言葉で案内し、次の客発話で承認を求める。注文はまだ送信されない。",
   submitOrder:

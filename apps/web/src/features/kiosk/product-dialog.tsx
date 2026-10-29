@@ -1,10 +1,11 @@
-import type { CartLine, Product } from "@tablecast/api/schema";
 import { RadioGroup } from "@base-ui/react/radio-group";
+import { type CartLine, maxCartLines, type Product } from "@tablecast/api/schema";
 import { Minus, Plus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { ConditionSummary } from "../../components/condition-summary";
 import { ErrorNotice } from "../../components/error-notice";
 import { Money, PriceChange } from "../../components/money";
+import { ProductFoodInformationSources } from "../../components/product-food-information";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -12,6 +13,7 @@ import { Checkbox } from "../../components/ui/checkbox";
 import { quantityControl } from "../../components/ui/quantity-control-variants";
 import { RadioGroupItem } from "../../components/ui/radio-group";
 import { useI18n } from "../../i18n/locale";
+import { type TableEndpoint } from "../../lib/api";
 import { m } from "../../paraglide/messages.js";
 import { ProductAllergens } from "./product-allergens";
 import { OptionContent } from "./product-option-content";
@@ -19,22 +21,30 @@ import { optionRow } from "./product-option-model";
 
 export function ProductPage({
   product,
+  endpoint,
+  configVersion = 0,
+  tableSessionId = "",
   imageSize = 160,
   initial,
   editing = Boolean(initial),
   busy,
+  cartLimitReached = false,
   error,
   onClose,
   onSave,
 }: {
   busy: boolean;
+  cartLimitReached?: boolean;
+  configVersion?: number;
   editing?: boolean;
+  endpoint?: TableEndpoint;
   error?: unknown;
   imageSize?: number;
   initial?: CartLine;
   onClose: () => void;
   onSave: (line: CartLine, pointer: boolean, origin: DOMRect) => void;
   product: Product;
+  tableSessionId?: string;
 }) {
   const { locale, t } = useI18n();
   const id = useId();
@@ -263,7 +273,17 @@ export function ProductPage({
             </fieldset>
           ))}
         </div>
-        <ProductAllergens product={product} />
+        {endpoint ? (
+          <ProductAllergens
+            product={product}
+            selections={selections}
+            endpoint={endpoint}
+            configVersion={configVersion}
+            tableSessionId={tableSessionId}
+          />
+        ) : (
+          <ProductFoodInformationSources product={product} />
+        )}
         {product.modifiers.flatMap((group) =>
           group.options.map((option) =>
             option.conditions &&
@@ -288,6 +308,11 @@ export function ProductPage({
         )}
         <ErrorNotice error={error} />
       </div>
+      {cartLimitReached && (
+        <p role="status" className="bg-card px-4 py-2 text-sm text-muted-foreground">
+          {m.kiosk_cart_limit({ count: maxCartLines }, { locale })}
+        </p>
+      )}
       <div
         data-theme-part="checkout"
         className="flex shrink-0 items-center justify-between gap-3 bg-card p-3"
@@ -329,7 +354,7 @@ export function ProductPage({
           size="lg"
           type="button"
 
-          disabled={busy || !product.available}
+          disabled={busy || !product.available || cartLimitReached}
           onClick={(event) =>
             onSave(
               {

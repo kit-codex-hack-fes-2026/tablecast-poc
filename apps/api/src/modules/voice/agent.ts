@@ -5,6 +5,8 @@ import type { Actor } from "../auth/model";
 import type { DisplayCurrencyContext } from "../currency/model";
 import { ensure } from "../../platform/errors";
 import { localeSchema, id as productIdSchema } from "../../platform/model";
+import { getProductFoodInformation } from "../catalog/food-service";
+import { foodQuerySchema } from "../catalog/model";
 import { getCatalog } from "../catalog/queries";
 import { menuSearchPage } from "../catalog/search";
 import { maxConfigurationProducts } from "../configuration/model";
@@ -97,6 +99,15 @@ export function createCastTools(
             productIds: result.products.map((product) => product.id),
           });
         return result;
+      },
+    }),
+    getProductFoodInformation: castTool({
+      id: "getProductFoodInformation",
+      description: voiceToolDescriptions.getProductFoodInformation,
+      inputSchema: foodQuerySchema,
+      execute: async (input) => {
+        guard();
+        return getProductFoodInformation(services, actor, input);
       },
     }),
     getCatalog: castTool({

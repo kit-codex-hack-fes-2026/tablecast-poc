@@ -1,5 +1,11 @@
-import { configurationSchema, type Modifier, type Product } from "@tablecast/api/schema";
+import {
+  configurationSchema,
+  legacyFoodInformation,
+  type Modifier,
+  type Product,
+} from "@tablecast/api/schema";
 import { demoOptionImageKey } from "./tablecast-demo-option-images.ts";
+import { koreanFoodInformation, withDemoFoodChanges } from "./tablecast-fixtures/food.ts";
 import { demoImageKey } from "./tablecast-seed-media.ts";
 
 type KoreanMenuItem = {
@@ -691,31 +697,33 @@ export function koreanDemoStore(profile: "demo" | "history" | "smoke") {
         ja: `${item.ingredients[0]}。${spice[0]}${safety[0]}${commonNote.ja}`,
         en: `${item.ingredients[1]}. ${spice[1]} ${safety[1]} ${commonNote.en}`,
       };
-      return {
-        id: `${koreanDemoStoreId}-${item.key}`,
-        categoryId: item.category,
-        text: text(item.ja, item.en, description.ja, description.en),
-        price: item.price,
-        available: item.available ?? true,
-        tags: [
-          ...(item.category === "korean-alcohol" ? ["alcohol"] : []),
-          ...(item.tabletop ? ["tabletop-cooking"] : []),
-        ],
-        imageKey: demoImageKey(`hanul-${item.key}.webp`),
-        imageKind: "illustration",
-        modifiers: item.groups.map((key) => {
-          const value = koreanDemoModifierGroups[key];
-          if (!value) throw new Error(`韓国店の選択肢がありません: ${key}`);
-          return value;
+      return koreanFoodInformation(
+        withDemoFoodChanges({
+          id: `${koreanDemoStoreId}-${item.key}`,
+          categoryId: item.category,
+          text: text(item.ja, item.en, description.ja, description.en),
+          price: item.price,
+          available: item.available ?? true,
+          tags: [
+            ...(item.category === "korean-alcohol" ? ["alcohol"] : []),
+            ...(item.tabletop ? ["tabletop-cooking"] : []),
+          ],
+          imageKey: demoImageKey(`hanul-${item.key}.webp`),
+          imageKind: "illustration",
+          modifiers: item.groups.map((key) => {
+            const value = koreanDemoModifierGroups[key];
+            if (!value) throw new Error(`韓国店の選択肢がありません: ${key}`);
+            return value;
+          }),
+          foodInfo: legacyFoodInformation({
+            contains: item.contains,
+            evidence: "verified",
+            crossContact: "unknown",
+            vegan: "unknown",
+            note: description,
+          }),
         }),
-        allergens: {
-          contains: item.contains,
-          evidence: "verified",
-          crossContact: "unknown",
-          vegan: "unknown",
-          note: description,
-        },
-      };
+      );
     });
   return {
     id: koreanDemoStoreId,

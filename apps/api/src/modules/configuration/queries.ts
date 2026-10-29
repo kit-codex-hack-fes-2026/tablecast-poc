@@ -10,6 +10,7 @@ import { requireManagerRead } from "../auth/policy";
 import { configurationErrors } from "../catalog/pricing";
 import { catalogQuery, catalogValue } from "../catalog/queries";
 import { configurationDifferences } from "./differences";
+import { readConfiguration } from "./food-compatibility";
 import {
   type Catalog,
   type ConfigDraft,
@@ -18,7 +19,6 @@ import {
   configurationIssueSchema,
   type ConfigurationRelease,
   configurationReleaseSchema,
-  configurationSchema,
   draftChoiceSchema,
   type DraftChoicesQuery,
 } from "./model";
@@ -46,7 +46,7 @@ export async function getDraft(
 }
 
 function draftValue(row: typeof business.configDrafts.$inferSelect, catalog: Catalog): ConfigDraft {
-  const configuration = configurationSchema.parse(JSON.parse(row.config_json));
+  const configuration = readConfiguration(JSON.parse(row.config_json));
   const storedErrors: unknown = JSON.parse(row.errors_json);
   const legacyErrors = z.array(z.string()).safeParse(storedErrors);
   // 旧形式は文言を解析せず保存設定から再評価する。読み取りでは検証状態・版を更新しない。
@@ -270,9 +270,15 @@ export async function getConfigurationRelease(
   ensure(row, "CONFIGURATION_RELEASE_NOT_FOUND", 404);
   ensure(current[0], "STORE_NOT_FOUND", 404);
   const { snapshot, ...metadata } = row;
-  const parsed = configurationSchema.safeParse(JSON.parse(snapshot));
+  const parsed = (() => {
+    try {
+      return { success: true as const, data: readConfiguration(JSON.parse(snapshot)) };
+    } catch {
+      return { success: false as const };
+    }
+  })();
   const configuration = parsed.success ? parsed.data : null;
-  const published = configurationSchema.parse(JSON.parse(current[0].snapshot));
+  const published = readConfiguration(JSON.parse(current[0].snapshot));
   return configurationReleaseSchema.parse({
     ...metadata,
     publishedVersion: current[0].version,

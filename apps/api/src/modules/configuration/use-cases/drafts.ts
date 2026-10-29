@@ -6,10 +6,12 @@ import * as business from "../../../db/business-schema";
 import { ensure } from "../../../platform/errors";
 import { requireManager } from "../../auth/policy";
 import { losesConditions } from "../../catalog/conditions";
+import { losesFoodChanges } from "../../catalog/food";
 import { configurationErrors } from "../../catalog/pricing";
 import { getCatalog } from "../../catalog/queries";
 import { requireConfigurationImages } from "../../media/service";
 import { voiceConfigurationErrors } from "../../voice/catalog";
+import { readConfiguration } from "../food-compatibility";
 import {
   type configurationRestoreSchema,
   configurationSchema,
@@ -60,8 +62,14 @@ export async function updateDraft(
     )
     .get();
   ensure(previous, "DRAFT_CONFLICT");
+  const previousConfiguration = readConfiguration(JSON.parse(previous.configuration));
   ensure(
-    !losesConditions(configurationSchema.parse(JSON.parse(previous.configuration)), configuration),
+    !losesFoodChanges(previousConfiguration, configuration),
+    "CONFIGURATION_FORMAT_UNSUPPORTED",
+    422,
+  );
+  ensure(
+    !losesConditions(previousConfiguration, configuration),
     "CONFIGURATION_FORMAT_UNSUPPORTED",
     422,
   );

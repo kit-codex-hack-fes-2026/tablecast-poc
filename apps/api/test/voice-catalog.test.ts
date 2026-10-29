@@ -56,7 +56,7 @@ describe("Responses functionと共通業務の認可", () => {
       total: 1,
       version: 4,
       detail: true,
-      products: [{ id: "tea", price: 920, allergens: tea.allergens }],
+      products: [{ id: "tea", price: 920, foodInfo: tea.foodInfo }],
     });
     for (const query of ["からあけ", "柚子"])
       expect((await tool("getCatalog", { query, show: true })).result).toMatchObject({
@@ -71,7 +71,7 @@ describe("Responses functionと共通業務の認可", () => {
     );
     expect(events.at(-1)?.data).toMatchObject({ productIds: ["tea"] });
     const overview = (await tool("getCatalog", { query: "柚子" })).result;
-    expect(overview).not.toHaveProperty("products.0.allergens");
+    expect(overview).not.toHaveProperty("products.0.foodInfo");
     expect(overview).not.toHaveProperty("products.0.modifiers");
   });
 });
@@ -127,7 +127,7 @@ describe("Responses functionと共通業務の認可", () => {
         products: [
           {
             id: "tea",
-            allergens: configuration.products[0]?.allergens,
+            foodInfo: configuration.products[0]?.foodInfo,
             modifiers: [{ id: "temperature", min: 1, options: [{ id: "ice" }] }],
           },
         ],
@@ -143,7 +143,7 @@ describe("Responses functionと共通業務の認可", () => {
       const result = await tool("getCatalog", args);
       expect(result.result).toMatchObject({ detail: false });
       expect(result.result).toHaveProperty("products.length", 2);
-      expect(result.result).not.toHaveProperty("products.0.allergens");
+      expect(result.result).not.toHaveProperty("products.0.foodInfo");
       expect(result.result).not.toHaveProperty("products.1.modifiers");
     }
     expect((await tool("getCatalog", { query: "未登録の商品", show: true })).result).toMatchObject({
@@ -214,13 +214,13 @@ describe("Responses functionと共通業務の認可", () => {
     const combined = (await tool("getCatalog", { query: "刺身 日本酒" })).result;
     expect(combined).toMatchObject({ detail: false, products: [{ id: "tea" }, { id: "coffee" }] });
     expect(combined).not.toHaveProperty("products.1.modifiers");
-    expect(combined).not.toHaveProperty("products.1.allergens");
+    expect(combined).not.toHaveProperty("products.1.foodInfo");
     expect((await tool("getCatalog", { query: "coffee" })).result).toMatchObject({
       detail: true,
       products: [
         {
           id: "coffee",
-          allergens: configuration.products[1]?.allergens,
+          foodInfo: configuration.products[1]?.foodInfo,
           modifiers: [{ min: 1, options: [{ priceDelta: 0 }, { priceDelta: 100 }] }],
         },
       ],
@@ -264,7 +264,7 @@ describe("Responses functionと共通業務の認可", () => {
     ])
       expect((await tool("getCatalog", { query })).result).toMatchObject({
         detail: true,
-        products: [{ id: "sake-tsukinagi", price: 620, allergens: base.allergens }],
+        products: [{ id: "sake-tsukinagi", price: 620, foodInfo: base.foodInfo }],
       });
     expect((await tool("getCatalog", { query: "こもれび 雪灯 純米酒" })).result).toMatchObject({
       detail: true,
@@ -277,7 +277,7 @@ describe("Responses functionと共通業務の認可", () => {
     const missing = (await tool("getCatalog", { query: "未登録の銘柄" })).result;
     expect(missing).toMatchObject({ detail: false });
     expect(missing).toHaveProperty("products.length", 0);
-    expect(missing).not.toHaveProperty("products.0.allergens");
+    expect(missing).not.toHaveProperty("products.0.foodInfo");
   });
 });
 describe("Responses functionと共通業務の認可", () => {
@@ -326,7 +326,7 @@ describe("Responses functionと共通業務の認可", () => {
     expect(lastPage).toHaveProperty("products.3.available", false);
     expect(overview).toHaveProperty("products.0.speechName", "にほんしゅめいがら0");
     expect(overview).toHaveProperty("products.0.description", "辛口。表示価格は60mlです。");
-    for (const field of ["aliases", "tags", "allergens", "modifiers"])
+    for (const field of ["aliases", "tags", "foodInfo", "modifiers"])
       expect(overview).not.toHaveProperty(`products.0.${field}`);
     const selected = (await tool("getCatalog", { query: "sake-0" })).result;
     expect(selected).toMatchObject({
@@ -335,7 +335,7 @@ describe("Responses functionと共通業務の認可", () => {
         {
           id: "sake-0",
           price: base.price,
-          allergens: base.allergens,
+          foodInfo: base.foodInfo,
           modifiers: [{ min: 1, max: 1, options: [{ priceDelta: 0 }, { priceDelta: 100 }] }],
         },
       ],
@@ -353,7 +353,7 @@ describe("Responses functionと共通業務の認可", () => {
       .where(eq(business.stores.id, device.storeId));
     expect((await tool("getCatalog", { query: "別名0" })).result).toMatchObject({
       detail: true,
-      products: [{ id: "sake-0", price: 650, allergens: base.allergens }],
+      products: [{ id: "sake-0", price: 650, foodInfo: base.foodInfo }],
     });
   });
 });
@@ -410,7 +410,7 @@ describe("Responses functionと共通業務の認可", () => {
         {
           id: "tablecast-paged-1999",
           price: 2099,
-          allergens: base.allergens,
+          foodInfo: base.foodInfo,
           modifiers: [
             {
               min: 1,
@@ -430,4 +430,28 @@ describe("Responses functionと共通業務の認可", () => {
       code: "INVALID_INPUT",
     });
   });
+});
+
+it("選択後の食事制限を読取り専用の音声ツールで確認し、注文かごを変えない", async () => {
+  await setup();
+  const response = await tool("getProductFoodInformation", {
+    productId: "coffee",
+    selections: [{ optionId: "dairy", quantity: 1 }],
+  });
+  expect(response.result).toMatchObject({
+    configVersion: 1,
+    productId: "coffee",
+    complete: true,
+    foodInformation: {
+      allergens: {},
+      crossContact: "unknown",
+      dietary: {
+        vegan: { status: "unknown" },
+        vegetarian: { status: "unknown" },
+        halal: { status: "unknown" },
+        glutenFree: { status: "unknown" },
+      },
+    },
+  });
+  expect((await getTableState(services(), device)).cart.lines).toHaveLength(0);
 });

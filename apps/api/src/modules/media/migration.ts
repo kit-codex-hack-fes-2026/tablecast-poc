@@ -10,7 +10,7 @@ import {
   stores,
   tableSessions,
 } from "../../db/table-schema";
-import { configurationSchema } from "../configuration/model";
+import { readConfiguration } from "../configuration/food-compatibility";
 import { couponRuleSchema } from "../customer-coupons/model";
 import { generateImageAsset } from "./placeholder";
 import { configurationImageKeys } from "./queries";
@@ -55,7 +55,7 @@ export async function migrateImageAssets(
     references.set(key, owners);
   };
   for (const row of configurations) {
-    for (const key of configurationImageKeys(configurationSchema.parse(JSON.parse(row.json))))
+    for (const key of configurationImageKeys(readConfiguration(JSON.parse(row.json))))
       add(row.storeId, key);
   }
   for (const row of [...rules, ...coupons])

@@ -1,6 +1,7 @@
 import type { Modifier, Product } from "@tablecast/api/schema";
 import { configurationSchema } from "@tablecast/api/schema";
 import { demoImageKey } from "../tablecast-seed-media.ts";
+import { westwardFoodInformation } from "./food.ts";
 import { allergenRecord, bilingual } from "./text.ts";
 import { westwardModifiers } from "./westward-modifiers.ts";
 
@@ -176,7 +177,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         ...(item.key === "westward-classic" ? ["ハンバーガー", "カスタムバーガー"] : []),
       ];
       text.en.aliases = [item.en.toLowerCase()];
-      return {
+      return westwardFoodInformation({
         id: `${storeId}-${item.key}`,
         categoryId: item.category,
         text,
@@ -186,8 +187,8 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         imageKey: demoImageKey(`westward-${item.key}.webp`),
         imageKind: "illustration",
         modifiers: item.modifiers ?? [],
-        allergens: allergenRecord(item.contains, item.ingredients),
-      };
+        foodInfo: allergenRecord(item.contains, item.ingredients),
+      });
     });
   return configurationSchema.parse({
     categories: (

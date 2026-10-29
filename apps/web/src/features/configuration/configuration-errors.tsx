@@ -2,6 +2,7 @@ import type { Configuration, ConfigurationIssue, Locale } from "@tablecast/api/s
 import { useI18n } from "../../i18n/locale";
 
 const messages = {
+  FOOD_COMPONENT_INVALID: "food_component_invalid",
   DUPLICATE_ID: "config_error_duplicate_id",
   CATEGORY_NOT_FOUND: "config_error_category_missing",
   MODIFIER_SELECTION_RANGE: "config_error_selection_range",
@@ -39,6 +40,7 @@ function subject(configuration: Configuration, path: ConfigurationIssue["path"],
 
 function reference(issue: ConfigurationIssue) {
   switch (issue.code) {
+    case "FOOD_COMPONENT_INVALID":
     case "DUPLICATE_ID":
       return issue.params.id;
     case "CATEGORY_NOT_FOUND":
