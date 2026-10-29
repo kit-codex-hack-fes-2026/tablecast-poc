@@ -5,6 +5,7 @@ const unitTests = [
   "test/catalog-search.test.ts",
   "test/currency-display.test.ts",
   "test/pricing.test.ts",
+  "test/food.test.ts",
   "test/billing-pricing.test.ts",
   "test/instructions.test.ts",
   "test/container-metrics.test.ts",

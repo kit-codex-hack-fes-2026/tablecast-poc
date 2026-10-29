@@ -6,6 +6,7 @@ import {
   type CoreState,
   type Locale,
   localeSchema,
+  maxCartLines,
   type Product,
   type Snapshot,
   submittedCoreOrderSchema,
@@ -935,11 +936,18 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                         >
                           {selection && (
                             <ProductPage
+                              endpoint={endpoint}
+                              configVersion={data.configVersion}
+                              tableSessionId={data.id}
                               imageSize={orderWidth && orderWidth < 576 ? 128 : 160}
                               key={selection.line?.id ?? selection.product.id}
                               product={selection.product}
                               initial={selection.line}
                               editing={selection.editing}
+                              cartLimitReached={
+                                cartLines.length >= maxCartLines &&
+                                !(selection.editing ?? Boolean(selection.line))
+                              }
                               busy={false}
                               error={selection.error}
                               onClose={() => setSection("menu")}

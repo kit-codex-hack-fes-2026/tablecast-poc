@@ -11,6 +11,7 @@ import {
   catalogSchema,
   configDraftSchema,
   configurationSchema,
+  legacyFoodInformation,
   uploadedImageSchema,
 } from "../src/schema";
 import { setupFixture, text } from "./fixture";
@@ -332,7 +333,7 @@ it("架空の二郎系店舗を店名・生成画像・マシマシ・日英接�
       imageKey: image.imageKey,
       imageKind: image.imageKind,
       imageSource: image.imageSource,
-      allergens: {
+      foodInfo: legacyFoodInformation({
         contains: [],
         evidence: "unknown",
         crossContact: "unknown",
@@ -341,7 +342,7 @@ it("架空の二郎系店舗を店名・生成画像・マシマシ・日英接�
           ja: "試作設定。原材料はスタッフに確認してください。",
           en: "Sample menu. Please ask staff about ingredients.",
         },
-      },
+      }),
       modifiers: [
         { id: "noodles", ja: "麺量", en: "Noodle portion" },
         { id: "vegetables", ja: "野菜", en: "Vegetables" },

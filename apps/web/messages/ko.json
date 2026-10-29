@@ -435,5 +435,7 @@
   "pwa_install_title": "iPad 홈 화면에 추가",
   "pwa_install_steps": "Safari에서 원하는 화면을 열고 공유, 홈 화면에 추가를 선택하세요. 설치된 앱을 열어 기기를 등록하거나 로그인하세요.",
   "pwa_kiosk": "테이블 앱 열기",
-  "pwa_staff": "직원 앱 열기"
+  "pwa_staff": "직원 앱 열기",
+  "kiosk_cart_limit": "장바구니에는 최대 {count}개 항목을 담을 수 있습니다. 더 담으려면 먼저 주문해 주세요.",
+  "kiosk_cart_limit_error": "장바구니가 가득 찼습니다. 먼저 주문하거나 항목을 삭제해 주세요."
 }

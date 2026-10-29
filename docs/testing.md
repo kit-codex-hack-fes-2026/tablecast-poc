@@ -451,3 +451,7 @@ Browserの色判定へ渡すCSSプロパティは`background-color`等の標準C
 既存`media`・`image-upload`・`customer-rewards-http`の実Workers/D1/R2/Images統合で、取込・保存・再送・索引移行・同一店舗認可を確認する。匿名・別店舗・端末失効は内部cache hitと条件付き要求でも拒否し、共有業務カタログには表示情報を追加しない。`ProductImage` BrowserでSSRのinline背景、hydration、成功・失敗・透過・差替え、実寸の予約と元画像幅の制限を確認する。
 
 新しいE2Eを作らず、既存`image-performance`の24/120商品・cold 500,000byte以下・取得済みURLのwarm転送0・CLS 0.1未満を維持する。HTML・カタログJSON・追加JS容量、SSR時間とLCPを対象SHA・同じfixtureで比較する。既存`pwa`で認可済み画像の通信なし再利用と401/404の非保存を確認し、権限失効後の即時消去は要求しない。ローカル・CIと実Cloudflareの性能は区別する。
+
+## 食事制限情報の保証
+
+集合・判定優先順位・根拠・具材参照・旧設定変換はAPIの`food.test.ts`、保存・店舗境界・履歴・注文snapshotは実D1/HTTPの`food-bindings.test.ts`で所有する。MCPは既存の実OAuth/SDK契約試験で全設定の往復と増減の消失拒否を、音声は固定ツール呼出しで読取り専用照会を確認する。Browserでは日英の編集・根拠の言語切替・失敗と再取得・遅着応答を確認し、Playwrightの`tablecast-food.spec.ts`だけがseed・実Web/API/DBを通した具材変更から注文と管理画面保存までを接続する。実モデルのツール選択や実音声の説明品質はこの決定的な試験の保証に含めない。

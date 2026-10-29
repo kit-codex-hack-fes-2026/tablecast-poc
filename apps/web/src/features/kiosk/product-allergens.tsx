@@ -1,51 +1,52 @@
-import type { Product } from "@tablecast/api/schema";
-import { resolveLocalized } from "@tablecast/api/localization";
+import { unknownFoodProfile } from "@tablecast/api/schema";
+import { LoaderCircle, RefreshCw } from "lucide-react";
+import type { ProductFoodQuery } from "./product-food-query";
+import { FoodInformationView } from "../../components/food-information";
+import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 
-const allergenLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]>> = {
-  crustaceans: "kiosk_allergen_crustaceans",
-  molluscs: "kiosk_allergen_molluscs",
-  buckwheat: "kiosk_allergen_buckwheat",
-  peanuts: "kiosk_allergen_peanuts",
-  mustard: "kiosk_allergen_mustard",
-  fish: "kiosk_allergen_fish",
-  wheat: "kiosk_allergen_wheat",
-  soya: "kiosk_allergen_soya",
-  egg: "kiosk_allergen_egg",
-  sesame: "kiosk_allergen_sesame",
-  prawn: "kiosk_allergen_prawn",
-  barley: "kiosk_allergen_barley",
-  milk: "kiosk_allergen_milk",
-};
-
-export function ProductAllergens({ product }: { product: Product }) {
-  const { locale, t } = useI18n();
+export function ProductAllergens({ query }: { query: ProductFoodQuery }) {
+  const { t } = useI18n();
+  const updating = query.isFetching;
   return (
-    <div className="bg-surface-subtle rounded-2xl p-4 mt-6">
-      <h3 className="text-xs mb-2">{t("kiosk_allergens")}</h3>
-      <p className="mb-2 text-sm font-semibold">
-        {product.allergens.contains
-          .map((item) => {
-            const key = allergenLabels[item];
-            return key ? t(key) : item;
-          })
-          .join(t("kiosk_allergen_separator")) ||
-          (product.allergens.evidence === "verified"
-            ? t("kiosk_allergens_none")
-            : t("kiosk_unknown"))}
+    <section className="grid min-w-0 gap-1.5" aria-label={t("food_title")} aria-busy={updating}>
+      <FoodInformationView
+        value={query.data?.foodInformation ?? unknownFoodProfile()}
+        caption={
+          <>
+            <span>{t("food_current_selection")}</span>
+            {query.data && !query.data.complete && (
+              <span className="shrink-0">{t("food_selection_incomplete")}</span>
+            )}
+            <span className="inline-flex size-4 shrink-0 items-center justify-center">
+              {updating && (
+                <LoaderCircle
+                  role="status"
+                  aria-label={t("food_updating")}
+                  className="size-3.5 motion-safe:animate-spin"
+                />
+              )}
+            </span>
+          </>
+        }
+      />
+      {query.isPlaceholderData && <p className="sr-only">{t("food_previous_selection")}</p>}
+      <p role="status" className="sr-only">
+        {!updating && query.data
+          ? t(query.data.complete ? "food_selection_complete" : "food_selection_incomplete")
+          : ""}
       </p>
-      <p className="block text-xs leading-relaxed text-muted-foreground">
-        {resolveLocalized(product.allergens.note, locale) || t("kiosk_unknown")}
-      </p>
-      {product.allergens.vegan === "yes" && (
-        <p className="block text-xs leading-relaxed text-muted-foreground">{t("kiosk_vegan")}</p>
-      )}
-      {product.allergens.crossContact !== "controlled" &&
-        !resolveLocalized(product.allergens.note, locale) && (
-          <p className="block text-xs leading-relaxed text-muted-foreground">
-            {t("kiosk_cross_contact")}
+      {query.isError && (
+        <div className="flex items-center gap-2">
+          <p role="alert" className="text-xs text-destructive">
+            {t("food_failed")}
           </p>
-        )}
-    </div>
+          <Button type="button" size="sm" variant="ghost" onClick={() => void query.refetch()}>
+            <RefreshCw aria-hidden="true" />
+            {t("food_retry")}
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }

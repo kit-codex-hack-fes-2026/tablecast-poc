@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { resolveLocalized } from "@tablecast/api/localization";
-import { configurationSchema } from "@tablecast/api/schema";
+import { configurationSchema, legacyFoodInformation } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Save } from "lucide-react";
 import { useState } from "react";
@@ -38,13 +38,13 @@ const configuration = configurationSchema.parse({
       text: text("カフェラテ", "Caffè latte"),
       price: 500,
       available: true,
-      allergens: {
+      foodInfo: legacyFoodInformation({
         contains: ["乳"],
         evidence: "verified",
         crossContact: "possible",
         vegan: "no",
         note: { ja: "スタッフへご確認ください。", en: "Please ask a member of staff." },
-      },
+      }),
       modifiers: Array.from({ length: 3 }, (_, group) => ({
         id: `milk-${group}`,
         text: text("ミルク", "Milk"),

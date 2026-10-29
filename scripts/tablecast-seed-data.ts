@@ -6,7 +6,7 @@ import {
 } from "@tablecast/api/bootstrap";
 import { business, createDatabase, type Database, identity } from "@tablecast/api/db";
 import { migrateImageAssets } from "@tablecast/api/media-migration";
-import { configurationSchema } from "@tablecast/api/schema";
+import { readConfiguration } from "@tablecast/api/schema";
 import { and, count, desc, eq, inArray, isNull, like, sql } from "drizzle-orm";
 import { type BatchItem } from "drizzle-orm/batch";
 import { tablecastDemoStoreIcons } from "../apps/emulate/src/tablecast-demo-identities.ts";
@@ -198,7 +198,7 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
       .where(eq(business.stores.id, store.id))
       .get();
     if (existing) {
-      store.configuration = configurationSchema.parse(JSON.parse(existing.config_json));
+      store.configuration = readConfiguration(JSON.parse(existing.config_json));
       store.configVersion = existing.config_version;
     }
     const existingMembers = await db

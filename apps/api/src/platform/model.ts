@@ -21,7 +21,7 @@ export type UiLocale = z.infer<typeof uiLocaleSchema>;
 
 export type Locale = z.infer<typeof localeSchema>;
 
-export const id = z.string().min(1).max(100);
+export const id = z.string().min(1).max(100).meta({ id: "tablecastId" });
 
 export const money = z.number().int().min(0).max(10_000_000);
 

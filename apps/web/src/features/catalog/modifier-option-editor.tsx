@@ -7,6 +7,7 @@ import { useI18n } from "../../i18n/locale";
 import { BilingualFields, BooleanField, NumericField } from "../configuration/configuration-fields";
 import { ConfigurationImageField } from "../configuration/configuration-image-field";
 import { type ImageStagedChange } from "../configuration/configuration-image-model";
+import { FoodChangesEditor } from "./food-information-editor";
 import { OptionConditionsEditor } from "./option-conditions-editor";
 
 export function ModifierOptionEditor({
@@ -75,6 +76,12 @@ export function ModifierOptionEditor({
           disabled={disabled}
         />
       </div>
+      <FoodChangesEditor
+        product={product}
+        option={option}
+        disabled={disabled}
+        onChange={onChange}
+      />
       <Disclosure.Root
         onOpenChange={(open) => {
           if (open) setConditionsVisible(true);

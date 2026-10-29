@@ -96,6 +96,10 @@ const configurationIssueBase = z.object({
 
 export const configurationIssueSchema = z.discriminatedUnion("code", [
   configurationIssueBase.extend({
+    code: z.literal("FOOD_COMPONENT_INVALID"),
+    params: z.object({ id: z.string() }).strict(),
+  }),
+  configurationIssueBase.extend({
     code: z.literal("DUPLICATE_ID"),
     params: z.object({ id: z.string() }).strict(),
   }),
@@ -307,4 +311,8 @@ export const draftPublishSchema = z
     idempotencyKey: z.string().min(8).max(100),
     approved: z.literal(true),
   })
+  .strict();
+
+export const foodPreviewSchema = z
+  .object({ product: productSchema, selections: z.array(selectionSchema).max(100) })
   .strict();

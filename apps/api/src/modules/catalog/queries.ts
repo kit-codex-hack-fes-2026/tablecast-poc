@@ -4,7 +4,8 @@ import type { ApiServices } from "../../platform/context";
 import * as business from "../../db/business-schema";
 import { ensure } from "../../platform/errors";
 import { observeOperation } from "../../platform/telemetry";
-import { type Catalog, configurationSchema } from "../configuration/model";
+import { readConfiguration } from "../configuration/food-compatibility";
+import { type Catalog } from "../configuration/model";
 export async function getCatalog(
   services: ApiServices,
   storeId: string,
@@ -22,7 +23,7 @@ export async function getCatalog(
           storeId,
           storeName: demo.configuration.storeName,
           version: demo.configuration.config_version,
-          configuration: configurationSchema.parse(JSON.parse(demo.configuration.config_json)),
+          configuration: readConfiguration(JSON.parse(demo.configuration.config_json)),
         };
       return catalogValue(await catalogQuery(services.db, storeId, demoId).get(), demoId);
     },
@@ -82,7 +83,7 @@ export function catalogValue(
     storeId: store.id,
     storeName: store.name,
     version: demo?.config_version ?? store.config_version,
-    configuration: configurationSchema.parse(JSON.parse(demo?.config_json ?? store.config_json)),
+    configuration: readConfiguration(JSON.parse(demo?.config_json ?? store.config_json)),
   };
 }
 

@@ -45,7 +45,7 @@ export const drinks: Food[] = [
     image: "beer",
     groups: [],
     ingredients: ["麦芽を使用したビールです", "Beer brewed with malted barley"],
-    contains: ["barley"],
+    contains: [],
   },
   {
     id: "highball",

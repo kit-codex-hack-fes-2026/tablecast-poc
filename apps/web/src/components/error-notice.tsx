@@ -8,6 +8,7 @@ import { apiError } from "../lib/api-error";
 function errorMessageKey(error: unknown): Parameters<ReturnType<typeof useI18n>["t"]>[0] {
   const failure = apiError(error);
   if (!failure) return error instanceof TypeError ? "common_connection_error" : "common_error";
+  if (failure.code === "CART_LINE_LIMIT") return "kiosk_cart_limit_error";
   if (failure.code === "CONFIGURATION_FORMAT_UNSUPPORTED") return "condition_upgrade_error";
   if (failure.code === "MEMBER_ICON_SIZE") return "customer_member_icon_size_error";
   switch (failure.status) {

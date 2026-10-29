@@ -12,7 +12,7 @@ export const dishes: Food[] = [
       "まぐろ・さけ・たいを各三切れ盛り合わせます",
       "Three slices each of tuna, salmon and sea bream, served raw",
     ],
-    contains: ["fish"],
+    contains: ["salmon"],
     speech: "おつくり三種盛り",
   },
   {
@@ -27,7 +27,7 @@ export const dishes: Food[] = [
       "鶏もも肉を小麦粉としょうゆの衣で揚げた五個盛りです",
       "Five pieces of chicken thigh fried in a wheat-flour and soy coating",
     ],
-    contains: ["wheat", "soya"],
+    contains: ["chicken", "wheat", "soya"],
   },
   {
     id: "salmon-sashimi",
@@ -38,7 +38,7 @@ export const dishes: Food[] = [
     image: "salmon-sashimi",
     groups: ["garnish"],
     ingredients: ["さけを生で提供します", "Salmon, served raw"],
-    contains: ["fish"],
+    contains: ["salmon"],
   },
   {
     id: "tuna-sashimi",
@@ -49,7 +49,7 @@ export const dishes: Food[] = [
     image: "tuna-sashimi",
     groups: ["garnish"],
     ingredients: ["まぐろの赤身を生で提供します", "Lean tuna, served raw"],
-    contains: ["fish"],
+    contains: [],
   },
   {
     id: "yakitori",
@@ -63,7 +63,7 @@ export const dishes: Food[] = [
       "鶏もも肉とねぎを焼きます。たれには小麦と大豆を含みます",
       "Grilled chicken thigh and spring onion; the glaze contains wheat and soya",
     ],
-    contains: ["wheat", "soya"],
+    contains: ["chicken", "wheat", "soya"],
   },
   {
     id: "tsukune",
@@ -77,7 +77,7 @@ export const dishes: Food[] = [
       "鶏ひき肉、卵、小麦粉を合わせて焼きます",
       "Grilled chicken meatballs made with egg and wheat flour",
     ],
-    contains: ["egg", "wheat", "soya"],
+    contains: ["chicken", "egg", "wheat", "soya"],
   },
   {
     id: "tamagoyaki",
@@ -91,7 +91,7 @@ export const dishes: Food[] = [
       "卵とかつお出汁を使い、四切れで提供します",
       "Rolled eggs with bonito broth, served in four pieces",
     ],
-    contains: ["egg", "fish"],
+    contains: ["egg"],
     speech: "だし巻きたまご",
   },
   {
@@ -167,7 +167,7 @@ export const dishes: Food[] = [
     image: "mackerel",
     groups: ["garnish"],
     ingredients: ["さばを塩焼きにします", "Mackerel grilled with salt"],
-    contains: ["fish"],
+    contains: ["mackerel"],
   },
   {
     id: "hokke",
@@ -178,7 +178,7 @@ export const dishes: Food[] = [
     image: "hokke",
     groups: ["garnish"],
     ingredients: ["ほっけの干物を焼きます", "Dried Atka mackerel, grilled"],
-    contains: ["fish"],
+    contains: [],
   },
   {
     id: "aubergine",
@@ -246,7 +246,7 @@ export const dishes: Food[] = [
       "豆腐を揚げ、かつお出汁としょうゆを合わせます",
       "Fried soya tofu in bonito broth with soy sauce",
     ],
-    contains: ["soya", "wheat", "fish"],
+    contains: ["soya", "wheat"],
   },
   {
     id: "nikujaga",
@@ -260,7 +260,7 @@ export const dishes: Food[] = [
       "牛肉、じゃがいも、玉ねぎをしょうゆで煮ます",
       "Beef, potatoes and onion simmered in soy sauce",
     ],
-    contains: ["wheat", "soya"],
+    contains: ["beef", "wheat", "soya"],
   },
   {
     id: "kakuni",
@@ -274,6 +274,6 @@ export const dishes: Food[] = [
       "豚ばら肉をしょうゆ、砂糖、しょうがで煮ます",
       "Pork belly braised with soy sauce, sugar and ginger",
     ],
-    contains: ["wheat", "soya"],
+    contains: ["pork", "wheat", "soya"],
   },
 ];

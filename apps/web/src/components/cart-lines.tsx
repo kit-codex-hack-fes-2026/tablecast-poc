@@ -8,6 +8,7 @@ import * as m from "motion/react-m";
 import { forwardRef, type ReactNode, useId, useState } from "react";
 import { useI18n } from "../i18n/locale";
 import { ConditionSummary } from "./condition-summary";
+import { FoodInformationView } from "./food-information";
 import { IllustrationNotice } from "./illustration-notice";
 import { Money, PriceChange } from "./money";
 import { ProductImage } from "./product-image";
@@ -214,6 +215,13 @@ export function CartLines({
                       </div>
                     )}
                   </div>
+                  <section aria-label={t("food_title")}>
+                    {line.total === undefined ? (
+                      <p role="status">{t("food_updating")}</p>
+                    ) : (
+                      <FoodInformationView value={line.foodInformation} />
+                    )}
+                  </section>
                   {line.conditionIssues?.map((issue) => {
                     const expression = product?.modifiers
                       .flatMap((group) => group.options)

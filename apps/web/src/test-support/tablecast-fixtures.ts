@@ -6,6 +6,7 @@ import type {
   StatisticsResult,
   TableState,
 } from "@tablecast/api/schema";
+import { legacyFoodInformation } from "@tablecast/api/schema";
 
 const text = (ja: string, en: string) => ({
   ja: {
@@ -68,13 +69,13 @@ export const product: Product = {
       ],
     },
   ],
-  allergens: {
+  foodInfo: legacyFoodInformation({
     contains: [],
     evidence: "unknown",
     crossContact: "unknown",
     vegan: "unknown",
     note: { ja: "共用の調理器具を使用します。", en: "Prepared using shared equipment." },
-  },
+  }),
 };
 export const catalog: Catalog = {
   storeId: "tablecast-story",

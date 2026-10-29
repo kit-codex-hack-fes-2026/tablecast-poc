@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { resolveLocalized } from "../src/modules/catalog/localization";
 import { createMenuSearch, menuSearchPage } from "../src/modules/catalog/search";
 import { configurationSchema } from "../src/modules/configuration/model";
+import { legacyFoodInformation } from "../src/schema";
 
 const text = (ja: string, en: string, description = "") => ({
   ja: { displayName: ja, speechName: ja, transliteration: ja, aliases: [], description },
@@ -13,13 +14,13 @@ const product = (id: string, ja: string, en: string, description = "") => ({
   text: text(ja, en, description),
   price: 600,
   available: true,
-  allergens: {
+  foodInfo: legacyFoodInformation({
     contains: [],
     evidence: "unknown",
     crossContact: "unknown",
     vegan: "unknown",
     note: { ja: "", en: "" },
-  },
+  }),
 });
 function menu(
   products = [

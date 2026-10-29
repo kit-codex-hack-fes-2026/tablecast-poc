@@ -5,7 +5,7 @@ import type { Demo } from "./model";
 import * as business from "../../db/business-schema";
 import { member } from "../../db/identity-schema";
 import { ensure } from "../../platform/errors";
-import { configurationSchema } from "../configuration/model";
+import { readConfiguration } from "../configuration/food-compatibility";
 import { sessionPlanUsage } from "../orders/queries";
 import { tablePlanSchema } from "../tables/model";
 
@@ -120,7 +120,7 @@ export async function getDemo(services: ApiServices, actor: Actor): Promise<Demo
     sourceDraftId: demo.source_draft_id,
     sourceVersion: demo.source_version,
     version: demo.config_version,
-    configuration: configurationSchema.parse(JSON.parse(demo.config_json)),
+    configuration: readConfiguration(JSON.parse(demo.config_json)),
     planId: session.plan_json ? tablePlanSchema.parse(JSON.parse(session.plan_json)).id : null,
     guestCount: session.guest_count,
   };

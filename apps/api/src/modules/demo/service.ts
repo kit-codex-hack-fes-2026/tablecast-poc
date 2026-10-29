@@ -7,7 +7,7 @@ import { ensure } from "../../platform/errors";
 import { requireManager } from "../auth/policy";
 import { configurationErrors } from "../catalog/pricing";
 import { getCatalog } from "../catalog/queries";
-import { configurationSchema } from "../configuration/model";
+import { readConfiguration } from "../configuration/food-compatibility";
 import { getDraft } from "../configuration/queries";
 import { tablePlanSchema } from "../tables/model";
 import {
@@ -50,7 +50,7 @@ export async function updateDemo(services: ApiServices, actor: Actor, input: Dem
   ensure(input.expectedVersion === demo.config_version, "DEMO_CONFLICT");
   const sourceId = input.sourceDraftId === undefined ? demo.source_draft_id : input.sourceDraftId;
   const reload = input.reload || input.sourceDraftId !== undefined;
-  let configuration = configurationSchema.parse(JSON.parse(demo.config_json));
+  let configuration = readConfiguration(JSON.parse(demo.config_json));
   let sourceVersion = demo.source_version;
   if (reload) {
     if (sourceId) {
