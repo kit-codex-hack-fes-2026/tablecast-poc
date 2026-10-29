@@ -224,7 +224,7 @@ export const PagedVoices: Story = {
             empty: "選択できる標準音声はありません。",
             more: "音声をさらに表示",
             unavailable: "音声一覧を取得できませんでした。",
-            retry: "再試行",
+            retry: "もう一度試す",
           };
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("tab", { name: "日本語" }));

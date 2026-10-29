@@ -53,6 +53,7 @@ export const files = [
   ["query", "src/modules/tables/history.ts"],
   ["query", "src/modules/orders/prerequisites.ts"],
   ["query", "src/modules/billing/reports.ts"],
+  ["query", "src/modules/customer-coupons/{audience,conditions}.ts"],
   ["service", "src/modules/customer-memory/context.ts"],
   ["pure", "src/modules/voice/{tool,tool-state,tool-descriptions,system-instructions}.ts"],
   ["pure", "src/modules/auth/token.ts"],

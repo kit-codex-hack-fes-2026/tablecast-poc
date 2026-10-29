@@ -1,8 +1,45 @@
 import { expect, it } from "vitest";
-import { loginReturnUrl } from "./login-model";
+import { loginReturnUrl, memberStoreLoginId, memberVisitLoginCode } from "./login-model";
 
 const origin = "https://tablecast.example.test";
 const returnSearch = (path: string) => `?${new URLSearchParams({ returnTo: path })}`;
+
+it("店舗PWAの会員証と子画面から戻る時だけ店舗識別を引き継ぐ", () => {
+  expect(memberStoreLoginId("/member/tablecast-komorebi")).toBe("tablecast-komorebi");
+  expect(memberStoreLoginId("/member/tablecast-komorebi/coupons?sessionId=visit")).toBe(
+    "tablecast-komorebi",
+  );
+  for (const path of [
+    "/member",
+    "/member/join?code=abc",
+    "/member/tablecast%2Fother",
+    "/member/%",
+    "//external.example.test/member/tablecast-komorebi",
+    "/admin/tablecast-komorebi",
+  ])
+    expect(memberStoreLoginId(path)).toBeUndefined();
+});
+const visitCode = "a".repeat(64);
+
+it.each([`/member/join?code=${visitCode}`, `/member/join?lang=en&code=${visitCode}#visit`])(
+  "正しいQR参加先%sだけからログイン用の店舗照会コードを取得する",
+  (returnTo) => {
+    expect(memberVisitLoginCode(returnTo)).toBe(visitCode);
+  },
+);
+
+it.each([
+  undefined,
+  [`/member/join?code=${visitCode}`],
+  `https://external.example.test/member/join?code=${visitCode}`,
+  `//external.example.test/member/join?code=${visitCode}`,
+  `/member/tablecast-store?code=${visitCode}`,
+  "/member/join?code=short",
+  `/member/join?code=${visitCode.toUpperCase()}`,
+  "/member/join?lang=en",
+])("対象外または不正な戻り先%jではログイン用の店舗照会コードを返さない", (returnTo) => {
+  expect(memberVisitLoginCode(returnTo)).toBeUndefined();
+});
 
 it.each([
   { path: "/", expected: "https://tablecast.example.test/" },

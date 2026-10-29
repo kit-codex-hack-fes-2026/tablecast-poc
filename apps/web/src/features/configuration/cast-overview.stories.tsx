@@ -196,7 +196,7 @@ export const VoiceCatalogRetry: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const retry = await canvas.findAllByRole("button", { name: "再試行" });
+    const retry = await canvas.findAllByRole("button", { name: "もう一度試す" });
     await expect(canvas.queryByText("利用不可", { exact: true })).not.toBeInTheDocument();
     catalog.mockImplementation(() =>
       Response.json({

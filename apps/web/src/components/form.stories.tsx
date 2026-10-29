@@ -99,7 +99,7 @@ export const 項目エラーと失敗後の再送: Story = {
     const response = Promise.withResolvers<void>();
     submit.mockReturnValueOnce(response.promise).mockResolvedValue(undefined);
     const canvas = within(canvasElement);
-    const button = canvas.getByRole("button", { name: "保存" });
+    const button = canvas.getByRole("button", { name: "保存する" });
     const email = canvas.getByRole("textbox", { name: "メールアドレス" });
     // When: 未入力で送信し、修正して再送する。
     await userEvent.click(button);

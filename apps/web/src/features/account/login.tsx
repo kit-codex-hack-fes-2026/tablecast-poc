@@ -1,10 +1,13 @@
+import type { ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useHydrated, useLocation } from "@tanstack/react-router";
 import { Fingerprint, Mail } from "lucide-react";
 import { useEffect } from "react";
 import { z } from "zod";
+import type { MemberLoginBranding } from "./member-login-query";
 import { useAppForm } from "../../components/form";
 import { GoogleIcon } from "../../components/google-icon";
+import { StoreLogo } from "../../components/store-logo";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -13,7 +16,13 @@ import { authClient, authResult, promptGoogleOneTap } from "../../lib/auth-clien
 import { AuthLayout } from "./auth-layout";
 import { loginReturnUrl } from "./login-model";
 
-export function Login({ evaluation = false }: { evaluation?: boolean }) {
+export function Login({
+  evaluation = false,
+  memberStore,
+}: {
+  evaluation?: boolean;
+  memberStore?: MemberLoginBranding;
+}) {
   const searchStr = useLocation({ select: (location) => location.searchStr });
   const { t, locale, setLocale } = useI18n();
   const hydrated = useHydrated();
@@ -81,17 +90,14 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const last = (method: string) =>
     lastMethod === method ? <Badge variant="secondary">{t("auth_last_used")}</Badge> : null;
   return (
-    <AuthLayout
-      title={evaluation ? t("evaluation_login_title") : t("auth_subtitle")}
+    <LoginLayout
+      evaluation={evaluation}
+      memberStore={memberStore}
+      searchStr={searchStr}
       onLocaleChange={(next) => {
         setLocale(next);
         localStorage.setItem("tablecast_staff_locale", next);
       }}
-      footer={
-        <Link to="/" className="inline-flex min-h-11 items-center underline underline-offset-4">
-          {t("auth_guest")}
-        </Link>
-      }
     >
       <div className="space-y-6">
         {new URLSearchParams(searchStr).has("error") && (
@@ -159,6 +165,66 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
             )}
           </form.Form>
         </form.AppForm>
+      </div>
+    </LoginLayout>
+  );
+}
+
+function LoginLayout({
+  evaluation,
+  memberStore,
+  searchStr,
+  onLocaleChange,
+  children,
+}: {
+  children: ReactNode;
+  evaluation: boolean;
+  memberStore?: MemberLoginBranding;
+  onLocaleChange: (locale: "en" | "ja") => void;
+  searchStr: string;
+}) {
+  const { t } = useI18n();
+  const memberDestination = new URLSearchParams(searchStr).get("returnTo");
+  const joiningVisit = memberDestination?.startsWith("/member/join?") ?? false;
+  const memberSignIn =
+    memberDestination === "/member" || memberDestination?.startsWith("/member/") === true;
+  return (
+    <AuthLayout
+      brand={
+        memberSignIn && memberStore?.logo ? (
+          <StoreLogo
+            logo={memberStore.logo}
+            imageBasePath={`/api/member-stores/${encodeURIComponent(memberStore.storeId)}/images`}
+            width={160}
+            height={40}
+          />
+        ) : undefined
+      }
+      eyebrow={memberSignIn ? memberStore?.storeName : undefined}
+      title={
+        evaluation
+          ? t("evaluation_login_title")
+          : joiningVisit
+            ? t("customer_login_title")
+            : memberSignIn
+              ? t("customer_member_login_title")
+              : t("auth_subtitle")
+      }
+      onLocaleChange={onLocaleChange}
+      footer={
+        <Link to="/" className="inline-flex min-h-11 items-center underline underline-offset-4">
+          {t("auth_guest")}
+        </Link>
+      }
+    >
+      <div className="space-y-6">
+        {joiningVisit && (
+          <p className="leading-relaxed text-muted-foreground">{t("customer_login_hint")}</p>
+        )}
+        {memberSignIn && !joiningVisit && (
+          <p className="leading-relaxed text-muted-foreground">{t("customer_member_login_hint")}</p>
+        )}
+        {children}
       </div>
     </AuthLayout>
   );

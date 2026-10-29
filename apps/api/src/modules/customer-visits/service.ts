@@ -14,7 +14,7 @@ import {
   finishCustomerContextChange,
   resetCustomerContextStatements,
 } from "../customer-memory/context";
-import { getCustomerStore } from "../customers/queries";
+import { getCustomerStore, getMemberStoreBranding } from "../customers/queries";
 import { notifyStore } from "../tables/mutations";
 import { getCustomerVisit, requireCustomerVisit, validVisitCode } from "./queries";
 
@@ -79,7 +79,14 @@ export async function resolveCustomerVisit(services: ApiServices, userId: string
     userId,
     storeId: visit.storeId,
   });
-  return { ...visit, membership: store.membership };
+  return { ...visit, membership: store.membership, branding: store.store.branding };
+}
+
+export async function resolveCustomerVisitBranding(services: ApiServices, code: string) {
+  const visit = await validVisitCode(services, await hashDeviceToken(code)).get();
+  ensure(visit, "CUSTOMER_VISIT_CODE_EXPIRED", 409);
+  const store = await getMemberStoreBranding(services, visit.storeId);
+  return { storeId: store.id, storeName: store.name, logo: store.branding?.banner ?? null };
 }
 
 export async function joinCustomerVisit(services: ApiServices, userId: string, code: string) {

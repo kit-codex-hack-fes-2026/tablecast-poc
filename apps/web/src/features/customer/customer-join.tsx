@@ -4,6 +4,7 @@ import { ArrowLeft, QrCode } from "lucide-react";
 import { useEffect } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
+import { StoreLogo } from "../../components/store-logo";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
@@ -67,16 +68,25 @@ export function CustomerJoin({ code }: { code: string }) {
         )}
         <Button variant="outline" nativeButton={false} role="link" render={<Link to="/member" />}>
           <ArrowLeft aria-hidden="true" />
-          {t("customer_title")}
+          {t("customer_places_view")}
         </Button>
       </section>
     );
   if (!destination.data) return null;
   return (
     <section className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">{destination.data.storeName}</h1>
-        <p className="mt-2 text-muted-foreground">{destination.data.tableName}</p>
+      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
+        <StoreLogo
+          logo={destination.data.branding?.banner}
+          imageBasePath={`/api/member-stores/${encodeURIComponent(destination.data.storeId)}/images`}
+          width={192}
+          height={48}
+        />
+        <div className="min-w-0">
+          <p className="mb-2 text-sm text-muted-foreground">{t("customer_join_destination")}</p>
+          <h1 className="text-xl font-semibold wrap-anywhere">{destination.data.storeName}</h1>
+          <p className="mt-2 text-muted-foreground">{destination.data.tableName}</p>
+        </div>
       </div>
       {destination.data.membership?.active ? (
         <>
@@ -89,12 +99,22 @@ export function CustomerJoin({ code }: { code: string }) {
           )}
         </>
       ) : (
-        <CustomerConsent
-          storeId={destination.data.storeId}
-          onEnrolled={() => {
-            void destination.refetch();
-          }}
-        />
+        <>
+          <ol
+            aria-label={t("customer_join_flow")}
+            className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-muted-foreground"
+          >
+            <li>{t("customer_join_register_step")}</li>
+            <li>{t("customer_join_table_step")}</li>
+            <li>{t("customer_join_coupon_step")}</li>
+          </ol>
+          <CustomerConsent
+            storeId={destination.data.storeId}
+            onEnrolled={() => {
+              void destination.refetch();
+            }}
+          />
+        </>
       )}
     </section>
   );

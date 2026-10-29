@@ -208,7 +208,7 @@ it("商品集計の部分取得を明示し、続きの失敗でも取得済み�
   await expect.element(page.getByRole("alert")).toBeVisible();
   await expect.element(page.getByRole("rowheader", { name: "定番の商品" })).toBeVisible();
   fail = false;
-  await userEvent.click(page.getByRole("button", { name: "再試行", exact: true }));
+  await userEvent.click(page.getByRole("button", { name: "もう一度試す", exact: true }));
   await expect.element(page.getByRole("rowheader", { name: "季節のおすすめ" })).toBeVisible();
   await expect.element(page.getByText("2 項目・すべて取得済み")).toBeVisible();
 });
@@ -269,7 +269,7 @@ it("失敗を0件に見せず、再取得失敗時は直前の集計と基準時
   await expect.element(page.getByRole("alert")).toBeVisible();
   expect(document.body.textContent).not.toContain("この期間に終了した来店はありません。");
   fail = false;
-  await userEvent.click(page.getByRole("button", { name: "再試行", exact: true }));
+  await userEvent.click(page.getByRole("button", { name: "もう一度試す", exact: true }));
   await expect.element(page.getByText("¥61,200", { exact: true })).toBeVisible();
   fail = true;
   await userEvent.click(page.getByRole("button", { name: "最新の集計に更新" }));

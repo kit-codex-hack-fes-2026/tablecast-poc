@@ -21,6 +21,8 @@ export function configurationImageKeys(configuration: Configuration): string[] {
       [
         configuration.branding?.logo?.imageKey,
         configuration.branding?.banner?.imageKey,
+        configuration.branding?.memberIcon?.imageKey,
+        configuration.branding?.membershipCard?.image?.imageKey,
         ...Object.values(configuration.appearance?.assets ?? {}).map((image) => image.imageKey),
         ...(configuration.banners ?? []).map((banner) => banner.image.imageKey),
         ...configuration.products.flatMap((product) => [

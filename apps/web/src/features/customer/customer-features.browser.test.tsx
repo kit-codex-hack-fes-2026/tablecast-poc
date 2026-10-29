@@ -14,6 +14,7 @@ import { type ReactNode, Suspense } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
+import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
@@ -67,6 +68,47 @@ async function show(view: ReactNode, locale: "en" | "ja" = "ja") {
 }
 
 const base = "/api/customer/stores/tablecast-store";
+it.each(["ja", "en"] as const)(
+  "%sのスマホQR遷移先で店舗・卓と登録から券利用までを案内し、同意前は来店へ参加しない",
+  async (locale) => {
+    const labels = locale === "ja" ? ja : en;
+    const paths: string[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      const path = new URL(request.url).pathname;
+      paths.push(path);
+      if (path !== "/api/customer/visits/resolve") throw new Error(`未定義の要求: ${path}`);
+      return Response.json({
+        storeId: "tablecast-store",
+        storeName: "卓上喫茶",
+        tableName: "T03",
+        membership: null,
+      });
+    });
+    await page.viewport(390, 844);
+    await show(<CustomerJoin code={"0".repeat(64)} />, locale);
+    await expect
+      .element(page.getByRole("heading", { name: "卓上喫茶", exact: true }))
+      .toBeVisible();
+    await expect.element(page.getByText("T03", { exact: true })).toBeVisible();
+    const flow = page.getByRole("list", { name: labels.customer_join_flow });
+    await expect
+      .element(flow.getByText(labels.customer_join_register_step, { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(flow.getByText(labels.customer_join_table_step, { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(flow.getByText(labels.customer_join_coupon_step, { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: labels.customer_enrol, exact: true }))
+      .toBeEnabled();
+    expect(paths).toEqual(["/api/customer/visits/resolve"]);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+  },
+);
+
 it("日本語で初回同意後の設定を保存し、新しい画面でも撤回済み設定を表示する", async () => {
   const locale = "ja";
   const labels = ja;
@@ -106,7 +148,7 @@ it("日本語で初回同意後の設定を保存し、新しい画面でも撤�
   await page.viewport(390, 844);
   await show(<CustomerStore storeId="tablecast-store" />, locale);
   await page.getByRole("button", { name: labels.customer_enrol, exact: true }).click();
-  await page.getByText(labels.customer_preferences, { exact: true }).click();
+  await page.getByText(labels.customer_settings_open, { exact: true }).click();
   const saveMemories = page.getByRole("checkbox", {
     name: labels.customer_save_memories,
     exact: true,
@@ -128,13 +170,48 @@ it("日本語で初回同意後の設定を保存し、新しい画面でも撤�
   await cleanup();
   client.clear();
   await show(<CustomerStore storeId="tablecast-store" />, locale);
-  await page.getByText(labels.customer_preferences, { exact: true }).click();
+  await page.getByText(labels.customer_settings_open, { exact: true }).click();
   await expect.element(saveMemories).not.toBeChecked();
   await expect
     .element(page.getByRole("button", { name: labels.customer_enrol, exact: true }))
     .not.toBeInTheDocument();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
 });
+
+it.each(["ja", "en"] as const)(
+  "%sで会話の記憶の確認を優先し、手動追加は一覧の後へ置く",
+  async (locale) => {
+    const labels = locale === "ja" ? ja : en;
+    vi.stubGlobal("fetch", async () =>
+      Response.json({
+        memories: [
+          {
+            id: "voice-memory",
+            content: "辛さは控えめ",
+            sourceKind: "voice",
+            revision: 1,
+            createdAt: 1,
+          },
+        ],
+        nextCursor: null,
+      }),
+    );
+    await show(<CustomerMemories storeId="tablecast-store" />, locale);
+    await expect
+      .element(page.getByRole("heading", { name: labels.customer_memories }))
+      .toBeVisible();
+    await expect.element(page.getByText(labels.customer_memories_note)).toBeVisible();
+    const memory = page.getByText("辛さは控えめ", { exact: true }).element();
+    const add = page.getByRole("button", { name: labels.customer_memory_add, exact: true });
+    expect(
+      memory.compareDocumentPosition(add.element()) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    await expect.element(add).toHaveAttribute("data-variant", "outline");
+    await expect
+      .element(page.getByRole("button", { name: labels.customer_edit, exact: true }))
+      .toBeEnabled();
+  },
+);
 
 it("日本語で記憶を作成・編集し、新しい画面で再取得して削除する", async () => {
   const locale = "ja";
@@ -166,7 +243,7 @@ it("日本語で記憶を作成・編集し、新しい画面で再取得して�
   await page
     .getByRole("textbox", { name: labels.customer_memory_content })
     .fill("I prefer less sweet drinks.");
-  await page.getByRole("button", { name: labels.account_save, exact: true }).click();
+  await page.getByRole("button", { name: labels.customer_save, exact: true }).click();
   await expect
     .element(page.getByText("I prefer less sweet drinks.", { exact: true }))
     .toBeVisible();
@@ -174,7 +251,7 @@ it("日本語で記憶を作成・編集し、新しい画面で再取得して�
   await page
     .getByRole("textbox", { name: labels.customer_memory_content })
     .fill("I prefer dry gin cocktails.");
-  await page.getByRole("button", { name: labels.account_save, exact: true }).click();
+  await page.getByRole("button", { name: labels.customer_save, exact: true }).click();
   await expect
     .element(page.getByText("I prefer dry gin cocktails.", { exact: true }))
     .toBeVisible();
@@ -227,6 +304,8 @@ it("ポイント交換の失敗は同じキーで再試行し、交換した券�
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const path = new URL(request.url).pathname;
+    if (path === `${base}/visits/tablecast-visit`)
+      return Response.json({ connected: true, tableName: "T10", openedAt: 1 });
     if (path === `${base}/points`)
       return Response.json({
         balance: 4,
@@ -266,9 +345,13 @@ it("ポイント交換の失敗は同じキーで再試行し、交換した券�
     </>,
   );
   await expect.element(page.getByText("+4 pt", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: `${ja.coupon_exchange} · 3 pt`, exact: true }).click();
+  await page
+    .getByRole("button", { name: `${ja.coupon_exchange_action} · 3 pt`, exact: true })
+    .click();
   await expect.element(page.getByRole("alert")).toMatchTextContent(ja.common_unavailable);
-  await page.getByRole("button", { name: `${ja.coupon_exchange} · 3 pt`, exact: true }).click();
+  await page
+    .getByRole("button", { name: `${ja.coupon_exchange_action} · 3 pt`, exact: true })
+    .click();
   await expect.element(page.getByText(ja.coupon_available, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: ja.coupon_request, exact: true }).click();
   await expect
@@ -308,7 +391,7 @@ it("飲食記録は取消で送信せず閉じ、再度開くと保存済みの�
   const trigger = page.getByRole("button", { name: new RegExp(ja.customer_edit_consumption) });
   await trigger.click();
   await page.getByRole("spinbutton", { name: ja.customer_consumption_quantity }).fill("5");
-  await page.getByRole("button", { name: ja.common_cancel, exact: true }).click();
+  await page.getByRole("button", { name: ja.customer_cancel, exact: true }).click();
   await expect.element(trigger).toHaveFocus();
   await expect.element(page.getByRole("spinbutton")).not.toBeInTheDocument();
   await trigger.click();
@@ -331,7 +414,7 @@ it.each([
   await expect.element(page.getByRole("alert").getByText(message, { exact: true })).toBeVisible();
   await expect.element(page.getByText(ja.common_conflict, { exact: true })).not.toBeInTheDocument();
   await expect
-    .element(page.getByRole("link", { name: ja.customer_title, exact: true }))
+    .element(page.getByRole("link", { name: ja.customer_places_view, exact: true }))
     .toHaveAttribute("href", "/member");
   expect(
     [...document.querySelectorAll("button")].filter(
