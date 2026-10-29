@@ -21,6 +21,15 @@ export function HomePreparation({ storeId }: { storeId: string }) {
         <h2 id="tablecast-home-setup" className="font-semibold">
           {t("home_setup")}
         </h2>
+        <Button
+          variant="outline"
+          nativeButton={false}
+          render={<Link to="/admin/stores/$storeId/onboarding" params={{ storeId }} />}
+          className="mt-3 w-full justify-between"
+        >
+          {t("onboarding_title")}
+          <ArrowRight />
+        </Button>
         <div className="divide-y divide-border">
           <div className="space-y-2 py-4">
             <h3 className="flex items-center gap-2 text-sm font-medium">

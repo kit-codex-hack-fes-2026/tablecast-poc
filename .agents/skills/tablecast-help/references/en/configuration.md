@@ -27,3 +27,13 @@ After publication, fetch the current configuration to confirm the result. Saving
 Upload real files with `upload_image`, then save the returned image key and source in the draft. Label generated images as illustrations. Uploading an image alone does not change the live menu. Mark an unavailable product as sold out rather than deleting it.
 
 Related: [MCP connections](./mcp.md), [Troubleshooting](./troubleshooting.md), [Documentation index](./index.md).
+
+## Set up the whole store
+
+Open Set up your store from the store home screen to review your menu, languages, service, materials, appearance and rewards. Give the plugin your store materials and ask it to set up the store. It checks existing settings and gaps, then updates the same draft. Configured does not mean fact-checked. A person completes the connection, device registration and publication approval.
+
+## Edit and transfer store materials
+
+Select a file in the service settings tree and switch between preview, source and visual editing. Tiptap supports headings, lists, code, tables, images and links. SKILL.md metadata is edited separately from its body. Record image sources when uploading. Create, rename or delete files and Skills, and import or export image-containing ZIP files up to 5 MiB. Explicitly select replacement to overwrite matching Skill IDs. Save the draft after importing.
+
+Check Skills validates the required SKILL.md, YAML name and description, matching names and file references. Fix errors before validating for publication. Scripts in materials are not executed. Keep secrets and customer memories out of store materials.

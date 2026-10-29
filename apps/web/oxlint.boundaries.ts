@@ -158,6 +158,7 @@ export const boundaryPolicies = [
     "configuration-image-model",
     "language-fields",
     "configuration-languages-context",
+    "store-knowledge-setup-banner",
   ]),
   {
     from: file(["feature", "composition"], "catalog"),
@@ -215,6 +216,10 @@ export const boundaryPolicies = [
   },
   { allow: { to: { module: { origin: ["external", "core"] } } } },
   { disallow: { to: { module: { source: "@tablecast/api" } } } },
+  {
+    from: file(["feature", "test"]),
+    allow: { to: { module: { source: "@tablecast/api", internalPath: "store-knowledge-files" } } },
+  },
   { allow: { to: { module: { source: "@tablecast/api", internalPath: "schema" } } } },
   {
     from: file(["feature", "test"]),

@@ -19,6 +19,9 @@ export function configurationImageKeys(configuration: Configuration): string[] {
   return [
     ...new Set(
       [
+        ...(configuration.cast.skills ?? []).flatMap((skill) =>
+          skill.files.flatMap((file) => ("imageKey" in file ? [file.imageKey] : [])),
+        ),
         configuration.branding?.logo?.imageKey,
         configuration.branding?.banner?.imageKey,
         configuration.branding?.memberIcon?.imageKey,

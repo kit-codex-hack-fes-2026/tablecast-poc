@@ -26,7 +26,7 @@ export async function uploadImage(
     422,
   );
   if (parsed.file) {
-    return saveMenuImage(services, actor, await downloadImage(parsed.file), {
+    return saveMenuImage(services, actor, await downloadUploadedFile(parsed.file), {
       imageKind: parsed.imageKind,
       imageSource: parsed.imageSource,
     });
@@ -50,7 +50,9 @@ export async function uploadImage(
   );
 }
 
-async function downloadImage(file: NonNullable<z.infer<typeof uploadImageSchema>["file"]>) {
+export async function downloadUploadedFile(
+  file: NonNullable<z.infer<typeof uploadImageSchema>["file"]>,
+) {
   const signal = AbortSignal.timeout(15_000);
   let url = new URL(file.download_url);
   try {
@@ -197,6 +199,9 @@ export async function requireConfigurationImages(
 ) {
   const images = [
     ...[
+      ...(configuration.cast.skills?.flatMap((skill) =>
+        skill.files.filter((file) => "imageKey" in file),
+      ) ?? []),
       configuration.branding?.logo,
       configuration.branding?.banner,
       configuration.branding?.memberIcon,
@@ -282,7 +287,7 @@ async function validatedImageBytes(image: File, maxBytes: number) {
   return bytes;
 }
 
-function imageMimeType(bytes: Uint8Array) {
+export function imageMimeType(bytes: Uint8Array) {
   if (bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) return "image/png";
   if (bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return "image/jpeg";
   if (

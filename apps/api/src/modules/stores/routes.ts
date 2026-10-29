@@ -3,6 +3,7 @@ import { apiFactory } from "../../platform/http";
 import { validateForm, validateQuery } from "../../platform/validation";
 import { requireStore } from "../auth/middleware";
 import { catalogAdminRoutes } from "../catalog/routes";
+import { knowledgeAdminRoutes } from "../configuration/knowledge-routes";
 import { configurationAdminRoutes } from "../configuration/routes";
 import { couponsAdminRoutes } from "../customer-coupons/admin-routes";
 import { pointsAdminRoutes } from "../customer-points/admin-routes";
@@ -51,5 +52,6 @@ export const admin = apiFactory
   .route("/", tablesAdminRoutes)
   .route("/", ordersAdminRoutes)
   .route("/", devicesAdminRoutes)
+  .route("/", knowledgeAdminRoutes)
   .route("/", configurationAdminRoutes)
   .route("/games", gamesAdminRoutes);

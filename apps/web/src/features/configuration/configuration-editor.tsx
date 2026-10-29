@@ -8,9 +8,11 @@ import { BooleanField, ConfigurationSection } from "./configuration-fields";
 import { LanguageFields } from "./language-fields";
 import { PromptEditor } from "./prompt-editor";
 import { StandardVoiceSelect } from "./standard-voice-select";
+import { StoreKnowledge } from "./store-knowledge";
 
 export function CastEditor({
   storeId,
+  draftId,
   value,
   voices,
   onChange,
@@ -18,6 +20,7 @@ export function CastEditor({
   focusTarget,
 }: {
   disabled: boolean;
+  draftId?: string;
   focusTarget?: CastTarget;
   onChange: (value: Configuration["cast"]) => void;
   storeId: string;
@@ -123,6 +126,15 @@ export function CastEditor({
           </>
         )}
       </LanguageFields>
+      <div id={`${id}-knowledge`} tabIndex={-1}>
+        <StoreKnowledge
+          draftId={draftId}
+          storeId={storeId}
+          value={value.skills ?? []}
+          onChange={(skills) => onChange({ ...value, skills })}
+          disabled={disabled}
+        />
+      </div>
       <section className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
         <MessageSquare className="mt-3 size-5 shrink-0" aria-hidden="true" />
         <div className="min-w-0">

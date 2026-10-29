@@ -4,6 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { FileCheck2, Pencil } from "lucide-react";
 import { useMemo } from "react";
 import { ErrorNotice } from "../../components/error-notice";
+import { ImageProvider } from "../../components/image-provider";
 import { LoadingState } from "../../components/loading-state";
 import { PageHeader } from "../../components/page-header";
 import { Button } from "../../components/ui/button";
@@ -25,7 +26,8 @@ export function CastOverviewPage({ draftId }: { draftId?: string }) {
     ...draftOptions(storeId, draftId ?? ""),
     queryFn: draftId ? draftOptions(storeId, draftId).queryFn : skipToken,
   });
-  const configuration = draftId ? draft.data?.configuration : catalog.data?.configuration;
+  const configurationData = draftId ? draft.data : catalog.data;
+  const configuration = configurationData?.configuration;
   const editable = !draftId || ["draft", "ready"].includes(draft.data?.status ?? "");
   const manager = ["owner", "admin"].includes(role);
 
@@ -56,16 +58,22 @@ export function CastOverviewPage({ draftId }: { draftId?: string }) {
         onRetry={() => void (draftId ? draft.refetch() : catalog.refetch())}
       />
       {configuration ? (
-        <CastOverview
-          key={`${storeId}:${draftId ?? "published"}`}
-          storeId={storeId}
-          value={configuration.cast}
-          renderEdit={
-            manager && editable
-              ? (target) => <CastEditAction target={target} storeId={storeId} draftId={draftId} />
-              : undefined
-          }
-        />
+        <ImageProvider
+          basePath={`/api/admin/stores/${storeId}`}
+          assets={configurationData?.imageAssets}
+        >
+          <CastOverview
+            key={`${storeId}:${draftId ?? "published"}`}
+            storeId={storeId}
+            draftId={draftId}
+            value={configuration.cast}
+            renderEdit={
+              manager && editable
+                ? (target) => <CastEditAction target={target} storeId={storeId} draftId={draftId} />
+                : undefined
+            }
+          />
+        </ImageProvider>
       ) : (
         !(catalog.error || draft.error) && <LoadingState />
       )}
@@ -89,19 +97,19 @@ function CastEditAction({
     [locale],
   );
   const language =
-    target === "proactive"
+    target === "proactive" || target === "knowledge"
       ? ""
       : (languageNames.of(target.slice(target.indexOf("-") + 1)) ?? target);
-  const label =
-    target === "proactive"
-      ? t("cast_edit_proactive")
-      : target.startsWith("system")
-        ? `${t("cast_edit_system")} (${language})`
-        : target.startsWith("instructions")
-          ? m.cast_edit_instructions({ language }, { locale: uiLocale(locale) })
-          : target.startsWith("opening")
-            ? `${t("cast_edit_opening")} (${language})`
-            : m.cast_edit_voice({ language }, { locale: uiLocale(locale) });
+  function editLabel() {
+    if (target === "knowledge") return t("knowledge_edit");
+    if (target === "proactive") return t("cast_edit_proactive");
+    if (target.startsWith("system")) return `${t("cast_edit_system")} (${language})`;
+    if (target.startsWith("instructions"))
+      return m.cast_edit_instructions({ language }, { locale: uiLocale(locale) });
+    if (target.startsWith("opening")) return `${t("cast_edit_opening")} (${language})`;
+    return m.cast_edit_voice({ language }, { locale: uiLocale(locale) });
+  }
+  const label = editLabel();
   return draftId ? (
     <Button
       nativeButton={false}

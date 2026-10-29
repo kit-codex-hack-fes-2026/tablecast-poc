@@ -28,6 +28,7 @@ const imageFields = {
     .string()
     .max(300)
     .regex(/^tablecast\/[a-zA-Z0-9/_-]+\.(png|jpg|webp|svg)$/)
+    .meta({ id: "tablecastImageKey" })
     .nullable()
     .default(null),
   imageKind: z.enum(["photograph", "illustration"]).default("illustration"),

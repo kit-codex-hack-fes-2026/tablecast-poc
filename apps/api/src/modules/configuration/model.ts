@@ -13,6 +13,7 @@ import {
 import { imageAssetsSchema } from "../media/model";
 import { selectionSchema } from "../orders/model";
 import { castInstructionSchema, instructionLimit } from "./instruction-model";
+import { storeSkillsSchema } from "./knowledge-model";
 export const guideSchema = z
   .object({
     id,
@@ -68,6 +69,7 @@ export const configurationSchema = z
     plans: z.array(planSchema).max(30),
     cast: z
       .object({
+        skills: storeSkillsSchema.optional(),
         systemInstructions: localizedSchema(
           z.string().trim().min(1).max(instructionLimit).nullable(),
         ).optional(),
@@ -95,6 +97,10 @@ const configurationIssueBase = z.object({
 });
 
 export const configurationIssueSchema = z.discriminatedUnion("code", [
+  configurationIssueBase.extend({
+    code: z.literal("KNOWLEDGE_INVALID"),
+    params: z.object({ skillId: z.string(), file: z.string(), issue: z.string() }).strict(),
+  }),
   configurationIssueBase.extend({
     code: z.literal("FOOD_COMPONENT_INVALID"),
     params: z.object({ id: z.string() }).strict(),

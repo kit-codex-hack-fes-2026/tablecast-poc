@@ -42,7 +42,10 @@ export const files = [
   ["mcp-tools", "src/modules/mcp/*-tools.ts"],
   ["pure", "src/modules/mcp/result.ts"],
   ["use-case", "src/modules/*/use-cases/*.ts"],
-  ["pure", "src/modules/configuration/{conditions,differences}.ts"],
+  [
+    "pure",
+    "src/modules/configuration/{conditions,differences,knowledge,knowledge-files,knowledge-archive,onboarding}.ts",
+  ],
   ["pure", "src/modules/tables/values.ts"],
   ["query", "src/modules/tables/{timeline,core-queries,assistance-queries}.ts"],
   ["query", "src/modules/stores/home.ts"],
@@ -59,7 +62,7 @@ export const files = [
   ],
   ["mutation", "src/modules/{tables,customer-coupons,customer-points}/mutations.ts"],
   ["mutation", "src/modules/customer-coupons/issuance.ts"],
-  ["model", "src/modules/configuration/{instruction-model,food-compatibility}.ts"],
+  ["model", "src/modules/configuration/{instruction-model,food-compatibility,knowledge-model}.ts"],
   ["model", "src/modules/catalog/food-model.ts"],
   ["pure", "src/modules/catalog/food.ts"],
   ["service", "src/modules/catalog/food-service.ts"],
@@ -71,6 +74,6 @@ export const files = [
   ["model", "src/modules/*/model.ts"],
   ["query", "src/modules/auth/passkey-policy.ts"],
   ["query", "src/modules/*/queries.ts"],
-  ["service", "src/modules/*/service.ts"],
+  ["service", "src/modules/*/{service,*-service}.ts"],
   ["route", "src/modules/*/*routes.ts"],
 ];

@@ -18,7 +18,11 @@ import {
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { CustomerActor } from "../customers/model";
-import type { customerMemoryPageSchema, customerSuggestionsSchema } from "./model";
+import type {
+  customerMemoryPageSchema,
+  customerSuggestionsSchema,
+  memorySearchSchema,
+} from "./model";
 import {
   customerConsumption,
   customerContexts,
@@ -383,6 +387,64 @@ export async function customerRecommendationContext(services: ApiServices, actor
             moreCoupons: coupons.length > 5,
           }
         : null,
+  };
+}
+
+/** 同意と接客対象の失効を最終SQLでも検査し、古い記憶へページ移動できる。 */
+export async function searchCustomerMemories(
+  services: ApiServices,
+  actor: Actor,
+  input: z.infer<typeof memorySearchSchema>,
+) {
+  const snapshot = await customerServiceTarget(services, actor);
+  const { target, context, participants } = snapshot;
+  if (!target || !context)
+    return { mode: "shared", needsTarget: participants.length > 1, memories: [], nextCursor: null };
+  const gate = customerReadGate(services, actor, snapshot);
+  const [valid, rows] = await services.db.batch([
+    customerReadProof(services, gate),
+    services.db
+      .select({
+        id: customerMemories.id,
+        content: customerMemories.content,
+        sourceKind: customerMemories.sourceKind,
+        edited: customerMemories.edited,
+        updatedAt: customerMemories.updatedAt,
+      })
+      .from(customerMemories)
+      .where(
+        and(
+          gate,
+          sql`${target.membership.useMemories}=1`,
+          eq(customerMemories.membershipId, target.membership.id),
+          eq(customerMemories.storeId, actor.storeId),
+          eq(customerMemories.deleted, false),
+          // instrはquery builderにないため、この断片だけSQLで書く。%と_も原文として探す。
+          input.query
+            ? sql`instr(lower(${customerMemories.content}), lower(${input.query})) > 0`
+            : undefined,
+          input.cursor
+            ? or(
+                lt(customerMemories.updatedAt, input.cursor.updatedAt),
+                and(
+                  eq(customerMemories.updatedAt, input.cursor.updatedAt),
+                  lt(customerMemories.id, input.cursor.id),
+                ),
+              )
+            : undefined,
+        ),
+      )
+      .orderBy(desc(customerMemories.updatedAt), desc(customerMemories.id))
+      .limit(9),
+  ]);
+  ensure(valid.length === 1, "CUSTOMER_CONTEXT_STALE", 409);
+  const memories = rows.slice(0, 8);
+  const last = memories.at(-1);
+  return {
+    mode: target.membership.useMemories ? "personal" : "permission-disabled",
+    needsTarget: false,
+    memories,
+    nextCursor: rows.length > 8 && last ? { updatedAt: last.updatedAt, id: last.id } : null,
   };
 }
 

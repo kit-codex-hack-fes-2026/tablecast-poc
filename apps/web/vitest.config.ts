@@ -23,6 +23,8 @@ const browser = (performance = false) =>
     optimizeDeps: {
       exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
       include: [
+        "@base-ui/react/context-menu",
+        "@base-ui/react/progress",
         "@base-ui/react/popover",
         "@base-ui/react/tooltip",
         "@tablecast/api > css-tree/parser",
@@ -170,6 +172,8 @@ export default defineConfig({
         optimizeDeps: {
           exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
           include: [
+            "@base-ui/react/context-menu",
+            "@base-ui/react/progress",
             "@base-ui/react/popover",
             "@base-ui/react/tooltip",
             "@base-ui/react/number-field",

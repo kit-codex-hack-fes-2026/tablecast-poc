@@ -1,4 +1,13 @@
 import { z } from "zod";
+export const memorySearchSchema = z
+  .object({
+    query: z.string().trim().min(1).max(100).optional(),
+    cursor: z
+      .object({ updatedAt: z.number().int().nonnegative(), id: z.string().min(1) })
+      .strict()
+      .optional(),
+  })
+  .strict();
 export const customerMemoryPageSchema = z.object({
   beforeId: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),

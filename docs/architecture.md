@@ -262,3 +262,7 @@ APIのappearance modelが構造化ロゴ・テーマ・チラシと追加CSSの�
 `configuration.guides`は店舗案内の日英本文・別名・関連商品・リンクを所有し、既存の公開設定を通す。`tables/assistance-queries.ts`が案内検索と来店単位の呼び出し履歴、`tables/use-cases/assistance.ts`が呼び出し保存・表示通知・対応済みを所有する。音声はこの公開業務境界を使い、判定をWebへ複製しない。Webの案内ひな形は`configuration/guide-model.ts`を共有する。
 
 `staff_calls`を引き継ぎメモと状態の正本とし、`table_sessions.staff_call_json`は現在の未対応依頼を追加問合せなしで返す表示用snapshotとする。呼び出し・対応済みでは正本、snapshot、既存の注意フラグ、通知用イベントを同じD1 batchで更新する。履歴は認可済みの店舗・来店IDと日時／IDのcursorで取得し、直近100件の会話ログに依存しない。
+
+### 店舗資料の取得境界
+
+`modules/configuration/knowledge-model.ts`は複数ファイルSkillの入力契約と上限、`knowledge.ts`は原文の位置を保持する分割・検索・読取を所有する。純粋な検索には既存カタログと同じFuse.jsだけを許可する。seedの検索検証は公開subpathの`@tablecast/api/store-knowledge`を使い、他workspaceから内部ファイルを直接importしない。`modules/voice/use-cases/knowledge.ts`は現在の卓を認可し、その店舗の公開カタログまたは許可されたデモ版から必要な資料を取得する。MCP・GUIは既存configurationの下書き・公開・履歴を共有し、独立した資料DB・索引の同期ジョブ・任意コード実行基盤を追加しない。 `knowledge-files.ts`はyamlとmarkedでAgent Skillsのmetadata・参照を検査し、GUIの未保存編集とMCPのファイル操作の規則を共有する。`knowledge-archive.ts`はfflateと容量・パス・CRCの検査、`knowledge-service.ts`は既存の管理者認可・画像取込・版付き下書きを組み合わせる。ZIPの画像は移植可能な実ファイルと出所manifestにし、下書きの更新前に全体を検査する。`onboarding.ts`は現在の設定から確認事項と既存の設定先を返し、GUIとMCPで進捗判定を複製しない。

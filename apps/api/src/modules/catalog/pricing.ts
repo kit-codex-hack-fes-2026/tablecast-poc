@@ -3,12 +3,24 @@ import type { Configuration, ConfigurationIssue } from "../configuration/model";
 import type { Cart, CartLine, PricedLine, Snapshot } from "../orders/model";
 import type { Plan } from "./model";
 import { ensure } from "../../platform/errors";
+import { lintStoreSkills } from "../configuration/knowledge-files";
 import { maxCartLines } from "../orders/model";
 import { evaluateCondition, productConditionErrors } from "./conditions";
 import { productFoodErrors, productFoodInformation } from "./food";
 import { localizedNames, resolveLocalized, uiLocale } from "./localization";
 export function configurationErrors(config: Configuration): ConfigurationIssue[] {
-  const errors: ConfigurationIssue[] = [];
+  const errors: ConfigurationIssue[] = lintStoreSkills(config.cast.skills ?? [])
+    .filter((issue) => issue.severity === "error")
+    .map((issue) => ({
+      code: "KNOWLEDGE_INVALID",
+      path: [
+        "cast",
+        "skills",
+        config.cast.skills?.findIndex((skill) => skill.id === issue.skillId) ?? 0,
+        "files",
+      ],
+      params: { skillId: issue.skillId, file: issue.path, issue: issue.code },
+    }));
   const unique = (items: { id: string }[], path: ConfigurationIssue["path"]) => {
     const seen = new Set<string>();
     for (const [index, item] of items.entries()) {

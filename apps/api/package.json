@@ -12,7 +12,9 @@
     "./telemetry": "./src/platform/telemetry.ts",
     "./db": "./src/db/public.ts",
     "./bootstrap": "./src/bootstrap.ts",
-    "./media-migration": "./src/modules/media/migration.ts"
+    "./media-migration": "./src/modules/media/migration.ts",
+    "./store-knowledge": "./src/modules/configuration/knowledge.ts",
+    "./store-knowledge-files": "./src/modules/configuration/knowledge-files.ts"
   },
   "scripts": {
     "typecheck": "node ../../node_modules/@tablecast/typescript-native/bin/tsc --noEmit",
@@ -44,12 +46,15 @@
     "blurhash": "2.0.5",
     "css-tree": "^3.2.1",
     "drizzle-orm": "1.0.0-rc.5",
+    "fflate": "0.8.3",
     "fuse.js": "7.5.0",
     "hono": "4.13.13",
+    "marked": "17.0.6",
     "openai": "7.36.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "stripe": "22.6.2",
+    "yaml": "2.9.1",
     "zod": "4.6.7"
   },
   "devDependencies": {

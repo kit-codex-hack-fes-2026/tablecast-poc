@@ -13,19 +13,22 @@ import { ConfigurationSection } from "./configuration-fields";
 import { InstructionView } from "./instruction-view";
 import { LanguageFields } from "./language-fields";
 import { standardVoicesOptions } from "./menu-query";
+import { StoreKnowledge } from "./store-knowledge";
 
 export function CastOverview({
   storeId,
   value,
+  draftId,
   renderEdit,
 }: {
+  draftId?: string;
   renderEdit?: (target: CastTarget) => ReactNode;
   storeId: string;
   value: Configuration["cast"];
 }) {
   const { t } = useI18n();
   return (
-    <div className="max-w-5xl space-y-8">
+    <div className="min-w-0 space-y-5">
       <LanguageFields languages={Object.keys(value.instructions)}>
         {(language) => (
           <>
@@ -62,6 +65,12 @@ export function CastOverview({
           </>
         )}
       </LanguageFields>
+      <StoreKnowledge
+        draftId={draftId}
+        storeId={storeId}
+        value={value.skills ?? []}
+        action={renderEdit?.("knowledge")}
+      />
       <ConfigurationSection title={t("editor_proactive")} icon={Sparkles}>
         <Badge variant={value.proactive ? "success" : "inactive"}>
           {t(value.proactive ? "cast_proactive_on" : "cast_proactive_off")}
