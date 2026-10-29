@@ -134,6 +134,8 @@ it.each(["ja", "en", "zh-Hans", "ko"] as const)(
         );
       });
       expect(visible.length).toBeGreaterThanOrEqual(2);
+      // 撮影対象の実画像を読み込み、headless iframeのlazy判定に撮影準備を依存させない。
+      for (const image of visible) image.loading = "eager";
       await expect
         .poll(async () => {
           try {
