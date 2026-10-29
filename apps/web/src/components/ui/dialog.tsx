@@ -16,6 +16,10 @@ const dialogVariants = tv({
         viewport: "items-center justify-center p-6 max-sm:p-3",
         popup: "max-h-full w-full max-w-xl rounded-xl p-6 max-sm:p-5",
       },
+      pane: {
+        viewport: "absolute z-30 items-center justify-center p-4 sm:p-6",
+        popup: "max-h-full min-h-0 w-full overflow-hidden rounded-3xl",
+      },
       right: { viewport: "justify-end", popup: "max-w-3xl px-6 pt-6 max-sm:px-5 size-full" },
       left: { viewport: "justify-start", popup: "max-w-3xl px-6 pt-6 max-sm:px-5 size-full" },
     },
@@ -43,26 +47,34 @@ export function DialogDescription({ className, ...props }: DialogPrimitive.Descr
 
 /**
  * 短い確認や詳細を重ねて表示する。
- * Dialogにopen/onOpenChange、DialogContentにside(center/right/left)とinitialFocus/finalFocusを渡す。
+ * Dialogにopen/onOpenChange、DialogContentにside(center/right/left/pane)とinitialFocus/finalFocusを渡す。
  * Header内のTitle、Description、Close、Scroll、Footerを組み合わせる。
  * 閉じるアイコンにはaria-labelが必須。
  * 長い内容はScrollへ置き、操作を隠さない。
  * 破壊操作にはConfirmActionを使う。
- * Portalのテーマは内部で引き継ぐ。
+ * paneはcontainerで指定したペイン内へ表示し、Portalのテーマは内部で引き継ぐ。
  */
 export function DialogContent({
   className,
   side = "center",
+  container,
   ...props
-}: DialogPrimitive.Popup.Props & VariantProps<typeof dialogVariants>) {
+}: DialogPrimitive.Popup.Props &
+  VariantProps<typeof dialogVariants> & { container?: DialogPrimitive.Portal.Props["container"] }) {
   const { viewport, popup } = dialogVariants({ side });
   return (
-    <DialogPrimitive.Portal>
+    <DialogPrimitive.Portal container={container}>
       <StyleScopeBoundary>
         <DialogPrimitive.Backdrop
-          className={cn("fixed inset-0 bg-overlay z-40", surfaceMotion({ kind: "backdrop" }))}
+          data-slot="dialog-backdrop"
+          className={cn(
+            side === "pane"
+              ? "absolute inset-0 z-20 bg-overlay/30"
+              : "fixed inset-0 bg-overlay z-40",
+            surfaceMotion({ kind: "backdrop" }),
+          )}
         />
-        <DialogPrimitive.Viewport className={viewport()}>
+        <DialogPrimitive.Viewport data-slot="dialog-viewport" className={viewport()}>
           <DialogPrimitive.Popup
             render={(renderProps, state) => (
               <div {...renderProps} inert={!state.open} aria-hidden={!state.open || undefined} />
@@ -73,7 +85,9 @@ export function DialogContent({
             className={(state) =>
               popup({
                 className: cn(
-                  surfaceMotion({ kind: side === "center" ? "dialog" : side }),
+                  surfaceMotion({
+                    kind: side === "pane" ? "scale" : side === "center" ? "dialog" : side,
+                  }),
                   typeof className === "function" ? className(state) : className,
                 ),
               })

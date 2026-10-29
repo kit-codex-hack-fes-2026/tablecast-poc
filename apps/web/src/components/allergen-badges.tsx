@@ -31,7 +31,7 @@ export function AllergenBadges({
       className="flex min-w-0 flex-wrap gap-1"
     >
       {items.map((item) => (
-        <li key={item.id}>
+        <li key={item.id} className="flex">
           <Badge
             variant="inactive"
             data-food-allergen={item.id}
@@ -45,7 +45,7 @@ export function AllergenBadges({
         </li>
       ))}
       {unverified && (
-        <li>
+        <li className="flex">
           <Badge variant="inactive" className="gap-1 rounded-full px-2 py-0.5 text-xs">
             <CircleHelp aria-hidden="true" />
             {t("food_unknown")}

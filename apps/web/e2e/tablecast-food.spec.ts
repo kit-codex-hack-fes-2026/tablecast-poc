@@ -139,7 +139,9 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
   await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
   await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
   await page.getByRole("button", { name: ja.kiosk_confirm, exact: true }).click();
-  await expect(page.getByRole("dialog", { name: ja.kiosk_ordered, exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: ja.kiosk_ordered_items.replace("{count}", "1"), exact: true }),
+  ).toBeVisible();
   const state = tableStateSchema.parse(await (await page.request.get(endpoint)).json());
   expect(state.orders[0]?.snapshot.lines[0]?.foodInformation).toMatchObject({
     allergens: { milk: "not_used", egg: "not_used", wheat: "not_used", soya: "contains" },

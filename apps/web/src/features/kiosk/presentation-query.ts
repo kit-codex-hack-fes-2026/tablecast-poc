@@ -91,5 +91,9 @@ export function useTablePresentation({
         search: confirmed.menuSearch,
       },
     );
-  return { screen, presentation };
+  return {
+    screen,
+    presentation,
+    searchPending: pendingScreens.some((input) => input.search !== undefined),
+  };
 }

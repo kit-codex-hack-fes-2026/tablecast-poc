@@ -1,7 +1,7 @@
 import type { Catalog, Product } from "@tablecast/api/schema";
 import { resolveText } from "@tablecast/api/localization";
-import { ImageOff, Plus, Search } from "lucide-react";
-import { memo, type RefObject, useState } from "react";
+import { ImageOff, Plus } from "lucide-react";
+import { memo, type ReactNode, useState } from "react";
 import { cn, tv } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
 import { IllustrationNotice } from "./illustration-notice";
@@ -36,8 +36,9 @@ export const ProductMenu = memo(function ProductMenu({
   compact = false,
   category: controlledCategory,
   onCategoryChange,
-  onSearch,
-  searchButtonRef,
+  searchControl,
+  searchStatus,
+  searchOpen = false,
   searchResults = false,
   imageSizes,
 }: {
@@ -47,10 +48,11 @@ export const ProductMenu = memo(function ProductMenu({
   imageSizes?: string;
   onCategoryChange?: (category: string) => void;
   onChoose: (product: Product) => void;
-  onSearch?: () => void;
   productIds?: string[];
-  searchButtonRef?: RefObject<HTMLButtonElement | null>;
+  searchControl?: ReactNode;
+  searchOpen?: boolean;
   searchResults?: boolean;
+  searchStatus?: ReactNode;
 }) {
   const { locale, t } = useI18n();
   const [localCategory, setLocalCategory] = useState("all");
@@ -66,36 +68,39 @@ export const ProductMenu = memo(function ProductMenu({
     : catalog.configuration.products.filter(
         (product) => category === "all" || product.categoryId === category,
       );
+  const showToolbar = !productIds || searchResults;
   return (
     <div className="@container/tablecast-menu min-w-0">
-      {!productIds && masthead?.visible && (
-        <div
-          data-theme-part="menu-masthead"
-          className="flex flex-col gap-2 mx-4 mt-3"
-          style={{
-            padding: masthead.padding,
-            alignItems: masthead.align === "center" ? "center" : "flex-start",
-          }}
-        >
-          <StoreLogo
-            logo={catalog.configuration.branding?.logo}
-            width={masthead.logoWidth}
-            height={masthead.logoHeight}
+      {showToolbar && (
+        <>
+          {masthead?.visible && (
+            <div
+              data-theme-part="menu-masthead"
+              className="flex flex-col gap-2 mx-4 mt-3"
+              style={{
+                padding: masthead.padding,
+                alignItems: masthead.align === "center" ? "center" : "flex-start",
+              }}
+            >
+              <StoreLogo
+                logo={catalog.configuration.branding?.logo}
+                width={masthead.logoWidth}
+                height={masthead.logoHeight}
+              />
+              <h2 className="text-base font-semibold">
+                {catalog.configuration.storeName ?? catalog.storeName}
+              </h2>
+            </div>
+          )}
+          <MenuBanners catalog={catalog} onChoose={onChoose} />
+          <MenuCategories
+            catalog={catalog}
+            category={category}
+            onCategoryChange={setCategory}
+            searchControl={searchControl}
+            searchOpen={searchOpen}
           />
-          <h2 className="text-base font-semibold">
-            {catalog.configuration.storeName ?? catalog.storeName}
-          </h2>
-        </div>
-      )}
-      {!productIds && <MenuBanners catalog={catalog} onChoose={onChoose} />}
-      {!productIds && (
-        <MenuCategories
-          catalog={catalog}
-          category={category}
-          onCategoryChange={setCategory}
-          onSearch={onSearch}
-          searchButtonRef={searchButtonRef}
-        />
+        </>
       )}
       {!productIds && products.length === 0 && (
         <p role="status" className="py-12 px-6 text-muted-foreground text-center">
@@ -124,48 +129,13 @@ export const ProductMenu = memo(function ProductMenu({
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <span
-              className={cn(
-                "relative flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-xl bg-muted",
-                compact && "h-24 aspect-auto",
-              )}
-            >
-              {product.imageKey ? (
-                <ProductImage
-                  responsive
-                  className="size-full object-contain"
-                  width={384}
-                  height={384}
-                  sizes={
-                    compact
-                      ? "156px"
-                      : (imageSizes ?? "(min-width: 48rem) 384px, calc(100vw - 56px)")
-                  }
-                  src={`/media/${product.imageKey}`}
-                  alt=""
-                />
-              ) : (
-                <span className="flex flex-col items-center gap-1.5 text-sm text-muted-foreground">
-                  <ImageOff size={26} strokeWidth={1} aria-hidden="true" />
-                  {t("kiosk_no_image")}
-                </span>
-              )}
-              {product.imageKey && product.imageKind === "illustration" && <IllustrationNotice />}
-              <span
-                className="absolute right-2 bottom-2 flex size-7 items-center justify-center rounded-full bg-card/90"
-                aria-hidden="true"
-              >
-                <Plus size={16} />
-              </span>
-            </span>
+            <ProductMenuPhoto product={product} compact={compact} imageSizes={imageSizes} />
             <span className={cn("flex flex-1 flex-col px-1 pt-4 pb-1", compact && "pt-2")}>
               {!product.available && (
                 <span className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-                  {!product.available && (
-                    <span className="rounded-sm bg-muted px-1.5 py-1 font-medium text-foreground">
-                      {t("kiosk_sold_out")}
-                    </span>
-                  )}
+                  <span className="rounded-sm bg-muted px-1.5 py-1 font-medium text-foreground">
+                    {t("kiosk_sold_out")}
+                  </span>
                 </span>
               )}
               <span
@@ -189,40 +159,82 @@ export const ProductMenu = memo(function ProductMenu({
           </Button>
         ))}
       </div>
+      {searchStatus}
     </div>
   );
 });
+
+function ProductMenuPhoto({
+  product,
+  compact,
+  imageSizes,
+}: {
+  compact: boolean;
+  imageSizes?: string;
+  product: Product;
+}) {
+  const { t } = useI18n();
+  return (
+    <span
+      className={cn(
+        "relative flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-xl bg-muted",
+        compact && "h-24 aspect-auto",
+      )}
+    >
+      {product.imageKey ? (
+        <ProductImage
+          responsive
+          className="size-full object-contain"
+          width={384}
+          height={384}
+          sizes={compact ? "156px" : (imageSizes ?? "(min-width: 48rem) 384px, calc(100vw - 56px)")}
+          src={`/media/${product.imageKey}`}
+          alt=""
+        />
+      ) : (
+        <span className="flex flex-col items-center gap-1.5 text-sm text-muted-foreground">
+          <ImageOff size={26} strokeWidth={1} aria-hidden="true" />
+          {t("kiosk_no_image")}
+        </span>
+      )}
+      {product.imageKey && product.imageKind === "illustration" && <IllustrationNotice />}
+      <span
+        className="absolute right-2 bottom-2 flex size-7 items-center justify-center rounded-full bg-card/90"
+        aria-hidden="true"
+      >
+        <Plus size={16} />
+      </span>
+    </span>
+  );
+}
 
 function MenuCategories({
   catalog,
   category,
   onCategoryChange,
-  onSearch,
-  searchButtonRef,
+  searchControl,
+  searchOpen,
 }: {
   catalog: Catalog;
   category: string;
   onCategoryChange: (category: string) => void;
-  onSearch?: () => void;
-  searchButtonRef?: RefObject<HTMLButtonElement | null>;
+  searchControl?: ReactNode;
+  searchOpen: boolean;
 }) {
   const { locale, t } = useI18n();
   return (
-    <div className="flex gap-2 px-4 pt-4 pb-6">
-      {onSearch && (
-        <Button
-          ref={searchButtonRef}
-          className="shrink-0"
-          variant="outline"
-          size="lg"
-          type="button"
-          onClick={onSearch}
-        >
-          <Search size={20} aria-hidden="true" />
-          {t("kiosk_menu_search")}
-        </Button>
-      )}
-      <fieldset className="flex min-w-0 gap-2 overflow-x-auto" aria-label={t("kiosk_menu")}>
+    <div data-ui="menu-toolbar" className="relative flex items-start gap-2 px-4 pt-4 pb-6">
+      {searchControl}
+      <fieldset
+        data-ui="menu-categories"
+        inert={searchOpen}
+        aria-hidden={searchOpen || undefined}
+        className={cn(
+          "-m-1.5 flex min-w-0 gap-2 overflow-x-auto p-1.5 scrollbar-thin",
+          searchOpen && "invisible",
+        )}
+        aria-label={t("kiosk_menu")}
+      >
         <Button
           className="shrink-0 whitespace-nowrap"
           variant={category === "all" ? "secondary" : "outline"}

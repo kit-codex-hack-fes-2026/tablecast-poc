@@ -26,6 +26,11 @@ import {
 } from "./food-information-model";
 import { Badge } from "./ui/badge";
 import { surfaceMotion } from "./ui/motion-variants";
+import { Skeleton } from "./ui/skeleton";
+
+const foodInformationLayout =
+  "grid min-w-0 grid-cols-[max-content_minmax(0,1fr)] items-start gap-2 text-xs";
+const foodBadgeClass = "gap-1.5 rounded-md px-2 py-0.5 text-xs";
 
 const dietaryStates = {
   yes: { icon: CircleCheck, variant: "success" },
@@ -62,7 +67,7 @@ function FoodDetailsBadge({
         data-variant={variant}
         className="inline-flex min-h-6 min-w-6 max-w-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <Badge variant={variant} className="gap-1.5 rounded-md px-2 py-0.5 text-xs">
+        <Badge variant={variant} className={foodBadgeClass}>
           {children}
         </Badge>
       </Popover.Trigger>
@@ -120,10 +125,7 @@ export function FoodInformationView({
         ? "success"
         : "inactive";
   return (
-    <div
-      className="grid min-w-0 grid-cols-[max-content_minmax(0,1fr)] items-start gap-2 text-xs"
-      data-ui="food-information"
-    >
+    <div className={foodInformationLayout} data-ui="food-information">
       <span className="py-0.5 font-medium">{t("food_allergens")}</span>
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
         <AllergenBadges contains={contains} unverified={unverified} />
@@ -146,7 +148,7 @@ export function FoodInformationView({
                 : foodStatusLabels[assessment.status],
             );
             return (
-              <li key={key} className="min-w-0">
+              <li key={key} className="flex min-w-0 items-start">
                 <FoodDetailsBadge
                   label={`${label}: ${statusLabel}`}
                   title={label}
@@ -178,7 +180,7 @@ export function FoodInformationView({
               </li>
             );
           })}
-          <li className="min-w-0">
+          <li className="flex min-w-0 items-start">
             <FoodDetailsBadge
               label={`${t("editor_cross_contact")}: ${t(foodStatusLabels[value.crossContact])}`}
               title={t("food_preparation")}
@@ -203,5 +205,52 @@ export function FoodInformationView({
         </ul>
       </div>
     </div>
+  );
+}
+
+/** 実際のラベル・アイコン幅を使い、食事情報の行とbadgeの形を予約する。 */
+export function FoodInformationSkeleton({ caption }: { caption?: ReactNode }) {
+  const { t } = useI18n();
+  return (
+    <div className={foodInformationLayout} data-ui="food-information-skeleton">
+      <span className="py-0.5 font-medium">{t("food_allergens")}</span>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <Skeleton className="h-6 w-16 rounded-full" />
+        {caption && (
+          <div className="flex min-h-6 items-center gap-2 text-muted-foreground">{caption}</div>
+        )}
+      </div>
+      <span className="py-0.5 font-medium">{t("food_dietary")}</span>
+      <ul className="flex min-w-0 flex-wrap items-start gap-1.5" aria-hidden="true">
+        {dietaryKeys.map((key) => {
+          const Icon = dietaryIcons[key];
+          return (
+            <li key={key} className="flex min-w-0 items-start">
+              <FoodBadgeSkeleton>
+                <Icon />
+                {t(key === "vegetarian" ? "food_vegetarian_short" : dietaryLabels[key])}
+                <CircleHelp />
+              </FoodBadgeSkeleton>
+            </li>
+          );
+        })}
+        <li className="flex min-w-0 items-start">
+          <FoodBadgeSkeleton>
+            <CircleHelp />
+            {t("food_preparation")}
+          </FoodBadgeSkeleton>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+function FoodBadgeSkeleton({ children }: { children: ReactNode }) {
+  return (
+    <Skeleton className="inline-flex min-h-6 min-w-6 max-w-full rounded-md">
+      <Badge variant="inactive" className={`invisible ${foodBadgeClass}`}>
+        {children}
+      </Badge>
+    </Skeleton>
   );
 }
