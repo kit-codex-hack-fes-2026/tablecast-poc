@@ -65,9 +65,6 @@ export function StoreOnboarding({ draftId }: { draftId?: string }) {
       <ErrorNotice query={progress} retrying={progress.isFetching} />
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-info-border p-4">
         <p className="max-w-3xl text-sm text-muted-foreground">{t("onboarding_agent_hint")}</p>
-        <code className="rounded border border-border px-2 py-1 font-mono text-xs">
-          get_store_onboarding
-        </code>
       </div>
       <ol className="grid min-w-0 gap-3 lg:grid-cols-2">
         {progress.data.steps.map((step, index) => {
@@ -94,12 +91,14 @@ export function StoreOnboarding({ draftId }: { draftId?: string }) {
               </div>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{t(hint)}</p>
               <div className="mt-3 flex items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {t("onboarding_count")} · {step.count.toLocaleString()}
-                </span>
+                {step.count !== null && (
+                  <span className="text-xs text-muted-foreground">
+                    {t("onboarding_count")} · {step.count.toLocaleString()}
+                  </span>
+                )}
                 <a
                   href={step.href}
-                  className="flex min-h-11 items-center gap-1 text-sm font-medium text-info-text underline-offset-4 hover:underline"
+                  className="ml-auto flex min-h-11 items-center gap-1 text-sm font-medium text-info-text underline-offset-4 hover:underline"
                 >
                   {t("onboarding_open")}
                   <ArrowRight className="size-4" />

@@ -75,14 +75,14 @@ export function storeOnboarding(
     {
       id: "rewards",
       status: "review",
-      count: 0,
+      count: null,
       href: `${root}/points`,
       tools: ["get_point_policy", "set_point_policy", "list_coupon_rules", "save_coupon_rule"],
     },
     {
       id: "games",
       status: "optional",
-      count: 0,
+      count: null,
       href: `${root}/games`,
       tools: ["list_games", "get_game_spec", "register_game", "validate_game"],
     },
