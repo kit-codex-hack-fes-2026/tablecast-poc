@@ -237,12 +237,21 @@ describe("開発資源の所有境界", () => {
         meterPriceId: "price_tablecast_usage",
         eventName: "tablecast_ai_usage",
       });
-      await run("", { TABLECAST_BILLING_RATES: rates });
+      const square = {
+        TABLECAST_SQUARE_APPLICATION_ID: "sandbox-sq0idb-tablecast-test",
+        TABLECAST_SQUARE_ENVIRONMENT: "sandbox",
+        TABLECAST_SQUARE_APPLICATION_SECRET: "sandbox-sq0csb-tablecast-test",
+        TABLECAST_SQUARE_WEBHOOK_SIGNATURE_KEY: "tablecast-square-signature-secret",
+        TABLECAST_POS_ENCRYPTION_SECRET:
+          "tablecast-square-encryption-secret-at-least-32-characters",
+      };
+      await run("", { TABLECAST_BILLING_RATES: rates, ...square });
       const api = z
         .object({
           main: z.string(),
           name: z.string(),
-          vars: z.object({ TABLECAST_PUBLIC_ORIGIN: z.string() }),
+          vars: z.record(z.string(), z.string()),
+          secrets: z.object({ required: z.array(z.string()) }),
         })
         .parse(JSON.parse(await readFile(join(root, ".local/api.wrangler.json"), "utf8")));
       expect(api.name).toBe("tablecast-voice-ui-api");
@@ -250,6 +259,21 @@ describe("開発資源の所有境界", () => {
       expect(api.vars.TABLECAST_PUBLIC_ORIGIN).toBe("http://web.voice-ui.tablecast-poc.localhost");
       const settings = parseEnv(await readFile(join(root, ".local/.env"), "utf8"));
       expect(settings.TABLECAST_BILLING_RATES).toBe(rates);
+      expect(settings.TABLECAST_SQUARE_APPLICATION_ID).toBe(square.TABLECAST_SQUARE_APPLICATION_ID);
+      expect(api.vars.TABLECAST_SQUARE_APPLICATION_ID).toBe(square.TABLECAST_SQUARE_APPLICATION_ID);
+      expect(api.vars.TABLECAST_SQUARE_ENVIRONMENT).toBe("sandbox");
+      const apiSecrets = parseEnv(await readFile(join(root, ".local/.dev.vars"), "utf8"));
+      const webSecrets = parseEnv(await readFile(join(root, ".local/.dev.vars.web"), "utf8"));
+      for (const [key, value] of Object.entries(square)) {
+        expect(apiSecrets[key]).toBe(value);
+        expect(webSecrets).not.toHaveProperty(key);
+        if (key === "TABLECAST_SQUARE_APPLICATION_ID" || key === "TABLECAST_SQUARE_ENVIRONMENT")
+          continue;
+        expect(settings).not.toHaveProperty(key);
+        expect(api.vars).not.toHaveProperty(key);
+        expect(api.secrets.required).toContain(key);
+        expect(JSON.stringify(api)).not.toContain(value);
+      }
       const loaded = await execute(
         "bun",
         ["--env-file=.local/.env", "-e", "console.log(process.env.TABLECAST_BILLING_RATES)"],
@@ -261,13 +285,15 @@ describe("開発資源の所有境界", () => {
         dotenvConfig,
         JSON.stringify({ name: "tablecast-dotenv-test", compatibility_date: "2026-10-01" }),
       );
-      const platform = await getPlatformProxy<{ TABLECAST_BILLING_RATES: string }>({
+      const platform = await getPlatformProxy<typeof square & { TABLECAST_BILLING_RATES: string }>({
         configPath: dotenvConfig,
         envFiles: [".dev.vars"],
         persist: false,
       });
       try {
         expect(platform.env.TABLECAST_BILLING_RATES).toBe(rates);
+        for (const [key, value] of Object.entries(square))
+          expect(Reflect.get(platform.env, key)).toBe(value);
       } finally {
         await platform.dispose();
       }

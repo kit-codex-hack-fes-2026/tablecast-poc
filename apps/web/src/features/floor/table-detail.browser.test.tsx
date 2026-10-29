@@ -96,7 +96,20 @@ it("店側の日本語カートで卓と同じ版のカタログから未充足�
   const requests: string[] = [];
   vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(new Request(input, init).url).pathname;
-    // 会計の会員情報取得は、検証対象のカタログ取得と分ける。
+    // 会計の会員・POS情報取得は、検証対象のカタログ取得と分ける。
+    if (path === `/api/admin/stores/${state.storeId}/tables/${state.id}/pos`)
+      return Promise.resolve(
+        Response.json({
+          connection: null,
+          checkout: null,
+          invoice: null,
+          issues: [],
+          locked: false,
+          canStart: false,
+          canCancel: false,
+          canReconcile: false,
+        }),
+      );
     if (path === `/api/admin/stores/${state.storeId}/tables/${state.id}/coupons`)
       return Promise.resolve(
         Response.json({ expectedVersion: state.cart.version, requested: [], uses: [] }),

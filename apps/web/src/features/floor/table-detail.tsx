@@ -13,6 +13,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { Suspense } from "react";
+import { BillSummary } from "../../components/bill-summary";
 import { CartLines } from "../../components/cart-lines";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageLabel } from "../../components/language-label";
@@ -27,6 +28,7 @@ import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { useRealtime } from "../../lib/use-realtime";
 import { catalogOptions } from "../catalog/catalog-query";
+import { PosCheckout } from "../pos/pos-checkout";
 import { CouponVisit } from "../rewards/coupon-visit";
 import { PointVisit } from "../rewards/point-visit";
 import { ActivityLog } from "./events";
@@ -171,7 +173,7 @@ export function TableDetail({
               {t("admin_diagnostics")}
             </Tabs.Tab>
           </Tabs.List>
-          <div className="overflow-y-auto min-h-0 pt-6 px-0 pb-9 [&_[data-ui=order-card]]:my-3.5 [&_[data-ui=order-card]]:mx-0 [&_[data-ui=bill-summary]]:pt-0 [&_[data-ui=bill-summary]]:px-0 [&_[data-ui=bill-summary]]:pb-6">
+          <div className="overflow-y-auto min-h-0 pt-6 px-0 pb-9 [&_[data-ui=order-card]]:my-3.5 [&_[data-ui=order-card]]:mx-0">
             <Tabs.Panel value="overview">
               <div className="grid grid-cols-3 border border-border rounded-md [&_>_div:last-child]:border-0 max-sm:grid-cols-2 max-sm:[&_>_div:last-child]:col-span-full max-sm:[&_>_div:last-child]:border-t max-sm:[&_>_div:last-child]:border-t-border">
                 <div className="py-4 px-3.5 border-r border-r-border">
@@ -238,34 +240,22 @@ export function TableDetail({
               </Suspense>
             </Tabs.Panel>
             <Tabs.Panel value="billing">
-              <div
-                data-ui="bill-summary"
-                className="py-6 px-5 [&_h3]:mb-5 [&_dl_>_div]:flex [&_dl_>_div]:items-center [&_dl_>_div]:justify-between [&_dl_>_div]:py-2 [&_dl_>_div]:px-0 [&_dl_>_div]:gap-3 [&_dl_>_div]:text-base [&_[data-ui=bill-total]]:border-t [&_[data-ui=bill-total]]:border-t-border [&_[data-ui=bill-total]]:pt-4 [&_[data-ui=bill-total]]:mt-2.5 [&_[data-ui=bill-total]_dd]:text-2xl [&_[data-ui=bill-total]_dd]:font-semibold [&_p]:text-muted-foreground [&_p]:text-sm [&_p]:mt-2.5 [&_[data-slot=button][data-variant=default]]:mt-6 [&_[data-slot=button][data-variant=default]]:w-full"
-              >
-                <dl>
-                  <div>
-                    <dt className="text-muted-foreground">{t("admin_ordered")}</dt>
-                    <dd>{money(table.bill.orderedTotal, locale)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">{t("kiosk_plan_charge")}</dt>
-                    <dd>{money(table.bill.planTotal, locale)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">{t("kiosk_adjustment")}</dt>
-                    <dd>{money(table.bill.adjustmentTotal, locale)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">{t("kiosk_paid")}</dt>
-                    <dd>{money(table.bill.paidTotal, locale)}</dd>
-                  </div>
-                  <div data-ui="bill-total" className="">
-                    <dt className="text-muted-foreground">{t("admin_due")}</dt>
-                    <dd>{money(table.bill.due, locale)}</dd>
-                  </div>
-                </dl>
-              </div>
+              <BillSummary
+                className="pb-6"
+                rows={[
+                  { id: "ordered", label: t("admin_ordered"), amount: table.bill.orderedTotal },
+                  { id: "plan", label: t("kiosk_plan_charge"), amount: table.bill.planTotal },
+                  {
+                    id: "adjustment",
+                    label: t("kiosk_adjustment"),
+                    amount: table.bill.adjustmentTotal,
+                  },
+                  { id: "paid", label: t("kiosk_paid"), amount: table.bill.paidTotal },
+                ]}
+                total={{ label: t("admin_due"), amount: table.bill.due }}
+              />
               <CouponVisit storeId={storeId} sessionId={table.id} />
+              <PosCheckout storeId={storeId} sessionId={table.id} />
               <PaymentForm
                 key={table.status}
                 storeId={storeId}

@@ -9,7 +9,7 @@ import { device, setupFixture } from "./fixture";
 export async function setupCouponRule(
   trigger: "enrol" | "exchange" | "manual" | "spend" | "visits" = "manual",
 ) {
-  const { staff } = await setupFixture();
+  const { staff, cookie } = await setupFixture();
   const services = createApiServices(env);
   const actor = { ...staff, tableSessionId: device.tableSessionId };
   const customer = { kind: "customer", storeId: device.storeId, userId: staff.userId } as const;
@@ -38,7 +38,7 @@ export async function setupCouponRule(
   };
   const ruleId = crypto.randomUUID();
   await saveCouponRule(services, actor, { id: ruleId, expectedVersion: 0, active: true, rules });
-  return { services, actor, customer, ruleId, rules };
+  return { services, actor, customer, ruleId, rules, cookie };
 }
 
 export async function setupCouponCustomer(

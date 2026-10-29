@@ -128,7 +128,7 @@ flowchart TD
     IO["外部I/O adapter"]
     DB["API内db<br/>schema・DB型・生成"]
     D1[(D1)]
-    External["OpenAI・Stripe・メール・通知"]
+    External["OpenAI・Stripe・Square・メール・通知"]
     Entry --> UseCase
     UseCase --> Own
     UseCase --> Other
@@ -144,6 +144,18 @@ flowchart TD
 `@tablecast/api/db`は運用CLI向けのschema・DB生成・型、`@tablecast/api/bootstrap`は初期化に限定した公開入口とする。CLIから任意のAPI内部ファイルへ到達させず、Webは両入口を利用しない。認証schemaを認証runtime配下へ移してdb→auth→dbの循環を作らない。DB切り出しは複数の実consumerがあるため将来候補だが、今回は`packages/*`を追加しない。auth client・React Email・WebのUIは変更理由と利用者が異なるため、現在のapp内の所有を保つ。
 
 メールはtemplate・文面を独立させ、送信を所有する`emails/send.ts`が描画とtransportを選ぶ。React Email rendererとtemplateは送信時だけ遅延importする。外部protocol adapterへは資格情報を解決済みの入力を渡し、APIの認可・DBやHonoへ逆依存させない。Oxlint boundariesは所有業務・読取/更新/HTTPの役割・公開入口を検査し、未知の配置も拒否する。行数だけで分割の妥当性を判断しない。
+
+### POS adapter
+
+`apps/api/src/modules/pos`が接続・対応付け・固定した会計試行を所有し、`adapter.ts`の共通`PosAdapter`から外部I/Oを呼ぶ。`model.ts`が公開契約、`routes.ts`がHTTP、`connections.ts`・`checkout.ts`・`devices.ts`が業務、`queries.ts`が読取、`invoice.ts`がsnapshotからの明細構築、`square.ts`がSquareへのI/Oを所有する。店舗・来店の認可、承認済みsnapshot、価格・プラン・クーポン、会計中の競合制御、支払記録・監査・永続イベント・通知は共通業務側に保つ。adapterへDB更新や業務判断を移さない。
+
+共通契約は商品・オプション候補、円単位の明細・数量・割引・調整、見積・注文出力、外部状態の取得と対応capabilityに限定する。接続・外部参照は`provider`と`connectionId`を組にして識別し、接続したSquare環境を保持する。必要なcapabilityがない操作や環境の異なる接続は理由付きで拒否し、未知の状態は要確認にする。Square SDKの型・生response・固有の状態や認証情報を公開API・Webへ渡さない。
+
+外部注文の初回作成はD1のclaimで同時送信を抑え、15秒のSDK timeoutより長い30秒を経過してから引き継ぐ。初回要求が明確に拒否され、先行する結果不明の要求がない場合だけ、そのclaimの所有者が会計を解除できる。応答喪失・期限後の引継ぎ・冪等キー競合は結果不明を維持し、同じキーの照合で回復する。
+
+実装するproviderはSquareのみとし、公式TypeScript SDK `square@46.0.0`の`SquareClient`とAPI version `2026-09-16`を使う。`TABLECAST_SQUARE_ENVIRONMENT`は`production`を既定とし、検証時だけ`sandbox`を明示する。SDK・OAuthの接続先と資格情報を同じ環境へ揃える。Square固有の変換、OAuth callback・token更新、Webhook署名検証、外部注文・端末決済・支払の対応付けと失敗分類はSquareの境界へ閉じる。接続tokenはAPI専用の`TABLECAST_POS_ENCRYPTION_SECRET`でAES-GCM暗号化してD1へ保持し、AADに`connectionId`を含める。平文をWeb・ログへ出さず、認証失効は再認証が必要な状態として扱う。接続解除は`revokeOnlyAccessToken`で対象tokenだけを失効させ、他の独立した接続を失効させない。
+
+通常の業務統合CIは接続環境を明示的な`sandbox`とし、公式SDKを通してSquare向けHTTPだけを公開fetcherで差し替える。実D1の更新・認可・冪等性は維持する。接続先選択は本番・Sandbox両方をHTTP差替えで検査し、Square自身の計算・OAuth・Webhook配送・実端末は対象環境の実接続で別に確認する。STORES用の空adapter、成功を返すfallback、動的registry、DI container、共有package、Square端末の模倣UIは追加しない。
 
 ## 単一オリジン
 

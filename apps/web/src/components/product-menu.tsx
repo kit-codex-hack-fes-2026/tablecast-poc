@@ -1,12 +1,10 @@
 import type { Catalog, Product } from "@tablecast/api/schema";
-import { ImageOff, Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { memo, type RefObject, useState } from "react";
-import { cn, tv } from "tailwind-variants";
+import { tv } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
-import { IllustrationNotice } from "./illustration-notice";
 import { MenuBanners } from "./menu-banners";
-import { Money } from "./money";
-import { ProductImage } from "./product-image";
+import { ProductCard } from "./product-card";
 import { StoreLogo } from "./store-logo";
 import { Button } from "./ui/button";
 
@@ -109,82 +107,17 @@ export const ProductMenu = memo(function ProductMenu({
         className={productGrid({ recommended: Boolean(productIds) && !searchResults, compact })}
       >
         {products.map((product) => (
-          <Button
-            variant="outline"
-            type="button"
-            className={cn(
-              "h-full min-w-0 flex-col items-stretch justify-start gap-0 rounded-3xl border-border bg-card bg-none p-3 text-left shadow-none disabled:opacity-70",
-              compact &&
-                "h-auto w-44 max-w-full shrink-0 snap-start whitespace-normal rounded-xl p-2",
-            )}
-            data-theme-part="product-card"
+          <ProductCard
             key={product.id}
-            onClick={() => onChoose(product)}
-            disabled={!product.available}
-          >
-            <span
-              className={cn(
-                "relative flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-xl bg-muted",
-                compact && "h-24 aspect-auto",
-              )}
-            >
-              {product.imageKey ? (
-                <ProductImage
-                  responsive
-                  className="size-full object-contain"
-                  width={384}
-                  height={384}
-                  sizes={
-                    compact
-                      ? "156px"
-                      : (imageSizes ?? "(min-width: 48rem) 384px, calc(100vw - 56px)")
-                  }
-                  src={`/media/${product.imageKey}`}
-                  alt=""
-                />
-              ) : (
-                <span className="flex flex-col items-center gap-1.5 text-sm text-muted-foreground">
-                  <ImageOff size={26} strokeWidth={1} aria-hidden="true" />
-                  {t("kiosk_no_image")}
-                </span>
-              )}
-              {product.imageKey && product.imageKind === "illustration" && <IllustrationNotice />}
-              <span
-                className="absolute right-2 bottom-2 flex size-7 items-center justify-center rounded-full bg-card/90"
-                aria-hidden="true"
-              >
-                <Plus size={16} />
-              </span>
-            </span>
-            <span className={cn("flex flex-1 flex-col px-1 pt-4 pb-1", compact && "pt-2")}>
-              {!product.available && (
-                <span className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-                  {!product.available && (
-                    <span className="rounded-sm bg-muted px-1.5 py-1 font-medium text-foreground">
-                      {t("kiosk_sold_out")}
-                    </span>
-                  )}
-                </span>
-              )}
-              <strong
-                title={product.text[locale].displayName}
-                className={cn(
-                  "block min-h-12 flex-1 text-base leading-6 font-semibold wrap-anywhere",
-                  compact && "line-clamp-2 min-h-10 text-sm leading-5",
-                )}
-              >
-                {product.text[locale].displayName}
-              </strong>
-              <span
-                className={cn(
-                  "mt-3 flex items-center justify-between gap-2 text-base font-semibold tabular-nums",
-                  compact && "mt-2 text-sm",
-                )}
-              >
-                <Money taxIncluded value={product.price} wrap={compact} />
-              </span>
-            </span>
-          </Button>
+            name={product.text[locale].displayName}
+            price={product.price}
+            available={product.available}
+            imageKey={product.imageKey}
+            imageKind={product.imageKind}
+            compact={compact}
+            imageSizes={imageSizes}
+            onChoose={() => onChoose(product)}
+          />
         ))}
       </div>
     </div>

@@ -9,6 +9,8 @@ import {
   deploymentSecrets,
   deploymentTarget,
   optionsSchema,
+  tablecastPosSecrets,
+  tablecastSquareVars,
 } from "./tablecast-deploy-config.ts";
 import { workerConfigurationDiff } from "./tablecast-infra-diff.ts";
 
@@ -35,10 +37,154 @@ const input = {
   CF_ACCESS_CLIENT_ID: "tablecast-access-id",
   CF_ACCESS_CLIENT_SECRET: "tablecast-access-secret",
 };
-beforeEach(() => vi.stubEnv("TABLECAST_EMAIL_FROM", "tablecast@example.test"));
+const squareRuntime = {
+  TABLECAST_MODEL_API_KEY: "tablecast-openai-secret",
+  TABLECAST_MODEL: "tablecast-test-model",
+  TABLECAST_SQUARE_APPLICATION_SECRET: "sq0csp-tablecast-test",
+  TABLECAST_SQUARE_WEBHOOK_SIGNATURE_KEY: "tablecast-square-signature-secret",
+  TABLECAST_POS_ENCRYPTION_SECRET: "tablecast-square-encryption-secret-at-least-32-characters",
+};
+beforeEach(() => {
+  vi.stubEnv("TABLECAST_EMAIL_FROM", "tablecast@example.test");
+  vi.stubEnv("TABLECAST_SQUARE_APPLICATION_ID", undefined);
+  vi.stubEnv("TABLECAST_SQUARE_ENVIRONMENT", undefined);
+});
 afterEach(() => vi.unstubAllEnvs());
 
 describe("本番とPRの配備境界", () => {
+  test("Square未設定では保存済み外部secretをAPIとWebへ追加しない", () => {
+    vi.stubEnv("TABLECAST_SQUARE_APPLICATION_ID", "");
+    const target = deploymentTarget("278");
+    const config = deploymentConfigs(
+      target,
+      "a".repeat(40),
+      "11111111-1111-4111-8111-111111111111",
+    );
+    const secrets = deploymentSecrets(target, {
+      ...input,
+      TABLECAST_RUNTIME_SECRETS: JSON.stringify(squareRuntime),
+    });
+    expect(config.api.vars.TABLECAST_SQUARE_APPLICATION_ID).toBe("");
+    expect(config.api.vars.TABLECAST_SQUARE_ENVIRONMENT).toBe("production");
+    expect(config.web.vars).not.toHaveProperty("TABLECAST_SQUARE_APPLICATION_ID");
+    expect(config.web.vars).not.toHaveProperty("TABLECAST_SQUARE_ENVIRONMENT");
+    for (const key of tablecastPosSecrets) {
+      expect(secrets).not.toHaveProperty(key);
+      expect(config.api.secrets.required).not.toContain(key);
+      expect(config.web.vars).not.toHaveProperty(key);
+    }
+  });
+
+  test.each([
+    { environment: "production", id: "sq0idp-tablecast-test", secret: "sq0csp-tablecast-test" },
+    {
+      environment: "sandbox",
+      id: "sandbox-sq0idb-tablecast-test",
+      secret: "sandbox-sq0csb-tablecast-test",
+    },
+  ])(
+    "Square $environmentの公開設定と秘密値をAPIへ分け再配備で鍵を維持する",
+    ({ environment, id, secret }) => {
+      vi.stubEnv("TABLECAST_SQUARE_APPLICATION_ID", id);
+      vi.stubEnv("TABLECAST_SQUARE_ENVIRONMENT", environment);
+      const target = deploymentTarget("278");
+      const config = deploymentConfigs(
+        target,
+        "a".repeat(40),
+        "11111111-1111-4111-8111-111111111111",
+      );
+      const keys = {
+        ...input,
+        TABLECAST_SQUARE_APPLICATION_ID: id,
+        TABLECAST_SQUARE_ENVIRONMENT: environment,
+        TABLECAST_RUNTIME_SECRETS: JSON.stringify({
+          ...squareRuntime,
+          TABLECAST_SQUARE_APPLICATION_SECRET: secret,
+        }),
+      };
+      const secrets = deploymentSecrets(target, keys);
+      expect(secrets).toMatchObject({
+        ...squareRuntime,
+        TABLECAST_SQUARE_APPLICATION_SECRET: secret,
+      });
+      expect(config.api.vars.TABLECAST_SQUARE_APPLICATION_ID).toBe(id);
+      expect(config.api.vars.TABLECAST_SQUARE_ENVIRONMENT).toBe(environment);
+      expect(config.web.vars).not.toHaveProperty("TABLECAST_SQUARE_APPLICATION_ID");
+      expect(config.web.vars).not.toHaveProperty("TABLECAST_SQUARE_ENVIRONMENT");
+      for (const key of tablecastPosSecrets) {
+        expect(config.api.secrets.required).toContain(key);
+        expect(config.api.vars).not.toHaveProperty(key);
+        expect(config.web.vars).not.toHaveProperty(key);
+        expect(JSON.stringify(config)).not.toContain(secrets[key]);
+      }
+      expect(deploymentSecrets(deploymentTarget("278"), keys).TABLECAST_POS_ENCRYPTION_SECRET).toBe(
+        secrets.TABLECAST_POS_ENCRYPTION_SECRET,
+      );
+    },
+  );
+
+  test.each(tablecastPosSecrets)("Square有効時に%sが欠けていれば配備前に拒否する", (key) => {
+    const runtime: Record<string, string> = { ...squareRuntime };
+    delete runtime[key];
+    expect(() =>
+      deploymentSecrets(deploymentTarget("278"), {
+        ...input,
+        TABLECAST_SQUARE_APPLICATION_ID: "sq0idp-tablecast-test",
+        TABLECAST_RUNTIME_SECRETS: JSON.stringify(runtime),
+      }),
+    ).toThrow(key);
+  });
+
+  test("Squareの短い暗号化secretを拒否する", () => {
+    expect(() =>
+      deploymentSecrets(deploymentTarget("278"), {
+        ...input,
+        TABLECAST_SQUARE_APPLICATION_ID: "sq0idp-tablecast-test",
+        TABLECAST_RUNTIME_SECRETS: JSON.stringify({
+          ...squareRuntime,
+          TABLECAST_POS_ENCRYPTION_SECRET: "short",
+        }),
+      }),
+    ).toThrow("TABLECAST_POS_ENCRYPTION_SECRET");
+  });
+
+  test("Square接続環境と異なるアプリIDとsecretを拒否する", () => {
+    vi.stubEnv("TABLECAST_SQUARE_APPLICATION_ID", "sandbox-sq0idb-tablecast-test");
+    expect(() =>
+      deploymentOptions(
+        deploymentTarget("278"),
+        "a".repeat(40),
+        "11111111-1111-4111-8111-111111111111",
+      ),
+    ).toThrow("接続環境");
+    expect(() =>
+      deploymentSecrets(deploymentTarget("278"), {
+        ...input,
+        TABLECAST_SQUARE_APPLICATION_ID: "sq0idp-tablecast-test",
+        TABLECAST_RUNTIME_SECRETS: JSON.stringify({
+          ...squareRuntime,
+          TABLECAST_SQUARE_APPLICATION_SECRET: "sandbox-sq0csb-tablecast-test",
+        }),
+      }),
+    ).toThrow("TABLECAST_SQUARE_APPLICATION_SECRET");
+  });
+
+  test("未指定のSquare環境は本番とし未対応の環境名を拒否する", () => {
+    expect(tablecastSquareVars({})).toEqual({
+      TABLECAST_SQUARE_APPLICATION_ID: "",
+      TABLECAST_SQUARE_ENVIRONMENT: "production",
+    });
+    expect(() => tablecastSquareVars({ TABLECAST_SQUARE_ENVIRONMENT: "prodution" })).toThrow(
+      "TABLECAST_SQUARE_ENVIRONMENT",
+    );
+  });
+
+  test.each(tablecastPosSecrets)("%sをAPIの平文varsへ入れた設定を拒否する", (key) => {
+    expect(() => apiSdkConfiguration({ vars: { [key]: "tablecast-must-stay-secret" } })).toThrow(
+      "API secret",
+    );
+  });
+
   test.each([undefined, "", "kit-codex.workers.dev"])(
     "本番の送信元が未設定または不正な%sなら資源変更前に拒否する",
     (value) => {

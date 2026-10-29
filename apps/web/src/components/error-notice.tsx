@@ -7,6 +7,7 @@ import { apiError } from "../lib/api-error";
 function errorMessageKey(error: unknown): Parameters<ReturnType<typeof useI18n>["t"]>[0] {
   const failure = apiError(error);
   if (!failure) return error instanceof TypeError ? "common_connection_error" : "common_error";
+  if (failure.code === "POS_CHECKOUT_LOCKED") return "pos_locked";
   if (failure.code === "CONFIGURATION_FORMAT_UNSUPPORTED") return "condition_upgrade_error";
   switch (failure.status) {
     case undefined:

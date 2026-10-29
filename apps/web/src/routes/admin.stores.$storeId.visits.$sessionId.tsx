@@ -4,6 +4,7 @@ import { catalogOptions } from "../features/catalog/catalog-query";
 import { floorSearchSchema } from "../features/floor/floor-model";
 import { tableDetailOptions } from "../features/floor/floor-query";
 import { TableDetail } from "../features/floor/table-detail";
+import { posCheckoutOptions } from "../features/pos/pos-query";
 import { pointVisitOptions } from "../features/rewards/point-query";
 export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")({
   staticData: { document: { title: "head_visit", description: "head_visit_description" } },
@@ -23,6 +24,9 @@ export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")
   loader: async ({ context, params, deps }) => {
     const [table] = await Promise.all([
       context.queryClient.ensureQueryData(tableDetailOptions(params.storeId, params.sessionId)),
+      deps.view === "billing"
+        ? context.queryClient.ensureQueryData(posCheckoutOptions(params.storeId, params.sessionId))
+        : undefined,
       deps.view === "billing"
         ? context.queryClient.ensureQueryData(pointVisitOptions(params.storeId, params.sessionId))
         : undefined,

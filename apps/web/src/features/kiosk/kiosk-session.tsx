@@ -33,6 +33,7 @@ import {
 } from "react";
 import { usePanelRef } from "react-resizable-panels";
 import { ActionToasts } from "../../components/action-toasts";
+import { BillSummary } from "../../components/bill-summary";
 import { Brand } from "../../components/brand";
 import { CartLines } from "../../components/cart-lines";
 import { ErrorNotice } from "../../components/error-notice";
@@ -704,43 +705,19 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
         aria-label={t("kiosk_bill")}
         className="mx-3 mb-3 rounded-2xl border border-border bg-card"
       >
-        <div
-          data-ui="bill-summary"
-          className="py-6 px-5 [&_dl_>_div]:flex [&_dl_>_div]:items-center [&_dl_>_div]:justify-between [&_dl_>_div]:py-2 [&_dl_>_div]:px-0 [&_dl_>_div]:gap-3 [&_dl_>_div]:text-sm [&_[data-ui=bill-total]]:border-t [&_[data-ui=bill-total]]:border-t-border [&_[data-ui=bill-total]]:pt-4 [&_[data-ui=bill-total]]:mt-2.5 [&_[data-ui=bill-total]_dd]:text-2xl [&_[data-ui=bill-total]_dd]:font-semibold [&_[data-slot=button][data-variant=default]]:mt-6 [&_[data-slot=button][data-variant=default]]:w-full"
-        >
+        <div className="px-5 py-6">
           <h3 className="mb-5">{t("kiosk_bill")}</h3>
-          <dl>
-            <div>
-              <dt className="text-muted-foreground">{t("admin_ordered")}</dt>
-              <dd>
-                <Money taxIncluded value={data.bill.orderedTotal} />
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">{t("kiosk_plan_charge")}</dt>
-              <dd>
-                <Money taxIncluded value={data.bill.planTotal} />
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">{t("kiosk_adjustment")}</dt>
-              <dd>
-                <Money taxIncluded value={data.bill.adjustmentTotal} />
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">{t("kiosk_paid")}</dt>
-              <dd>
-                <Money taxIncluded value={data.bill.paidTotal} />
-              </dd>
-            </div>
-            <div data-ui="bill-total" className="">
-              <dt className="text-muted-foreground">{t("kiosk_due")}</dt>
-              <dd>
-                <Money taxIncluded value={data.bill.due} />
-              </dd>
-            </div>
-          </dl>
+          <BillSummary
+            taxIncluded
+            rows={[
+              { id: "ordered", label: t("admin_ordered"), amount: data.bill.orderedTotal },
+              { id: "plan", label: t("kiosk_plan_charge"), amount: data.bill.planTotal },
+              { id: "adjustment", label: t("kiosk_adjustment"), amount: data.bill.adjustmentTotal },
+              { id: "paid", label: t("kiosk_paid"), amount: data.bill.paidTotal },
+            ]}
+            total={{ label: t("kiosk_due"), amount: data.bill.due }}
+            className="text-sm"
+          />
           <p className="text-muted-foreground text-xs mt-2.5">
             {t("kiosk_not_sent")}: <Money taxIncluded value={data.bill.cartTotal} />
           </p>
@@ -757,7 +734,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
               variant="default"
               size="lg"
               type="button"
-              className="h-auto min-h-14 whitespace-normal py-2"
+              className="mt-6 h-auto min-h-14 w-full whitespace-normal py-2"
               onClick={() => call.mutate(true)}
               disabled={call.isPending}
             >

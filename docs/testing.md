@@ -408,6 +408,25 @@ cf設定・IaCの試験はmode解決、秘密値の宣言、Build Outputの別�
 
 文字サイズを200%へ書き換える試験は利用者の指定により廃止した。日英・縦横・狭幅・長文・keyboard/focus・通常の主要操作を検証し、CSSによる文字拡大を受入条件や画像証拠へ含めない。
 
+## SquareのPOS連携
+
+共通`PosAdapter`の実装はSquareだけを対象にし、製品の接続環境は`production`を既定とする。通常の業務統合CIは`TABLECAST_SQUARE_ENVIRONMENT=sandbox`を明示し、本番のSquare adapterと公式SDKを通してSquare向けHTTPだけをテスト起動時に差し替える。想定外の要求は失敗させ、SDKメソッド全体・DB・DOを恒久mockへ置き換えない。資格情報付きの実provider suiteへ通常CIやStorybookから接続しない。
+
+| 層                         | 所有する保証                                                                                                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Vitestの単体・adapter契約  | 本番・SandboxのSDK/OAuth接続先、資格と環境の一致、共通明細からSquareへの変換、人数料金、プラン内0円、割引・調整・端数・0円会計、登録価格差、capability不足、状態・失敗の正規化 |
+| APIの`bindings`            | 本番HTTP・Cookie・実D1/DOによる店舗・接続環境・来店・role認可、暗号化、同時会計、永続化した冪等キー、二重支払防止、処理中の変更拒否、途中失敗の原子性、署名・Webhook重複排除   |
+| Storybook・Vitest Browser  | 既存部品を使う接続・対応付け・価格差、処理中・取消・要確認、再認証・再試行、入力保持、日英・長文・keyboard/focus                                                               |
+| 実Web/API/D1の代表E2E      | 既存画面から対応付け・会計・支払済み表示へ進むCookie・Service Binding・永続化・再読込み・通信失敗後の再照会の接続                                                              |
+| 資格情報付きSquare Sandbox | OAuth・商品取得・注文作成・Square自身の金額計算、公式Terminalテストdevice IDの成功・取消・タイムアウト、実Webhook配送と再照会                                                  |
+| 許可された本番の外部接続   | 対象店舗・実端末のOAuth・商品・会計金額・実決済結果・実WebhookとTableCast支払記録の一致                                                                                        |
+
+API試験は既存の`setupFixture()`・`fixtureDb`・`insertFixture`と公式reset/migrationを再利用する。同じbindingをresetするcaseをconcurrentにせず、同時操作は一つのcase内から本番HTTPへ送る。外部送信へ到達したgateを待って応答喪失・遅延を起こし、再送時の公開状態とDBの会計・支払・イベントを観測する。429・5xx、応答喪失、Webhookの重複・順序逆転・欠落をSquare HTTP境界で決定的に再現する。未対応capabilityには狭いテスト用stubを使えるが、製品用の別providerは追加しない。
+
+実Sandbox確認は資格情報を持つ手動実行に分離し、専用の日本向けテストアカウントで書込を直列実行する。実行IDで合成データを識別し、対象SHA・環境・実施ケース・外部参照・未実施範囲をPRへ記録する。Sandboxは実TerminalやSquare POSアプリを動かす環境ではなく、端末画面・印刷の検証を代替しない。[Square Sandboxの制限](https://developer.squareup.com/docs/devtools/sandbox/overview)と[TerminalのSandboxテスト](https://developer.squareup.com/docs/devtools/sandbox/testing)を参照する。
+
+本番の実決済・実機試験・配備は対象と実行範囲を別途確定して行う。資格情報がない現時点では未実施とし、HTTP差替えやSandboxの成功を本番接続の証拠にしない。
+
 ## 組織課金
 
 `billing-pricing.test.ts`で秒数・cached token・実際のtier・料金精度・期間境界を確認する。`billing*.test.ts`は実D1/DOと本番HTTPを使い、組織作成、発行の競合・回収、暗号化、同じ鍵での停止、利用量再送、Costsの全ページ・置換・失敗、署名済みStripe Webhook、Metersの送信不明期限、role認可を確認する。OpenAI/Stripeの外部I/Oだけ固定し、DBやDOは差し替えない。

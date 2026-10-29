@@ -11,6 +11,7 @@ const owners = [
   "games",
   "help",
   "kiosk",
+  "pos",
   "rewards",
   "shell",
   "statistics",
@@ -191,6 +192,7 @@ export const boundaryPolicies = [
     from: file("feature", "floor"),
     allow: { to: file("feature", "rewards", ["coupon-visit", "point-visit"]) },
   },
+  { from: file("feature", "floor"), allow: { to: file("feature", "pos", ["pos-checkout"]) } },
   {
     from: file("feature", "demo"),
     allow: { to: file("feature", "configuration", ["configuration-errors"]) },

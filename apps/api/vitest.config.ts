@@ -1,6 +1,10 @@
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
 const unitTests = [
+  "test/pos-square.unit.test.ts",
+  "test/pos-square-catalog.unit.test.ts",
+  "test/pos-square-devices.unit.test.ts",
+  "test/pos-invoice.unit.test.ts",
   "test/catalog-search.test.ts",
   "test/currency-display.test.ts",
   "test/pricing.test.ts",
@@ -42,7 +46,12 @@ const bindings = (performance = false) => ({
           TABLECAST_BILLING_OPERATOR_USER_IDS: "",
           TABLECAST_STRIPE_SECRET_KEY: "",
           TABLECAST_STRIPE_WEBHOOK_SECRET: "",
+          TABLECAST_SQUARE_APPLICATION_ID: "",
+          TABLECAST_SQUARE_APPLICATION_SECRET: "",
+          TABLECAST_SQUARE_WEBHOOK_SIGNATURE_KEY: "",
+          TABLECAST_POS_ENCRYPTION_SECRET: "",
           TABLECAST_PUBLIC_ORIGIN: "http://localhost:3000",
+          TABLECAST_SQUARE_ENVIRONMENT: "sandbox",
         },
       },
     }),

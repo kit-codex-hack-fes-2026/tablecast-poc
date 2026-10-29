@@ -148,6 +148,13 @@ export const navigationPages = {
     Icon: MonitorSmartphone,
     to: "/admin/stores/$storeId/devices",
   },
+  pos: {
+    group: "store",
+    label: "pos_title",
+    Icon: Plug,
+    to: "/admin/stores/$storeId/pos",
+    manager: true,
+  },
   profile: {
     group: "store",
     label: "store_profile",

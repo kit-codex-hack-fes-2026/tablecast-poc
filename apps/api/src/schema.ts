@@ -64,7 +64,6 @@ export type {
 export { couponDefinitionSchema, couponRuleSchema } from "./modules/customer-coupons/model";
 export { customerMemoryInputSchema } from "./modules/customer-memory/model";
 export { pointPolicySchema, pointRulesSchema } from "./modules/customer-points/model";
-// Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
 export { customerConsentVersion, customerPreferencesSchema } from "./modules/customers/model";
 export { type Demo, demoSchema, type DemoUpdate, demoUpdateSchema } from "./modules/demo/model";
 export { gameMessageSchema, gamePackageSchema, gameStateSchema } from "./modules/games/model";
@@ -85,8 +84,31 @@ export {
   snapshotSchema,
   submitSchema,
 } from "./modules/orders/model";
-
 export type { CartLine, CartUpdate, Order, PricedLine, Snapshot } from "./modules/orders/model";
+// Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
+export {
+  posCatalogSchema,
+  posCheckoutViewSchema,
+  posConfigurationSchema,
+  posDeviceCodeSchema,
+  posDeviceSchema,
+  posInvoiceSchema,
+  posIssueSchema,
+  posMappingSchema,
+  posSettingsSchema,
+} from "./modules/pos/model";
+
+export type {
+  PosCatalog,
+  PosCheckoutView,
+  PosConnection,
+  PosDevice,
+  PosDeviceCode,
+  PosInvoice,
+  PosIssue,
+  PosMapping,
+  PosSettings,
+} from "./modules/pos/model";
 
 export {
   statisticsQuerySchema,

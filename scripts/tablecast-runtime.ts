@@ -10,6 +10,9 @@ import {
   modeOptions,
   tablecastBillingSecrets,
   tablecastBillingVars,
+  tablecastPosSecrets,
+  tablecastPosVars,
+  tablecastSquareVars,
 } from "./tablecast-deploy-config.ts";
 import { localObservability, worktreeId } from "./tablecast-observability-config.ts";
 
@@ -60,6 +63,8 @@ export function developmentSecrets() {
       "TABLECAST_OTEL_CAPTURE_CONTENT",
       ...tablecastBillingVars,
       ...tablecastBillingSecrets,
+      ...tablecastPosVars,
+      ...tablecastPosSecrets,
     ].flatMap((key) => (process.env[key] ? [[key, process.env[key]]] : [])),
   );
 }
@@ -124,6 +129,7 @@ if (import.meta.main) {
         external[key] === undefined ? [] : [[key, external[key]]],
       ),
     ),
+    ...tablecastSquareVars(external),
     TABLECAST_WORKTREE_NAME: name,
     TABLECAST_WORKTREE_ID: await worktreeId(tablecastRoot),
     TABLECAST_RESOURCE_NAME: resource,

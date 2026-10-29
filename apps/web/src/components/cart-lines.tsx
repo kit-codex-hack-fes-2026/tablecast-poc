@@ -14,8 +14,13 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { quantityControl } from "./ui/quantity-control-variants";
 
-export type CartDisplayLine = Omit<PricedLine, "planCovered" | "total" | "unitPrice"> &
-  Partial<Pick<PricedLine, "planCovered" | "total" | "unitPrice">>;
+export type CartDisplayLine = Partial<
+  Pick<PricedLine, "conditionIssues" | "missing" | "planCovered" | "total" | "unitPrice">
+> &
+  Pick<PricedLine, "id" | "name" | "quantity"> & {
+    options: Pick<PricedLine["options"][number], "id" | "name" | "priceDelta" | "quantity">[];
+    productId: null | string;
+  };
 
 /**
  * 注文かごの行。
@@ -24,7 +29,7 @@ export type CartDisplayLine = Omit<PricedLine, "planCovered" | "total" | "unitPr
  * disabledで更新中の操作を防ぐ。
  * 表示側で価格や必須条件を再計算せず、明示注文確定はfeatureの確認フローへ残す。
  */
-export function CartLines({
+export function CartLines<Line extends CartDisplayLine>({
   lines,
   onEdit,
   onRemove,
@@ -34,10 +39,10 @@ export function CartLines({
   variant = "cards",
 }: {
   disabled?: boolean;
-  lines: CartDisplayLine[];
-  onEdit?: (line: CartDisplayLine) => void;
-  onQuantity?: (line: CartDisplayLine, quantity: number) => void;
-  onRemove?: (line: CartDisplayLine) => void;
+  lines: Line[];
+  onEdit?: (line: Line) => void;
+  onQuantity?: (line: Line, quantity: number) => void;
+  onRemove?: (line: Line) => void;
   products?: Product[];
   variant?: "cards" | "receipt";
 }) {
@@ -63,9 +68,9 @@ export function CartLines({
           </CartLineSurface>
         )}
         {lines.map((line) => {
-          const product = productsById.get(line.productId);
+          const product = line.productId ? productsById.get(line.productId) : undefined;
           const canEdit = Boolean(
-            onEdit && (product?.modifiers.length || line.options.length || line.missing.length),
+            onEdit && (product?.modifiers.length || line.options.length || line.missing?.length),
           );
           const optionsById = new Map(
             product?.modifiers.flatMap((group) =>
@@ -235,7 +240,7 @@ export function CartLines({
                       </p>
                     );
                   })}
-                  {line.missing.length > 0 && (
+                  {(line.missing?.length ?? 0) > 0 && (
                     <span className="inline-flex text-sm text-destructive">
                       {t("kiosk_missing")}
                     </span>
@@ -274,14 +279,14 @@ const CartLineSurface = forwardRef<HTMLLIElement, { children: ReactNode; framed?
 );
 
 /** 入力中の文字だけを保持し、確定した数量を既存APIへ渡す。応答後はAPIの数量へ同期する。 */
-function LineQuantity({
+function LineQuantity<Line extends CartDisplayLine>({
   line,
   disabled,
   onQuantity,
 }: {
   disabled: boolean;
-  line: CartDisplayLine;
-  onQuantity: (line: CartDisplayLine, quantity: number) => void;
+  line: Line;
+  onQuantity: (line: Line, quantity: number) => void;
 }) {
   const { locale, t } = useI18n();
   const id = useId();
