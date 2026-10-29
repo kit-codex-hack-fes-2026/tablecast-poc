@@ -2,7 +2,9 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
+import { previewCouponAudience } from "../customer-coupons/audience";
 import {
+  couponAudienceSchema,
   couponDefinitionSchema,
   couponPageSchema,
   issueCouponSchema,
@@ -51,11 +53,22 @@ export function registerRewardsTools(server: McpServer, services: ApiServices, a
     "save_coupon_rule",
     {
       description:
-        "画像と日英条件を持つクーポン発行ルールを作成・更新する。発行済み券は変更しない。",
+        "画像と日英条件を持つクーポン発行ルールを作成・更新する。conditions.allは全条件、conditions.anyは一つ以上を要求する。来店数・購入額・入会日時・直近確認日時を組み合わせ、先にpreview_coupon_audienceで対象件数を確認する。発行済み券は条件と券面を版固定し変更しない。",
       inputSchema: couponDefinitionSchema.shape,
       annotations: { readOnlyHint: false, destructiveHint: true },
     },
     async (input) => result(await saveCouponRule(services, actor, input)),
+  );
+
+  server.registerTool(
+    "preview_coupon_audience",
+    {
+      description:
+        "保存前の発券条件で現在の有効会員を集計する。eligibleは新規発行対象、alreadyIssuedは同じ自動ルールの既発行、notMatchingは契機・条件・残高・期間の不一致。入会特典はルール作成後に入会した会員だけ。未来の来店や入会で件数は変わる。SQLや個人記憶は扱わず、この操作では発行しない。",
+      inputSchema: couponAudienceSchema.shape,
+      annotations: { readOnlyHint: true },
+    },
+    async (input) => result(await previewCouponAudience(services, actor, input)),
   );
 
   server.registerTool(

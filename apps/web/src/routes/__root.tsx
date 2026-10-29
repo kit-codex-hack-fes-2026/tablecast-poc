@@ -91,30 +91,41 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     }
     return { panelCookies, promptPasskey };
   },
-  head: ({ matches }) => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#f7f7f2" },
-      { name: "apple-mobile-web-app-capable", content: "yes" },
-    ],
-    links: [
-      { rel: "stylesheet", href: stylesheet },
-      {
-        rel: "manifest",
-        href: matches.at(-1)?.pathname.startsWith("/member")
-          ? "/tablecast-customer.webmanifest"
-          : matches.at(-1)?.pathname === "/"
-            ? "/tablecast-kiosk.webmanifest"
-            : "/tablecast-staff.webmanifest",
-      },
-      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
-      { rel: "icon", href: "/favicon.ico", sizes: "16x16 32x32 48x48" },
-      { rel: "apple-touch-icon", href: "/icons/tablecast-180.png", sizes: "180x180" },
-      { rel: "apple-touch-icon", href: "/icons/tablecast-167.png", sizes: "167x167" },
-      { rel: "apple-touch-icon", href: "/icons/tablecast-152.png", sizes: "152x152" },
-    ],
-  }),
+  head: ({ matches }) => {
+    const pathname = matches.at(-1)?.pathname ?? "";
+    const store = /^\/member\/([^/]+)(?:\/|$)/.exec(pathname)?.[1];
+    const memberStore = store && store !== "join" ? store : undefined;
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+        { name: "theme-color", content: "#f7f7f2" },
+        { name: "apple-mobile-web-app-capable", content: "yes" },
+      ],
+      links: [
+        { rel: "stylesheet", href: stylesheet },
+        {
+          rel: "manifest",
+          href: matches.at(-1)?.pathname.startsWith("/member")
+            ? memberStore
+              ? `/api/member-stores/${memberStore}/manifest.webmanifest`
+              : "/tablecast-customer.webmanifest"
+            : matches.at(-1)?.pathname === "/"
+              ? "/tablecast-kiosk.webmanifest"
+              : "/tablecast-staff.webmanifest",
+        },
+        { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+        { rel: "icon", href: "/favicon.ico", sizes: "16x16 32x32 48x48" },
+        ...[180, 167, 152].map((size) => ({
+          rel: "apple-touch-icon",
+          href: memberStore
+            ? `/api/member-stores/${memberStore}/icon?width=${size}`
+            : `/icons/tablecast-${size}.png`,
+          sizes: `${size}x${size}`,
+        })),
+      ],
+    };
+  },
   shellComponent: Root,
   component: RootContent,
   notFoundComponent: () => (

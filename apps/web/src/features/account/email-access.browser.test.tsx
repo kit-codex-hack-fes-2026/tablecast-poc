@@ -204,3 +204,31 @@ it("パスキーの案内はEscapeでも閉じられる", async () => {
   await userEvent.keyboard("{Escape}");
   await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
 });
+
+it.each(["ja", "en"] as const)(
+  "%s: QRからのログインで来店への復帰を案内し、メールリンクにも参加先を残す",
+  async (locale) => {
+    const labels = locale === "ja" ? ja : en;
+    const bodies: unknown[] = [];
+    requests(async (path, request) => {
+      if (path === "/api/auth/sign-in/magic-link") {
+        bodies.push(await request.json());
+        return Response.json({ status: true });
+      }
+      unexpected.push(path);
+      return Response.json({}, { status: 500 });
+    });
+    const destination = "/member/join?code=tablecast-test-only-visit-code";
+    await show(locale, `?${new URLSearchParams({ returnTo: destination })}`);
+    await expect
+      .element(page.getByRole("heading", { name: labels.customer_login_title, exact: true }))
+      .toBeVisible();
+    await expect.element(page.getByText(labels.customer_login_hint)).toBeVisible();
+    await page
+      .getByRole("textbox", { name: labels.auth_email, exact: true })
+      .fill("customer@example.test");
+    await page.getByRole("button", { name: labels.auth_send_magic_link, exact: true }).click();
+    await expect.element(page.getByRole("status")).toHaveTextContent(labels.auth_magic_sent);
+    expect(bodies).toMatchObject([{ callbackURL: `${window.location.origin}${destination}` }]);
+  },
+);

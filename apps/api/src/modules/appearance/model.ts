@@ -221,5 +221,21 @@ export const bannerSchema = z
   .strict();
 export type Banner = z.infer<typeof bannerSchema>;
 export const brandingSchema = z
-  .object({ logo: themeImageSchema.nullable(), banner: themeImageSchema.nullable().optional() })
+  .object({
+    logo: themeImageSchema.nullable(),
+    banner: themeImageSchema.nullable().optional(),
+    memberIcon: themeImageSchema
+      .nullable()
+      .optional()
+      .describe("店舗会員PWAの公開アイコン。512px以上の正方形で個人情報を含めない。"),
+    membershipCard: z
+      .object({
+        image: themeImageSchema.nullable().optional(),
+        tone: z.enum(["neutral", "green", "amber", "violet"]),
+        imageFit: z.enum(["contain", "cover"]),
+      })
+      .strict()
+      .optional()
+      .describe("会員証の公開意匠。画像は個人情報を含めず、会員名や状態は画面で重ねる。"),
+  })
   .strict();

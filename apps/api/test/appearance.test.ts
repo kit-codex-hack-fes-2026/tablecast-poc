@@ -13,6 +13,7 @@ import { createApiServices } from "../src/platform/context";
 import {
   appearanceSchema,
   bannerSchema,
+  type Configuration,
   configurationSchema,
   type ThemeImage,
 } from "../src/schema";
@@ -116,9 +117,11 @@ it("店舗ロゴ・装飾・チラシの他店舗画像を拒否し公開まで�
   for (const change of [
     { branding: { logo: image } },
     { branding: { logo: null, banner: image } },
+    { branding: { logo: null, memberIcon: image } },
+    { branding: { logo: null, membershipCard: { image, tone: "neutral", imageFit: "contain" } } },
     { appearance: { assets: { paper: image } } },
     { banners: [banner] },
-  ]) {
+  ] satisfies Partial<Configuration>[]) {
     await expect(
       updateDraft(services, staff, draft.id, {
         expectedVersion: draft.version,

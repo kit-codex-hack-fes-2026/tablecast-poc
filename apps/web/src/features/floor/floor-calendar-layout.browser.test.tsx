@@ -75,7 +75,7 @@ it("続きの失敗を再試行し、背景再取得でも既存の帯・フォ�
   await expect.element(screen.getByRole("alert")).toBeVisible();
   await expect.element(band).toBeVisible();
   fail = false;
-  await screen.getByRole("button", { name: "再試行", exact: true }).click();
+  await screen.getByRole("button", { name: "もう一度試す", exact: true }).click();
   await expect.element(viewport.getByRole("button", { name: /^T03 · 2 / })).toBeInTheDocument();
   await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
   viewport.element().scrollLeft = 650;

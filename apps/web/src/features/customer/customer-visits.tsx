@@ -16,6 +16,7 @@ import { calendarDate } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { ConsumptionEditor } from "./customer-consumption";
+import { OwnedCoupons } from "./customer-coupons";
 import {
   customerOrdersOptions,
   customerVisitOptions,
@@ -59,9 +60,16 @@ export function CustomerVisits({ storeId }: { storeId: string }) {
                             <span className="block font-medium wrap-break-word">
                               {calendarDate(visit.openedAt, locale)} · {visit.tableName}
                             </span>
+                            <span className="mt-1 block text-xs text-muted-foreground">
+                              {t("customer_visit_view")}
+                            </span>
                             <span className="mt-1 block text-sm text-muted-foreground">
                               {visit.participants.map((person) => (
-                                <ParticipantIdentity key={person.id} name={person.name} />
+                                <ParticipantIdentity
+                                  key={person.id}
+                                  image={person.image}
+                                  name={person.name}
+                                />
                               ))}
                             </span>
                           </span>
@@ -154,8 +162,8 @@ export function CustomerVisit({ storeId, sessionId }: { sessionId: string; store
   });
   const data = visit.data;
   return (
-    <article className="space-y-7">
-      <header className="space-y-2">
+    <article className="space-y-6">
+      <header className="space-y-2 border-b border-border pb-4">
         <p className="text-sm text-muted-foreground">{t("customer_visits")}</p>
         <h1 className="text-2xl font-semibold tracking-tight wrap-break-word">
           {calendarDate(data.openedAt, locale)} · {data.tableName}
@@ -164,20 +172,25 @@ export function CustomerVisit({ storeId, sessionId }: { sessionId: string; store
           role="status"
           className={data.connected ? "font-medium text-success" : "text-muted-foreground"}
         >
-          {t(data.connected ? "customer_connected" : "customer_disconnected")}
+          {t(data.connected ? "customer_table_joined" : "customer_disconnected")}
         </p>
       </header>
-      <Link
-        to="/member/$storeId/coupons"
-        params={{ storeId }}
-        search={{ sessionId }}
-        className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-control-edge bg-control px-4 py-3 font-medium shadow-control transition-colors hover:bg-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      >
-        {t("customer_owned_coupons")}
-        <ArrowRight aria-hidden className="size-4 shrink-0" />
-      </Link>
+      {data.connected && (
+        <div className="space-y-3">
+          <OwnedCoupons storeId={storeId} sessionId={sessionId} compact />
+          <Link
+            to="/member/$storeId/coupons"
+            params={{ storeId }}
+            search={{ sessionId }}
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:text-primary"
+          >
+            {t("customer_coupons_and_rewards")}
+            <ArrowRight aria-hidden className="size-4 shrink-0" />
+          </Link>
+        </div>
+      )}
       <ErrorNotice query={visit} />
-      <section className="space-y-3">
+      <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
         <h2 className="flex items-center gap-2 font-semibold">
           <Users aria-hidden className="size-5" />
           {t("customer_companions")}
@@ -186,7 +199,7 @@ export function CustomerVisit({ storeId, sessionId }: { sessionId: string; store
           {data.participants.map((person) => (
             <li key={person.id} className="flex flex-wrap items-center gap-2">
               <span>
-                <ParticipantIdentity name={person.name} />
+                <ParticipantIdentity image={person.image} name={person.name} />
               </span>
               {person.id === data.participantId && <small>{t("customer_you")}</small>}
               {person.leftAt !== null && (
@@ -196,13 +209,13 @@ export function CustomerVisit({ storeId, sessionId }: { sessionId: string; store
           ))}
         </ul>
       </section>
-      <section className="space-y-4">
+      <section className="space-y-4 rounded-2xl border border-border bg-card p-4">
         <h2 className="text-xl font-semibold">{t("customer_shared_orders")}</h2>
         <p className="text-sm text-muted-foreground">{t("customer_shared_orders_note")}</p>
         {!data.orders.length && <p className="text-muted-foreground">{t("common_empty")}</p>}
         {orderPages.data?.pages.flatMap((page) =>
           page.orders.map((order) => (
-            <section key={order.id} className="space-y-2 rounded-xl bg-card p-4">
+            <section key={order.id} className="space-y-2 border-t border-border pt-4">
               <p className="text-sm text-muted-foreground">{t(`order_${order.status}`)}</p>
               <ul className="space-y-2">
                 {order.snapshot.lines.map((line) => (
@@ -246,7 +259,7 @@ export function CustomerVisit({ storeId, sessionId }: { sessionId: string; store
         to="/member/$storeId"
         params={{ storeId }}
       >
-        {t("customer_card")}
+        {t("customer_card_view")}
       </Link>
     </article>
   );

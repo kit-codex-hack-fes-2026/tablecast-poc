@@ -23,20 +23,22 @@ export const mediaRoutes = apiFactory.createApp().get("/api/avatars/:key", async
   });
 });
 
-/** 呼出し元のスタッフ・卓・デモ・会員の認可が完了した後だけ配信する。 */
+/** 呼出し元の認可、または公開済みの会員意匠への参照確認が完了した後だけ配信する。 */
 export async function imageResponse(
   c: Pick<Context<ApiEnv>, "env" | "executionCtx" | "req" | "var">,
   storeId: string,
   key: string,
+  format: "image/png" | "image/webp" = "image/webp",
 ) {
   return measured("tablecast.image.deliver", async () => {
     ensure(/^tablecast\/[a-zA-Z0-9/_-]+\.(png|jpg|webp|svg)$/.test(key), "MEDIA_NOT_FOUND", 404);
     const width = Number(c.req.query("width") ?? 640);
     ensure(Number.isInteger(width) && width >= 1 && width <= 1600, "INVALID_INPUT", 400);
     const quality = 85;
+    const formatName = format === "image/png" ? "png" : "webp";
     trace.getActiveSpan()?.setAttributes({
       "tablecast.image.width": width,
-      "tablecast.image.format": "webp",
+      "tablecast.image.format": formatName,
       "tablecast.image.quality": quality,
       "tablecast.image.version": imageDeliveryVersion,
     });
@@ -48,7 +50,7 @@ export async function imageResponse(
     const immutable =
       /^tablecast\/(images\/[a-f0-9]{64}\.(png|webp)|uploads\/[a-f0-9]{64}\.webp)$/.test(key);
     const cacheControl = immutable ? "private, max-age=31536000, immutable" : "private, no-cache";
-    const etag = `W/"${object.etag}-${width}-webp-q${quality}-v${imageDeliveryVersion}"`;
+    const etag = `W/"${object.etag}-${width}-${formatName}-q${quality}-v${imageDeliveryVersion}"`;
     if (
       c.req
         .header("If-None-Match")
@@ -67,7 +69,7 @@ export async function imageResponse(
     cacheUrl.search = new URLSearchParams({
       width: String(width),
       etag: object.etag,
-      format: "webp",
+      format: formatName,
       quality: String(quality),
       version: String(imageDeliveryVersion),
     }).toString();
@@ -88,7 +90,7 @@ export async function imageResponse(
     const output = await measured("tablecast.image.transform", () =>
       c.env.TABLECAST_IMAGES.input(byteStream(image.body))
         .transform({ width, fit: "scale-down" })
-        .output({ format: "image/webp", quality }),
+        .output({ format, quality }),
     );
     const response = output.response();
     response.headers.set("ETag", etag);

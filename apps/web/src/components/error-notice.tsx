@@ -8,6 +8,7 @@ function errorMessageKey(error: unknown): Parameters<ReturnType<typeof useI18n>[
   const failure = apiError(error);
   if (!failure) return error instanceof TypeError ? "common_connection_error" : "common_error";
   if (failure.code === "CONFIGURATION_FORMAT_UNSUPPORTED") return "condition_upgrade_error";
+  if (failure.code === "MEMBER_ICON_SIZE") return "customer_member_icon_size_error";
   switch (failure.status) {
     case undefined:
       return "common_error";

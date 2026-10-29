@@ -10,7 +10,13 @@ import {
   submittedCoreOrderSchema,
   type UiSection,
 } from "@tablecast/api/schema";
-import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useIsMutating,
+  useMutation,
+  useMutationState,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useHydrated } from "@tanstack/react-router";
 import {
   Check,
@@ -63,6 +69,7 @@ import { useCartUpdates } from "./cart-updates-query";
 import { conversationLines } from "./conversation-model";
 import { CurrencySelector } from "./currency-selector";
 import { CustomerOrderAttribution } from "./customer-order-attribution";
+import { customerParticipantsOptions, customerTargetKey } from "./customer-participants-query";
 import { CustomerVisitPanel } from "./customer-visit-panel";
 import { KioskGames } from "./games";
 import { KioskVoicePanel } from "./kiosk-voice-panel";
@@ -281,15 +288,28 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
       data.locale,
     );
   }, [data.voiceSessionId, data.voiceState, data.speechSpeed, data.locale, voice]);
-  const customerContextCursor =
+  const incomingCustomerContextCursor =
     events.findLast((event) => event.kind === "customer.context-reset")?.cursor ?? 0;
+  const [lastCustomerContextCursor, setLastCustomerContextCursor] = useState(0);
+  const customerContextCursor = Math.max(lastCustomerContextCursor, incomingCustomerContextCursor);
+  if (customerContextCursor > lastCustomerContextCursor)
+    setLastCustomerContextCursor(customerContextCursor);
+  const participants = useQuery({
+    ...customerParticipantsOptions(endpoint, data.id, customerContextCursor),
+    enabled: false,
+  });
+  const selectingCustomer =
+    useIsMutating({ mutationKey: customerTargetKey(endpoint, data.id) }) > 0;
+  const customerTargetUnconfirmed =
+    selectingCustomer || (customerContextCursor > 0 && !participants.isSuccess);
   const previousCustomerContext = useRef(0);
   useEffect(() => {
     if (customerContextCursor > previousCustomerContext.current) {
       previousCustomerContext.current = customerContextCursor;
       voice.clearCustomerContext();
+      toasts.add({ title: t("customer_context_updated") });
     }
-  }, [customerContextCursor, voice]);
+  }, [customerContextCursor, voice, toasts, t]);
   const resetCart = updateCart.reset;
   const choose = useCallback(
     (product: Product) => {
@@ -403,6 +423,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   const voiceActive = view.error === "active" || !["idle", "paused", "error"].includes(view.status);
 
   const toggleVoice = () => {
+    if (!voiceActive && customerTargetUnconfirmed) return;
     if (voiceActive) void voice.stop({ existingSession: view.error === "active" });
     else void voice.start(locale, data.speechSpeed);
   };
@@ -585,7 +606,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
               </div>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1">{renderVisitTools()}</div>
+          {renderVisitTools()}
           <div className="ml-auto flex shrink-0 items-center gap-1">
             <LanguageSwitch onChange={(next) => language.mutate(next)} />
             <CurrencySelector compact />
@@ -598,6 +619,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           catalog={catalog.data}
           events={events}
           voice={voice}
+          voiceBlocked={customerTargetUnconfirmed}
           onChoose={choose}
         />
       </header>
@@ -610,7 +632,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
           key={data.id}
           endpoint={endpoint}
           sessionId={data.id}
-          cursor={events.at(-1)?.cursor ?? 0}
+          cursor={customerContextCursor}
         />
         <KioskGames
           endpoint={endpoint}
@@ -812,7 +834,11 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                     reviewPending={prepare.isPending}
                     onChoose={choose}
                     onStart={toggleVoice}
-                    controlDisabled={view.status === "stopping" || language.isPending}
+                    controlDisabled={
+                      view.status === "stopping" ||
+                      language.isPending ||
+                      (!voiceActive && customerTargetUnconfirmed)
+                    }
                     speechSpeed={speed.isPending ? speed.variables : data.speechSpeed}
                     onSpeedChange={(value) => speed.mutate(value)}
                     onMicrophoneChange={(deviceId) => {

@@ -61,7 +61,11 @@ export type {
   DisplayCurrencyContext,
   ExchangeRates,
 } from "./modules/currency/model";
-export { couponDefinitionSchema, couponRuleSchema } from "./modules/customer-coupons/model";
+export {
+  couponConditionsSchema,
+  couponDefinitionSchema,
+  couponRuleSchema,
+} from "./modules/customer-coupons/model";
 export { customerMemoryInputSchema } from "./modules/customer-memory/model";
 export { pointPolicySchema, pointRulesSchema } from "./modules/customer-points/model";
 // Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
