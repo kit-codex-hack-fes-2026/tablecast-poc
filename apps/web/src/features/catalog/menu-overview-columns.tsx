@@ -19,10 +19,14 @@ export function menuOverviewColumns(
   t: ReturnType<typeof useI18n>["t"],
 ): DataTableColumn<OptionRow>[] {
   return [
-    { accessorKey: "group", header: t("editor_modifiers"), meta: { icon: Layers } },
+    {
+      accessorKey: "group",
+      header: t("editor_modifiers"),
+      meta: { icon: Layers, sortLabel: t("collection_group_name") },
+    },
     {
       accessorKey: "name",
-      meta: { icon: Package },
+      meta: { icon: Package, sortLabel: t("collection_option_name") },
       header: t("editor_options"),
       cell: ({ row }) => (
         <CustomisationContent
@@ -36,7 +40,7 @@ export function menuOverviewColumns(
     },
     {
       accessorKey: "price",
-      meta: { icon: Banknote, align: "right" },
+      meta: { icon: Banknote, align: "right", sortLabel: t("collection_price_delta") },
       header: t("editor_price_delta"),
       cell: ({ row }) => <CustomisationPrice value={row.original.price} showZero />,
     },

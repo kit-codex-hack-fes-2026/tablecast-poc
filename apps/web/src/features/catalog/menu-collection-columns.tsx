@@ -22,10 +22,19 @@ export function menuCollectionColumns(
     plans: "editor_plan",
     guides: "assistance_guides",
   } as const;
+  const nameLabels = {
+    products: "collection_product_name",
+    categories: "collection_category_name",
+    plans: "collection_plan_name",
+    guides: "collection_guide_name",
+  } as const;
   return [
     {
       accessorKey: "name",
-      meta: { icon: section === "categories" ? Tags : section === "plans" ? Layers : Package },
+      meta: {
+        icon: section === "categories" ? Tags : section === "plans" ? Layers : Package,
+        sortLabel: t(nameLabels[section]),
+      },
       header: t(labels[section]),
       cell: ({ row }) => (
         <div className="flex min-w-56 items-center gap-3">
@@ -82,7 +91,11 @@ export function menuCollectionColumns(
       ? [
           {
             accessorKey: "price",
-            meta: { align: "right", icon: Banknote },
+            meta: {
+              align: "right",
+              icon: Banknote,
+              sortLabel: t(section === "plans" ? "collection_plan_price" : "collection_unit_price"),
+            },
             header: t(section === "plans" ? "editor_plan_price" : "admin_unit_price"),
             cell: ({ row }) => (
               <span className="whitespace-nowrap tabular-nums">
@@ -111,7 +124,7 @@ export function menuCollectionColumns(
           {
             accessorKey: "duration",
             header: t("editor_duration"),
-            meta: { align: "right", icon: Clock3 },
+            meta: { align: "right", icon: Clock3, sortLabel: t("collection_duration") },
             cell: ({ row }) => (
               <span className="whitespace-nowrap tabular-nums">
                 {row.original.duration} {t("kiosk_minutes")}
@@ -124,7 +137,7 @@ export function menuCollectionColumns(
       ? [
           {
             accessorKey: "count",
-            meta: { align: "right", icon: Layers },
+            meta: { align: "right", icon: Layers, sortLabel: t("collection_product_count") },
             header: t(section === "categories" ? "menu_category_products" : "menu_plan_scope"),
             cell: ({ row }) => (
               <div className="min-w-40 max-w-sm whitespace-normal">

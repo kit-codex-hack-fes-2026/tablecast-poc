@@ -21,9 +21,7 @@ export const cartSubmissionSchema = z.object({
   dismissProductId: z.string().optional(),
 });
 
-export type CartSubmission = z.infer<typeof cartSubmissionSchema> & {
-  addition?: { from: DOMRect; imageKey: string };
-};
+export type CartSubmission = z.infer<typeof cartSubmissionSchema>;
 
 /** 数量は絶対値、追加は固定した行IDとし、受理済みの応答にも二重適用しない。 */
 export function applyCartChange(lines: CartLine[], { change }: CartSubmission): CartLine[] {

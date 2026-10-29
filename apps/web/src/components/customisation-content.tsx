@@ -4,6 +4,7 @@ import { useI18n } from "../i18n/locale";
 import { AllergenBadges } from "./allergen-badges";
 import { MenuOptionImage } from "./menu-option-image";
 import { Money, PriceChange } from "./money";
+import { Skeleton } from "./ui/skeleton";
 
 /** 選択・確定注文・設定一覧で共用する選択肢の表示。入力と業務判断は呼出し元が所有する。 */
 export function CustomisationContent({
@@ -18,10 +19,13 @@ export function CustomisationContent({
   showIllustration = true,
   reserveImageSpace = false,
   allergens,
+  allergensPending = false,
+  reserveAllergens = false,
   showAllergens = false,
   className,
 }: {
   allergens?: Pick<ComponentProps<typeof AllergenBadges>, "contains" | "unverified">;
+  allergensPending?: boolean;
   className?: string;
   compact?: boolean;
   description?: string;
@@ -31,14 +35,11 @@ export function CustomisationContent({
   imageKind?: "illustration" | "photograph";
   name: string;
   quantity?: number;
+  reserveAllergens?: boolean;
   reserveImageSpace?: boolean;
   showAllergens?: boolean;
   showIllustration?: boolean;
 }) {
-  const { t } = useI18n();
-  const hasAllergens = Boolean(
-    allergens && (allergens.contains.length > 0 || allergens.unverified),
-  );
   return (
     <div className={cn("flex min-w-0 max-w-full items-center gap-2", className)}>
       {group && <span className="font-medium">{group}: </span>}
@@ -49,20 +50,24 @@ export function CustomisationContent({
         showIllustration={showIllustration}
         reserveImageSpace={reserveImageSpace}
       />
-      <div className="min-w-0">
+      <div
+        className={
+          showAllergens && reserveAllergens
+            ? "flex min-h-13 min-w-0 flex-col justify-center"
+            : "min-w-0"
+        }
+      >
         <span id={id ? `${id}-name` : undefined} className="block font-medium wrap-anywhere">
           {name}
           {quantity !== undefined && quantity > 1 && ` × ${quantity}`}
         </span>
         {showAllergens && (
-          <div
-            id={id ? `${id}-allergens` : undefined}
-            className={hasAllergens ? "mt-0.5" : undefined}
-          >
-            {allergens && hasAllergens && (
-              <AllergenBadges {...allergens} label={t("food_option_allergens")} />
-            )}
-          </div>
+          <CustomisationAllergens
+            id={id}
+            allergens={allergens}
+            pending={allergensPending}
+            reserve={reserveAllergens}
+          />
         )}
         {description && (
           <span
@@ -73,6 +78,34 @@ export function CustomisationContent({
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+function CustomisationAllergens({
+  id,
+  allergens,
+  pending,
+  reserve,
+}: {
+  allergens: Pick<ComponentProps<typeof AllergenBadges>, "contains" | "unverified"> | undefined;
+  id?: string;
+  pending: boolean;
+  reserve: boolean;
+}) {
+  const { t } = useI18n();
+  const hasAllergens = Boolean(
+    allergens && (allergens.contains.length > 0 || allergens.unverified),
+  );
+  return (
+    <div
+      id={id ? `${id}-allergens` : undefined}
+      className={hasAllergens || (pending && reserve) ? "mt-0.5" : undefined}
+    >
+      {pending && reserve && <Skeleton className="h-6 w-20 rounded-full" />}
+      {allergens && hasAllergens && (
+        <AllergenBadges {...allergens} label={t("food_option_allergens")} />
+      )}
     </div>
   );
 }

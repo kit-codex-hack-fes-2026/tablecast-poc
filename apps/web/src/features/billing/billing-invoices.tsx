@@ -50,6 +50,7 @@ export function Invoices({ organizationId }: { organizationId: string }) {
         {t("billing_invoices")}
       </h2>
       <DataTable
+        defaultSort={{ id: "createdAt", desc: true }}
         {...collection}
         searchLabel={t("billing_invoice_search")}
         searchPlaceholder={t("billing_invoice_search")}

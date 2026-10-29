@@ -34,6 +34,7 @@ export function Organisations() {
       />
       <ErrorNotice query={stores} />
       <DataTable
+        defaultSort={{ id: "name", desc: false }}
         {...collection}
         data={stores.data.stores}
         columns={columns}
@@ -49,7 +50,7 @@ function storeColumns(t: ReturnType<typeof useI18n>["t"]): DataTableColumn<Store
   return [
     {
       accessorKey: "name",
-      meta: { icon: Store },
+      meta: { icon: Store, sortLabel: t("org_name") },
       header: t("admin_store"),
       cell: ({ row }) => (
         <Link

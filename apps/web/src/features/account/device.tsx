@@ -27,6 +27,7 @@ export function DeviceApproval() {
       <p>{t("admin_store")}</p>
       <ErrorNotice query={stores} />
       <DataTable
+        defaultSort={{ id: "name", desc: false }}
         {...collection}
         searchLabel={t("stores_search")}
         searchPlaceholder={t("stores_search")}
@@ -47,7 +48,11 @@ function deviceApprovalColumns(
   userCode: string,
 ): DataTableColumn<Store>[] {
   return [
-    { accessorKey: "name", header: t("admin_store"), meta: { icon: StoreIcon } },
+    {
+      accessorKey: "name",
+      header: t("admin_store"),
+      meta: { icon: StoreIcon, sortLabel: t("org_name") },
+    },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("admin_pair")}</span>,

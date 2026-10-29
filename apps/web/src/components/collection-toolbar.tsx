@@ -1,11 +1,11 @@
-import { ArrowDownUp, ListFilter, RotateCcw, Search } from "lucide-react";
+import { RotateCcw, Search } from "lucide-react";
 import { type ReactNode, useId } from "react";
 import { cn } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
-/** 検索・条件・並べ替えを同じ場所へまとめる。値とリセット範囲は各一覧が所有する。 */
+/** 検索とリセット、各条件を分け、利用できる幅で条件の列数を切り替える。 */
 export function CollectionToolbar({
   className,
   search,
@@ -30,56 +30,62 @@ export function CollectionToolbar({
 }) {
   const { t } = useI18n();
   const id = useId();
-  return (
+  const criteria = (
     <div
-      className={cn("flex flex-wrap items-end gap-4 rounded-2xl bg-surface-subtle p-4", className)}
+      className={`grid min-w-0 gap-4 ${filters && sort ? "@3xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]" : ""}`}
     >
-      {search && (
-        <label
-          className="flex min-w-0 basis-60 grow flex-col gap-2 text-sm font-medium"
-          htmlFor={`${id}-search`}
-        >
-          <span className="flex items-center gap-2">
-            <Search aria-hidden className="size-4 shrink-0" />
-            {search.label}
-          </span>
-          <Input
-            id={`${id}-search`}
-            type="search"
-            disabled={disabled}
-            value={search.value}
-            placeholder={search.placeholder ?? search.label}
-            onChange={(event) => search.onChange(event.target.value)}
-          />
-        </label>
-      )}
       {filters && (
-        <fieldset disabled={disabled} className="min-w-0 basis-40 grow sm:basis-96">
-          <legend className="mb-2 flex items-center gap-2 text-sm font-medium">
-            <ListFilter aria-hidden className="size-4 shrink-0" />
-            {t("collection_filters")}
-          </legend>
+        <fieldset disabled={disabled} className="min-w-0">
+          <legend className="sr-only">{t("collection_filters")}</legend>
           {filters}
         </fieldset>
       )}
       {sort && (
-        <fieldset disabled={disabled} className="min-w-0 basis-40 grow sm:basis-48">
-          <legend className="mb-2 flex items-center gap-2 text-sm font-medium">
-            <ArrowDownUp aria-hidden className="size-4 shrink-0" />
-            {t("collection_sort")}
-          </legend>
-          <div className="grid">{sort}</div>
+        <fieldset disabled={disabled} className={`min-w-0 ${filters ? "" : "max-w-xl"}`}>
+          <legend className="sr-only">{t("collection_sort")}</legend>
+          {sort}
         </fieldset>
       )}
-      <Button
-        type="button"
-        variant="outline"
-        disabled={disabled || resetDisabled}
-        onClick={onReset}
-      >
-        <RotateCcw aria-hidden />
-        {t("collection_reset")}
-      </Button>
+    </div>
+  );
+  return (
+    <div className={cn("@container space-y-4 rounded-2xl bg-surface-subtle p-4", className)}>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
+        {search ? (
+          <label
+            className="flex min-w-0 flex-col gap-2 text-sm font-medium"
+            htmlFor={`${id}-search`}
+          >
+            <span className="flex items-center gap-2">
+              <Search aria-hidden className="size-4 shrink-0" />
+              {search.label}
+            </span>
+            <Input
+              id={`${id}-search`}
+              type="search"
+              disabled={disabled}
+              value={search.value}
+              placeholder={search.placeholder ?? search.label}
+              onChange={(event) => search.onChange(event.target.value)}
+            />
+          </label>
+        ) : (
+          criteria
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          className="shrink-0 @max-sm:w-12 @max-sm:px-0"
+          aria-label={t("collection_reset")}
+          title={t("collection_reset")}
+          disabled={disabled || resetDisabled}
+          onClick={onReset}
+        >
+          <RotateCcw aria-hidden />
+          <span className="hidden @sm:inline">{t("collection_reset")}</span>
+        </Button>
+      </div>
+      {search && (filters || sort) && criteria}
     </div>
   );
 }

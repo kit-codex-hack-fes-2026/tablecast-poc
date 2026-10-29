@@ -39,6 +39,7 @@ export function AccountPasskeys({ controller }: { controller: AccountController 
         <p className="text-sm text-muted-foreground">{t("auth_passkey_description")}</p>
       </div>
       <DataTable
+        defaultSort={{ id: "createdAt", desc: true }}
         {...collection}
         searchLabel={t("account_passkeys_search")}
         searchPlaceholder={t("account_passkeys_search")}

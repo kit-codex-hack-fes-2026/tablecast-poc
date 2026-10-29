@@ -1,14 +1,11 @@
 import { RadioGroup } from "@base-ui/react/radio-group";
 import { resolveText, uiLocale } from "@tablecast/api/localization";
 import { type CartLine, maxCartLines, type Product } from "@tablecast/api/schema";
-import { Minus, Plus, X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
+import { useId, useState } from "react";
 import { ConditionSummary } from "../../components/condition-summary";
 import { CustomisationContent, CustomisationPrice } from "../../components/customisation-content";
 import { ErrorNotice } from "../../components/error-notice";
-import { Money } from "../../components/money";
-import { ProductImage } from "../../components/product-image";
-import { ProductName } from "../../components/product-name";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -17,7 +14,7 @@ import { RadioGroupItem } from "../../components/ui/radio-group";
 import { useI18n } from "../../i18n/locale";
 import { type TableEndpoint } from "../../lib/api";
 import { m } from "../../paraglide/messages.js";
-import { ProductAllergens } from "./product-allergens";
+import { ProductDetailHeader } from "./product-detail-header";
 import { useProductFoodInformation } from "./product-food-query";
 import { optionRow } from "./product-option-model";
 
@@ -50,10 +47,6 @@ export function ProductPage({
 }) {
   const { locale, t } = useI18n();
   const id = useId();
-  const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => {
-    heading.current?.focus();
-  }, []);
   const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const [selections, setSelections] = useState<CartLine["selections"]>(initial?.selections ?? []);
   const food = useProductFoodInformation({
@@ -63,6 +56,9 @@ export function ProductPage({
     configVersion,
     tableSessionId,
   });
+  const saveAction = editing
+    ? { label: t("common_update"), Icon: Check }
+    : { label: t("kiosk_add"), Icon: ShoppingBag };
   function select(optionId: string, amount: number, replaceIds: string[] = []) {
     const replaced = new Set(replaceIds);
     setSelections((current) => [
@@ -73,58 +69,16 @@ export function ProductPage({
   return (
     <section
       data-ui="product-detail"
-      className="@container/product-dialog flex h-full min-h-0 flex-col"
+      className="@container/product-dialog flex max-h-full min-h-0 flex-col rounded-[inherit] bg-card"
       aria-label={resolveText(product.text, locale).displayName}
     >
-      <div
-        data-ui="product-detail-header"
-        className={`grid shrink-0 items-start gap-x-3 gap-y-4 bg-card p-3 pb-1 @min-[36rem]/product-dialog:gap-x-5 @min-[36rem]/product-dialog:p-4 ${product.imageKey ? "grid-cols-[4rem_minmax(0,1fr)_auto] @min-[36rem]/product-dialog:grid-cols-[10rem_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}
-      >
-        {product.imageKey && (
-          <ProductImage
-            priority
-            width={160}
-            height={160}
-            sizes={`${imageSize}px`}
-            className="col-start-1 row-start-1 size-16 rounded-lg object-top-left @min-[36rem]/product-dialog:row-span-2 @min-[36rem]/product-dialog:size-40"
-            src={`/media/${product.imageKey}`}
-            alt={resolveText(product.text, locale).displayName}
-          />
-        )}
-        <div
-          className={`min-w-0 ${product.imageKey ? "col-start-2 row-start-1" : "col-start-1 row-start-1"}`}
-        >
-          <h2
-            ref={heading}
-            tabIndex={-1}
-            className="text-base font-semibold outline-none @min-[36rem]/product-dialog:text-lg"
-          >
-            <ProductName text={product.text} />
-          </h2>
-          <div data-ui="product-detail-price" className="mt-1 text-lg font-semibold">
-            <Money taxIncluded value={product.price} />
-          </div>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className={`row-start-1 justify-self-end @max-[36rem]/product-dialog:size-11 @max-[36rem]/product-dialog:p-0 ${product.imageKey ? "col-start-3" : "col-start-2"}`}
-          onClick={onClose}
-          disabled={busy}
-        >
-          <X />
-          <span className="sr-only @min-[36rem]/product-dialog:not-sr-only">
-            {t("common_close")}
-          </span>
-        </Button>
-        {endpoint && (
-          <div
-            className={`col-span-full min-w-0 @min-[36rem]/product-dialog:col-span-1 @min-[36rem]/product-dialog:row-start-2 ${product.imageKey ? "@min-[36rem]/product-dialog:col-start-2" : "@min-[36rem]/product-dialog:col-start-1"}`}
-          >
-            <ProductAllergens query={food} />
-          </div>
-        )}
-      </div>
+      <ProductDetailHeader
+        product={product}
+        imageSize={imageSize}
+        busy={busy}
+        onClose={onClose}
+        food={endpoint ? food : undefined}
+      />
       <div
         data-ui="product-detail-body"
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pt-2 scrollbar-thin"
@@ -198,6 +152,8 @@ export function ProductPage({
                         imageKey={option.imageKey}
                         imageKind={option.imageKind}
                         showAllergens={Boolean(endpoint)}
+                        allergensPending={food.isPending}
+                        reserveAllergens={option.foodChanges?.add.length !== 0}
                         allergens={food.data?.optionAllergens[option.id]}
                         id={`${id}-${groupIndex}-${optionIndex}`}
                         showIllustration={false}
@@ -218,7 +174,10 @@ export function ProductPage({
                     selections.find((item) => item.optionId === option.id)?.quantity ?? 0;
                   return (
                     <div
-                      className={optionRow({ selected: amount > 0, className: "mb-2 flex-wrap" })}
+                      className={optionRow({
+                        selected: amount > 0,
+                        className: "mb-2 flex-wrap",
+                      })}
                       key={option.id}
                     >
                       {group.kind === "multiple" ? (
@@ -240,6 +199,8 @@ export function ProductPage({
                             imageKey={option.imageKey}
                             imageKind={option.imageKind}
                             showAllergens={Boolean(endpoint)}
+                            allergensPending={food.isPending}
+                            reserveAllergens={option.foodChanges?.add.length !== 0}
                             allergens={food.data?.optionAllergens[option.id]}
                             id={`${id}-${groupIndex}-${optionIndex}`}
                             showIllustration={false}
@@ -253,6 +214,8 @@ export function ProductPage({
                           imageKey={option.imageKey}
                           imageKind={option.imageKind}
                           showAllergens={Boolean(endpoint)}
+                          allergensPending={food.isPending}
+                          reserveAllergens={option.foodChanges?.add.length !== 0}
                           allergens={food.data?.optionAllergens[option.id]}
                           id={`${id}-${groupIndex}-${optionIndex}`}
                           showIllustration={false}
@@ -343,7 +306,7 @@ export function ProductPage({
       )}
       <div
         data-theme-part="checkout"
-        className="flex shrink-0 items-center justify-between gap-3 bg-card p-3"
+        className="flex shrink-0 items-center justify-between gap-3 rounded-b-3xl bg-card p-3"
       >
         <div data-ui="quantity-control" className={quantityControl().group()}>
           <Button
@@ -377,11 +340,10 @@ export function ProductPage({
         </div>
         <Button
           data-theme-part="action-button"
-          className="h-auto min-h-14 min-w-0 flex-1 shrink whitespace-normal px-3 py-2"
+          className="h-auto min-h-14 min-w-0 shrink whitespace-normal px-4 py-2"
           variant="default"
           size="lg"
           type="button"
-
           disabled={busy || !product.available || cartLimitReached}
           onClick={(event) =>
             onSave(
@@ -396,8 +358,8 @@ export function ProductPage({
             )
           }
         >
-          {editing ? t("common_update") : t("kiosk_add")}
-          <Plus size={19} aria-hidden="true" />
+          {saveAction.label}
+          <saveAction.Icon aria-hidden />
         </Button>
       </div>
     </section>

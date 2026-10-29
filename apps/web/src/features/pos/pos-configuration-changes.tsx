@@ -123,6 +123,7 @@ export function PosConfigurationChanges({
         <DataTable
           data={rows}
           columns={columns}
+          defaultSort={{ id: "name", desc: false }}
           getRowId={(row) => row.id}
           tableLabel={t("pos_change_target")}
           searchLabel={t("pos_mapping_search")}

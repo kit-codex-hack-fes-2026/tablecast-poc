@@ -13,6 +13,9 @@ it.each(["ja", "en"] as const)(
   "%sで下部タブの金額・画像とペイン内詳細・成功通知を確認できる",
   async (locale) => {
     const labels = locale === "ja" ? ja : en;
+    const addedMessage = labels.kiosk_cart_added_product
+      .replace("{product}", resolveLocalized(product.text, locale).displayName)
+      .replace("{count}", "1");
     fixture.current.locale = locale;
     fixture.current.uiSection = "menu";
     fixture.current.staffCalled = false;
@@ -72,18 +75,32 @@ it.each(["ja", "en"] as const)(
     expect(brand.getBoundingClientRect().right).toBeLessThan(divider.getBoundingClientRect().left);
     expect(divider.getBoundingClientRect().right).toBeLessThan(banner.getBoundingClientRect().left);
     expect(document.querySelector("footer[data-theme-part=checkout]")).toBeNull();
+    await expect
+      .element(page.getByRole("button", { name: labels.kiosk_review, exact: true }))
+      .not.toBeInTheDocument();
+    await cart.click();
     const callout = page.getByRole("group", { name: labels.kiosk_cart, exact: true });
     await expect
-      .element(callout.getByRole("button", { name: labels.kiosk_review, exact: true }))
+      .element(callout.getByRole("button", { name: labels.kiosk_confirm, exact: true }))
       .toBeVisible();
-    expect(callout.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(
-      tabs.element().getBoundingClientRect().top,
-    );
+    expect(callout.getByRole("button").elements()).toHaveLength(1);
+    expect(callout.element().textContent).toBe(labels.kiosk_confirm);
+    await expect
+      .poll(
+        () =>
+          callout.element().getBoundingClientRect().bottom -
+          tabs.element().getBoundingClientRect().top,
+      )
+      .toBeLessThanOrEqual(0);
     for (const price of document.querySelectorAll('[data-ui="tab-price"]')) {
       expect(getComputedStyle(price).whiteSpace).toBe("nowrap");
       expect(parseFloat(getComputedStyle(price).fontSize)).toBeGreaterThanOrEqual(14);
       expect(price.getBoundingClientRect().height).toBeLessThanOrEqual(24);
     }
+    await userEvent.keyboard("{Escape}");
+    await expect.element(callout).not.toBeInTheDocument();
+    await expect.element(cart).toHaveFocus();
+    await page.getByRole("tab", { name: labels.kiosk_menu, exact: true }).click();
     const choose = page.getByRole("button").filter({
       has: page.getByText(resolveLocalized(pictured.text, locale).displayName, { exact: true }),
     });
@@ -94,6 +111,14 @@ it.each(["ja", "en"] as const)(
     });
     await expect.element(dialog).toBeVisible();
     expect(pane.contains(dialog.element())).toBe(true);
+    // Dialogの入場scaleが完了してから画像と余白の実寸を測る。
+    await expect.element(dialog).not.toHaveAttribute("data-starting-style");
+    await Promise.all(
+      dialog
+        .element()
+        .getAnimations()
+        .map((animation) => animation.finished),
+    );
     const bounds = dialog.element().getBoundingClientRect();
     expect(bounds.left).toBeGreaterThan(pane.getBoundingClientRect().left);
     expect(bounds.right).toBeLessThan(pane.getBoundingClientRect().right);
@@ -107,7 +132,7 @@ it.each(["ja", "en"] as const)(
       .getBoundingClientRect();
     expect(close.right).toBeCloseTo(bounds.right - 16, 0);
     expect(close.top).toBeCloseTo(bounds.top + 16, 0);
-    const overlay = pane.querySelector('[data-ui="product-overlay"]');
+    const overlay = pane.querySelector('[data-slot="dialog-backdrop"]');
     expect(overlay?.getBoundingClientRect().width).toBe(pane.getBoundingClientRect().width);
     expect(dialog.element().querySelector('[data-ui="illustration-label"]')).toBeNull();
     await expect
@@ -117,12 +142,27 @@ it.each(["ja", "en"] as const)(
     await expect.element(dialog).not.toBeInTheDocument();
     await expect.element(choose).toHaveFocus();
     await choose.click();
+    await expect.element(dialog).toBeVisible();
+    const viewport = pane.querySelector('[data-slot="dialog-viewport"]');
+    if (!(viewport instanceof HTMLElement)) throw new Error("Dialogの背景操作領域が必要です");
+    await userEvent.click(viewport, { position: { x: 4, y: 4 } });
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expect.element(choose).toHaveFocus();
+    await choose.click();
     await dialog.getByRole("radio", { name: "90 mL", exact: true }).click();
     await dialog.getByRole("button", { name: labels.kiosk_add, exact: true }).click();
     await expect.element(dialog).not.toBeInTheDocument();
     await expect
       .element(page.getByRole("tab", { name: labels.kiosk_menu, exact: true }))
       .toHaveAttribute("aria-selected", "true");
+    await expect.element(page.getByText(addedMessage, { exact: true })).toBeVisible();
+    await page
+      .getByRole("dialog", { name: addedMessage, exact: true })
+      .getByRole("button", { name: labels.common_close, exact: true })
+      .click();
+    await expect
+      .element(page.getByRole("dialog", { name: addedMessage, exact: true }))
+      .not.toBeInTheDocument();
     await cart.click();
     await expect.element(cart).toHaveAttribute("aria-selected", "true");
     await expect
@@ -137,22 +177,16 @@ it.each(["ja", "en"] as const)(
           .getByRole("button", { name: labels.kiosk_review, exact: true }),
       )
       .toBeEnabled();
-    const actionPosition = callout.element().getBoundingClientRect();
     await callout.getByRole("button", { name: labels.kiosk_review, exact: true }).click();
     await expect
       .element(callout.getByRole("button", { name: labels.kiosk_confirm, exact: true }))
       .toBeVisible();
-    expect(callout.element().getBoundingClientRect().top).toBeCloseTo(actionPosition.top, 0);
-    expect(callout.element().getBoundingClientRect().bottom).toBeCloseTo(actionPosition.bottom, 0);
-    await callout.getByRole("button", { name: labels.kiosk_edit, exact: true }).click();
-    await expect.element(page.getByText(labels.kiosk_cart_added, { exact: true })).toBeVisible();
+    expect(callout.getByRole("button").elements()).toHaveLength(1);
     await page
-      .getByRole("dialog", { name: labels.kiosk_cart_added, exact: true })
-      .getByRole("button", { name: labels.common_close, exact: true })
+      .getByRole("region", { name: labels.kiosk_review_title, exact: true })
+      .getByRole("button", { name: labels.kiosk_edit, exact: true })
       .click();
-    await expect
-      .element(page.getByRole("dialog", { name: labels.kiosk_cart_added, exact: true }))
-      .not.toBeInTheDocument();
+    await expect.element(callout).not.toBeInTheDocument();
     expect(cart.element().querySelectorAll("img")).toHaveLength(1);
     await expect
       .poll(() => {
@@ -283,6 +317,7 @@ it("カゴの商品画像は3枚まで重ねて表示する", async () => {
       cart.element().querySelector('[data-ui="cart-icon"]')?.getBoundingClientRect().width,
     ).toBeGreaterThan(0);
   }
+  await cart.click();
   await page.getByRole("button", { name: en.kiosk_review, exact: true }).click();
   await page.getByRole("button", { name: en.kiosk_confirm, exact: true }).click();
   const orders = page.getByRole("tab", { name: new RegExp(`^${en.kiosk_orders_bill}`) });

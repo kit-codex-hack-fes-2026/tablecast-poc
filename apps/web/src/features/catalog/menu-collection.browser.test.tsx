@@ -268,7 +268,7 @@ for (const alias of ["moon drink", "月の酒"] as const) {
 
 it("価格を金額順に並べ、URLの昇降順を履歴と詳細の往復で復元する", async () => {
   const value = structuredClone(catalog);
-  value.configuration.products = [10000, 900, 50].map((price) => ({
+  value.configuration.products = [900, 10000, 50].map((price) => ({
     ...structuredClone(product),
     id: `tablecast-price-${price}`,
     price,
@@ -287,13 +287,8 @@ it("価格を金額順に並べ、URLの昇降順を履歴と詳細の往復で�
   await expect
     .element(search)
     .toHaveAttribute("placeholder", ja.collection_search_menu_placeholder);
-  await screen.getByRole("combobox", { name: ja.collection_sort, exact: true }).click();
-  await page
-    .getByRole("option", {
-      name: `${ja.admin_unit_price} · ${ja.collection_sort_ascending}`,
-      exact: true,
-    })
-    .click();
+  await screen.getByRole("combobox", { name: ja.collection_sort_direction, exact: true }).click();
+  await page.getByRole("option", { name: ja.collection_sort_ascending, exact: true }).click();
   await expect.element(first().getByRole("link", { name: "料理 50", exact: true })).toBeVisible();
   expect(router.state.location.search).toMatchObject({ sort: "price:asc" });
   router.history.back();
@@ -308,7 +303,78 @@ it("価格を金額順に並べ、URLの昇降順を履歴と詳細の往復で�
   expect(router.state.location.search).toMatchObject({ sort: "price:desc" });
   await screen.getByRole("button", { name: ja.collection_reset, exact: true }).click();
   expect(router.state.location.search).toEqual({});
+  const sort = screen.getByRole("combobox", { name: ja.collection_sort_field, exact: true });
+  const direction = screen.getByRole("combobox", {
+    name: ja.collection_sort_direction,
+    exact: true,
+  });
+  await expect.element(sort).toHaveTextContent(ja.collection_product_name);
+  await expect.element(direction).toHaveTextContent(ja.collection_sort_ascending);
+  await expect.element(first().getByRole("link", { name: "料理 50", exact: true })).toBeVisible();
+  await search.fill("料理");
+  await expect.element(sort).toHaveTextContent(ja.collection_sort_relevance);
+  await expect.element(direction).toBeDisabled();
+  await sort.click();
+  await page.getByRole("option", { name: ja.collection_unit_price, exact: true }).click();
+  await expect.element(direction).toBeEnabled();
+  await expect
+    .element(first().getByRole("link", { name: "料理 10000", exact: true }))
+    .toBeVisible();
+  await direction.click();
+  await page.getByRole("option", { name: ja.collection_sort_ascending, exact: true }).click();
+  expect(router.state.location.search.sort).toBe("price:asc");
+  await expect.element(first().getByRole("link", { name: "料理 50", exact: true })).toBeVisible();
+  await sort.click();
+  await page.getByRole("option", { name: ja.collection_product_name, exact: true }).click();
+  expect(router.state.location.search.sort).toBe("name:asc");
+  await expect.element(direction).toHaveTextContent(ja.collection_sort_ascending);
+  await sort.click();
+  await page.getByRole("option", { name: ja.collection_sort_relevance, exact: true }).click();
+  await expect.element(first().getByRole("link", { name: "料理 900", exact: true })).toBeVisible();
+  expect(router.state.location.search.sort).toBeUndefined();
+  await search.fill("");
+  await expect.poll(() => router.state.location.search).toEqual({});
+  await expect.element(sort).toHaveTextContent(ja.collection_product_name);
 });
+
+it.each([
+  { locale: "ja", viewport: [402, 874], contentWidth: 402 },
+  { locale: "ja", viewport: [1180, 820], contentWidth: 860 },
+  { locale: "en", viewport: [1512, 982], contentWidth: 1512 },
+] as const)(
+  "$locale の幅 $contentWidth で検索とリセット、条件の基準線を揃える",
+  async ({ locale, viewport, contentWidth }) => {
+    await page.viewport(viewport[0], viewport[1]);
+    const labels = locale === "ja" ? ja : en;
+    const { screen } = await showMenu(catalog, locale);
+    screen.getByRole("main").element().style.maxWidth = `${contentWidth}px`;
+    const search = screen.getByRole("searchbox", { name: labels.menu_search });
+    const reset = screen.getByRole("button", { name: labels.collection_reset, exact: true });
+    const category = screen.getByRole("combobox", { name: labels.editor_category, exact: true });
+    const availability = screen.getByRole("combobox", { name: labels.menu_availability });
+    const field = screen.getByRole("combobox", { name: labels.collection_sort_field, exact: true });
+    const direction = screen.getByRole("combobox", {
+      name: labels.collection_sort_direction,
+      exact: true,
+    });
+    const bounds = (item: typeof field) => item.element().getBoundingClientRect();
+    expect(Math.abs(bounds(search).bottom - bounds(reset).bottom)).toBeLessThan(1);
+    expect(bounds(reset).left).toBeGreaterThanOrEqual(bounds(search).right);
+    expect(Math.abs(bounds(field).top - bounds(direction).top)).toBeLessThan(1);
+    expect(bounds(direction).left).toBeGreaterThanOrEqual(bounds(field).right);
+    expect(bounds(field).top).toBeGreaterThan(bounds(search).bottom);
+    const aligned =
+      contentWidth >= 860 ? [category, availability, field, direction] : [field, direction];
+    const tops = aligned.map((item) => bounds(item).top);
+    expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(1);
+    for (const select of [category, availability, field, direction]) {
+      const value = select.element().querySelector("[title] > span");
+      if (!(value instanceof HTMLElement)) throw new Error("選択値の表示がありません");
+      expect(value.scrollWidth).toBeLessThanOrEqual(value.clientWidth + 1);
+    }
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(viewport[0]);
+  },
+);
 
 vi.mock("../store/store-context", () => ({
   useStore: () => ({ id: "tablecast-story", name: "店舗", role: fixture.storeRole }),

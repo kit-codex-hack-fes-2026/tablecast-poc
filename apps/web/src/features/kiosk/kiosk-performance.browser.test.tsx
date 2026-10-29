@@ -50,6 +50,7 @@ it("1.5秒の応答待ちでも数量・件数は100ms以内に変わり、連�
       )
       .toHaveValue("4");
     expect(count.textContent).toBe("4");
+    await cart.click();
     await expect
       .element(page.getByRole("button", { name: ja.kiosk_review, exact: true }))
       .toBeDisabled();

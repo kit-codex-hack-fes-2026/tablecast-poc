@@ -86,6 +86,7 @@ export function Invitations() {
         onRetry={() => void query.refetch()}
       />
       <DataTable
+        defaultSort={{ id: "email", desc: false }}
         {...collection}
         data={query.data.invitations}
         error={query.error}

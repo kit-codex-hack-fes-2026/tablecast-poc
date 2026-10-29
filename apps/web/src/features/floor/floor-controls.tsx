@@ -1,5 +1,4 @@
 import {
-  ArrowDownUp,
   Bell,
   CircleDashed,
   CircleDollarSign,
@@ -60,26 +59,17 @@ export function FloorControls({
   };
   const FilterIcon = filterIcons[filter];
   const fields = [
-    { value: "table", label: t("floor_table"), icon: Table2 },
+    { value: "table", label: t("collection_table_name"), icon: Table2 },
     { value: "status", label: t("floor_sort_status"), icon: CircleDot },
     { value: "duration", label: t("floor_sort_duration"), icon: Clock3 },
     { value: "guests", label: t("floor_sort_guests"), icon: Users },
     { value: "due", label: t("admin_due"), icon: CircleDollarSign },
   ];
   const sortOptions = [
-    { value: "", label: t("collection_sort_default"), icon: ArrowDownUp },
-    ...fields.flatMap((field) => [
-      {
-        ...field,
-        value: `${field.value}:asc`,
-        label: `${field.label} · ${t("collection_sort_ascending")}`,
-      },
-      {
-        ...field,
-        value: `${field.value}:desc`,
-        label: `${field.label} · ${t("collection_sort_descending")}`,
-      },
-    ]),
+    ...(view === "list"
+      ? [{ value: "", label: t("floor_sort_attention"), icon: TriangleAlert }]
+      : []),
+    ...fields,
   ];
   const filters = (
     ["all", "attention", "active", "called", "billing", "voice", "vacant"] as const
@@ -109,38 +99,63 @@ export function FloorControls({
         }}
         filters={
           view === "list" && (
-            <Select
-              items={filters}
-              value={filter}
-              onValueChange={(next) => {
-                if (next) onFilterChange(next);
-              }}
-              disabled={disabled}
-            >
-              <SelectTrigger aria-label={t("floor_filters")}>
-                <span className="flex min-w-0 items-center gap-2 text-left">
-                  <FilterIcon aria-hidden className="size-4 shrink-0" />
-                  <SelectValue />
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {filters.map(({ value, label, icon: Icon }) => (
-                  <SelectItem key={value} value={value}>
-                    <span className="flex items-center gap-2">
-                      <Icon aria-hidden className="size-4 shrink-0" />
-                      {label}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col gap-2 text-sm font-medium">
+              <span className="flex items-center gap-2">
+                <FilterIcon aria-hidden className="size-4 shrink-0" />
+                {t("floor_filters")}
+              </span>
+              <Select
+                items={filters}
+                value={filter}
+                onValueChange={(next) => {
+                  if (next) onFilterChange(next);
+                }}
+                disabled={disabled}
+              >
+                <SelectTrigger
+                  aria-label={t("floor_filters")}
+                  className="whitespace-nowrap px-2 text-sm"
+                >
+                  <span className="flex min-w-0 items-center gap-2 text-left">
+                    <FilterIcon aria-hidden className="size-4 shrink-0" />
+                    <SelectValue />
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {filters.map(({ value, label, icon: Icon }) => (
+                    <SelectItem key={value} value={value}>
+                      <span className="flex items-center gap-2">
+                        <Icon aria-hidden className="size-4 shrink-0" />
+                        {label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )
         }
         sort={
           <CollectionSort
             options={sortOptions}
-            value={sort ?? ""}
-            onValueChange={(next) => onSortChange(floorSortValues.find((value) => value === next))}
+            value={sort?.split(":")[0] ?? (view === "timeline" ? "table" : "")}
+            descending={sort?.endsWith(":desc") ?? false}
+            directionDisabled={!sort && view === "list"}
+            onValueChange={(next) =>
+              onSortChange(
+                floorSortValues.find(
+                  (value) => value === `${next}:${sort?.endsWith(":desc") ? "desc" : "asc"}`,
+                ),
+              )
+            }
+            onDescendingChange={(descending) =>
+              onSortChange(
+                floorSortValues.find(
+                  (value) =>
+                    value === `${sort?.split(":")[0] ?? "table"}:${descending ? "desc" : "asc"}`,
+                ),
+              )
+            }
             disabled={disabled}
           />
         }

@@ -11,6 +11,8 @@ import { Button } from "./ui/button";
 
 export function TableControls<T extends RowData>({
   table,
+  sourceOrderLabel,
+  sortingActive,
   searchLabel,
   searchPlaceholder,
   searchValue,
@@ -30,9 +32,10 @@ export function TableControls<T extends RowData>({
   searchLabel?: string;
   searchPlaceholder?: string;
   searchValue: string;
+  sortingActive: boolean;
+  sourceOrderLabel?: string;
   table: ReactTable<typeof features, T>;
 }) {
-  const { t } = useI18n();
   const sortable = table
     .getAllLeafColumns()
     .filter(
@@ -41,7 +44,7 @@ export function TableControls<T extends RowData>({
         (column.columnDef.meta?.sortLabel || typeof column.columnDef.header === "string"),
     );
   const sorting = table.state.sorting[0];
-  const hasCriteria = !!searchValue || filtersActive || table.state.sorting.length > 0;
+  const hasCriteria = !!searchValue || filtersActive || sortingActive;
   function resetCriteria() {
     if (onReset) onReset();
     else {
@@ -72,25 +75,25 @@ export function TableControls<T extends RowData>({
         sortable.length > 0 && (
           <CollectionSort
             disabled={pending}
-            value={sorting ? `${sorting.id}:${sorting.desc ? "desc" : "asc"}` : ""}
+            value={sorting?.id ?? ""}
+            descending={sorting?.desc ?? true}
+            directionDisabled={!sorting}
             onValueChange={(option) => {
-              const column = sortable.find(
-                (item) => option === `${item.id}:asc` || option === `${item.id}:desc`,
-              );
-              table.setSorting(
-                column ? [{ id: column.id, desc: option === `${column.id}:desc` }] : [],
-              );
+              const column = sortable.find((item) => option === item.id);
+              table.setSorting(column ? [{ id: column.id, desc: sorting?.desc ?? true }] : []);
+              if (resetPageOnSort) table.setPageIndex(0);
+            }}
+            onDescendingChange={(desc) => {
+              if (sorting) table.setSorting([{ id: sorting.id, desc }]);
               if (resetPageOnSort) table.setPageIndex(0);
             }}
             options={[
-              { value: "", label: t("collection_sort_default"), icon: List },
-              ...sortable.flatMap((column) =>
-                [false, true].map((desc) => ({
-                  value: `${column.id}:${desc ? "desc" : "asc"}`,
-                  label: `${column.columnDef.meta?.sortLabel ?? String(column.columnDef.header)} · ${t(desc ? "collection_sort_descending" : "collection_sort_ascending")}`,
-                  icon: column.columnDef.meta?.icon ?? ArrowDownUp,
-                })),
-              ),
+              ...(sourceOrderLabel ? [{ value: "", label: sourceOrderLabel, icon: List }] : []),
+              ...sortable.map((column) => ({
+                value: column.id,
+                label: column.columnDef.meta?.sortLabel ?? String(column.columnDef.header),
+                icon: column.columnDef.meta?.icon ?? ArrowDownUp,
+              })),
             ]}
           />
         )
