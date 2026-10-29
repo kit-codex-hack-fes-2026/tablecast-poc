@@ -1,6 +1,6 @@
 import { applyD1Migrations, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { expect, inject, it } from "vitest";
 import { z } from "zod";
 import app from "../src/app";
@@ -153,7 +153,7 @@ it("カタログ更新では検索語を保って先頭ページの新しい価�
   });
 });
 
-it("空検索・0件・末尾を画面と同じ件数で返し、2000商品でも8件と出力予算を保つ", async () => {
+it("0件・末尾を画面と同じ件数で返し、2000商品でも8件と出力予算を保つ", async () => {
   await setupProducts(2000);
   const measured = measuredDatabase(env.TABLECAST_DB);
   const result = await invokeVoiceTool(
@@ -163,7 +163,7 @@ it("空検索・0件・末尾を画面と同じ件数で返し、2000商品で�
       turnId,
       toolCallId: crypto.randomUUID(),
       toolName: "showMenuSearch",
-      arguments: { query: "", offset: 1992 },
+      arguments: { query: "検索カテゴリ", offset: 1992 },
     },
     new AbortController().signal,
   );
@@ -179,18 +179,95 @@ it("空検索・0件・末尾を画面と同じ件数で返し、2000商品で�
   });
 });
 
+it("GUIと音声の空・空白検索を拒否し、確定済みの検索ページを変更しない", async () => {
+  await setupProducts();
+  const before = await setUiSection(
+    services(),
+    device,
+    { section: "menu", search: { query: "  検索カテゴリ　", offset: 8 } },
+    "core",
+  );
+  expect(before.menuSearch?.query).toBe("検索カテゴリ");
+  const uiEvents = () =>
+    services()
+      .db.select()
+      .from(business.tableEvents)
+      .where(
+        and(
+          eq(business.tableEvents.table_session_id, device.tableSessionId),
+          eq(business.tableEvents.kind, "table.ui"),
+        ),
+      );
+  const beforeEvents = await uiEvents();
+  const context = createExecutionContext();
+  try {
+    for (const query of ["", "   ", "　", "\t\n"]) {
+      const beforeRequest = await getCoreState(services(), device);
+      const response = await app.request(
+        "/api/table/ui?view=core",
+        {
+          method: "PATCH",
+          headers: {
+            Cookie: `tablecast.device=${deviceToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ section: "menu", search: { query } }),
+        },
+        env,
+        context,
+      );
+      expect(response.status).toBe(422);
+      expect((await getCoreState(services(), device)).cursor).toBe(beforeRequest.cursor);
+      await expect(tool("showMenuSearch", { query })).rejects.toThrow("INVALID_INPUT");
+      const after = await getCoreState(services(), device);
+      expect(after.menuSearch).toEqual(before.menuSearch);
+      expect(after.uiSection).toBe(before.uiSection);
+    }
+    // 音声ツールの失敗記録は残すが、検索表示を更新するイベントは増やさない。
+    expect(await uiEvents()).toEqual(beforeEvents);
+  } finally {
+    await waitOnExecutionContext(context);
+  }
+});
+
+it("旧保存の空・空白検索を通常一覧として読み、カートと保存済みの値を保つ", async () => {
+  await setupProducts();
+  const before = await getCoreState(services(), device);
+  for (const query of ["", "　 \t"]) {
+    const saved = JSON.stringify({ query, offset: 8, configVersion: before.configVersion });
+    await services()
+      .db.update(business.tableSessions)
+      .set({ menu_search_json: saved })
+      .where(eq(business.tableSessions.id, device.tableSessionId));
+    const state = await getCoreState(services(), device);
+    expect(state.menuSearch).toBeNull();
+    expect(state.cart).toEqual(before.cart);
+    const row = await services()
+      .db.select({ search: business.tableSessions.menu_search_json })
+      .from(business.tableSessions)
+      .where(eq(business.tableSessions.id, device.tableSessionId))
+      .get();
+    expect(row?.search).toBe(saved);
+  }
+});
+
 it("検索条件を別店舗・閉卓・停止済みturnから更新できず、不正入力を保存しない", async () => {
   await setupProducts();
   await expect(
     setUiSection(
       services(),
       { ...device, storeId: "tablecast-other-store" },
-      { section: "menu", search: { query: "" } },
+      { section: "menu", search: { query: "検索カテゴリ" } },
       "core",
     ),
   ).rejects.toThrow("TABLE_NOT_FOUND");
   await expect(
-    setUiSection(services(), device, { section: "cart", search: { query: "" } }, "core"),
+    setUiSection(
+      services(),
+      device,
+      { section: "cart", search: { query: "検索カテゴリ" } },
+      "core",
+    ),
   ).rejects.toThrow("INVALID_INPUT");
   await expect(tool("showMenuSearch", { query: "a".repeat(101) })).rejects.toThrow("INVALID_INPUT");
   expect((await getCoreState(services(), device)).menuSearch).toBeNull();
@@ -198,13 +275,20 @@ it("検索条件を別店舗・閉卓・停止済みturnから更新できず、
     .db.update(business.tableSessions)
     .set({ voice_state: "stopped", active_turn_id: null })
     .where(eq(business.tableSessions.id, device.tableSessionId));
-  await expect(tool("showMenuSearch", { query: "" })).rejects.toThrow("VOICE_SESSION_STALE");
+  await expect(tool("showMenuSearch", { query: "検索カテゴリ" })).rejects.toThrow(
+    "VOICE_SESSION_STALE",
+  );
   await services()
     .db.update(business.tableSessions)
     .set({ status: "closed" })
     .where(eq(business.tableSessions.id, device.tableSessionId));
   await expect(
-    setUiSection(services(), device, { section: "menu", search: { query: "" } }, "core"),
+    setUiSection(
+      services(),
+      device,
+      { section: "menu", search: { query: "検索カテゴリ" } },
+      "core",
+    ),
   ).rejects.toThrow("SESSION_CLOSED");
 });
 

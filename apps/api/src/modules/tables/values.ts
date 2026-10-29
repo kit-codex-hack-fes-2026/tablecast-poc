@@ -171,7 +171,7 @@ export function coreStateValue(
   const savedSearch = row.menu_search_json
     ? savedMenuSearchSchema.parse(JSON.parse(row.menu_search_json))
     : null;
-  const searchPage = savedSearch
+  const searchPage = savedSearch?.query
     ? menuSearchPage(catalog.configuration, {
         query: savedSearch.query,
         offset: savedSearch.configVersion === catalog.version ? savedSearch.offset : 0,

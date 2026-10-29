@@ -869,7 +869,9 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                     className="@container/tablecast-order relative isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
                   >
                     {renderPlanSummary()}
-                    <ErrorNotice error={screen.variables?.search ? null : screen.error} />
+                    <ErrorNotice
+                      error={screen.variables?.search !== undefined ? null : screen.error}
+                    />
                     <Tabs.Root
                       className="flex flex-col min-h-0 flex-1"
                       value={section === "bill" ? "orders" : section}
