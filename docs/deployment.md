@@ -245,9 +245,33 @@ R2の`tablecast/staging-reset.json`へ対象SHAとメンテナンス・runtime�
 
 ### release PR
 
-pushとCI完了時に現在のmainとの差分を集約し、Draft release PRを1本作成・更新する。差分がない場合は開いた集約PRを閉じ、新規作成しない。関連PRは各commitの関連付けを保ち、差分内のmerge SHAを持つマージ済みPRで補完する。同じmerge SHAで統合されたStackも、元commitを未関連扱いに変えず全段を集約する。関連PR・元PR冒頭の要約・SHA・CI・配備状況は自動領域へ書き、概要・主な変更・移行手順・実クライアント検証はagentが編集する。[本文・確認手順](../.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#stagingとrelease-pr)を使う。
+pushとCI完了時に現在のmainとの差分を集約し、Draft release PRを1本作成・更新する。差分がない場合は開いた集約PRを閉じ、新規作成しない。関連PRは各commitの関連付けを保ち、差分内のmerge SHAを持つマージ済みPRで補完する。同じmerge SHAで統合されたStackも、元commitを未関連扱いに変えず全段を集約する。関連PR・元PR冒頭の要約・SHA・CI・配備状況は自動領域へ書き、概要・主な変更・移行手順・実クライアント検証はagentが編集する。
+
+release PRは複数の実装PRを集約する例外であり、専用の実装Issueを毎回作らない。[releaseテンプレート](../.github/release_pull_request_template.md)を使い、集約PRに`Closes`等の一括終了指定を書かない。実装Issueはstagingへの統合で開発完了となり、本番公開はrelease PRと配備SHAで別に確認する。
 
 mainへの通常マージには同一repoの最新staging、stagingの最新pushまたは手動リセットCIの成功、同SHAの疎通、mainとの合成treeとstaging treeの一致が必要。mainに緊急修正がある場合はstagingへ戻して再検証する。集約はmerge commitを使い、stagingを削除・rebaseしない。本番の配備確認はmain pushのCIとhealthで別に行う。
+
+#### 本文の編集
+
+release PRだけで今回何が変わり、何を確認して本番へ出すか分かる本文にする。日本語の常体とし、冒頭は利用者・運用者にとって主要な変更を短い段落でまとめる。
+
+- 主な変更は機能追加、不具合修正、性能・品質、開発・運用の該当分類へまとめる。同じ機能を構成する複数PRは一つの説明にまとめ、説明ごとに根拠となるPRをリンクする。
+- 関連PR一覧は番号・タイトル・変更の要約を重複なく掲載する。現在のmainとの差分とcommitの包含関係を使い、最近のマージ日時だけで選ばない。既公開・取消済み・対象外の変更を新機能として説明しない。PRに紐付かないcommitも確認する。
+- 元PRの本文・実差分・検証結果を読み、具体的な問題と変更後の振る舞いを要約する。性能改善・実動作・本番受入を根拠なく断定しない。意思決定とテストはrelease判断に必要な点だけ要約し、詳細へリンクする。
+- 移行・運用上の注意にはmigration、secret・設定変更、互換性、手動操作、rollback制約を書く。該当がない場合も確認して該当なしと書く。
+- 検証には比較範囲、head SHA、staging配備SHA・URL、CI・remote MCPの結果と未確認事項を書く。手動確認には対象SHAとクライアントを添える。
+
+通常の実装PRの変更内容は、冒頭の一段落だけでも問題と変更後の振る舞いが分かるように書く。自動生成する関連PR一覧にはその段落を使う。HTMLコメントの記入例は要約にしない。
+
+#### 自動更新とagentの担当
+
+`scripts/tablecast-release.ts`はPR一覧・元PR要約・比較SHA・CI・配備状況・参照Issueを更新する。HTMLマーカーで囲まれた自動領域を削除・重複させない。外側のリリース概要、主な変更、運用上の注意、実クライアント確認はagentが編集し、自動更新で上書きしない。要約専用の有料LLMジョブは使わない。
+
+実装PRをstagingへ統合したagentはrelease本文の更新を確認し、概要・主な変更・移行手順へ必要な変更を反映する。対象PRやSHAが変わると本文は更新確認待ちになる。部分revertや複数PRにまたがる取消は最終diffで確認する。
+
+Draft解除・マージ直前に現在のmain/staging、PR一覧・実差分、レビュー、最新CI・配備を取得し直す。本文を再照合したら、自動表示された`<!-- tablecast-release:reviewed:... -->`をコードブロックの外へ単独行として記載する。SHAや元PR本文の変更後に古いマーカーを再利用しない。マーカー自体は検証・マージ許可の代わりではない。
+
+releaseの確認先は常設stagingであり、PR専用previewは作らない。対応するローカルworktreeの終了処理でも常設stagingを停止しない。
 
 ## 組織課金の段階導入
 

@@ -5,7 +5,7 @@
       "source": "emilkowalski/skill",
       "sourceType": "github",
       "skillPath": "skills/animate/SKILL.md",
-      "computedHash": "609e30351bf518b21a8cfe87cd1111554855527075d6563605bafe61963252f7"
+      "computedHash": "7598d33e7f60dd5c24531eaaa897621cc3bdb48e8050324211627973bc59c4ce"
     },
     "assistant-mcp": {
       "source": "grafana/skills",
@@ -17,7 +17,7 @@
       "source": "ReoHakase/skills",
       "sourceType": "github",
       "skillPath": "conventional-commit/SKILL.md",
-      "computedHash": "3d5f561355d53d32c8702df40ca14daac58cd91bf9a78f326e07e4a96a4d7142"
+      "computedHash": "c85c35cf401d800a232fa4da422e5acb56547ac617976cd73d52bf725265861c"
     },
     "dashboarding": {
       "source": "grafana/skills",
@@ -29,25 +29,25 @@
       "source": "emilkowalski/skill",
       "sourceType": "github",
       "skillPath": "skills/emil-design-eng/SKILL.md",
-      "computedHash": "41b0a4dc1a27164fe297845a6c6850a39e9242c42c9be999967fcee9df2c5974"
+      "computedHash": "51f2537e04d15911b41d78e2de24c36a0e26d41beae15e82a954fe5496a5eda9"
     },
     "fullstack-web-testing": {
       "source": "ReoHakase/skills",
       "sourceType": "github",
       "skillPath": "fullstack-web-testing/SKILL.md",
-      "computedHash": "b291f55f697aebed86c6f8c287bdfe2f8d25d9cc4172d23c7a7522354982a56c"
+      "computedHash": "3d72f16436f7e439c163390dc96a791fc65cc3cdaa9be1383cb284496aceed90"
     },
     "github-issue-pr-ops": {
       "source": "ReoHakase/skills",
       "sourceType": "github",
       "skillPath": "github-issue-pr-ops/SKILL.md",
-      "computedHash": "bfa114e9601f8b7b7027dee9b2da1eb6ed79d4b38371a6595678e50f26d4aa40"
+      "computedHash": "034c6facbbc3f64a60f303fabf2747d16c26b83fa074397c9056055f349d4d58"
     },
     "github-project-ops": {
       "source": "ReoHakase/skills",
       "sourceType": "github",
       "skillPath": "github-project-ops/SKILL.md",
-      "computedHash": "a919e2a6dd91aee1face140115e93b04534c4d89f87a6e6953ff4369f3340b06"
+      "computedHash": "e036d79c96dd10a591b1ff0c787195f339ce8829544a2ce3adb55550f514b88e"
     },
     "hyperframes-animation": {
       "source": "heygen-com/hyperframes",
@@ -86,13 +86,13 @@
       "source": "mastra-ai/skills",
       "sourceType": "github",
       "skillPath": "skills/mastra/SKILL.md",
-      "computedHash": "6482dad39fb72d1fe9d02078c15c3ee708774fd026a8557b4c7dc37fb554977a"
+      "computedHash": "a857fcd05f042b20ad3561df502073c43d2eb4b50b0795ee45ee7ce305104a97"
     },
     "minimum-impl": {
       "source": "ReoHakase/skills",
       "sourceType": "github",
       "skillPath": "minimum-impl/SKILL.md",
-      "computedHash": "c27fe9faed57827c5fd5513b287b9fdb915f8576e3917a22937a9a93c5806599"
+      "computedHash": "89e90625ad43004a6693ef6ffe5fc9aca6f688d0e59b06b430613df3346bfc98"
     },
     "openscreen-demo-video": {
       "source": "ReoHakase/skills",

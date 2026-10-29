@@ -156,6 +156,17 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 
 作業branchは`origin/staging`から作成し、stagingへPRを出す。共用stagingは[配備手順](deployment.md#stagingとreleaseの運用)に従って利用し、ローカル終了処理で停止・リセットしない。実装Issueの開発完了とmainへの本番releaseを区別する。
 
+## PRの検証と証拠
+
+共通のIssue・PR操作は[github-issue-pr-ops](../.agents/skills/github-issue-pr-ops/SKILL.md)、本文は[リポジトリのPRテンプレート](../.github/pull_request_template.md)、runnerは[変更に応じた検証](testing.md#変更に応じた検証)を使う。以下はTableCast固有の確認条件である。
+
+- PRのスクリーンショットはCSS viewportでiPhone 17を402×874、11インチiPad（A16）を1180×820（縦向き820×1180）、14インチMacBook Proを1512×982として描画する。対象に合う端末を選び、レスポンシブ変更は3種を揃える。撮影後の拡大縮小で代用しない。captionには端末・向き・viewport、実画面かfixtureかを記載し、実機検証と区別する。ユーザーが別寸法を指定した場合はその指定を優先する。
+- 通常の代表画面はローカルseed DBか、同じseed生成元・設定・商品画像を共用するStorybookで撮る。画像なし・失敗・境界値用の小さいtest-support fixtureを通常画面の代わりにしない。店舗ロゴ・商品・選択肢の画像decode完了を確認し、seed DB接続かseed由来の表示再現かをcaptionで区別する。
+- アニメーションや音声停止など時間変化が成果なら動画またはAnimated WebP/APNGを使う。音声の確認には音声を含む記録を使う。
+- 配備済みのStorybook・React Emailのpreview URLをPR本文の変更内容か確認結果へ記載する。両カタログが配備されるPRでは変更対象外のものも含めて入口を載せ、変更したStory・テンプレートと言語への直リンクも実ページか生成manifestで確認する。カタログを変更していなければその旨を添える。
+- [カタログ配備](deployment.md#prのstorybookメールカタログ)の通知・job・release情報から最新head SHAに対応する実URLを取得する。Cloudflare Access認証の要否、配備SHAと状態を示す。未配備・失敗・未確認なら理由を残し、push後は新しいheadへの配備を確認して更新する。
+- マージ後は[終了・残存確認](../AGENTS.md#完了の確認)を行い、開発用プロセス・コンテナを片付けてから完了報告する。
+
 ## Renovateによる依存更新
 
 設定は[Renovate設定](../.github/renovate.json5)で管理し、標準Mend Renovate GitHub Appをこのリポジトリへ接続する。botが作成・更新するDependency Dashboardに検出した依存、PR、保留・エラー・再実行を集約する。手動の追跡Issueや専用のIssue作成workflowは使わない。`.agents/skills/**`は更新対象から除き、skill内の参考workflowを実際のCI依存として更新しない。
