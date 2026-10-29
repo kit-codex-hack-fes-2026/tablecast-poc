@@ -41,10 +41,10 @@ export const posCatalogFixture: PosCatalog = {
   items: [
     {
       id: "tablecast-square-tea",
-      name: "Green tea",
+      name: "煎茶（店内）",
       price: 500,
       available: true,
-      options: [{ id: "tablecast-square-large", name: "Large", price: 100, available: true }],
+      options: [{ id: "tablecast-square-large", name: "大盛り", price: 100, available: true }],
     },
   ],
   issues: [],
@@ -132,11 +132,11 @@ export const posMappingCatalogFixture: PosCatalog = {
       ...mappingItem,
       options: [
         ...mappingItem.options,
-        { id: "tablecast-square-extra", name: "Extra large", price: 100, available: true },
-        { id: "tablecast-square-shared", name: "Shared customisation", price: 0, available: true },
+        { id: "tablecast-square-extra", name: "特大", price: 100, available: true },
+        { id: "tablecast-square-shared", name: "共通カスタマイズ", price: 0, available: true },
         {
           id: "tablecast-square-shared-next",
-          name: "Shared replacement",
+          name: "共通カスタマイズ（変更後）",
           price: 0,
           available: true,
         },
@@ -144,14 +144,14 @@ export const posMappingCatalogFixture: PosCatalog = {
     },
     {
       id: "tablecast-square-coffee",
-      name: "Coffee",
+      name: "ホットコーヒー",
       price: 500,
       available: true,
       options: [
-        { id: "tablecast-square-shared", name: "Shared customisation", price: 0, available: true },
+        { id: "tablecast-square-shared", name: "共通カスタマイズ", price: 0, available: true },
         {
           id: "tablecast-square-shared-next",
-          name: "Shared replacement",
+          name: "共通カスタマイズ（変更後）",
           price: 0,
           available: true,
         },
@@ -159,14 +159,14 @@ export const posMappingCatalogFixture: PosCatalog = {
     },
     {
       id: "tablecast-square-juice",
-      name: "Juice",
+      name: "オレンジジュース",
       price: 400,
       available: true,
-      options: [{ id: "tablecast-square-ice", name: "Ice", price: 0, available: true }],
+      options: [{ id: "tablecast-square-ice", name: "氷あり", price: 0, available: true }],
     },
     {
       id: "tablecast-square-cake",
-      name: "Cake",
+      name: "本日のケーキ",
       price: 600,
       available: true,
       options: [],

@@ -14,6 +14,7 @@ export function CustomisationContent({
   quantity,
   compact = true,
   showIllustration = true,
+  reserveImageSpace = false,
   className,
 }: {
   className?: string;
@@ -25,6 +26,7 @@ export function CustomisationContent({
   imageKind?: "illustration" | "photograph";
   name: string;
   quantity?: number;
+  reserveImageSpace?: boolean;
   showIllustration?: boolean;
 }) {
   return (
@@ -35,6 +37,7 @@ export function CustomisationContent({
         imageKind={imageKind}
         compact={compact}
         showIllustration={showIllustration}
+        reserveImageSpace={reserveImageSpace}
       />
       <span className="min-w-0">
         <span id={id ? `${id}-name` : undefined} className="block font-medium wrap-anywhere">

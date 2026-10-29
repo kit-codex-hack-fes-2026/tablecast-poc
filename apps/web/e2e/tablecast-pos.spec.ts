@@ -39,17 +39,12 @@ test("所有者のCookieでPOS設定と商品対応一覧をSSRし匿名へ漏�
     expect(response?.headers()["cache-control"]).toBe("private, no-store");
     await expect(ssrPage.getByRole("heading", { name: ja.pos_title, exact: true })).toBeVisible();
     await expect(ssrPage.getByRole("button", { name: ja.pos_connect, exact: true })).toBeDisabled();
-    const productRow = ssrPage
-      .getByRole("table")
-      .getByRole("row")
-      .filter({
-        has: ssrPage.getByRole("combobox", {
-          name: `${product.name.ja} · ${ja.pos_mapping_product}`,
-        }),
-      });
-    await expect(productRow).toHaveCount(1);
-    await expect(productRow).toContainText(product.name.ja);
-    await expect(productRow).toContainText(new Intl.NumberFormat("ja-JP").format(product.price));
+    const productGroup = ssrPage.getByRole("article", { name: product.name.ja, exact: true });
+    await expect(productGroup).toHaveCount(1);
+    await expect(
+      productGroup.getByRole("heading", { name: product.name.ja, exact: true }),
+    ).toBeVisible();
+    await expect(productGroup).toContainText(new Intl.NumberFormat("ja-JP").format(product.price));
 
     const pageErrors: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));

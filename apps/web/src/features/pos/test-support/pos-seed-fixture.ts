@@ -39,13 +39,13 @@ export const posSeedCatalog: PosCatalog = {
   locations: [{ id: "tablecast-location", name: catalog.storeName }],
   items: products.map((product) => ({
     id: `square-${product.id}`,
-    name: product.text.en.displayName,
+    name: product.text.ja.displayName,
     price: product.price,
     available: product.available,
     options: product.modifiers.flatMap((group) =>
       group.options.map((option) => ({
         id: `square-${option.id}`,
-        name: option.text.en.displayName,
+        name: option.text.ja.displayName,
         price: option.priceDelta,
         available: option.available,
       })),

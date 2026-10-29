@@ -1,6 +1,6 @@
 ---
 name: tablecast
-description: TableCastのメニュー・接客を資料から設定するとき、価格・売切・画像・翻訳を変更するとき、採用した提案を下書きに反映するとき、卓上ゲームを制作・登録・検証するときに使う。
+description: TableCastのメニュー・接客を資料から設定するとき、価格・売切・画像・翻訳を変更するとき、Squareの商品とカスタマイズを対応付けるとき、採用した提案を下書きに反映するとき、卓上ゲームを制作・登録・検証するときに使う。
 ---
 
 # TableCastを設定する
@@ -21,7 +21,7 @@ validate_gameの結果を確認し、返されたreviewUrlで試遊する。自�
 
 探索前から未接続と決めつけない。実際の認証エラー・tool不在・権限不足を確認した場合だけ必要な接続操作を伝える。利用者が認証したら再探索して同じ依頼を再開する。権限不足を別の認証情報で回避しない。
 
-提案・分析・確認だけの依頼では読み取りに留める。設定して、採用した案を反映してという依頼は下書き作成の許可であり、実行してよいかを繰り返し聞かない。公開申請は明示依頼がある場合だけrequest_publicationで確認画面を案内する。実際の公開は人が管理画面で承認する。
+提案・分析・確認だけの依頼では読み取りに留める。メニュー・接客を設定して、採用した案を反映してという依頼は下書き作成の許可であり、実行してよいかを繰り返し聞かない。Squareの対応付けを設定する依頼は、下記のPOS設定を保存する許可として扱う。公開申請は明示依頼がある場合だけrequest_publicationで確認画面を案内する。実際の公開は人が管理画面で承認する。
 
 ## 資料から取り込む
 
@@ -50,6 +50,17 @@ get_configurationの現行値、またはこの会話で編集中の下書きを
 - 採用済みの提案は対象と具体文を会話から引き継ぎ、現在設定と照合する。推奨価格を確認済みの事実として扱わない。
 
 接客指示が文書形式なら構造を保持し、update_draftへinstructionFormatVersion: 1を添える。本文だけの変更で書式を落とさず、実際の入力schemaに従う。
+
+## Squareの商品とカスタマイズを対応付ける
+
+この店の商品をSquareに対応付けてという依頼では、既存のPOS設定を読み、確かめられた対応を保存する。対応付けはメニューの下書きと別の店舗設定であり、保存するとPOS設定へ反映される。提案だけの依頼では保存しない。
+
+1. 実際のtool一覧とschemaを確認する。get_pos_settingsのsection:itemsで商品・カスタマイズ、section:mappingsで既存対応をそれぞれ取得し、nextCursorがなくなるまで同じsectionとlimitで続ける。storeId・settingsUrl・接続・revisionも確認する。owner/adminとtablecast:readが必要で、保存にはtablecast:writeも必要である。未接続ならsettingsUrlで管理者にSquare接続を案内し、接続後に同じ依頼を再開する。
+2. get_pos_catalogで対象locationIdの全entriesを収集し、kindとproductIdからvariationと親ごとのmodifierを組み立てる。必要ならlist_pos_devicesで端末も全page取得する。両toolのlimit・locationIdを継続取得中に変更しない。POS_CURSOR_STALEなら先頭から再収集し、設定revisionも読み直す。既存の店舗・端末は維持し、未選択や複数候補で判断できない項目だけ確認する。架空のIDやOAuth・接続解除・端末登録・決済toolを作らない。
+3. TableCastの日英名とSquareの原文名、itemName・variationName、容量、通常価格、売切状態を照合する。Squareの登録名は表示言語に合わせて翻訳・書換えしない。名前が似ているだけで一致とせず、価格や容量が異なる候補は保留する。APIの対応範囲はJPYの税込10%である。
+4. 商品はvariation IDへ、カスタマイズはそのvariationに属するmodifier IDへ対応付ける。同じlocal optionを複数商品が使う場合は、全ての親に有効な対応一つを共有する。保存配列はkindとlocalIdの組で一意にする。別商品で同じ外部modifierを再利用できる。異なる商品が同じvariationを使う候補や、同じ商品内で異なるoptionが同じmodifierを使う候補は重複として示し、曖昧な行だけ保留する。
+5. items全pageとmappings全pageを突合し、現存するlocal IDで、取得候補に存在する既存対応を依頼範囲外も保持する。廃止local IDや消失したSquare IDは区別し、依頼範囲の行は候補へ修正するか未対応として示す。範囲外で維持できない行が保存を妨げる場合はその行と選択肢を説明し、黙って解除して保存を通さない。取得したexpectedRevision・locationId・deviceIdと全mappingsをsave_pos_mappingsへ渡す。最大5,000件の全置換なので、変更行だけの送信や分割保存で他の対応を消さない。上限を超えるときは保留し、未対応行は配列へ含めない。競合なら最新設定から依頼差分を組み直し、会計中の固定を回避しない。
+6. 保存応答のconnection・mappingCountだけで完了にせず、get_pos_settingsのsection:mappingsを最後まで再取得してIDと保存値を照合する。対象店舗、保存した対応、保留・重複・要確認、settingsUrlを短く報告する。設定保存の成功を、実決済や実機の確認済みとして報告しない。未配備のtoolを実行済みと装わない。
 
 ## 商品画像
 

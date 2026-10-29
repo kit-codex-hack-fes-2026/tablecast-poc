@@ -102,6 +102,23 @@ stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、�
 
 `cast.instructions.ja/en` は旧文字列と版1の制限されたTiptap文書のunion。文書を保存する `update_draft` 呼出しでは `instructionFormatVersion: 1` を付ける。省略した旧クライアントは文書を含む下書きを更新できず、競合として拒否される。schemaと本文投影・上限はGUIと共通。[保存契約と展開条件](prompt-editor-design.md)を参照する。
 
+## Squareの商品対応
+
+POS設定はメニューの下書きとは別に保存する。owner/adminが`tablecast:read`で設定・カタログ・端末を取得し、`tablecast:write`で対応を保存する。GUIと同じPOS serviceが店舗境界、接続環境、会計中の固定、設定revisionを検証する。
+
+| tool                | 入出力                                                                                                                                                                                                     |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_pos_settings`  | sectionはitemsまたはmappings、limitは1〜100（既定50）、cursorで継続する。storeId・settingsUrl・接続・revision・total・nextCursorと、指定sectionのitemsまたはmappingsを返す。未接続でも設定画面を案内できる |
+| `get_pos_catalog`   | 任意のlocationId・limit・cursorを受け取り、kindがlocation/product/optionのentriesとtotal・nextCursor・issuesを返す。optionのproductIdは親variationを示し、原文名・通常価格・販売状態を保持する             |
+| `list_pos_devices`  | 任意のlocationId・limit・cursorを受け取り、端末ID・名前・locationIdとcanPair・total・nextCursorを返す。端末の登録は行わない                                                                                |
+| `save_pos_mappings` | expectedRevision・locationId・deviceId・全mappingsを受け取り、storeId・settingsUrl・保存後connection・mappingCountだけを返す                                                                               |
+
+settingsのitemsはkind・id・productId・日英名・価格・販売状態に限定し、画像や全configurationを複製しない。section:mappingsも最後まで取得し、itemsの現存local IDと突合する。limit・section・locationIdを変えずにnextCursorを辿り、POS_CURSOR_STALEなら先頭から再収集してrevisionも読み直す。各pageは共有serviceを再読取するため、ページ化だけでDB処理量が一定になるとは保証しない。
+
+agentはTableCastの日英名、Squareの登録名・itemName・variationName、容量、通常価格を照合し、確かめられた商品からvariationへ、その子のカスタマイズからmodifierへ対応付ける。Squareの名前は日本語登録なら英語UIでも原文を維持する。別の親に属するmodifierや不一致の価格を名前だけで対応済みにしない。
+
+保存は最大5,000件の全置換であり、現存するlocal IDと取得候補IDに一致する既存対応は依頼範囲外も含める。分割保存で追加する方式ではない。廃止local IDや消失したSquare IDは保存時に拒否されるため、該当行を区別し、依頼範囲では修正候補または未対応として明示する。範囲外で維持できない対応を黙って解除しない。親modifierの所属と価格は会計前のquoteで厳密に照合する。共有local optionはkindとlocalIdの組で一件にし、別商品での外部modifier再利用を妨げない。未対応行は配列へ含めず、曖昧な行だけ保留する。競合時は最新revisionを再取得して差分を組み直し、保存後も設定を再取得して確認する。接続・再認証・接続解除・端末登録・会計は設定画面で行い、今回のMCP toolには含めない。対応範囲はJPYの税込10%で、実接続・実決済の確認は設定保存の検証と分ける。
+
 ## 店舗統計
 
 `get_statistics` はowner/admin向けの読取りtoolで、`tablecast:read` により概要・商品・カスタマイズの統計を取得する。from/toで指定した期間内に閉卓した通常来店を対象にする。詳細は[指標・期間・ページング](statistics.md)を参照する。分析だけの依頼で下書きを作らず、採用された設定変更に既存の下書きtoolを使う。

@@ -92,17 +92,23 @@ it("商品対応はseedの商品とカスタマイズを小さな一覧で示し
   await Promise.all(images.map((image) => image.decode()));
   expect(images.every((image) => image.naturalWidth > 0)).toBe(true);
   expect(document.querySelectorAll('article[data-theme-part="product-card"]').length).toBe(0);
-  const table = page.getByRole("table");
-  await expect.element(table.getByRole("columnheader", { name: "TableCast" })).toBeVisible();
-  await expect.element(table.getByRole("columnheader", { name: "Square" })).toBeVisible();
-  await expect
-    .element(table.getByRole("columnheader", { name: ja.pos_mapping_status }))
-    .toBeVisible();
+  expect(page.getByRole("article").elements()).toHaveLength(posSeedSettings.products.length);
+  for (const product of posSeedSettings.products) {
+    const group = page.getByRole("article", { name: product.name.ja, exact: true });
+    await expect
+      .element(group.getByRole("heading", { name: product.name.ja, exact: true }))
+      .toBeVisible();
+    expect(
+      group
+        .getByRole("list", { name: ja.pos_mapping_customisations })
+        .getByRole("listitem")
+        .elements(),
+    ).toHaveLength(product.options.length);
+  }
   const rows = posSeedSettings.products.reduce(
     (count, product) => count + 1 + product.options.length,
     0,
   );
-  expect(table.getByRole("row").elements()).toHaveLength(Math.min(rows, 20) + 1);
   await expect
     .element(
       page.getByRole("button", { name: new RegExp(`^${ja.pos_mapping_filter_all}\\s*${rows}$`) }),
@@ -115,7 +121,11 @@ it("商品対応はseedの商品とカスタマイズを小さな一覧で示し
   const search = page.getByRole("searchbox", { name: ja.pos_mapping_search });
   heading.element().scrollIntoView({ block: "start" });
   await new Promise(requestAnimationFrame);
-  expect(table.getByRole("row").nth(1).element().getBoundingClientRect().height).toBeLessThan(100);
+  const product = posSeedSettings.products[0];
+  if (!product) throw new Error("商品fixtureがありません");
+  const entry = document.querySelector(`[data-row-id="${product.id}:product:${product.id}"]`);
+  if (!entry) throw new Error("商品の親行がありません");
+  expect(entry.getBoundingClientRect().height).toBeLessThan(100);
   await capture("tablecast-pos-mapping-ja");
   for (const [width, height, suffix] of [
     [402, 874, "mobile"],
@@ -129,6 +139,70 @@ it("商品対応はseedの商品とカスタマイズを小さな一覧で示し
     await capture(`tablecast-pos-mapping-${suffix}-ja`);
   }
 });
+
+it("画像がない商品とカスタマイズも同じ階層の文字左端を揃え、子だけを字下げする", async () => {
+  await page.viewport(1180, 820);
+  client.setQueryData(
+    posCatalogOptions("tablecast-store", "tablecast-location").queryKey,
+    posSeedCatalog,
+  );
+  client.setQueryData(
+    posDevicesOptions("tablecast-store", "tablecast-location").queryKey,
+    posDevicesFixture,
+  );
+  const [pictured, unpictured] = posSeedSettings.products;
+  const picturedOption = pictured?.options.find((option) => option.imageKey);
+  const unpicturedOption = pictured?.options.find((option) => !option.imageKey);
+  if (!pictured?.imageKey || !unpictured || !picturedOption || !unpicturedOption)
+    throw new Error("画像あり・なしを比べるfixtureがありません");
+  const settings = {
+    ...posSeedSettings,
+    products: [
+      { ...pictured, options: [unpicturedOption, picturedOption] },
+      { ...unpictured, imageKey: null, options: [] },
+    ],
+  };
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    unexpected.push(new Request(input, init).url);
+    return Response.json({}, { status: 500 });
+  });
+  await render(
+    providers(<StorePosSettings storeId="tablecast-store" canEdit settings={settings} />, "ja"),
+  );
+  const first = page.getByRole("article", { name: pictured.name.ja, exact: true });
+  const productX = first
+    .getByRole("heading", { name: pictured.name.ja, exact: true })
+    .element()
+    .getBoundingClientRect().left;
+  const missingX = page
+    .getByRole("article", { name: unpictured.name.ja, exact: true })
+    .getByRole("heading", { name: unpictured.name.ja, exact: true })
+    .element()
+    .getBoundingClientRect().left;
+  expect(Math.abs(productX - missingX)).toBeLessThanOrEqual(1);
+  const optionX = first
+    .getByText(picturedOption.name.ja, { exact: true })
+    .element()
+    .getBoundingClientRect().left;
+  const missingOptionX = first
+    .getByText(unpicturedOption.name.ja, { exact: true })
+    .element()
+    .getBoundingClientRect().left;
+  expect(Math.abs(optionX - missingOptionX)).toBeLessThanOrEqual(1);
+  expect(optionX).toBeGreaterThan(productX);
+  page
+    .getByRole("heading", { name: ja.pos_mapping, exact: true })
+    .element()
+    .scrollIntoView({ block: "start" });
+  expect(
+    page
+      .getByRole("article", { name: unpictured.name.ja, exact: true })
+      .element()
+      .getBoundingClientRect().bottom,
+  ).toBeLessThan(window.innerHeight);
+  await capture("tablecast-pos-mapping-alignment-ja");
+});
+
 it("iPad縦の英語POS会計は必要時に既存の注文明細と合計を開く", async () => {
   await page.viewport(820, 1180);
   const data = posSeedCheckout("en");

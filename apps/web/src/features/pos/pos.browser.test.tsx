@@ -414,10 +414,22 @@ it("商品と選択肢の名前を管理言語へ切り替えても入力中のS
   await expect
     .element(page.getByRole("combobox", { name: `Green tea · ${en.pos_mapping_product}` }))
     .toBeVisible();
+  expect(
+    page
+      .getByRole("combobox", { name: `Green tea · ${en.pos_mapping_product}` })
+      .element()
+      .querySelector("option:checked")?.textContent,
+  ).toContain("煎茶（店内）");
   await expect.element(page.getByText("Large", { exact: true })).toBeVisible();
   await expect
     .element(page.getByRole("combobox", { name: `Green tea · Large · ${en.pos_mapping_option}` }))
     .toHaveValue("tablecast-square-large");
+  expect(
+    page
+      .getByRole("combobox", { name: `Green tea · Large · ${en.pos_mapping_option}` })
+      .element()
+      .querySelector("option:checked")?.textContent,
+  ).toContain("大盛り");
   await page.getByRole("button", { name: "日本語", exact: true }).click();
   await expect
     .element(page.getByRole("combobox", { name: `煎茶 · ${ja.pos_mapping_product}` }))

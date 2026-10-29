@@ -96,6 +96,13 @@ it("非表示行を含む全体件数を保ち、未対応・重複・要確認�
   const search = page.getByRole("searchbox", { name: ja.pos_mapping_search });
   await search.fill("氷");
   await expect.element(select("氷", "option", "ジュース")).toBeVisible();
+  const juice = page.getByRole("article", { name: "ジュース", exact: true });
+  await expect.element(juice.getByRole("heading", { name: "ジュース", exact: true })).toBeVisible();
+  await expect
+    .element(juice.getByRole("list", { name: ja.pos_mapping_customisations }))
+    .toBeVisible();
+  expect(juice.getByRole("listitem").elements()).toHaveLength(1);
+  await expect.element(select("ジュース", "product")).toBeVisible();
   await expect.element(select("ケーキ", "product")).not.toBeInTheDocument();
   await expect.element(filter(ja.pos_mapping_filter_all, 9)).toBeVisible();
   await expect.element(filter(ja.pos_mapping_filter_duplicate, 4)).toBeVisible();
@@ -171,10 +178,15 @@ it("親商品を未対応にすると既存の選択肢を保持して入力を�
   expect(large.element().querySelector('option[value="tablecast-square-extra"]')).toBeNull();
   await expect.element(select("共通の選択肢", "option", "コーヒー")).toBeEnabled();
   await expect.element(filter(ja.pos_mapping_filter_review, 4)).toBeVisible();
-  const status = page.getByRole("row").filter({ has: large }).getByRole("cell").nth(1);
-  await expect
-    .element(status.getByText(ja.pos_mapping_parent_required, { exact: true }))
-    .toBeVisible();
+  const entry = page
+    .getByRole("article", { name: "煎茶", exact: true })
+    .getByRole("listitem")
+    .filter({ has: large });
+  expect(
+    [...entry.element().querySelectorAll("p")].some(
+      (paragraph) => paragraph.textContent === ja.pos_mapping_parent_required,
+    ),
+  ).toBe(true);
   await select("煎茶", "product").selectOptions("tablecast-square-tea");
   await expect.element(large).toBeEnabled();
   await expect.element(large).toHaveValue("tablecast-square-large");

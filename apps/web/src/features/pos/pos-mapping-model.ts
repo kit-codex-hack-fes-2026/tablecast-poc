@@ -19,6 +19,11 @@ export type PosMappingRow = {
   product: Product;
   remote: Candidate | undefined;
 };
+export type PosMappingGroup = {
+  id: string;
+  options: PosMappingRow[];
+  product: PosMappingRow;
+};
 
 /** 同じlocal optionは複数商品で使えても、保存する対応は一つに保つ。 */
 export function posMappingValues(settings: PosSettings) {
@@ -122,4 +127,29 @@ export function matchesPosMapping(row: PosMappingRow, filter: PosMappingFilter) 
     default:
       return false;
   }
+}
+
+/** 子だけが条件に一致しても親商品を残し、ページ分割で親子を切り離さない。 */
+export function posMappingGroups(
+  rows: PosMappingRow[],
+  filter: PosMappingFilter,
+  search: string,
+): PosMappingGroup[] {
+  const groups = new Map<string, PosMappingGroup>();
+  for (const row of rows) {
+    if (!row.option) groups.set(row.product.id, { id: row.product.id, product: row, options: [] });
+    else groups.get(row.product.id)?.options.push(row);
+  }
+  const query = search.trim().toLocaleLowerCase();
+  const matches = (row: PosMappingRow) =>
+    matchesPosMapping(row, filter) &&
+    (!query ||
+      [row.product.name.ja, row.product.name.en, row.name.ja, row.name.en, row.remote?.name]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(query));
+  return [...groups.values()].flatMap((group) => {
+    const options = group.options.filter(matches);
+    return matches(group.product) || options.length ? [{ ...group, options }] : [];
+  });
 }

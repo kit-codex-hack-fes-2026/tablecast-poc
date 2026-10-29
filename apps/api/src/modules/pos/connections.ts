@@ -5,6 +5,7 @@ import type { Actor } from "../auth/model";
 import type { posConfigurationSchema, PosConnection, PosSettings } from "./model";
 import { posCheckouts, posConnections, posOauthStates } from "../../db/pos-schema";
 import { ensure } from "../../platform/errors";
+import { requireManager, requireManagerRead } from "../auth/policy";
 import { findStoreMembership } from "../auth/queries";
 import { getCatalog } from "../catalog/queries";
 import {
@@ -61,7 +62,8 @@ export function activeConnectionCheckout(services: ApiServices, connectionId: st
     );
 }
 export async function getPosSettings(services: ApiServices, actor: Actor): Promise<PosSettings> {
-  requirePosStaff(actor);
+  if (actor.kind === "mcp") requireManagerRead(actor);
+  else requirePosStaff(actor);
   const [connection, catalog] = await Promise.all([
     findPosConnection(services, actor.storeId),
     getCatalog(services, actor.storeId),
@@ -92,7 +94,7 @@ export async function getPosSettings(services: ApiServices, actor: Actor): Promi
   };
 }
 export async function getPosCatalog(services: ApiServices, actor: Actor, locationId?: string) {
-  requirePosStaff(actor, true);
+  requireManagerRead(actor);
   const connection = await findPosConnection(services, actor.storeId);
   ensure(connection, "POS_CONNECTION_REQUIRED", 422);
   const adapter = await connectedAdapter(services, connection);
@@ -108,7 +110,7 @@ export async function savePosSettings(
   actor: Actor,
   input: z.infer<typeof posConfigurationSchema>,
 ) {
-  requirePosStaff(actor, true);
+  requireManager(actor);
   const connection = await findPosConnection(services, actor.storeId);
   ensure(connection?.status === "connected", "POS_CONNECTION_REQUIRED", 422);
   const settings = await getPosSettings(services, actor);

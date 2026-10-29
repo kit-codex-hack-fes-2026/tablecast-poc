@@ -244,6 +244,8 @@ function catalogItems(
       {
         id: variation.id,
         name: [item.itemData.name ?? item.id, data.name].filter(Boolean).join(" / "),
+        itemName: item.itemData.name ?? null,
+        variationName: data.name ?? null,
         price,
         available: data.sellable !== false && !override?.soldOut && price !== null,
         options,

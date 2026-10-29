@@ -1,11 +1,13 @@
 import { ArrowDownUp, ListFilter, RotateCcw, Search } from "lucide-react";
 import { type ReactNode, useId } from "react";
+import { cn } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
 /** 検索・条件・並べ替えを同じ場所へまとめる。値とリセット範囲は各一覧が所有する。 */
 export function CollectionToolbar({
+  className,
   search,
   filters,
   sort,
@@ -13,6 +15,7 @@ export function CollectionToolbar({
   resetDisabled,
   disabled = false,
 }: {
+  className?: string;
   disabled?: boolean;
   filters?: ReactNode;
   onReset: () => void;
@@ -28,7 +31,9 @@ export function CollectionToolbar({
   const { t } = useI18n();
   const id = useId();
   return (
-    <div className="flex flex-wrap items-end gap-4 rounded-2xl bg-surface-subtle p-4">
+    <div
+      className={cn("flex flex-wrap items-end gap-4 rounded-2xl bg-surface-subtle p-4", className)}
+    >
       {search && (
         <label
           className="flex min-w-0 basis-60 grow flex-col gap-2 text-sm font-medium"

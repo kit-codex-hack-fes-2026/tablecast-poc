@@ -150,6 +150,8 @@ describe("Squareの商品候補", () => {
         {
           id: "latte",
           name: "ラテ / 標準",
+          itemName: "ラテ",
+          variationName: "標準",
           price: 550,
           available: true,
           options: [
@@ -160,6 +162,8 @@ describe("Squareの商品候補", () => {
         {
           id: "variable",
           name: "ラテ / 変動",
+          itemName: "ラテ",
+          variationName: "変動",
           price: null,
           available: false,
           options: [

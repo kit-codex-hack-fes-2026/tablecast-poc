@@ -40,7 +40,7 @@ const moduleContracts = {
   mcp: [],
   media: ["model", "service", "queries"],
   orders: ["queries", "model", "use-cases/cart", "use-cases/confirmation"],
-  pos: ["model"],
+  pos: ["connections", "devices", "model"],
   statistics: ["model", "service"],
   stores: ["queries"],
   tables: [

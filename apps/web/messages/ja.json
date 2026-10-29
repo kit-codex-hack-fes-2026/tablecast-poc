@@ -1727,5 +1727,6 @@
   "pos_mapping_filter_review": "要確認",
   "pos_mapping_unchecked": "未確認",
   "pos_mapping_duplicate_with": "重複先: {names}",
-  "pos_mapping_parent_required": "先に商品を対応付けてください"
+  "pos_mapping_parent_required": "先に商品を対応付けてください",
+  "pos_mapping_customisations": "カスタマイズ"
 }

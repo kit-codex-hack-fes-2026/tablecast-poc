@@ -48,6 +48,8 @@ export type PosIssue = z.infer<typeof posIssueSchema>;
 const posCatalogItemSchema = z.object({
   id: z.string(),
   name: z.string(),
+  itemName: z.string().nullable().optional(),
+  variationName: z.string().nullable().optional(),
   price: z.number().int().nullable(),
   available: z.boolean(),
   options: z.array(

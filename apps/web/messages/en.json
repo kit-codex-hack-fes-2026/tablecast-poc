@@ -1727,5 +1727,6 @@
   "pos_mapping_filter_review": "Needs review",
   "pos_mapping_unchecked": "Unchecked",
   "pos_mapping_duplicate_with": "Also used by: {names}",
-  "pos_mapping_parent_required": "Map the product first"
+  "pos_mapping_parent_required": "Map the product first",
+  "pos_mapping_customisations": "Customisations"
 }

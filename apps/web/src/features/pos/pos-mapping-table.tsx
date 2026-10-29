@@ -1,9 +1,11 @@
 import type { PosCatalog, PosSettings } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
+import { useTable } from "@tanstack/react-table";
 import { useState } from "react";
-import type { DataTableColumn } from "../../components/data-table-model";
+import { CollectionToolbar } from "../../components/collection-toolbar";
 import { CustomisationContent, CustomisationPrice } from "../../components/customisation-content";
-import { DataTable } from "../../components/data-table";
+import { TablePagination } from "../../components/data-table-controls";
+import { type DataTableColumn, features } from "../../components/data-table-model";
 import { MenuOptionImage } from "../../components/menu-option-image";
 import { Money } from "../../components/money";
 import { Badge } from "../../components/ui/badge";
@@ -13,21 +15,16 @@ import { m } from "../../paraglide/messages";
 import {
   matchesPosMapping,
   type PosMappingFilter,
+  type PosMappingGroup,
+  posMappingGroups,
   type PosMappingRow,
   posMappingRows,
 } from "./pos-mapping-model";
 
 const filters = ["all", "mapped", "unmapped", "duplicate", "review"] as const;
-type MappingTableRow = PosMappingRow & { renderMapping: (row: PosMappingRow) => ReactNode };
-function SourceCell({ row }: { row: { original: MappingTableRow } }) {
-  return <MappingSource row={row.original} />;
-}
-function SquareCell({ row }: { row: { original: MappingTableRow } }) {
-  return <div className="w-96 max-w-96">{row.original.renderMapping(row.original)}</div>;
-}
-function StatusCell({ row }: { row: { original: MappingTableRow } }) {
-  return <MappingStatus row={row.original} />;
-}
+const columns: DataTableColumn<PosMappingGroup>[] = [
+  { id: "product", accessorFn: (group) => group.product.name.ja },
+];
 
 export function PosMappingTable({
   products,
@@ -44,107 +41,166 @@ export function PosMappingTable({
   const [filter, setFilter] = useState<PosMappingFilter>("all");
   const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
-  const rows = posMappingRows(products, mappings, catalog).map((row) => ({
-    ...row,
-    renderMapping,
-  }));
-  const columns: DataTableColumn<MappingTableRow>[] = [
-    {
-      id: "local",
-      header: "TableCast",
-      meta: { rowHeader: true },
-      enableSorting: false,
-      accessorFn: (row) =>
-        [row.product.name.ja, row.product.name.en, row.name.ja, row.name.en, row.remote?.name].join(
-          " ",
+  const rows = posMappingRows(products, mappings, catalog);
+  const groups = posMappingGroups(rows, filter, search);
+  const table = useTable({
+    features,
+    data: groups,
+    columns,
+    getRowId: (group) => group.id,
+    state: {
+      pagination: {
+        ...pagination,
+        pageIndex: Math.min(
+          pagination.pageIndex,
+          Math.max(0, Math.ceil(groups.length / pagination.pageSize) - 1),
         ),
-      cell: SourceCell,
+      },
     },
-    {
-      id: "square",
-      header: "Square",
-      enableSorting: false,
-      cell: SquareCell,
-    },
-    {
-      id: "status",
-      header: t("pos_mapping_status"),
-      enableSorting: false,
-      cell: StatusCell,
-    },
-  ];
+    onPaginationChange: setPagination,
+    autoResetPageIndex: false,
+    manualFiltering: true,
+  });
   return (
-    <DataTable
-      data={rows.filter((row) => matchesPosMapping(row, filter))}
-      columns={columns}
-      state={{ globalFilter: search, pagination }}
-      onGlobalFilterChange={(next) => {
-        setSearch(next);
-        setPagination((value) => ({ ...value, pageIndex: 0 }));
-      }}
-      onPaginationChange={setPagination}
-      getRowId={(row) => row.id}
-      tableLabel={t("pos_mapping")}
-      searchLabel={t("pos_mapping_search")}
-      filters={
-        <div className="flex flex-wrap gap-2" role="group" aria-label={t("pos_mapping_status")}>
-          {filters.map((value) => (
-            <Button
-              key={value}
-              type="button"
-              size="sm"
-              variant={filter === value ? "secondary" : "outline"}
-              aria-pressed={filter === value}
-              onClick={() => {
-                setFilter(value);
-                setPagination((page) => ({ ...page, pageIndex: 0 }));
-              }}
-            >
-              {t(`pos_mapping_filter_${value}`)}
-              <span className="tabular-nums">
-                {rows.filter((row) => matchesPosMapping(row, value)).length}
-              </span>
-            </Button>
+    <div className="space-y-3">
+      <CollectionToolbar
+        className="max-sm:gap-3 max-sm:[&>fieldset]:basis-full"
+        search={{
+          label: t("pos_mapping_search"),
+          value: search,
+          onChange: (value) => {
+            setSearch(value);
+            setPagination((page) => ({ ...page, pageIndex: 0 }));
+          },
+        }}
+        filters={
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t("pos_mapping_status")}>
+            {filters.map((value) => (
+              <Button
+                key={value}
+                type="button"
+                size="sm"
+                variant={filter === value ? "secondary" : "outline"}
+                aria-pressed={filter === value}
+                onClick={() => {
+                  setFilter(value);
+                  setPagination((page) => ({ ...page, pageIndex: 0 }));
+                }}
+              >
+                {t(`pos_mapping_filter_${value}`)}
+                <span className="tabular-nums">
+                  {rows.filter((row) => matchesPosMapping(row, value)).length}
+                </span>
+              </Button>
+            ))}
+          </div>
+        }
+        resetDisabled={filter === "all" && !search}
+        onReset={() => {
+          setFilter("all");
+          setSearch("");
+          setPagination((page) => ({ ...page, pageIndex: 0 }));
+        }}
+      />
+      <div className="hidden grid-cols-[minmax(0,1fr)_minmax(16rem,24rem)_minmax(7rem,12rem)] gap-4 px-3 text-sm text-muted-foreground @3xl:grid">
+        <span>TableCast</span>
+        <span>Square</span>
+        <span>{t("pos_mapping_status")}</span>
+      </div>
+      {groups.length ? (
+        <div className="space-y-3">
+          {table.getRowModel().rows.map(({ original: group }) => (
+            <MappingProduct key={group.id} group={group} renderMapping={renderMapping} />
           ))}
         </div>
-      }
-      filtersActive={filter !== "all"}
-      onReset={() => {
-        setFilter("all");
-        setSearch("");
-        setPagination((page) => ({ ...page, pageIndex: 0 }));
-      }}
-    />
+      ) : (
+        <p className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">
+          {t("common_no_results")}
+        </p>
+      )}
+      <TablePagination table={table} pending={false} />
+    </div>
+  );
+}
+
+function MappingProduct({
+  group,
+  renderMapping,
+}: {
+  group: PosMappingGroup;
+  renderMapping: (row: PosMappingRow) => ReactNode;
+}) {
+  const { t, locale } = useI18n();
+  return (
+    <article
+      aria-label={group.product.name[locale]}
+      className="min-w-0 rounded-xl border border-border bg-card"
+    >
+      <MappingEntry row={group.product} renderMapping={renderMapping} />
+      {group.options.length > 0 && (
+        <div className="mx-3 mb-3 rounded-lg bg-surface-subtle py-2">
+          <h4 className="px-3 text-sm font-medium text-muted-foreground">
+            {t("pos_mapping_customisations")}
+          </h4>
+          <ul aria-label={t("pos_mapping_customisations")} className="ml-3 pl-2">
+            {group.options.map((option) => (
+              <MappingEntry key={option.id} as="li" row={option} renderMapping={renderMapping} />
+            ))}
+          </ul>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function MappingEntry({
+  as: Tag = "div",
+  row,
+  renderMapping,
+}: {
+  as?: "div" | "li";
+  renderMapping: (row: PosMappingRow) => ReactNode;
+  row: PosMappingRow;
+}) {
+  return (
+    <Tag
+      data-row-id={row.id}
+      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-3 py-2 @3xl:grid-cols-[minmax(0,1fr)_minmax(16rem,24rem)_minmax(7rem,12rem)]"
+    >
+      <div className="col-span-2 min-w-0 @3xl:col-span-1">
+        <MappingSource row={row} />
+      </div>
+      <div className="min-w-0">{renderMapping(row)}</div>
+      <MappingStatus row={row} />
+    </Tag>
   );
 }
 
 function MappingSource({ row }: { row: PosMappingRow }) {
   const { locale, t } = useI18n();
   return (
-    <div className="flex min-w-60 max-w-96 items-center gap-3 py-1">
+    <div className="flex min-w-0 items-center gap-3">
       {row.option ? (
-        <div className="min-w-0 flex-1 pl-4">
-          <span className="mb-1 block text-xs text-muted-foreground">
-            {row.product.name[locale]}
-          </span>
-          <CustomisationContent
-            name={row.name[locale]}
-            imageKey={row.option.imageKey}
-            imageKind={row.option.imageKind}
-            compact
-          />
-        </div>
+        <CustomisationContent
+          className="min-w-0 flex-1"
+          name={row.name[locale]}
+          imageKey={row.option.imageKey}
+          imageKind={row.option.imageKind}
+          reserveImageSpace
+          compact
+        />
       ) : (
         <>
           <MenuOptionImage
             imageKey={row.product.imageKey}
             imageKind={row.product.imageKind}
+            reserveImageSpace
             compact
           />
-          <div className="min-w-0 flex-1 font-medium wrap-anywhere">
-            {row.name[locale]}
+          <div className="min-w-0 flex-1 wrap-anywhere">
+            <h3 className="font-medium">{row.name[locale]}</h3>
             {!row.product.available && (
-              <span className="ml-2 text-xs text-muted-foreground">{t("kiosk_sold_out")}</span>
+              <span className="text-sm text-muted-foreground">{t("kiosk_sold_out")}</span>
             )}
           </div>
         </>
