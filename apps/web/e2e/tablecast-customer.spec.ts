@@ -262,6 +262,13 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     ).toHaveCount(2);
     const privateVisit = await first.reload();
     expect(privateVisit?.headers()["cache-control"]).toBe("private, no-store");
+    const companionImages = first
+      .getByRole("heading", { name: ja.customer_companions, exact: true })
+      .locator("..")
+      .locator("img");
+    await expect(companionImages).toHaveCount(2);
+    for (const portrait of await companionImages.all())
+      await expect(portrait).not.toHaveJSProperty("naturalWidth", 0);
     await expect(first.locator('head link[rel="manifest"]')).toHaveAttribute(
       "href",
       `/api/member-stores/${storeId}/manifest.webmanifest`,
@@ -282,7 +289,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
         })
       ).ok(),
     ).toBe(true);
-    await first.getByRole("link", { name: ja.customer_card, exact: true }).click();
+    await first.getByRole("link", { name: ja.customer_card_view, exact: true }).click();
     await expect(first.getByRole("region", { name: ja.customer_card, exact: true })).toBeVisible();
     await expect(first.getByText("10 pt", { exact: true })).toBeVisible();
     await expect(first.getByRole("heading", { name: ja.customer_current_visit })).toBeVisible();
@@ -296,7 +303,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     await capture(first, "07c-phone-choose-visit");
     await first.getByRole("link", { name: /T10/ }).click();
     await expect(first).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));
-    await first.getByRole("link", { name: ja.customer_card, exact: true }).click();
+    await first.getByRole("link", { name: ja.customer_card_view, exact: true }).click();
     await first.getByRole("link", { name: ja.customer_points_history, exact: true }).click();
     await expect(
       first.getByRole("heading", { name: ja.customer_points, exact: true }),
@@ -304,7 +311,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     await expect(first.getByText("+10 pt", { exact: true })).toBeVisible();
     await capture(first, "08-phone-points");
     await first.getByRole("link", { name: new RegExp(ja.customer_back_to_store) }).click();
-    await first.getByRole("link", { name: ja.customer_memories, exact: true }).click();
+    await first.getByRole("link", { name: ja.customer_memories_view, exact: true }).click();
     await expect(first.getByText(ja.customer_memories_note)).toBeVisible();
     await expect(first.getByRole("textbox")).toHaveCount(0);
     await capture(first, "09a-phone-automatic-memory");
@@ -312,11 +319,14 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
     const memory = "辛さは控えめ、冷たいお茶が好きです。";
     await first.getByRole("textbox", { name: ja.customer_memory_content }).fill(memory);
     await capture(first, "09-phone-memory-editor");
-    await first.getByRole("button", { name: ja.account_save, exact: true }).click();
+    await first.getByRole("button", { name: ja.customer_save, exact: true }).click();
     await expect(first.getByRole("listitem").filter({ hasText: memory })).toBeVisible();
     await capture(first, "10-phone-memories");
     await first.getByRole("link", { name: new RegExp(ja.customer_back_to_store) }).click();
     await first.getByRole("link", { name: new RegExp("T10") }).click();
+    await expect(first).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));
+    await expect(owned.getByRole("button", { name: ja.coupon_request, exact: true })).toBeVisible();
+    await first.evaluate(() => scrollTo(0, 0));
     await expect(owned.getByRole("heading", { name: couponTitle, exact: true })).toBeVisible();
     const couponImage = owned.getByRole("img", { name: couponTitle, exact: true });
     await expect(couponImage).toBeVisible();
@@ -386,7 +396,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
         .filter({ hasText: ja.customer_disconnected }),
     ).toBeVisible();
     await capture(first, "16-phone-visit-complete");
-    await first.getByRole("link", { name: ja.customer_card, exact: true }).click();
+    await first.getByRole("link", { name: ja.customer_card_view, exact: true }).click();
     await expect(first.getByRole("heading", { name: ja.customer_previous_visits })).toBeVisible();
     await capture(first, "17-phone-visit-history");
     const next = await open();

@@ -241,7 +241,7 @@ it("取得失敗から再試行し、狭い日本語画面でも操作できる"
     true,
   );
   await page.viewport(390, 844);
-  await userEvent.click(page.getByRole("button", { name: "再試行" }));
+  await userEvent.click(page.getByRole("button", { name: "もう一度試す" }));
   await expect.element(page.getByText("AI音声接客を開始できません")).toBeVisible();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   await page.screenshot({

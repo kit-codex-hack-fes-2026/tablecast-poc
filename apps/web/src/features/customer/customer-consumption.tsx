@@ -139,7 +139,7 @@ export function ConsumptionEditor({
               )}
             </form.Field>
             <div className="flex flex-wrap gap-3">
-              <form.SubmitButton>{t("account_save")}</form.SubmitButton>
+              <form.SubmitButton>{t("customer_save")}</form.SubmitButton>
 
               <Button
                 type="button"
@@ -152,7 +152,7 @@ export function ConsumptionEditor({
                   requestAnimationFrame(() => trigger.current?.focus());
                 }}
               >
-                {t("common_cancel")}
+                {t("customer_cancel")}
               </Button>
             </div>
           </form.Form>

@@ -178,7 +178,7 @@ it("続きの失敗でも既存履歴を残し、再試行と公開版のキー�
   await expect.element(page.getByRole("alert")).toBeVisible();
   await expect.element(old).toBeVisible();
   failNext = false;
-  await page.getByRole("button", { name: "再試行", exact: true }).click();
+  await page.getByRole("button", { name: "もう一度試す", exact: true }).click();
   await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
   old.element().focus();
   await userEvent.keyboard("{Enter}");

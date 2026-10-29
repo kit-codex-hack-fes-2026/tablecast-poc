@@ -42,7 +42,7 @@ for (const locale of ["ja", "en"] as const) {
       390,
     );
     await page.reload();
-    await page.getByRole("link", { name: labels.customer_memories, exact: true }).click();
+    await page.getByRole("link", { name: labels.customer_memories_view, exact: true }).click();
     await expect(
       page.getByRole("heading", { name: labels.customer_memories, exact: true }),
     ).toBeVisible();

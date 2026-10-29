@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
-import { page, userEvent } from "vitest/browser";
+import { page, server, userEvent } from "vitest/browser";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
@@ -46,7 +46,8 @@ const couponRules = couponRuleSchema.parse({
   imageKind: image.imageKind,
   imageSource: image.imageSource,
 });
-beforeEach(() => {
+beforeEach(async () => {
+  await server.commands.tablecastLogoFixture(true);
   initialViewport = { width: window.innerWidth, height: window.innerHeight };
   paths = [];
   writes = [];
@@ -68,7 +69,12 @@ beforeEach(() => {
               ? "卓上喫茶 / Tablecast Coffee and Seasonal Kitchen"
               : "川沿い食堂",
           branding: {
-            logo: image,
+            logo: {
+              ...image,
+              imageKey: `tablecast/uploads/${"b".repeat(64)}.webp`,
+              alt: { ja: "正方形の店舗アイコン", en: "Square venue icon" },
+            },
+            banner: image,
             membershipCard: {
               tone: "green",
               imageFit: "contain",
@@ -145,6 +151,7 @@ afterEach(async () => {
   await cleanup();
   client.clear();
   vi.unstubAllGlobals();
+  await server.commands.tablecastLogoFixture(false);
   await page.viewport(initialViewport.width, initialViewport.height);
 });
 
@@ -206,7 +213,7 @@ it.each(["ja", "en"] as const)(
     await expect.element(page.getByRole("img", { name: image.alt[locale] })).toBeVisible();
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(402);
     await expect
-      .element(page.getByRole("link", { name: labels.customer_memories, exact: true }))
+      .element(page.getByRole("link", { name: labels.customer_memories_view, exact: true }))
       .toHaveAttribute("href", "/member/tablecast-first/memories");
     await page.screenshot({ path: `../../../test-results/tablecast-member-card-${locale}.png` });
   },
@@ -246,7 +253,7 @@ it("同意前の店舗ホームはポイント・券・来店を取得しない"
 
 it("店舗を切り替えると残高・保有券と設定の確認状態を引き継がない", async () => {
   const router = await show();
-  await page.getByText(ja.customer_preferences, { exact: true }).click();
+  await page.getByText(ja.customer_settings_open, { exact: true }).click();
   await page.getByRole("checkbox", { name: ja.customer_save_memories, exact: true }).click();
   await page.getByRole("button", { name: ja.customer_leave, exact: true }).click();
   await expect.element(page.getByRole("button", { name: ja.customer_leave_confirm })).toBeVisible();
@@ -256,7 +263,7 @@ it("店舗を切り替えると残高・保有券と設定の確認状態を引�
   await expect
     .element(page.getByText("季節のデザートを一皿", { exact: true }))
     .not.toBeInTheDocument();
-  await page.getByText(ja.customer_preferences, { exact: true }).click();
+  await page.getByText(ja.customer_settings_open, { exact: true }).click();
   await expect
     .element(page.getByRole("checkbox", { name: ja.customer_save_memories, exact: true }))
     .toBeChecked();
@@ -267,7 +274,7 @@ it("店舗を切り替えると残高・保有券と設定の確認状態を引�
 
 it("設定をキーボードで開き、競合時も変更した入力とrevisionを保持する", async () => {
   await show();
-  const summary = page.getByText(ja.customer_preferences, { exact: true });
+  const summary = page.getByText(ja.customer_settings_open, { exact: true });
   await expect.element(summary).toBeVisible();
   for (let count = 0; count < 20 && document.activeElement !== summary.element(); count++)
     await userEvent.keyboard("{Tab}");
@@ -286,7 +293,7 @@ it("設定をキーボードで開き、競合時も変更した入力とrevisio
 
 it("退会は明示確認後だけrevision付きで送信し、失敗後も確認内容を保持する", async () => {
   await show();
-  await page.getByText(ja.customer_preferences, { exact: true }).click();
+  await page.getByText(ja.customer_settings_open, { exact: true }).click();
   await page.getByRole("button", { name: ja.customer_leave, exact: true }).click();
   expect(writes).toEqual([]);
   await page.getByRole("button", { name: ja.customer_leave_confirm, exact: true }).click();
@@ -300,10 +307,10 @@ it("退会は明示確認後だけrevision付きで送信し、失敗後も確�
 
 it("退会確認を取り消すと保存せず元の操作へ戻る", async () => {
   await show();
-  await page.getByText(ja.customer_preferences, { exact: true }).click();
+  await page.getByText(ja.customer_settings_open, { exact: true }).click();
   const trigger = page.getByRole("button", { name: ja.customer_leave, exact: true });
   await trigger.click();
-  await page.getByRole("button", { name: ja.common_cancel, exact: true }).click();
+  await page.getByRole("button", { name: ja.customer_cancel, exact: true }).click();
   await expect.element(trigger).toHaveFocus();
   await expect
     .element(page.getByRole("button", { name: ja.customer_leave_confirm }))

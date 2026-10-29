@@ -380,7 +380,7 @@ test("実Routerの遷移と既定エラー画面を接続し、再試行で復�
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
   await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
   await page.unroute("**/api/admin/stores/tablecast-komorebi/devices");
-  await page.getByRole("button", { name: "再試行", exact: true }).click();
+  await page.getByRole("button", { name: "もう一度試す", exact: true }).click();
   await expect(page.getByRole("heading", { name: "端末", exact: true })).toBeVisible();
   await expect(page.getByText("0 件", { exact: true })).toBeVisible();
   // 来店履歴の見出しはfeature外のfile routeが所有するため、そのpending接続だけ実物で残す。

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { calendarDate } from "../i18n/format";
 import { useI18n } from "../i18n/locale";
 import { ProductImage } from "./product-image";
+import { StoreLogo } from "./store-logo";
 
 export function MembershipCard({
   storeId,
@@ -40,37 +41,32 @@ export function MembershipCard({
       className="overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-sm"
       style={palette[card?.tone ?? "neutral"]}
     >
-      <div className="space-y-3 p-5 sm:p-6">
-        <div className="flex items-center gap-3">
-          {branding?.logo && (
-            <ProductImage
-              src={`${images}/images/${branding.logo.imageKey}`}
-              alt={branding.logo.alt[locale]}
-              width={52}
-              height={52}
-              sizes="52px"
-              priority
-              className="size-13 shrink-0 rounded-xl bg-card p-1 object-contain"
+      <div className="space-y-2 p-4 sm:p-6">
+        <header className="space-y-2 border-b border-border pb-2">
+          <div className="flex items-center justify-between gap-3">
+            <StoreLogo
+              logo={branding?.banner}
+              imageBasePath={`${images}/images`}
+              width={160}
+              height={40}
             />
-          )}
-          <div className="min-w-0 flex-1 space-y-1">
-            <p className="text-xs opacity-75">{t("customer_card")}</p>
-            <h1 className="text-xl font-semibold leading-tight tracking-tight wrap-anywhere sm:text-2xl">
-              {storeName}
-            </h1>
+            <p className="shrink-0 text-xs opacity-75">{t("customer_card")}</p>
           </div>
-        </div>
+          <h1 className="text-xl font-semibold leading-tight tracking-tight wrap-anywhere sm:text-2xl">
+            {storeName}
+          </h1>
+        </header>
         {card?.image && (
           <ProductImage
             src={`${images}/images/${card.image.imageKey}`}
             alt={card.image.alt[locale]}
             width={800}
             height={320}
-            sizes="(max-width: 640px) 100vw, 608px"
+            sizes="160px"
             className={
               card.imageFit === "contain"
-                ? "aspect-5/2 h-auto w-full object-contain"
-                : "aspect-5/2 h-auto w-full object-cover"
+                ? "mx-auto block aspect-5/2 h-auto w-full max-w-40 object-contain"
+                : "mx-auto block aspect-5/2 h-auto w-full max-w-40 object-cover"
             }
           />
         )}
@@ -86,7 +82,7 @@ export function MembershipCard({
           </span>
         </div>
         {(balance !== undefined || visitCount !== undefined) && (
-          <dl className="grid grid-cols-2 gap-4 border-t border-border pt-4">
+          <dl className="grid grid-cols-2 gap-4 border-t border-border pt-3">
             {balance !== undefined && (
               <div className="space-y-1">
                 <dt className="text-xs opacity-75">{t("customer_points_balance")}</dt>

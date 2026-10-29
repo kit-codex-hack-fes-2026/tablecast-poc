@@ -9,7 +9,7 @@ export const memberStorePublicRoutes = apiFactory
     const store = await getMemberStoreBranding(c.var.services, c.req.param("storeId"));
     c.header("Cache-Control", "public, max-age=300");
     return c.json(
-      { storeId: store.id, storeName: store.name, logo: store.branding?.logo ?? null },
+      { storeId: store.id, storeName: store.name, logo: store.branding?.banner ?? null },
       200,
     );
   })
@@ -66,6 +66,7 @@ export const memberStorePublicRoutes = apiFactory
     ensure(
       [
         store.branding?.logo?.imageKey,
+        store.branding?.banner?.imageKey,
         store.branding?.memberIcon?.imageKey,
         store.branding?.membershipCard?.image?.imageKey,
       ].includes(key),

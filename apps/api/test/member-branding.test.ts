@@ -87,17 +87,34 @@ it("カード意匠は画像出所を検査し、公開前や公開意匠と無�
     ...imageMetadata,
     alt: { ja: "店舗のカード", en: "Venue card" },
   };
+  const bannerImage = await env.TABLECAST_IMAGES.input(byteStream(new Blob([png]).stream()))
+    .transform({ width: 128, height: 32, fit: "cover" })
+    .output({ format: "image/png" });
+  const bannerUpload = await saveMenuImage(
+    services,
+    staff,
+    new File([await bannerImage.response().arrayBuffer()], "banner.png", { type: "image/png" }),
+    imageMetadata,
+  );
+  const banner = {
+    imageKey: bannerUpload.imageKey,
+    ...imageMetadata,
+    alt: { ja: "店舗の横長ロゴ", en: "Venue banner" },
+  };
   const draft = await createDraft(services, staff);
   const branding = {
-    logo: null,
+    logo: image,
+    banner,
     membershipCard: { image, tone: "green" as const, imageFit: "contain" as const },
   };
   const imagePath = `${base}/images/${image.imageKey}`;
+  const bannerPath = `${base}/images/${banner.imageKey}`;
   const next = await updateDraft(services, staff, draft.id, {
     expectedVersion: draft.version,
     configuration: { ...configuration, branding },
   });
   expect((await request(imagePath)).status).toBe(404);
+  expect((await request(bannerPath)).status).toBe(404);
   await expect(
     updateDraft(services, staff, draft.id, {
       expectedVersion: next.version,
@@ -125,6 +142,18 @@ it("カード意匠は画像出所を検査し、公開前や公開意匠と無�
   expect(publicImage.headers.get("Content-Type")).toBe("image/webp");
   expect(publicImage.headers.get("Cache-Control")).toBe("public, max-age=300");
   expect((await publicImage.arrayBuffer()).byteLength).toBeGreaterThan(0);
+  expect(await (await request(`${base}/identity`)).json()).toEqual({
+    storeId: staff.storeId,
+    storeName: "卓上喫茶",
+    logo: banner,
+  });
+  const deliveredBanner = await request(bannerPath);
+  expect(deliveredBanner.status).toBe(200);
+  expect(
+    await env.TABLECAST_IMAGES.info(
+      byteStream(new Blob([await deliveredBanner.arrayBuffer()]).stream()),
+    ),
+  ).toMatchObject({ width: 128, height: 32 });
   expect((await request(`${base}/images/tablecast/uploads/${"b".repeat(64)}.webp`)).status).toBe(
     404,
   );

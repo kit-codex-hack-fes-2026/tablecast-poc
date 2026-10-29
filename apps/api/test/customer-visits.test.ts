@@ -8,6 +8,7 @@ import {
   getCustomerVisit,
   getDeviceParticipants,
   listCustomerOrders,
+  listCustomerVisits,
 } from "../src/modules/customer-visits/queries";
 import {
   createCustomerVisitCode,
@@ -23,6 +24,7 @@ import {
 import { updateCart } from "../src/modules/orders/use-cases/cart";
 import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
 import { getTableState } from "../src/modules/tables/queries";
+import { closeTable } from "../src/modules/tables/use-cases/lifecycle";
 import { createApiServices } from "../src/platform/context";
 import { fixtureDb } from "./database-fixture";
 import { configuration, device, deviceToken, setupFixture } from "./fixture";
@@ -58,9 +60,14 @@ it("未ログインのQR案内は有効なコードの店舗意匠だけを返�
     imageSource: { generated: false, description: "店舗の公式ロゴ" },
     alt: { ja: "卓上喫茶のロゴ", en: "Venue logo" },
   };
+  const banner = {
+    ...logo,
+    imageKey: `tablecast/uploads/${"b".repeat(64)}.webp`,
+    alt: { ja: "卓上喫茶の横長ロゴ", en: "Venue banner" },
+  };
   await fixtureDb
     .update(stores)
-    .set({ config_json: JSON.stringify({ ...configuration, branding: { logo } }) })
+    .set({ config_json: JSON.stringify({ ...configuration, branding: { logo, banner } }) })
     .where(eq(stores.id, device.storeId));
   const requestBranding = () =>
     exports.default.fetch(
@@ -73,9 +80,13 @@ it("未ログインのQR案内は有効なコードの店舗意匠だけを返�
   const response = await requestBranding();
   expect(response.status).toBe(200);
   expect(response.headers.get("Cache-Control")).toBe("private, no-store");
-  expect(await response.json()).toEqual({ storeId: device.storeId, storeName: "卓上喫茶", logo });
+  expect(await response.json()).toEqual({
+    storeId: device.storeId,
+    storeName: "卓上喫茶",
+    logo: banner,
+  });
   expect(await resolveCustomerVisit(services, customer.userId, code)).toMatchObject({
-    branding: { logo },
+    branding: { logo, banner },
     membership: { active: true },
   });
   await fixtureDb
@@ -100,6 +111,10 @@ it("二人が同じQRで参加でき、再読取りと同時送信で人数が�
   expect(JSON.stringify(participants)).not.toContain("@example.test");
   expect(participants.participants.every((person) => !("email" in person))).toBe(true);
   expect(participants.participants.find((person) => person.name === "同行者")).toMatchObject({
+    image: "/api/avatars/11111111-1111-4111-8111-111111111111",
+  });
+  const phone = await getCustomerVisit(services, customer, device.tableSessionId);
+  expect(phone.participants.find((person) => person.name === "同行者")).toMatchObject({
     image: "/api/avatars/11111111-1111-4111-8111-111111111111",
   });
   expect(await fixtureDb.select().from(customerVisitParticipants)).toHaveLength(2);
@@ -129,10 +144,14 @@ it("退出後も同行履歴を残し、共有撤回を他会員の履歴へ反�
   const history = await getCustomerVisit(services, customer, device.tableSessionId);
   expect(history.participants).toHaveLength(2);
   expect(history.participants.every((person) => !("email" in person))).toBe(true);
-  expect(history.participants.every((person) => !("image" in person))).toBe(true);
+  expect(history.participants.find((person) => person.id === result.participantId)).toMatchObject({
+    name: null,
+    image: null,
+  });
+  const visits = await listCustomerVisits(services, customer, { limit: 20 });
   expect(
-    history.participants.find((person) => person.id === result.participantId)?.name,
-  ).toBeNull();
+    visits.visits[0]?.participants.find((person) => person.id === result.participantId),
+  ).toMatchObject({ name: null, image: null });
   expect((await joinCustomerVisit(services, other.userId, code)).connected).toBe(true);
   expect(
     (await getDeviceParticipants(services, tablet)).participants.find(
@@ -140,6 +159,36 @@ it("退出後も同行履歴を残し、共有撤回を他会員の履歴へ反�
     ),
   ).toMatchObject({ name: null, image: null });
   expect(await fixtureDb.select().from(customerVisitParticipants)).toHaveLength(2);
+});
+
+it("同席共有のある過去来店では画像を返し、退会後は名前と画像を匿名化する", async () => {
+  const { services, staff, customer, other, code } = await setupCustomers();
+  await joinCustomerVisit(services, customer.userId, code);
+  const joined = await joinCustomerVisit(services, other.userId, code);
+  await closeTable(services, { ...staff, tableSessionId: device.tableSessionId });
+  const shared = {
+    name: "同行者",
+    image: "/api/avatars/11111111-1111-4111-8111-111111111111",
+  };
+  const history = await getCustomerVisit(services, customer, device.tableSessionId);
+  expect(history.connected).toBe(false);
+  expect(history.participants.find((person) => person.id === joined.participantId)).toMatchObject(
+    shared,
+  );
+  const visits = await listCustomerVisits(services, customer, { limit: 20 });
+  expect(
+    visits.visits[0]?.participants.find((person) => person.id === joined.participantId),
+  ).toMatchObject(shared);
+
+  await leaveCustomerMembership(services, other, 1);
+  const privateHistory = await getCustomerVisit(services, customer, device.tableSessionId);
+  expect(
+    privateHistory.participants.find((person) => person.id === joined.participantId),
+  ).toMatchObject({ name: null, image: null });
+  const privateVisits = await listCustomerVisits(services, customer, { limit: 20 });
+  expect(
+    privateVisits.visits[0]?.participants.find((person) => person.id === joined.participantId),
+  ).toMatchObject({ name: null, image: null });
 });
 
 it.each(["期限切れ", "来店終了", "端末失効"])("%sのQRでは参加を作成できない", async (condition) => {

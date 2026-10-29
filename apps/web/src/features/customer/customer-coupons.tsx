@@ -229,7 +229,7 @@ function ExchangeCoupons({ storeId, onChanged }: CouponCollectionProps) {
                 exchange.mutate({ ruleId: rule.id, idempotencyKey: key });
               }}
             >
-              {t("coupon_exchange")} · {rule.rules.threshold} pt
+              {t("coupon_exchange_action")} · {rule.rules.threshold} pt
             </Button>
           </CouponCard>
         ))}

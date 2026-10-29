@@ -11,8 +11,8 @@ import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
 import { MembershipCard } from "../../components/membership-card";
-import { ProductImage } from "../../components/product-image";
 import { PwaInstallHelp } from "../../components/pwa";
+import { StoreLogo } from "../../components/store-logo";
 import { Button } from "../../components/ui/button";
 import * as Disclosure from "../../components/ui/disclosure";
 import { useI18n } from "../../i18n/locale";
@@ -47,10 +47,10 @@ export function CustomerConsent({
     },
   });
   return (
-    <section className="space-y-5 pt-6">
+    <section className="space-y-5 rounded-2xl border border-border bg-card p-5">
       <h2 className="text-xl font-semibold">{t("customer_consent_title")}</h2>
       <p className="leading-relaxed text-muted-foreground">{t("customer_consent_intro")}</p>
-      <ul className="list-disc space-y-3 pl-5 text-sm leading-relaxed">
+      <ul className="list-disc space-y-3 border-y border-border py-4 pl-5 text-sm leading-relaxed">
         <li>{t("customer_consent_companions")}</li>
         <li>{t("customer_consent_use")}</li>
         <li>{t("customer_consent_save")}</li>
@@ -76,7 +76,7 @@ export function CustomerConsent({
 
 export function CustomerStore({ storeId }: { storeId: string }) {
   const { data } = useSuspenseQuery(customerStoreOptions(storeId));
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const points = useInfiniteQuery({
     ...customerPointsOptions(storeId),
     enabled: Boolean(data.membership?.active),
@@ -105,18 +105,13 @@ export function CustomerStore({ storeId }: { storeId: string }) {
           </Link>
         </MembershipCard>
       ) : (
-        <header className="flex items-center gap-3 pb-2">
-          {data.store.branding?.logo && (
-            <ProductImage
-              src={`/api/member-stores/${encodeURIComponent(storeId)}/images/${data.store.branding.logo.imageKey}`}
-              alt={data.store.branding.logo.alt[locale]}
-              width={56}
-              height={56}
-              sizes="56px"
-              priority
-              className="size-14 shrink-0 rounded-xl object-contain"
-            />
-          )}
+        <header className="space-y-4 rounded-2xl border border-border bg-card p-4">
+          <StoreLogo
+            logo={data.store.branding?.banner}
+            imageBasePath={`/api/member-stores/${encodeURIComponent(storeId)}/images`}
+            width={192}
+            height={48}
+          />
           <div className="min-w-0 space-y-1">
             <p className="text-sm text-muted-foreground">{t("customer_card")}</p>
             <h1 className="text-xl font-semibold tracking-tight wrap-break-word">
@@ -127,7 +122,7 @@ export function CustomerStore({ storeId }: { storeId: string }) {
       )}
       {data.membership?.active ? (
         <>
-          <div className="space-y-3">
+          <div className="space-y-3 border-b border-border pb-5">
             <OwnedCoupons storeId={storeId} compact />
             <Link
               to="/member/$storeId/coupons"
@@ -139,7 +134,7 @@ export function CustomerStore({ storeId }: { storeId: string }) {
             </Link>
           </div>
           <CustomerVisits storeId={storeId} />
-          <Disclosure.Root className="rounded-xl bg-secondary/60 px-4">
+          <Disclosure.Root className="rounded-2xl border border-border bg-card px-4">
             <Disclosure.Trigger className="flex min-h-12 cursor-pointer items-center text-sm font-medium">
               {t("customer_install_title")}
             </Disclosure.Trigger>
@@ -150,14 +145,14 @@ export function CustomerStore({ storeId }: { storeId: string }) {
           </Disclosure.Root>
           <nav
             aria-label={t("customer_personal_records")}
-            className="divide-y divide-border border-y border-border text-sm"
+            className="divide-y divide-border rounded-2xl border border-border bg-card px-4 text-sm"
           >
             <Link
               className="flex min-h-12 items-center justify-between gap-4 py-3 font-medium hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               to="/member/$storeId/memories"
               params={{ storeId }}
             >
-              {t("customer_memories")}
+              {t("customer_memories_view")}
               <ArrowRight aria-hidden className="size-4 shrink-0" />
             </Link>
             <Link
@@ -165,13 +160,13 @@ export function CustomerStore({ storeId }: { storeId: string }) {
               to="/member/$storeId/consumption"
               params={{ storeId }}
             >
-              {t("customer_consumption")}
+              {t("customer_consumption_view")}
               <ArrowRight aria-hidden className="size-4 shrink-0" />
             </Link>
           </nav>
-          <Disclosure.Root className="group rounded-xl bg-secondary/60 px-4">
+          <Disclosure.Root className="group rounded-2xl border border-border bg-card px-4">
             <Disclosure.Trigger className="flex min-h-12 cursor-pointer items-center justify-between gap-4 text-sm font-medium">
-              {t("customer_preferences")}
+              {t("customer_settings_open")}
             </Disclosure.Trigger>
             <Disclosure.Panel>
               <CustomerPreferences key={data.membership.id} data={data} />

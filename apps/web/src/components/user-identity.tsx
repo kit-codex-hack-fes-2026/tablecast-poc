@@ -45,20 +45,24 @@ export function UserIdentity({
   );
 }
 
-/** 客向けの同席者。共有が許可された名前だけを使い、メールやアカウント画像を取得しない。 */
-export function ParticipantIdentity({ name }: { name: null | string }) {
+/** 客向けの同席者。共有が許可された名前と画像を使い、メールは取得しない。 */
+export function ParticipantIdentity({
+  image,
+  name,
+}: {
+  image?: null | string;
+  name: null | string;
+}) {
   const { t } = useI18n();
   return (
     <span className="inline-flex min-w-0 items-center gap-2">
-      <span className={userAvatar({ compact: true })} aria-hidden="true">
-        <UserRound className="size-5" />
-      </span>
+      <ParticipantAvatar image={image} />
       <span className="wrap-anywhere">{name ?? t("customer_anonymous")}</span>
     </span>
   );
 }
 
-/** 現在の卓で共有を許可された会員画像だけを表示し、非共有・未設定は人物アイコンにする。 */
+/** 同席共有を許可された会員画像を表示し、非共有・未設定は人物アイコンにする。 */
 export function ParticipantAvatar({ image }: { image?: null | string }) {
   return (
     <Avatar.Root className={userAvatar({ compact: true })} aria-hidden="true">

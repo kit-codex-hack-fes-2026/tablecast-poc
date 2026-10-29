@@ -122,7 +122,7 @@ export function CustomerPreferences({ data }: { data: CustomerStoreData }) {
                   requestAnimationFrame(() => leaveTrigger.current?.focus());
                 }}
               >
-                {t("common_cancel")}
+                {t("customer_cancel")}
               </Button>
               <Button
                 variant="destructive"

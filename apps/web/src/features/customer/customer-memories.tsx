@@ -34,7 +34,7 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
   });
   return (
     <article className="space-y-6">
-      <header className="space-y-3">
+      <header className="space-y-3 border-b border-border pb-4">
         <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight">
           <Brain aria-hidden="true" className="size-6 shrink-0" />
           {t("customer_memories")}
@@ -167,10 +167,10 @@ function MemoryEditor({
           )}
         </form.AppField>
         <div className="flex flex-wrap gap-3">
-          <form.SubmitButton>{t("account_save")}</form.SubmitButton>
+          <form.SubmitButton>{t("customer_save")}</form.SubmitButton>
 
           <Button type="button" variant="outline" disabled={save.isPending} onClick={onClose}>
-            {t("common_cancel")}
+            {t("customer_cancel")}
           </Button>
         </div>
         <ActionFeedback

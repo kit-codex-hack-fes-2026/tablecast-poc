@@ -7,7 +7,7 @@ import { z } from "zod";
 import type { MemberLoginBranding } from "./member-login-query";
 import { useAppForm } from "../../components/form";
 import { GoogleIcon } from "../../components/google-icon";
-import { ProductImage } from "../../components/product-image";
+import { StoreLogo } from "../../components/store-logo";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -183,7 +183,7 @@ function LoginLayout({
   onLocaleChange: (locale: "en" | "ja") => void;
   searchStr: string;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const memberDestination = new URLSearchParams(searchStr).get("returnTo");
   const joiningVisit = memberDestination?.startsWith("/member/join?") ?? false;
   const memberSignIn =
@@ -192,13 +192,11 @@ function LoginLayout({
     <AuthLayout
       brand={
         memberSignIn && memberStore?.logo ? (
-          <ProductImage
-            src={`/api/member-stores/${encodeURIComponent(memberStore.storeId)}/images/${memberStore.logo.imageKey}`}
-            alt={memberStore.logo.alt[locale]}
-            width={144}
-            height={56}
-            sizes="144px"
-            className="h-14 w-36 object-contain object-left"
+          <StoreLogo
+            logo={memberStore.logo}
+            imageBasePath={`/api/member-stores/${encodeURIComponent(memberStore.storeId)}/images`}
+            width={160}
+            height={40}
           />
         ) : undefined
       }

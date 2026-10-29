@@ -148,7 +148,7 @@ it("日本語で初回同意後の設定を保存し、新しい画面でも撤�
   await page.viewport(390, 844);
   await show(<CustomerStore storeId="tablecast-store" />, locale);
   await page.getByRole("button", { name: labels.customer_enrol, exact: true }).click();
-  await page.getByText(labels.customer_preferences, { exact: true }).click();
+  await page.getByText(labels.customer_settings_open, { exact: true }).click();
   const saveMemories = page.getByRole("checkbox", {
     name: labels.customer_save_memories,
     exact: true,
@@ -170,7 +170,7 @@ it("日本語で初回同意後の設定を保存し、新しい画面でも撤�
   await cleanup();
   client.clear();
   await show(<CustomerStore storeId="tablecast-store" />, locale);
-  await page.getByText(labels.customer_preferences, { exact: true }).click();
+  await page.getByText(labels.customer_settings_open, { exact: true }).click();
   await expect.element(saveMemories).not.toBeChecked();
   await expect
     .element(page.getByRole("button", { name: labels.customer_enrol, exact: true }))
@@ -243,7 +243,7 @@ it("日本語で記憶を作成・編集し、新しい画面で再取得して�
   await page
     .getByRole("textbox", { name: labels.customer_memory_content })
     .fill("I prefer less sweet drinks.");
-  await page.getByRole("button", { name: labels.account_save, exact: true }).click();
+  await page.getByRole("button", { name: labels.customer_save, exact: true }).click();
   await expect
     .element(page.getByText("I prefer less sweet drinks.", { exact: true }))
     .toBeVisible();
@@ -251,7 +251,7 @@ it("日本語で記憶を作成・編集し、新しい画面で再取得して�
   await page
     .getByRole("textbox", { name: labels.customer_memory_content })
     .fill("I prefer dry gin cocktails.");
-  await page.getByRole("button", { name: labels.account_save, exact: true }).click();
+  await page.getByRole("button", { name: labels.customer_save, exact: true }).click();
   await expect
     .element(page.getByText("I prefer dry gin cocktails.", { exact: true }))
     .toBeVisible();
@@ -345,9 +345,13 @@ it("ポイント交換の失敗は同じキーで再試行し、交換した券�
     </>,
   );
   await expect.element(page.getByText("+4 pt", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: `${ja.coupon_exchange} · 3 pt`, exact: true }).click();
+  await page
+    .getByRole("button", { name: `${ja.coupon_exchange_action} · 3 pt`, exact: true })
+    .click();
   await expect.element(page.getByRole("alert")).toMatchTextContent(ja.common_unavailable);
-  await page.getByRole("button", { name: `${ja.coupon_exchange} · 3 pt`, exact: true }).click();
+  await page
+    .getByRole("button", { name: `${ja.coupon_exchange_action} · 3 pt`, exact: true })
+    .click();
   await expect.element(page.getByText(ja.coupon_available, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: ja.coupon_request, exact: true }).click();
   await expect
@@ -387,7 +391,7 @@ it("飲食記録は取消で送信せず閉じ、再度開くと保存済みの�
   const trigger = page.getByRole("button", { name: new RegExp(ja.customer_edit_consumption) });
   await trigger.click();
   await page.getByRole("spinbutton", { name: ja.customer_consumption_quantity }).fill("5");
-  await page.getByRole("button", { name: ja.common_cancel, exact: true }).click();
+  await page.getByRole("button", { name: ja.customer_cancel, exact: true }).click();
   await expect.element(trigger).toHaveFocus();
   await expect.element(page.getByRole("spinbutton")).not.toBeInTheDocument();
   await trigger.click();
@@ -410,7 +414,7 @@ it.each([
   await expect.element(page.getByRole("alert").getByText(message, { exact: true })).toBeVisible();
   await expect.element(page.getByText(ja.common_conflict, { exact: true })).not.toBeInTheDocument();
   await expect
-    .element(page.getByRole("link", { name: ja.customer_title, exact: true }))
+    .element(page.getByRole("link", { name: ja.customer_places_view, exact: true }))
     .toHaveAttribute("href", "/member");
   expect(
     [...document.querySelectorAll("button")].filter(

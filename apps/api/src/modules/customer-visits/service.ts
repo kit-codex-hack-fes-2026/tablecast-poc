@@ -86,7 +86,7 @@ export async function resolveCustomerVisitBranding(services: ApiServices, code: 
   const visit = await validVisitCode(services, await hashDeviceToken(code)).get();
   ensure(visit, "CUSTOMER_VISIT_CODE_EXPIRED", 409);
   const store = await getMemberStoreBranding(services, visit.storeId);
-  return { storeId: store.id, storeName: store.name, logo: store.branding?.logo ?? null };
+  return { storeId: store.id, storeName: store.name, logo: store.branding?.banner ?? null };
 }
 
 export async function joinCustomerVisit(services: ApiServices, userId: string, code: string) {

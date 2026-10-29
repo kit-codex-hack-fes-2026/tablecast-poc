@@ -10,7 +10,7 @@ export function CustomerPoints({ storeId }: { storeId: string }) {
   const data = query.data.pages[0];
   return (
     <article className="space-y-6">
-      <header className="space-y-4 pb-2">
+      <header className="space-y-4 rounded-2xl border border-border bg-card p-5">
         <h1 className="text-2xl font-semibold tracking-tight">{t("customer_points")}</h1>
         <p className="text-sm text-muted-foreground">{t("customer_points_balance")}</p>
         <p className="text-4xl font-semibold tracking-tight tabular-nums">
@@ -21,14 +21,14 @@ export function CustomerPoints({ storeId }: { storeId: string }) {
       </header>
       {(data?.balance ?? 0) < 0 && <p>{t("customer_points_negative")}</p>}
       <p className="text-sm text-muted-foreground">{t("customer_points_allocation_note")}</p>
-      <dl className="space-y-3 text-sm">
-        <div className="flex justify-between gap-4">
+      <dl className="divide-y divide-border rounded-2xl border border-border bg-card px-4 text-sm">
+        <div className="flex justify-between gap-4 py-3">
           <dt>{t("customer_points_visits")}</dt>
           <dd className="shrink-0 tabular-nums">
             {(data?.totals.visits ?? 0).toLocaleString(locale)}
           </dd>
         </div>
-        <div className="flex justify-between gap-4">
+        <div className="flex justify-between gap-4 py-3">
           <dt>{t("customer_points_purchase")}</dt>
           <dd className="shrink-0 tabular-nums">
             ¥{(data?.totals.allocatedYen ?? 0).toLocaleString(locale)}
@@ -36,7 +36,7 @@ export function CustomerPoints({ storeId }: { storeId: string }) {
         </div>
       </dl>
       <ErrorNotice query={query} />
-      <ul className="divide-y divide-border">
+      <ul className="divide-y divide-border rounded-2xl border border-border bg-card px-4 empty:hidden">
         {query.data.pages.flatMap((page) =>
           page.entries.map((entry) => (
             <li key={entry.id} className="flex justify-between gap-4 py-4">
