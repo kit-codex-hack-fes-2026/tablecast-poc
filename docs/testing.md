@@ -432,6 +432,8 @@ APIの`performance` projectは本番Hono・Cookie・実D1で8操作、8／120商
 
 会話のスクロール領域はSSRからoverflowを設定する。hydration後のeffectだけでscrollbarを出すと、常時表示するOSでは有効幅と折返しが変わり、歓迎案内が動く。実SSRの試験はJSをgateで止めた初期描画も通し、初期状態とlayout-shiftの要素・時刻をartifactへ残す。CLSの予算0.01は維持する。
 
+空の会話案内は、SSRのイラストの後でHTMLを分割し、説明・開始ボタンと下部操作が後から届く経路を同じ代表SSR試験で確認する。分割中・hydration前後の画面を残し、先に描画した案内が後続chunkで上へ移動しないことを保証する。日英・最小幅・縦配置の余白と位置はBrowserで確認し、カメラのON/OFF・映像比率・リサイズ・会話のスクロールは既存のBrowser保証を保つ。
+
 HTMLがvisibleでもCSS適用済みとは限らない。JSを保留したSSRのスタイルはPlaywrightのtoHaveCSSで待ち、computed styleの単発取得を描画準備の同期に使わない。
 
 英語の日付はIntlのformatToPartsから曜日・日・月・年を組み立て、ICUの版で曜日の後のカンマが変わらないようにする。店舗会員の代表E2Eは日英ともreload直後のリンク操作を維持し、hydrationのpageerrorも失敗にする。

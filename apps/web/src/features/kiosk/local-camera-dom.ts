@@ -46,3 +46,4 @@ export async function captureCameraFrame(
     canvas.height = 0;
   }
 }
+export const localCameraDefaults = { width: 128, aspectRatio: 4 / 3 };

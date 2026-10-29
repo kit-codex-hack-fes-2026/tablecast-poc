@@ -1,6 +1,7 @@
 import { type BrowserContext, expect } from "@playwright/test";
 import { adminStateSchema, catalogSchema } from "@tablecast/api/schema";
 import { writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { z } from "zod";
 import ja from "../messages/ja.json" with { type: "json" };
 import { approveGuestDevice, signInFromLogin, signInStaff } from "./support/session";
@@ -185,13 +186,45 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
           }).observe({ type: "layout-shift", buffered: true });
       });
       const hydrate = Promise.withResolvers<void>();
-      await interactive.route("**/assets/*.js", async (route) => {
-        await hydrate.promise;
-        await route.continue();
-      });
+      const continueHtml = Promise.withResolvers<void>();
+      let streamed: ReturnType<typeof createServer> | undefined;
       try {
+        if (browserName === "chromium") {
+          const html = await (await guest.request.get("/")).text();
+          const welcomeStart = html.indexOf('data-ui="voice-welcome"');
+          const split = html.indexOf('<div class="space-y-2">', welcomeStart);
+          expect(welcomeStart).toBeGreaterThan(0);
+          expect(split).toBeGreaterThan(welcomeStart);
+          // CLS対応engineではイラストを先に描画し、説明と操作を次のchunkで届ける。
+          streamed = createServer((_request, stream) => {
+            stream.writeHead(200, {
+              "content-type": "text/html; charset=utf-8",
+              "cache-control": "private, no-store",
+            });
+            stream.write(html.slice(0, split));
+            void continueHtml.promise.then(() => stream.end(html.slice(split)));
+          });
+          await new Promise<void>((resolve) => streamed?.listen(0, "127.0.0.1", resolve));
+          const address = streamed.address();
+          if (!address || typeof address === "string") throw new Error("分割SSRの待受が必要です。");
+          await interactive.route(new URL("/", baseURL).href, (route) =>
+            route.continue({ url: `http://127.0.0.1:${address.port}/` }),
+          );
+        }
+        await interactive.route("**/assets/*.js", async (route) => {
+          await hydrate.promise;
+          await route.continue();
+        });
         await interactive.goto("/", { waitUntil: "commit" });
         await expect(interactive.locator('[data-ui="voice-welcome"]')).toBeVisible();
+        if (streamed)
+          await interactive.screenshot({
+            path: testInfo.outputPath(`kiosk-stream-partial-${browserName}.png`),
+          });
+        continueHtml.resolve();
+        await expect(
+          interactive.getByRole("button", { name: ja.kiosk_welcome_start, exact: true }),
+        ).toBeVisible();
         await expect(interactive.getByRole("log").locator(":scope > div")).toHaveCSS(
           "overflow-y",
           "auto",
@@ -218,9 +251,21 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
             2,
           ),
         );
+        if (browserName === "chromium")
+          await interactive.screenshot({
+            path: testInfo.outputPath(`kiosk-before-hydration-${browserName}.png`),
+          });
       } finally {
+        continueHtml.resolve();
         hydrate.resolve();
         await interactive.unrouteAll({ behavior: "wait" });
+        if (streamed) {
+          const closed = new Promise<void>((resolve, reject) =>
+            streamed?.close((error) => (error ? reject(error) : resolve())),
+          );
+          streamed.closeAllConnections();
+          await closed;
+        }
       }
       await expect(
         interactive.getByRole("button", { name: ja.kiosk_voice_resume, exact: true }),
@@ -256,7 +301,21 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
         resources: performance.getEntriesByType("resource").map((entry) => entry.name),
         layoutShiftEntries: window.tablecastLayoutShiftEntries,
         fonts: document.fonts.status,
+        layout: [
+          ...document.querySelectorAll(
+            '[data-ui="voice-welcome"], [data-ui="conversation-history"], [data-ui="camera-window"]',
+          ),
+        ].map((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            name: element.getAttribute("data-ui"),
+            rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+          };
+        }),
       }));
+      await interactive.screenshot({
+        path: testInfo.outputPath(`kiosk-after-hydration-${browserName}.png`),
+      });
       // 予算超過時にも実際に動いた要素と時刻を残す。
       await writeFile(
         testInfo.outputPath(`kiosk-performance-${browserName}.json`),
@@ -267,6 +326,29 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       );
       if (metrics.layoutShift !== null) expect(metrics.layoutShift).toBeLessThan(0.01);
       expect(errors).toEqual([]);
+      if (browserName === "chromium") {
+        // 性能計測のviewportを保ち、別の画面証拠は測定完了後に撮影する。
+        for (const [width, height] of [
+          [1180, 820],
+          [820, 1180],
+          [402, 874],
+          [1512, 982],
+        ] as const) {
+          await interactive.setViewportSize({ width, height });
+          await expect(
+            interactive.getByRole("button", { name: ja.kiosk_welcome_start, exact: true }),
+          ).toBeVisible();
+          await interactive.evaluate(
+            () =>
+              new Promise<void>((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+              ),
+          );
+          await interactive.screenshot({
+            path: testInfo.outputPath(`kiosk-initial-${width}x${height}.png`),
+          });
+        }
+      }
     } finally {
       await guestSsr.close();
     }
