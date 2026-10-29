@@ -151,7 +151,10 @@ export const handleRpcError: ErrorHandler<ApiEnv> = (error, c) => {
 export const requestBodyLimit = createMiddleware<ApiEnv>(async (c, next) => {
   const limit: MiddlewareHandler<ApiEnv> = bodyLimit({
     maxSize:
-      c.req.path === "/mcp" || /^\/api\/admin\/stores\/[^/]+\/images$/.test(c.req.path)
+      c.req.path === "/mcp" ||
+      /^\/api\/admin\/stores\/[^/]+\/(images|knowledge\/import|drafts\/[^/]+\/knowledge\/import)$/.test(
+        c.req.path,
+      )
         ? 8 * 1024 * 1024
         : 2 * 1024 * 1024,
     onError: () =>

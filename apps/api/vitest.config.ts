@@ -3,6 +3,7 @@ import { defineConfig } from "vitest/config";
 const unitTests = [
   "test/localization.test.ts",
   "test/store-knowledge.test.ts",
+  "test/store-knowledge-files.test.ts",
   "test/catalog-search.test.ts",
   "test/currency-display.test.ts",
   "test/pricing.test.ts",

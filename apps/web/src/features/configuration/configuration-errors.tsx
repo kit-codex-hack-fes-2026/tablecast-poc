@@ -3,6 +3,7 @@ import { resolveText } from "@tablecast/api/localization";
 import { useI18n } from "../../i18n/locale";
 
 const messages = {
+  KNOWLEDGE_INVALID: "knowledge_invalid",
   FOOD_COMPONENT_INVALID: "food_component_invalid",
   DUPLICATE_ID: "config_error_duplicate_id",
   CATEGORY_NOT_FOUND: "config_error_category_missing",
@@ -42,6 +43,8 @@ function subject(configuration: Configuration, path: ConfigurationIssue["path"],
 
 function reference(issue: ConfigurationIssue) {
   switch (issue.code) {
+    case "KNOWLEDGE_INVALID":
+      return `${issue.params.skillId}/${issue.params.file}: ${issue.params.issue}`;
     case "FOOD_COMPONENT_INVALID":
     case "DUPLICATE_ID":
       return issue.params.id;

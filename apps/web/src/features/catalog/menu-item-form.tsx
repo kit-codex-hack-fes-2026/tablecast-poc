@@ -395,7 +395,7 @@ export function ItemForm({
               event.preventDefault();
               void submitConfiguration(event.currentTarget);
             }}
-            className="max-w-4xl space-y-6"
+            className={section === "cast" ? "min-w-0 space-y-4" : "max-w-4xl space-y-6"}
           >
             <fieldset
               disabled={!editable || pending}

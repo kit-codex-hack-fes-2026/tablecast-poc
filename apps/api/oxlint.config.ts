@@ -116,6 +116,14 @@ export default defineConfig({
             allow: { to: { module: { source: "fuse.js" } } },
           },
           {
+            from: { file: { path: "src/modules/configuration/knowledge-files.ts" } },
+            allow: { to: { module: { source: ["yaml", "marked"] } } },
+          },
+          {
+            from: { file: { path: "src/modules/configuration/knowledge-archive.ts" } },
+            allow: { to: { module: { source: "fflate" } } },
+          },
+          {
             from: { file: { path: "src/modules/appearance/{model.ts,css-tree.d.ts}" } },
             allow: { to: { module: { source: ["css-tree", "css-tree/*"] } } },
           },

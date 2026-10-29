@@ -26,7 +26,7 @@ export function CastOverview({
 }) {
   const { t } = useI18n();
   return (
-    <div className="max-w-5xl space-y-8">
+    <div className="min-w-0 space-y-5">
       <LanguageFields languages={Object.keys(value.instructions)}>
         {(language) => (
           <>

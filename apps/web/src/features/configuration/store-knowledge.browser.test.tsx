@@ -1,9 +1,11 @@
 import type { Locale } from "@tablecast/api/schema";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { afterEach, expect, it } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 import { catalog } from "../../../.storybook/tablecast-fixtures";
+import ja from "../../../messages/ja.json";
 import { ImageProvider } from "../../components/image-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import "../../styles.css";
@@ -14,19 +16,30 @@ afterEach(async () => {
   await page.viewport(1280, 720);
 });
 function Fixture({ locale, editable = true }: { editable?: boolean; locale: Locale }) {
+  const [client] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      }),
+  );
   const [skills, setSkills] = useState(catalog.configuration.cast.skills ?? []);
   return (
-    <LocaleProvider initialLocale={locale} persist={false}>
-      <ImageProvider basePath={`/api/admin/stores/${catalog.storeId}`} assets={catalog.imageAssets}>
-        <main className="mx-auto max-w-5xl p-4">
-          <StoreKnowledge
-            storeId={catalog.storeId}
-            value={skills}
-            onChange={editable ? setSkills : undefined}
-          />
-        </main>
-      </ImageProvider>
-    </LocaleProvider>
+    <QueryClientProvider client={client}>
+      <LocaleProvider initialLocale={locale} persist={false}>
+        <ImageProvider
+          basePath={`/api/admin/stores/${catalog.storeId}`}
+          assets={catalog.imageAssets}
+        >
+          <main className="mx-auto max-w-5xl p-4">
+            <StoreKnowledge
+              storeId={catalog.storeId}
+              value={skills}
+              onChange={editable ? setSkills : undefined}
+            />
+          </main>
+        </ImageProvider>
+      </LocaleProvider>
+    </QueryClientProvider>
   );
 }
 
@@ -47,7 +60,7 @@ it.each([
         }),
       )
       .toBeVisible();
-    await page.getByRole("tab", { name: locale === "ja" ? "編集" : "Edit", exact: true }).click();
+    await page.getByRole("tab", { name: locale === "ja" ? "原文" : "Source", exact: true }).click();
     const input = page.getByRole("textbox", {
       name: locale === "ja" ? "ファイルの原文" : "File source",
       exact: true,
@@ -67,7 +80,7 @@ it.each([
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
     await page.getByRole("treeitem", { name: "SKILL.md", exact: true }).click();
     await page.getByRole("treeitem", { name: "visit.md", exact: true }).click();
-    await page.getByRole("tab", { name: locale === "ja" ? "編集" : "Edit", exact: true }).click();
+    await page.getByRole("tab", { name: locale === "ja" ? "原文" : "Source", exact: true }).click();
     await expect.element(input).toHaveValue(content);
   },
 );
@@ -95,6 +108,7 @@ it("資料追加と削除で必須のSKILL.mdを保つ", async () => {
   await render(<Fixture locale="ja" />);
   await page.getByRole("button", { name: "Skillを追加", exact: true }).click();
   await page.getByRole("button", { name: "ファイルを追加", exact: true }).click();
+  await page.getByRole("tab", { name: "原文", exact: true }).click();
   const content = page.getByRole("textbox", { name: "ファイルの原文", exact: true });
   await content.fill("# 新しい資料");
   await page.getByRole("button", { name: "ファイルを削除", exact: true }).click();
@@ -146,4 +160,60 @@ it("階層フォルダーを開閉し、相対画像・コードブロック・�
       }),
     )
     .toBeVisible();
+});
+
+it("Tiptapで本文を書式編集し、YAML・相対画像・コードをソースと往復できる", async () => {
+  await page.viewport(1512, 1000);
+  await render(<Fixture locale="ja" />);
+  await page.getByRole("treeitem", { name: "SKILL.md", exact: true }).click();
+  await page.getByRole("tab", { name: "原文", exact: true }).click();
+  const source = page.getByRole("textbox", { name: "ファイルの原文", exact: true });
+  const originalElement = source.element();
+  if (!(originalElement instanceof HTMLTextAreaElement))
+    throw new Error("原文の入力欄がありません");
+  const original = originalElement.value;
+  await page.getByRole("tab", { name: "編集", exact: true }).click();
+  const body = page.getByRole("textbox", { name: "Markdownのグラフィカル編集", exact: true });
+  await expect.element(body).toBeVisible();
+  await expect.element(page.getByRole("toolbar", { name: "書式" })).toBeVisible();
+  await body.click();
+  const selection = window.getSelection();
+  selection?.selectAllChildren(body.element());
+  selection?.collapseToEnd();
+  await userEvent.keyboard("{Enter}店長の追記");
+  await page.getByRole("button", { name: "見出し2", exact: true }).click();
+  await page.getByRole("tab", { name: "原文", exact: true }).click();
+  await expect.element(source).toBeVisible();
+  const current = source.element();
+  expect(current instanceof HTMLTextAreaElement ? current.value : "").toContain("## 店長の追記");
+  expect(current instanceof HTMLTextAreaElement ? current.value.split("---")[1] : undefined).toBe(
+    original.split("---")[1],
+  );
+  await page.getByRole("tab", { name: "編集", exact: true }).click();
+  await expect.poll(() => body.element().textContent).toContain("店長の追記");
+  await page.getByRole("tab", { name: "プレビュー", exact: true }).click();
+  await expect
+    .element(page.getByRole("heading", { name: "店長の追記", level: 2, exact: true }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "コードをコピー", exact: true }))
+    .toBeVisible();
+});
+
+it("Skill検査から不備のあるファイルを選択し、改名時はmetadataも更新する", async () => {
+  await render(<Fixture locale="ja" />);
+  await page.getByRole("button", { name: "Skillを追加", exact: true }).click();
+  await page.getByRole("button", { name: "名前を変更", exact: true }).click();
+  await page.getByRole("textbox", { name: "Skill名", exact: true }).fill("new-guide");
+  await page.getByRole("button", { name: ja.common_save, exact: true }).click();
+  await page.getByRole("tab", { name: "原文", exact: true }).click();
+  const renamed = page.getByRole("textbox", { name: "ファイルの原文", exact: true }).element();
+  expect(renamed instanceof HTMLTextAreaElement ? renamed.value : "").toContain("name: new-guide");
+  await page
+    .getByRole("textbox", { name: "ファイルの原文", exact: true })
+    .fill("---\nname: wrong\ndescription: 店舗資料\n---\n本文");
+  await page.getByRole("button", { name: /^Skill検査/ }).click();
+  await expect
+    .poll(() => page.getByRole("region", { name: "Skill検査", exact: true }).element().textContent)
+    .toContain("nameとSkillのIDを一致させてください。");
 });

@@ -39,10 +39,18 @@ function publicHttps(href: string) {
   }
 }
 
-function KnowledgeImage({ src, alt, imageKey }: { alt: string; imageKey?: string; src?: string }) {
+export function KnowledgeImage({
+  src,
+  alt,
+  imageKey,
+}: {
+  alt: string;
+  imageKey?: string;
+  src?: string;
+}) {
   const { t } = useI18n();
   const [failed, setFailed] = useState<string>();
-  const url = imageKey ? `/media/${imageKey}` : src;
+  const url = imageKey ? `/media/${imageKey}` : publicHttps(src ?? "");
   if (!url || failed === url)
     return (
       <span

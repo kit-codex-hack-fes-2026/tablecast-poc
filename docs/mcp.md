@@ -141,3 +141,17 @@ stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、�
 画像ファイルは`upload_image`で取り込んだ`{ path, imageKey, imageKind, imageSource, alt }`をfilesへ追加する。画像のpathはPNG・JPEG・WebPの拡張子にする。Markdownから`![説明](../assets/photo.webp)`のように同じSkillの相対パスで参照できる。imageKeyの所属店舗と出所は、既存の画像設定と同じAPIで検証する。画像もファイル件数上限に含み、検索と原文読取では代替テキストと出所を返す。
 
 管理画面の接客設定で折り畳めるツリーからSkill・ファイルを選び、Markdown・画像・コードのプレビューと原文を確認し、下書きを手動編集できる。参照資料のスクリプトを実行する機能ではない。資料は客へ案内してよい店舗情報に限定し、認証情報・内部連絡先・個人記憶を含めない。営業時間などの運用案内と、現在の価格・在庫・食事対応を判定する業務APIを区別する。
+
+### Skillファイルの個別操作とZIP
+
+`get_store_onboarding`は公開設定または指定した下書きの不足・確認事項、対応tool、管理画面を返す。GUIの店舗初期設定も同じ判定を使う。メニュー・言語・食事情報・選択肢・接客・テーマ・資料・特典を確認する。OAuth・認証情報・端末登録・顧客の同意・最終公開は人が行う。
+
+`list_store_skills`でmetadataとツリー、`read_store_skill_file`で4,000文字ずつ原文または画像の出所を取得する。続きを読むときは`expectedVersion`が必須。`edit_store_skill`は最新の下書き版を確認して、Skillの作成・改名・削除とファイルの作成／更新・改名・削除を行う。画像は`upload_image`の返却値を画像ファイルへ設定する。`SKILL.md`単体の改名・削除は拒否する。
+
+`lint_store_skills`はAgent SkillsのYAML frontmatter、必須の`name`・`description`、ディレクトリ名との一致、参照ファイルを検査する。500行超は警告。指摘は50件ずつ返し、`totalIssues`・`nextOffset`で総数と続きを示す。続きは取得版の`expectedVersion`が必須。初期設定の概要も最大50件と総数を返す。エラーは`validate_draft`でも公開を止める。一般のSkillスクリプトはテキストとして保持し、実行しない。
+
+`import_store_skills`は単体Skillまたは複数の`skill-id/`フォルダーを持つZIPを取り込む。実ファイルのBase64を`data`、ChatGPT添付を`file`へ渡し、併記しない。圧縮5MiB、展開20MiB、250エントリーまで。同名置換は`replaceExisting=true`を明示する。パス、重複、サイズ、中央ディレクトリ、CRC、Skill lintを確認してから下書きを一度更新し、失敗時は下書きを維持する。画像のアップロード後に版競合が起きた場合、未参照の画像が残ることはあるが公開は変わらない。
+
+`export_store_skills`が返す`resource_link`を`resources/read`で取得すると、画像の実バイト列と出所manifest付きZIPになる。店舗固有の保存キーはZIPに含めない。`tablecast-skills.json`に画像の出所・種類・altを保持する。manifestなしの画像入りZIPでは確認済みの`imageMetadata`が必要。保存画像は各ファイルの拡張子と一致するPNG／JPEG／WebPで配布する。書出しも5MiBまで。
+
+GUIは共通の`/api/admin/stores/:storeId/knowledge`系APIを使う。未保存の取込は編集フォームへ戻して通常の下書き保存を行い、MCPの版付き取込は直接その下書きを保存する。どちらも公開版へ直接反映しない。

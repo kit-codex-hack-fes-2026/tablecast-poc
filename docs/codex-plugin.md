@@ -143,3 +143,9 @@ agent向けに`/llms.txt`で日英の索引とページ単位のMarkdown URL、`
 ## 多言語メニューの設定指針
 
 製品plugin 0.6.0は`tablecast` skillへ[多言語メニューの設定指針](../plugins/tablecast/skills/tablecast/references/localization.md)を同梱する。商品名の意味訳と転写、固有名と長音記号の保持、sentence case、料理が何か分かる説明、情報を省略しない編集、言語と参考通貨の扱いを説明する。言語・名称・翻訳は既存MCPの下書き・検証・差分・公開申請で設定する。配布元の更新と、利用者がインストールしたpluginへの更新反映は分けて確認する。
+
+## 店舗のオンボーディングと資料Skill
+
+製品plugin 0.7.0の`tablecast` skillは[初期設定](../plugins/tablecast/skills/tablecast/references/onboarding.md)と[資料Skill](../plugins/tablecast/skills/tablecast/references/store-skills.md)の手順を同梱する。`get_store_onboarding`で現在値と不足を確認し、既存の下書きへメニュー・言語・食事情報・接客・テーマ・資料を反映する。画像アップロード、ファイルCRUD、ZIP取込／書出、Agent Skills lintをMCPから使える。GUIは店舗ホームの店舗の初期設定から同じ確認事項を開く。
+
+ポイント・クーポンは専用toolで確認し、メニュー下書きと異なり即時適用されることを説明する。未採用の特典を勝手に設定しない。現在値の存在を事実確認済みとせず、未確認の食事情報を安全と断定しない。OAuth、認証情報、端末登録、顧客本人の同意、最終公開の人の操作を保持する。配布元の更新は利用者がインストール済みのpluginの自動更新を保証しない。

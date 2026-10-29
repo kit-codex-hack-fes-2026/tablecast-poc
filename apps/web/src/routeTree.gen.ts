@@ -48,6 +48,7 @@ import { Route as AdminStoresStoreIdDesignRouteImport } from './routes/admin.sto
 import { Route as AdminStoresStoreIdFloorRouteImport } from './routes/admin.stores.$storeId.floor'
 import { Route as AdminStoresStoreIdGamesRouteImport } from './routes/admin.stores.$storeId.games'
 import { Route as AdminStoresStoreIdMembersRouteImport } from './routes/admin.stores.$storeId.members'
+import { Route as AdminStoresStoreIdOnboardingRouteImport } from './routes/admin.stores.$storeId.onboarding'
 import { Route as AdminStoresStoreIdPointsRouteImport } from './routes/admin.stores.$storeId.points'
 import { Route as AdminStoresStoreIdProfileRouteImport } from './routes/admin.stores.$storeId.profile'
 import { Route as AdminStoresStoreIdStatisticsRouteImport } from './routes/admin.stores.$storeId.statistics'
@@ -270,6 +271,12 @@ const AdminStoresStoreIdMembersRoute =
     path: '/members',
     getParentRoute: () => AdminStoresStoreIdRoute,
   } as any)
+const AdminStoresStoreIdOnboardingRoute =
+  AdminStoresStoreIdOnboardingRouteImport.update({
+    id: '/onboarding',
+    path: '/onboarding',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
 const AdminStoresStoreIdPointsRoute =
   AdminStoresStoreIdPointsRouteImport.update({
     id: '/points',
@@ -429,6 +436,7 @@ export interface FileRoutesByFullPath {
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/onboarding': typeof AdminStoresStoreIdOnboardingRoute
   '/admin/stores/$storeId/points': typeof AdminStoresStoreIdPointsRoute
   '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
   '/admin/stores/$storeId/statistics': typeof AdminStoresStoreIdStatisticsRoute
@@ -487,6 +495,7 @@ export interface FileRoutesByTo {
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/onboarding': typeof AdminStoresStoreIdOnboardingRoute
   '/admin/stores/$storeId/points': typeof AdminStoresStoreIdPointsRoute
   '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
   '/admin/stores/$storeId/statistics': typeof AdminStoresStoreIdStatisticsRoute
@@ -549,6 +558,7 @@ export interface FileRoutesById {
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/onboarding': typeof AdminStoresStoreIdOnboardingRoute
   '/admin/stores/$storeId/points': typeof AdminStoresStoreIdPointsRoute
   '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
   '/admin/stores/$storeId/statistics': typeof AdminStoresStoreIdStatisticsRoute
@@ -612,6 +622,7 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/onboarding'
     | '/admin/stores/$storeId/points'
     | '/admin/stores/$storeId/profile'
     | '/admin/stores/$storeId/statistics'
@@ -670,6 +681,7 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/onboarding'
     | '/admin/stores/$storeId/points'
     | '/admin/stores/$storeId/profile'
     | '/admin/stores/$storeId/statistics'
@@ -731,6 +743,7 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/onboarding'
     | '/admin/stores/$storeId/points'
     | '/admin/stores/$storeId/profile'
     | '/admin/stores/$storeId/statistics'
@@ -1059,6 +1072,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStoresStoreIdMembersRouteImport
       parentRoute: typeof AdminStoresStoreIdRoute
     }
+    '/admin/stores/$storeId/onboarding': {
+      id: '/admin/stores/$storeId/onboarding'
+      path: '/onboarding'
+      fullPath: '/admin/stores/$storeId/onboarding'
+      preLoaderRoute: typeof AdminStoresStoreIdOnboardingRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
     '/admin/stores/$storeId/points': {
       id: '/admin/stores/$storeId/points'
       path: '/points'
@@ -1245,6 +1265,7 @@ interface AdminStoresStoreIdRouteChildren {
   AdminStoresStoreIdFloorRoute: typeof AdminStoresStoreIdFloorRoute
   AdminStoresStoreIdGamesRoute: typeof AdminStoresStoreIdGamesRoute
   AdminStoresStoreIdMembersRoute: typeof AdminStoresStoreIdMembersRoute
+  AdminStoresStoreIdOnboardingRoute: typeof AdminStoresStoreIdOnboardingRoute
   AdminStoresStoreIdPointsRoute: typeof AdminStoresStoreIdPointsRoute
   AdminStoresStoreIdProfileRoute: typeof AdminStoresStoreIdProfileRoute
   AdminStoresStoreIdStatisticsRoute: typeof AdminStoresStoreIdStatisticsRoute
@@ -1271,6 +1292,7 @@ const AdminStoresStoreIdRouteChildren: AdminStoresStoreIdRouteChildren = {
   AdminStoresStoreIdFloorRoute: AdminStoresStoreIdFloorRoute,
   AdminStoresStoreIdGamesRoute: AdminStoresStoreIdGamesRoute,
   AdminStoresStoreIdMembersRoute: AdminStoresStoreIdMembersRoute,
+  AdminStoresStoreIdOnboardingRoute: AdminStoresStoreIdOnboardingRoute,
   AdminStoresStoreIdPointsRoute: AdminStoresStoreIdPointsRoute,
   AdminStoresStoreIdProfileRoute: AdminStoresStoreIdProfileRoute,
   AdminStoresStoreIdStatisticsRoute: AdminStoresStoreIdStatisticsRoute,

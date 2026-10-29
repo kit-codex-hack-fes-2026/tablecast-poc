@@ -1,27 +1,30 @@
+import { type StoreSkill, storeSkillLimits, storeSkillsSchema } from "@tablecast/api/schema";
+import { lintStoreSkills } from "@tablecast/api/store-knowledge-files";
+import { useIsMutating } from "@tanstack/react-query";
 import {
-  type StoreSkill,
-  storeSkillLimits,
-  storeSkillSchema,
-  storeSkillsSchema,
-} from "@tablecast/api/schema";
-import { FilePlus2, ImagePlus, Plus, Trash2 } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
-import type { ImageValue } from "./configuration-image-model";
+  Eye,
+  FileCode2,
+  FilePlus2,
+  FolderCode,
+  ImagePlus,
+  Pencil,
+  Plus,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
+import { type ReactNode, useId, useMemo, useState } from "react";
 import { Button } from "../../components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogScroll,
-  DialogTitle,
-} from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import * as Tabs from "../../components/ui/tabs";
 import { useI18n } from "../../i18n/locale";
 import { ConfigurationImageField } from "./configuration-image-field";
+import { configurationImageUploadKey } from "./menu-query";
+import { KnowledgeArchiveControls } from "./store-knowledge-archive";
+import { KnowledgeImageDialog } from "./store-knowledge-image-dialog";
+import { KnowledgeLint } from "./store-knowledge-lint";
+import { KnowledgeMarkdownEditor } from "./store-knowledge-markdown";
 import { KnowledgePreview, KnowledgeSource } from "./store-knowledge-preview";
+import { KnowledgeRename } from "./store-knowledge-rename";
 import { type KnowledgeSelection, StoreKnowledgeTree } from "./store-knowledge-tree";
 
 type KnowledgeFile = StoreSkill["files"][number];
@@ -39,7 +42,7 @@ export function StoreKnowledge({
   value,
   storeId,
   onChange,
-  disabled = false,
+  disabled: inputDisabled = false,
   action,
 }: {
   action?: ReactNode;
@@ -50,8 +53,12 @@ export function StoreKnowledge({
 }) {
   const { t } = useI18n();
   const id = useId();
+  const uploading = useIsMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0;
+  const disabled = inputDisabled || uploading;
   const [selected, setSelected] = useState<KnowledgeSelection>();
   const [imageDialog, setImageDialog] = useState(false);
+  const [showLint, setShowLint] = useState(false);
+  const issues = useMemo(() => lintStoreSkills(value), [value]);
   const { skill, file, selection } = selectedFile(value, selected);
   const editable = Boolean(onChange);
   function updateSkill(next: StoreSkill) {
@@ -66,10 +73,14 @@ export function StoreKnowledge({
     <section
       id="store-knowledge"
       aria-labelledby={`${id}-heading`}
-      className="min-w-0 scroll-mt-80 space-y-4 md:scroll-mt-40"
+      className="min-w-0 scroll-mt-80 space-y-2 md:scroll-mt-40"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id={`${id}-heading`} className="text-lg font-semibold">
+        <h2
+          id={`${id}-heading`}
+          className="flex items-center gap-2 text-lg font-semibold text-nav-menu"
+        >
+          <FolderCode className="size-5" />
           {t("knowledge_title")}
         </h2>
         {editable && (
@@ -102,7 +113,36 @@ export function StoreKnowledge({
           </Button>
         )}
       </div>
-      <p className="text-sm text-muted-foreground">{t("knowledge_hint")}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <KnowledgeArchiveControls
+          storeId={storeId}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowLint((previous) => !previous)}
+          aria-expanded={showLint}
+          className={
+            issues.some((issue) => issue.severity === "error")
+              ? "text-destructive"
+              : "text-success-text"
+          }
+        >
+          <ShieldCheck />
+          {t("knowledge_lint")} · {issues.length}
+        </Button>
+        <p className="min-w-0 flex-1 text-sm text-muted-foreground">{t("knowledge_hint")}</p>
+      </div>
+      {showLint && (
+        <KnowledgeLint
+          issues={issues}
+          onSelect={(item) => setSelected({ skillId: item.skillId, path: item.path })}
+        />
+      )}
       {value.length === 0 ? (
         <div className="grid justify-items-start gap-3 rounded-lg border border-dashed border-border p-6">
           <p className="text-sm text-muted-foreground">{t("knowledge_empty")}</p>
@@ -110,8 +150,8 @@ export function StoreKnowledge({
         </div>
       ) : (
         <div className="@container overflow-hidden rounded-lg border border-border bg-card">
-          <div className="grid min-w-0 @2xl:grid-cols-[16rem_minmax(0,1fr)]">
-            <aside className="max-h-52 min-w-0 overflow-auto border-b border-border bg-muted/20 @2xl:max-h-[70vh] @2xl:border-r @2xl:border-b-0">
+          <div className="grid min-w-0 @2xl:grid-cols-[14rem_minmax(0,1fr)]">
+            <aside className="max-h-52 min-w-0 overflow-auto border-b border-border bg-surface-subtle @2xl:max-h-[70vh] @2xl:border-r @2xl:border-b-0">
               <StoreKnowledgeTree skills={value} selected={selection} onSelect={setSelected} />
             </aside>
             {skill && file && (
@@ -125,6 +165,19 @@ export function StoreKnowledge({
                 onSelect={setSelected}
                 onAdd={addFile}
                 onAddImage={() => setImageDialog(true)}
+                rename={
+                  onChange && (
+                    <KnowledgeRename
+                      key={`${skill.id}/${file.path}`}
+                      skills={value}
+                      skill={skill}
+                      path={file.path}
+                      disabled={disabled}
+                      onChange={onChange}
+                      onSelect={setSelected}
+                    />
+                  )
+                }
                 onRemove={() => onChange?.(value.filter((item) => item !== skill))}
               />
             )}
@@ -155,6 +208,7 @@ export function StoreKnowledge({
 function KnowledgeDocument({
   skill,
   file,
+  rename,
   storeId,
   disabled,
   action,
@@ -172,6 +226,7 @@ function KnowledgeDocument({
   onChange?: (skill: StoreSkill) => void;
   onRemove: () => void;
   onSelect: (selection: KnowledgeSelection) => void;
+  rename?: ReactNode;
   skill: StoreSkill;
   storeId: string;
 }) {
@@ -189,7 +244,7 @@ function KnowledgeDocument({
   return (
     <div className="min-w-0">
       <Tabs.Root value={mode} onValueChange={(next) => setMode(String(next))} className="min-w-0">
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-2">
           <p
             className="min-w-0 flex-1 truncate font-mono text-sm"
             title={`${skill.id}/${file.path}`}
@@ -197,10 +252,21 @@ function KnowledgeDocument({
             {file.path}
           </p>
           <Tabs.List aria-label={t("knowledge_view")} className="gap-1 rounded-lg p-1">
-            <Tabs.Tab value="preview">{t("prompt_preview")}</Tabs.Tab>
-            <Tabs.Tab value="source">{t("knowledge_source")}</Tabs.Tab>
+            <Tabs.Tab value="preview" className="data-active:[&_svg]:text-primary-foreground">
+              <Eye className="text-info-text" />
+              {t("prompt_preview")}
+            </Tabs.Tab>
+            <Tabs.Tab value="source" className="data-active:[&_svg]:text-primary-foreground">
+              <FileCode2 className="text-nav-menu" />
+              {t("knowledge_source")}
+            </Tabs.Tab>
             {onChange && (
-              <Tabs.Tab value="edit" disabled={disabled}>
+              <Tabs.Tab
+                value="edit"
+                disabled={disabled}
+                className="data-active:[&_svg]:text-primary-foreground"
+              >
+                <Pencil className="text-success-text" />
                 {t("knowledge_edit_file")}
               </Tabs.Tab>
             )}
@@ -209,7 +275,7 @@ function KnowledgeDocument({
         </div>
         <Tabs.Panel
           value="preview"
-          className="max-h-[70vh] min-h-96 min-w-0 overflow-auto p-5 sm:p-6"
+          className="max-h-[70vh] min-h-72 min-w-0 overflow-auto p-3 sm:p-4"
         >
           <KnowledgePreview
             skill={skill}
@@ -217,56 +283,45 @@ function KnowledgeDocument({
             onOpen={(path) => onSelect({ skillId: skill.id, path })}
           />
         </Tabs.Panel>
-        <Tabs.Panel value="source" className="max-h-[70vh] min-h-96 min-w-0 overflow-auto p-4">
-          <KnowledgeSource
-            content={"content" in file ? file.content : JSON.stringify(file, null, 2)}
-            path={"content" in file ? file.path : "image.json"}
-          />
+        <Tabs.Panel value="source" className="max-h-[70vh] min-h-72 min-w-0 overflow-auto p-3">
+          {onChange && "content" in file ? (
+            <KnowledgeTextSource
+              value={file.content}
+              disabled={disabled}
+              onChange={(content) => updateFile({ ...file, content })}
+            />
+          ) : (
+            <KnowledgeSource
+              content={"content" in file ? file.content : JSON.stringify(file, null, 2)}
+              path={"content" in file ? file.path : "image.json"}
+            />
+          )}
         </Tabs.Panel>
-        <Tabs.Panel
-          value="edit"
-          className="max-h-[70vh] min-h-96 space-y-5 overflow-auto p-4 sm:p-6"
-        >
+        <Tabs.Panel value="edit" className="max-h-[70vh] min-h-72 space-y-3 overflow-auto p-3">
           <fieldset disabled={disabled} className="grid min-w-0 gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm">
-                {t("knowledge_skill_id")}
-                <Input
-                  value={skill.id}
-                  maxLength={64}
-                  onChange={(event) => {
-                    const skillId = event.target.value;
-                    updateSkill({ ...skill, id: skillId });
-                    onSelect({ skillId, path: file.path });
+            {"content" in file ? (
+              /\.md$/i.test(file.path) ? (
+                <KnowledgeMarkdownEditor
+                  key={`${skill.id}/${file.path}`}
+                  value={file.content}
+                  path={file.path}
+                  skill={skill}
+                  storeId={storeId}
+                  disabled={disabled}
+                  onChange={(content, image) => {
+                    const files = skill.files.map((item) =>
+                      item === file ? { ...file, content } : item,
+                    );
+                    updateSkill({ ...skill, files: image ? [...files, image] : files });
                   }}
                 />
-              </label>
-              <label className="grid gap-2 text-sm">
-                {t("knowledge_path")}
-                <Input
-                  disabled={file.path === "SKILL.md"}
-                  value={file.path}
-                  maxLength={160}
-                  onChange={(event) => updateFile({ ...file, path: event.target.value })}
-                />
-              </label>
-            </div>
-            {"content" in file ? (
-              <label className="grid gap-2 text-sm">
-                {t("knowledge_content")}
-                <textarea
-                  spellCheck={false}
-                  aria-label={t("knowledge_content")}
-                  aria-invalid={file.content.length > storeSkillLimits.fileCharacters}
+              ) : (
+                <KnowledgeTextSource
                   value={file.content}
-                  onChange={(event) => updateFile({ ...file, content: event.target.value })}
-                  className="min-h-80 w-full resize-y rounded-md border border-input bg-background p-3 font-mono text-sm leading-6"
+                  disabled={disabled}
+                  onChange={(content) => updateFile({ ...file, content })}
                 />
-                <span className="text-xs text-muted-foreground">
-                  {file.content.length.toLocaleString()} /{" "}
-                  {storeSkillLimits.fileCharacters.toLocaleString()}
-                </span>
-              </label>
+              )
             ) : (
               <>
                 <label className="grid gap-2 text-sm">
@@ -299,6 +354,7 @@ function KnowledgeDocument({
       </Tabs.Root>
       {onChange && (
         <div className="flex flex-wrap gap-1 border-t border-border p-2">
+          {rename}
           <Button
             type="button"
             variant="ghost"
@@ -345,74 +401,31 @@ function KnowledgeDocument({
   );
 }
 
-function KnowledgeImageDialog({
-  skill,
-  storeId,
+function KnowledgeTextSource({
+  value,
   disabled,
-  onOpenChange,
-  onAdd,
+  onChange,
 }: {
   disabled: boolean;
-  onAdd: (file: KnowledgeFile) => void;
-  onOpenChange: (open: boolean) => void;
-  skill: StoreSkill;
-  storeId: string;
+  onChange: (value: string) => void;
+  value: string;
 }) {
   const { t } = useI18n();
-  const [path, setPath] = useState(`assets/image-${skill.files.length}.webp`);
-  const [alt, setAlt] = useState("");
-  const [image, setImage] = useState<ImageValue>({ imageKey: null, imageKind: "photograph" });
-  const candidate =
-    image.imageKey && image.imageSource
-      ? {
-          path,
-          alt,
-          imageKey: image.imageKey,
-          imageKind: image.imageKind,
-          imageSource: image.imageSource,
-        }
-      : undefined;
-  const valid =
-    candidate &&
-    storeSkillSchema.safeParse({ ...skill, files: [...skill.files, candidate] }).success;
   return (
-    <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("knowledge_add_image")}</DialogTitle>
-          <DialogDescription>{t("knowledge_image_hint")}</DialogDescription>
-        </DialogHeader>
-        <DialogScroll className="space-y-4">
-          <label className="grid gap-2 text-sm">
-            {t("knowledge_path")}
-            <Input value={path} onChange={(event) => setPath(event.target.value)} />
-          </label>
-          <label className="grid gap-2 text-sm">
-            {t("theme_alt")}
-            <Input value={alt} maxLength={300} onChange={(event) => setAlt(event.target.value)} />
-          </label>
-          <ConfigurationImageField
-            storeId={storeId}
-            value={image}
-            onChange={setImage}
-            disabled={disabled}
-          />
-        </DialogScroll>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            {t("common_cancel")}
-          </Button>
-          <Button
-            type="button"
-            disabled={disabled || !valid}
-            onClick={() => {
-              if (candidate && valid) onAdd(candidate);
-            }}
-          >
-            {t("knowledge_add_image")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <label className="grid gap-2 text-sm">
+      {t("knowledge_content")}
+      <textarea
+        aria-label={t("knowledge_content")}
+        aria-invalid={value.length > storeSkillLimits.fileCharacters}
+        disabled={disabled}
+        spellCheck={false}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-h-80 w-full resize-y rounded-md border border-input bg-background p-3 font-mono text-sm leading-6"
+      />
+      <span className="text-xs text-muted-foreground">
+        {value.length.toLocaleString()} / {storeSkillLimits.fileCharacters.toLocaleString()}
+      </span>
+    </label>
   );
 }

@@ -4,6 +4,7 @@ import { isAPIError } from "better-auth/api";
 import { apiFactory } from "../../platform/http";
 import { registerConfigurationTools } from "./configuration-tools";
 import { registerGamesTools } from "./games-tools";
+import { registerKnowledgeTools } from "./knowledge-tools";
 import { registerRewardsTools } from "./rewards-tools";
 import { resolveMcpActor } from "./service";
 
@@ -33,6 +34,7 @@ export const mcpRoutes = apiFactory.createApp().all("/", async (c) => {
   registerRewardsTools(server, c.get("services"), actor);
   registerGamesTools(server, c.get("services"), actor);
   registerConfigurationTools(server, c.get("services"), actor);
+  registerKnowledgeTools(server, c.get("services"), actor);
 
   c.set("errorPhase", "mcp.transport");
   const transport = new StreamableHTTPTransport({ sessionIdGenerator: undefined });

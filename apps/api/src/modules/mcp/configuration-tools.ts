@@ -175,7 +175,7 @@ export function registerConfigurationTools(server: McpServer, services: ApiServi
     "upload_image",
     {
       description:
-        "店舗設定用の商品・店舗ロゴ・テーマ装飾・チラシ画像・会員カード・会員PWAアイコン・クーポン券面を取り込む。画像テーマは先にget_theme_specで素材別の寸法と配置を確認し、クライアントの画像生成機能で別々に制作する。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品、branding.logo、branding.banner、branding.membershipCard.image、branding.memberIcon、appearance.assets、bannersの画像へ設定する。ロゴ・装飾・チラシにはaltの日英説明も設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
+        "店舗設定用の資料Skill内の画像・商品・店舗ロゴ・テーマ装飾・チラシ画像・会員カード・会員PWAアイコン・クーポン券面を取り込む。画像テーマは先にget_theme_specで素材別の寸法と配置を確認し、クライアントの画像生成機能で別々に制作する。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをedit_store_skillの画像ファイル、またはupdate_draftの商品、branding.logo、branding.banner、branding.membershipCard.image、branding.memberIcon、appearance.assets、bannersの画像へ設定する。ロゴ・装飾・チラシにはaltの日英説明も設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
       inputSchema: uploadImageSchema.shape,
       outputSchema: uploadedImageSchema.shape,
       _meta: { "openai/fileParams": ["file"] },
