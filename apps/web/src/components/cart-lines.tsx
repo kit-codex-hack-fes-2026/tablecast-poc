@@ -7,8 +7,9 @@ import * as m from "motion/react-m";
 import { forwardRef, type ReactNode, useId, useState } from "react";
 import { useI18n } from "../i18n/locale";
 import { ConditionSummary } from "./condition-summary";
+import { CustomisationContent, CustomisationPrice } from "./customisation-content";
 import { IllustrationNotice } from "./illustration-notice";
-import { Money, PriceChange } from "./money";
+import { Money } from "./money";
 import { ProductImage } from "./product-image";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -146,30 +147,22 @@ export function CartLines<Line extends CartDisplayLine>({
                               return (
                                 <span
                                   key={option.id}
-                                  className="inline-flex min-h-12.5 max-w-full flex-wrap items-center gap-2 rounded-2xl bg-muted p-2 text-sm"
+                                  className="inline-flex min-h-12.5 max-w-full flex-wrap items-center gap-2 rounded-2xl bg-surface-subtle p-2 text-sm"
                                 >
-                                  <span className="font-medium">
-                                    {context?.group.text[locale].displayName ??
-                                      t("kiosk_customisations")}
-                                    :{" "}
-                                  </span>
-                                  {context?.option.imageKey && (
-                                    <ProductImage
-                                      src={`/media/${context.option.imageKey}`}
-                                      width={32}
-                                      height={32}
-                                      sizes="32px"
-                                      alt=""
-                                      className="size-8 shrink-0 rounded-lg object-contain"
-                                    />
-                                  )}
-                                  <span className="min-w-0 wrap-anywhere">
-                                    {option.name[locale]}
-                                    {option.quantity > 1 && ` × ${option.quantity}`}
-                                  </span>
+                                  <CustomisationContent
+                                    group={
+                                      context?.group.text[locale].displayName ??
+                                      t("kiosk_customisations")
+                                    }
+                                    name={option.name[locale]}
+                                    imageKey={context?.option.imageKey}
+                                    imageKind={context?.option.imageKind}
+                                    quantity={option.quantity}
+                                    showIllustration={false}
+                                  />
                                   {option.priceDelta !== 0 && (
                                     <span>
-                                      (<PriceChange value={option.priceDelta} />)
+                                      (<CustomisationPrice value={option.priceDelta} />)
                                     </span>
                                   )}
                                 </span>

@@ -3,16 +3,13 @@ import { useStore as useFormStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useHydrated } from "@tanstack/react-router";
 import { Link2, Link2Off, RefreshCw, Save } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
 import { useAppForm } from "../../components/form";
 import { SubmitButton } from "../../components/form/fields";
-import { MenuOptionImage } from "../../components/menu-option-image";
-import { Money } from "../../components/money";
 import { PageHeader } from "../../components/page-header";
-import { ProductCard } from "../../components/product-card";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
@@ -23,30 +20,16 @@ import { apiError } from "../../lib/api-error";
 import { useStore } from "../store/store-context";
 import { PosDevicePicker } from "./pos-devices";
 import { PosIssues } from "./pos-issues";
+import { type PosMappingRow, posMappingValues } from "./pos-mapping-model";
+import { PosMappingTable } from "./pos-mapping-table";
 import { posCatalogOptions, posSettingsOptions } from "./pos-query";
 
-const formValues = (settings: PosSettings) => {
-  const mappings = new Map(
-    settings.mappings.map((mapping) => [`${mapping.kind}:${mapping.localId}`, mapping.externalId]),
-  );
-  return {
-    expectedRevision: settings.connection?.revision ?? 0,
-    locationId: settings.connection?.locationId ?? "",
-    deviceId: settings.connection?.deviceId ?? "",
-    mappings: settings.products.flatMap((product) => [
-      {
-        kind: "product" as const,
-        localId: product.id,
-        externalId: mappings.get(`product:${product.id}`) ?? "",
-      },
-      ...product.options.map((option) => ({
-        kind: "option" as const,
-        localId: option.id,
-        externalId: mappings.get(`option:${option.id}`) ?? "",
-      })),
-    ]),
-  };
-};
+const formValues = (settings: PosSettings) => ({
+  expectedRevision: settings.connection?.revision ?? 0,
+  locationId: settings.connection?.locationId ?? "",
+  deviceId: settings.connection?.deviceId ?? "",
+  mappings: posMappingValues(settings),
+});
 
 export function StorePos() {
   const store = useStore();
@@ -73,7 +56,7 @@ export function StorePosSettings({
   settings: PosSettings;
   storeId: string;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const hydrated = useHydrated();
   const client = useQueryClient();
   const endpoint = rpc.api.admin.stores[":storeId"].pos;
@@ -125,6 +108,7 @@ export function StorePosSettings({
     },
   });
   const locationId = useFormStore(form.store, (state) => state.values.locationId);
+  const mappings = useFormStore(form.store, (state) => state.values.mappings);
   const catalog = useQuery({
     ...posCatalogOptions(storeId, locationId),
     enabled: canEdit && connected,
@@ -136,17 +120,21 @@ export function StorePosSettings({
       index,
     ]),
   );
-  function renderMapping(kind: "option" | "product", id: string, name: string) {
-    const index = mappingIndexes.get(`${kind}:${id}`);
+  function renderMapping(row: PosMappingRow) {
+    const index = mappingIndexes.get(`${row.kind}:${row.localId}`);
     if (index === undefined) return null;
     return (
       <form.Field name={`mappings[${index}].externalId`}>
         {(field) => (
           <PosMappingSelect
-            kind={kind}
-            name={name}
-            items={catalog.data?.items ?? []}
-            loaded={!!catalog.data}
+            disabled={!editable || !catalog.data}
+            parentRequired={!!row.option && !row.parentId}
+            kind={row.kind}
+            name={
+              row.option ? `${row.product.name[locale]} · ${row.name[locale]}` : row.name[locale]
+            }
+            candidates={row.candidates}
+            loaded={row.loaded}
             value={field.state.value}
             onChange={field.handleChange}
           />
@@ -215,9 +203,14 @@ export function StorePosSettings({
               connected={connected && canEdit}
               hasProducts={defaults.products.length > 0}
             />
-            <fieldset disabled={!editable || !catalog.data}>
-              <PosProductMappings products={defaults.products} renderMapping={renderMapping} />
-            </fieldset>
+            <div>
+              <PosMappingTable
+                products={defaults.products}
+                mappings={mappings}
+                catalog={catalog.data}
+                renderMapping={renderMapping}
+              />
+            </div>
           </section>
           <PosSettingsActions
             canEdit={canEdit}
@@ -234,79 +227,50 @@ export function StorePosSettings({
   );
 }
 
-function PosProductMappings({
-  products,
-  renderMapping,
-}: {
-  products: PosSettings["products"];
-  renderMapping: (kind: "option" | "product", id: string, name: string) => ReactNode;
-}) {
-  const { locale } = useI18n();
-  return (
-    <div className="grid grid-cols-1 gap-4 @lg:grid-cols-2 @3xl:grid-cols-3">
-      {products.map((product) => (
-        <ProductCard
-          key={product.id}
-          name={product.name[locale]}
-          price={product.price}
-          available={product.available}
-          imageKey={product.imageKey}
-          imageKind={product.imageKind}
-        >
-          {renderMapping("product", product.id, product.name[locale])}
-          {product.options.map((option) => (
-            <div key={option.id} className="space-y-2">
-              <div className="flex items-center gap-2">
-                <MenuOptionImage imageKey={option.imageKey} imageKind={option.imageKind} compact />
-                <span className="min-w-0 flex-1 text-sm">{option.name[locale]}</span>
-                <span className="text-sm">
-                  <Money signed value={option.price} />
-                </span>
-              </div>
-              {renderMapping("option", option.id, option.name[locale])}
-            </div>
-          ))}
-        </ProductCard>
-      ))}
-    </div>
-  );
-}
-
 function PosMappingSelect({
+  disabled,
+  parentRequired,
   kind,
   name,
-  items,
+  candidates,
   loaded,
   value,
   onChange,
 }: {
-  items: PosCatalog["items"];
+  candidates: PosMappingRow["candidates"];
+  disabled: boolean;
   kind: "option" | "product";
   loaded: boolean;
   name: string;
   onChange: (value: string) => void;
+  parentRequired: boolean;
   value: string;
 }) {
   const { t, locale } = useI18n();
-  const candidates =
-    kind === "product"
-      ? items
-      : items.flatMap((product) =>
-          product.options.map((option) => ({
-            ...option,
-            name: `${product.name} · ${option.name}`,
-          })),
-        );
   const remote = candidates.find((candidate) => candidate.id === value);
   return (
     <label className="grid gap-2 text-sm">
       <span className="sr-only">
         {name} · {t(kind === "product" ? "pos_mapping_product" : "pos_mapping_option")}
       </span>
-      <NativeSelect value={value} onChange={(event) => onChange(event.target.value)}>
-        <option value="">{t("pos_unmapped")}</option>
+      <NativeSelect
+        disabled={disabled || parentRequired}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">
+          {t(parentRequired ? "pos_mapping_parent_required" : "pos_unmapped")}
+        </option>
         {value && !remote && (
-          <option value={value}>{loaded ? t("pos_missing_reference") : value}</option>
+          <option value={value}>
+            {t(
+              parentRequired
+                ? "pos_mapping_parent_required"
+                : loaded
+                  ? "pos_missing_reference"
+                  : "pos_mapping_unchecked",
+            )}
+          </option>
         )}
         {candidates.map((candidate) => (
           <option key={candidate.id} value={candidate.id}>

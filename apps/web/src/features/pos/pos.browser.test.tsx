@@ -107,10 +107,14 @@ it("設定保存が競合しても選択を保持し、修正した対応付け�
     providers(<StorePosSettings storeId="tablecast-store" canEdit settings={posSettingsFixture} />),
   );
   await page.getByRole("combobox", { name: ja.pos_device }).selectOptions("tablecast-terminal-2");
-  const option = page.getByRole("combobox", { name: `大きめ · ${ja.pos_mapping_option}` });
+  const option = page.getByRole("combobox", { name: `煎茶 · 大きめ · ${ja.pos_mapping_option}` });
   await option.selectOptions("tablecast-square-large");
+  const search = page.getByRole("searchbox", { name: ja.pos_mapping_search });
+  await search.fill("該当する商品なし");
+  await expect.element(option).not.toBeInTheDocument();
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
   await expect.element(page.getByText(ja.pos_conflict)).toBeVisible();
+  await search.fill("");
   await expect.element(option).toHaveValue("tablecast-square-large");
   await expect
     .element(page.getByRole("combobox", { name: ja.pos_device }))
@@ -295,6 +299,12 @@ it("店舗メンバーには設定を読取専用で示し、管理者専用のS
     .element(page.getByRole("button", { name: ja.pos_catalog_refresh }))
     .not.toBeInTheDocument();
   await expect.element(page.getByText(ja.common_loading, { exact: true })).not.toBeInTheDocument();
+  const search = page.getByRole("searchbox", { name: ja.pos_mapping_search });
+  await expect.element(search).toBeEnabled();
+  await search.fill("該当する商品なし");
+  await expect
+    .element(page.getByRole("combobox", { name: `煎茶 · ${ja.pos_mapping_product}` }))
+    .not.toBeInTheDocument();
 });
 
 it("解除要求が失敗しても解除処理中を再取得し、再接続と保存を止めながら解除を再試行できる", async () => {
@@ -388,20 +398,32 @@ it("商品と選択肢の名前を管理言語へ切り替えても入力中のS
       </>,
     ),
   );
-  await expect.element(page.getByRole("heading", { name: "煎茶", exact: true })).toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: `煎茶 · ${ja.pos_mapping_product}` }))
+    .toBeVisible();
   await page
-    .getByRole("combobox", { name: `大きめ · ${ja.pos_mapping_option}` })
+    .getByRole("combobox", { name: `煎茶 · 大きめ · ${ja.pos_mapping_option}` })
     .selectOptions("tablecast-square-large");
   await page.getByRole("button", { name: "English", exact: true }).click();
-  await expect.element(page.getByRole("heading", { name: "Green tea", exact: true })).toBeVisible();
+  await expect.element(page.getByRole("searchbox", { name: en.pos_mapping_search })).toBeVisible();
+  await expect
+    .element(
+      page.getByRole("button", { name: new RegExp(`^${en.pos_mapping_filter_mapped}\\s*2$`) }),
+    )
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: `Green tea · ${en.pos_mapping_product}` }))
+    .toBeVisible();
   await expect.element(page.getByText("Large", { exact: true })).toBeVisible();
   await expect
-    .element(page.getByRole("combobox", { name: `Large · ${en.pos_mapping_option}` }))
+    .element(page.getByRole("combobox", { name: `Green tea · Large · ${en.pos_mapping_option}` }))
     .toHaveValue("tablecast-square-large");
   await page.getByRole("button", { name: "日本語", exact: true }).click();
-  await expect.element(page.getByRole("heading", { name: "煎茶", exact: true })).toBeVisible();
   await expect
-    .element(page.getByRole("combobox", { name: `大きめ · ${ja.pos_mapping_option}` }))
+    .element(page.getByRole("combobox", { name: `煎茶 · ${ja.pos_mapping_product}` }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: `煎茶 · 大きめ · ${ja.pos_mapping_option}` }))
     .toHaveValue("tablecast-square-large");
 });
 

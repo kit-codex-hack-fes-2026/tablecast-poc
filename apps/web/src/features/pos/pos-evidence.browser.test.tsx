@@ -60,7 +60,7 @@ async function capture(name: string) {
   );
   await page.screenshot({ path: `../../../test-results/${name}.png`, fullPage: false });
 }
-it("iPad横の日本語POS設定はseedの商品カードと写真を表示し、開発用の案内を表示しない", async () => {
+it("商品対応はseedの商品とカスタマイズを小さな一覧で示し、iPad・携帯・デスクトップで全体をはみ出さない", async () => {
   await page.viewport(1180, 820);
   client.setQueryData(
     posCatalogOptions("tablecast-store", "tablecast-location").queryKey,
@@ -91,22 +91,43 @@ it("iPad横の日本語POS設定はseedの商品カードと写真を表示し�
   expect(images.length).toBeGreaterThan(0);
   await Promise.all(images.map((image) => image.decode()));
   expect(images.every((image) => image.naturalWidth > 0)).toBe(true);
-  expect(document.querySelectorAll('article[data-theme-part="product-card"]').length).toBe(
-    posSeedSettings.products.length,
+  expect(document.querySelectorAll('article[data-theme-part="product-card"]').length).toBe(0);
+  const table = page.getByRole("table");
+  await expect.element(table.getByRole("columnheader", { name: "TableCast" })).toBeVisible();
+  await expect.element(table.getByRole("columnheader", { name: "Square" })).toBeVisible();
+  await expect
+    .element(table.getByRole("columnheader", { name: ja.pos_mapping_status }))
+    .toBeVisible();
+  const rows = posSeedSettings.products.reduce(
+    (count, product) => count + 1 + product.options.length,
+    0,
   );
+  expect(table.getByRole("row").elements()).toHaveLength(Math.min(rows, 20) + 1);
+  await expect
+    .element(
+      page.getByRole("button", { name: new RegExp(`^${ja.pos_mapping_filter_all}\\s*${rows}$`) }),
+    )
+    .toBeVisible();
   expect(document.body.textContent).not.toMatch(/Sandbox|模擬|冪等|SDK/);
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   await capture("tablecast-pos-settings-ja");
-  page
-    .getByRole("region", { name: ja.pos_mapping, exact: true })
-    .element()
-    .scrollIntoView({ block: "start" });
+  const heading = page.getByRole("heading", { name: ja.pos_mapping, exact: true });
+  const search = page.getByRole("searchbox", { name: ja.pos_mapping_search });
+  heading.element().scrollIntoView({ block: "start" });
   await new Promise(requestAnimationFrame);
-  const card = document.querySelector('article[data-theme-part="product-card"]');
-  const select = card?.querySelector("select");
-  if (!select) throw new Error("商品の対応付けがありません");
-  expect(select.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight);
+  expect(table.getByRole("row").nth(1).element().getBoundingClientRect().height).toBeLessThan(100);
   await capture("tablecast-pos-mapping-ja");
+  for (const [width, height, suffix] of [
+    [402, 874, "mobile"],
+    [1512, 982, "desktop"],
+  ] as const) {
+    await page.viewport(width, height);
+    heading.element().scrollIntoView({ block: "start" });
+    await new Promise(requestAnimationFrame);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
+    await expect.element(search).toBeVisible();
+    await capture(`tablecast-pos-mapping-${suffix}-ja`);
+  }
 });
 it("iPad縦の英語POS会計は必要時に既存の注文明細と合計を開く", async () => {
   await page.viewport(820, 1180);

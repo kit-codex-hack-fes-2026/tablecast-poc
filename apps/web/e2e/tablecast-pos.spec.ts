@@ -6,7 +6,7 @@ import { test } from "./support/test";
 
 test.use({ serviceWorkers: "block" });
 
-test("所有者のCookieでPOS設定と共通商品表示をSSRし匿名へ漏らさない", async ({
+test("所有者のCookieでPOS設定と商品対応一覧をSSRし匿名へ漏らさない", async ({
   page,
   browser,
   baseURL,
@@ -18,9 +18,9 @@ test("所有者のCookieでPOS設定と共通商品表示をSSRし匿名へ漏�
   const settings = posSettingsSchema.parse(await settingsResponse.json());
   expect(settings.configured).toBe(false);
   expect(settings.connection).toBeNull();
-  // 実際の公開済み商品から、共通カードに写真・名称・価格を表示できる一件を選ぶ。
-  const product = settings.products.find((item) => item.available && item.imageKey);
-  if (!product?.imageKey) throw new Error("画像付きの公開商品fixtureが必要です");
+  // 実際の公開済み商品から、対応一覧で名称・価格を確認できる一件を選ぶ。
+  const product = settings.products.find((item) => item.available);
+  if (!product) throw new Error("公開済みの商品fixtureが必要です");
   const ownerSsr = await browser.newContext({
     baseURL,
     javaScriptEnabled: false,
@@ -39,19 +39,25 @@ test("所有者のCookieでPOS設定と共通商品表示をSSRし匿名へ漏�
     expect(response?.headers()["cache-control"]).toBe("private, no-store");
     await expect(ssrPage.getByRole("heading", { name: ja.pos_title, exact: true })).toBeVisible();
     await expect(ssrPage.getByRole("button", { name: ja.pos_connect, exact: true })).toBeDisabled();
-    const productCard = ssrPage.getByRole("article").filter({
-      has: ssrPage.getByRole("heading", { name: product.name.ja, exact: true }),
-    });
-    await expect(productCard).toHaveCount(1);
-    await expect(productCard).toHaveCSS("display", "flex");
-    await expect(productCard).toContainText(new Intl.NumberFormat("ja-JP").format(product.price));
-    await expect(productCard.locator(`img[src*="${product.imageKey}"]`)).toHaveCount(1);
+    const productRow = ssrPage
+      .getByRole("table")
+      .getByRole("row")
+      .filter({
+        has: ssrPage.getByRole("combobox", {
+          name: `${product.name.ja} · ${ja.pos_mapping_product}`,
+        }),
+      });
+    await expect(productRow).toHaveCount(1);
+    await expect(productRow).toContainText(product.name.ja);
+    await expect(productRow).toContainText(new Intl.NumberFormat("ja-JP").format(product.price));
 
     const pageErrors: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
     await page.goto(path);
     await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
-    await expect(page.getByRole("heading", { name: product.name.ja, exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: `${product.name.ja} · ${ja.pos_mapping_product}` }),
+    ).toBeVisible();
     expect(pageErrors).toEqual([]);
     await page.screenshot({ path: testInfo.outputPath("tablecast-pos-owner.png") });
 
@@ -62,7 +68,9 @@ test("所有者のCookieでPOS設定と共通商品表示をSSRし匿名へ漏�
     await anonymousPage.goto(path);
     await expect(anonymousPage).toHaveURL(/\/login\?/);
     await expect(
-      anonymousPage.getByRole("heading", { name: product.name.ja, exact: true }),
+      anonymousPage.getByRole("combobox", {
+        name: `${product.name.ja} · ${ja.pos_mapping_product}`,
+      }),
     ).toHaveCount(0);
   } finally {
     await ownerSsr.close();

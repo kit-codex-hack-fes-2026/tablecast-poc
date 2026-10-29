@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { catalog as seedCatalog } from "../../../.storybook/tablecast-fixtures";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { money } from "../../i18n/format";
@@ -15,13 +16,18 @@ it.each(["ja", "en"] as const)(
     fixture.current.uiSection = "menu";
     fixture.current.staffCalled = false;
     const pictured = structuredClone(product);
-    pictured.imageKey = "tablecast/images/tablecast-product.webp";
+    const productImage = seedCatalog.configuration.products.find((item) => item.imageKey)?.imageKey;
+    const optionImage = seedCatalog.configuration.products
+      .flatMap((item) => item.modifiers.flatMap((group) => group.options))
+      .find((item) => item.imageKey)?.imageKey;
+    if (!productImage || !optionImage) throw new Error("seedの画像がありません");
+    pictured.imageKey = productImage;
     pictured.imageKind = "illustration";
     const option = fixtureValue(pictured.modifiers[0]).options.find(
       (item) => item.id === "tablecast-large-glass",
     );
     if (!option) throw new Error("画像付き選択肢が必要です");
-    option.imageKey = "tablecast/images/tablecast-option.webp";
+    option.imageKey = optionImage;
     fixture.catalogResponse = Response.json({
       ...catalog,
       configuration: { ...catalog.configuration, products: [pictured] },
@@ -147,9 +153,14 @@ it.each(["ja", "en"] as const)(
       .element(page.getByRole("dialog", { name: labels.kiosk_cart_added, exact: true }))
       .not.toBeInTheDocument();
     expect(cart.element().querySelectorAll("img")).toHaveLength(1);
-    expect(
-      pane.querySelector('[data-ui="cart-lines"] img[src*="tablecast-option"]'),
-    ).not.toBeNull();
+    await expect
+      .poll(() => {
+        const optionPicture = pane.querySelector<HTMLImageElement>(
+          `[data-ui="cart-lines"] img[src*="${optionImage}"]`,
+        );
+        return !!optionPicture?.complete && optionPicture.naturalWidth > 0;
+      })
+      .toBe(true);
     const picture = pane.querySelector('[data-ui="cart-product-image"]');
     const card = picture?.closest("li");
     if (!picture || !card) throw new Error("商品画像付きのカードが必要です");

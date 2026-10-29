@@ -1618,5 +1618,15 @@
   "pos_device_check": "Check connection",
   "pos_device_generate": "Generate code",
   "pos_issue_device": "Choose a payment terminal.",
-  "pos_details": "Bill details"
+  "pos_details": "Bill details",
+  "pos_mapping_status": "Mapping status",
+  "pos_mapping_search": "Search products and customisations",
+  "pos_mapping_filter_all": "All",
+  "pos_mapping_filter_mapped": "Mapped",
+  "pos_mapping_filter_unmapped": "Unmapped",
+  "pos_mapping_filter_duplicate": "Duplicate",
+  "pos_mapping_filter_review": "Needs review",
+  "pos_mapping_unchecked": "Unchecked",
+  "pos_mapping_duplicate_with": "Also used by: {names}",
+  "pos_mapping_parent_required": "Map the product first"
 }

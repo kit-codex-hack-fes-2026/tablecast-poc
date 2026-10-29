@@ -1,9 +1,8 @@
 import { Banknote, CircleCheck, Layers, Package } from "lucide-react";
 import type { useI18n } from "../../i18n/locale";
+import { CustomisationContent, CustomisationPrice } from "../../components/customisation-content";
 import { type DataTableColumn } from "../../components/data-table-model";
-import { MenuOptionImage } from "../../components/menu-option-image";
 import { Badge } from "../../components/ui/badge";
-import { money } from "../../i18n/format";
 
 type OptionRow = {
   available: boolean;
@@ -18,7 +17,6 @@ type OptionRow = {
 
 export function menuOverviewColumns(
   t: ReturnType<typeof useI18n>["t"],
-  locale: ReturnType<typeof useI18n>["locale"],
 ): DataTableColumn<OptionRow>[] {
   return [
     { accessorKey: "group", header: t("editor_modifiers"), meta: { icon: Layers } },
@@ -27,24 +25,20 @@ export function menuOverviewColumns(
       meta: { icon: Package },
       header: t("editor_options"),
       cell: ({ row }) => (
-        <div className="flex items-center gap-3">
-          <MenuOptionImage imageKey={row.original.imageKey} imageKind={row.original.imageKind} />
-          <div className="min-w-0">
-            <span className="font-medium">{row.original.name}</span>
-            {row.original.description && (
-              <p className="mt-1 whitespace-normal text-sm text-muted-foreground">
-                {row.original.description}
-              </p>
-            )}
-          </div>
-        </div>
+        <CustomisationContent
+          name={row.original.name}
+          description={row.original.description}
+          imageKey={row.original.imageKey}
+          imageKind={row.original.imageKind}
+          compact={false}
+        />
       ),
     },
     {
       accessorKey: "price",
       meta: { icon: Banknote, align: "right" },
       header: t("editor_price_delta"),
-      cell: ({ row }) => money(row.original.price, locale),
+      cell: ({ row }) => <CustomisationPrice value={row.original.price} showZero />,
     },
     {
       accessorKey: "available",

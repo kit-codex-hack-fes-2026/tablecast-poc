@@ -3,8 +3,9 @@ import { RadioGroup } from "@base-ui/react/radio-group";
 import { Minus, Plus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { ConditionSummary } from "../../components/condition-summary";
+import { CustomisationContent, CustomisationPrice } from "../../components/customisation-content";
 import { ErrorNotice } from "../../components/error-notice";
-import { Money, PriceChange } from "../../components/money";
+import { Money } from "../../components/money";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -14,7 +15,6 @@ import { RadioGroupItem } from "../../components/ui/radio-group";
 import { useI18n } from "../../i18n/locale";
 import { m } from "../../paraglide/messages.js";
 import { ProductAllergens } from "./product-allergens";
-import { OptionContent } from "./product-option-content";
 import { optionRow } from "./product-option-model";
 
 export function ProductPage({
@@ -149,30 +149,30 @@ export function ProductPage({
                         selected: selections.some((item) => item.optionId === option.id),
                       })}
                       key={option.id}
+                      htmlFor={`${id}-${groupIndex}-${optionIndex}-control`}
                     >
                       <RadioGroupItem
+                        id={`${id}-${groupIndex}-${optionIndex}-control`}
                         value={option.id}
                         disabled={!option.available || busy}
                         aria-labelledby={`${id}-${groupIndex}-${optionIndex}-name`}
                         aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                       ></RadioGroupItem>
-                      <OptionContent
-                        option={option}
-                        locale={locale}
+                      <CustomisationContent
+                        name={option.text[locale].displayName}
+                        description={option.text[locale].description}
+                        imageKey={option.imageKey}
+                        imageKind={option.imageKind}
                         id={`${id}-${groupIndex}-${optionIndex}`}
+                        showIllustration={false}
+                        className="flex-1"
                       />
-                      <small
+                      <CustomisationPrice
                         id={`${id}-${groupIndex}-${optionIndex}-price`}
-                        className="ml-auto text-sm whitespace-nowrap text-muted-foreground"
-                      >
-                        {!option.available ? (
-                          t("kiosk_sold_out")
-                        ) : option.priceDelta !== 0 ? (
-                          <PriceChange value={option.priceDelta} />
-                        ) : (
-                          ""
-                        )}
-                      </small>
+                        className="ml-auto"
+                        value={option.priceDelta}
+                        available={option.available}
+                      />
                     </label>
                   ))}
                 </RadioGroup>
@@ -198,31 +198,33 @@ export function ProductPage({
                             aria-labelledby={`${id}-${groupIndex}-${optionIndex}-name`}
                             aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                           ></Checkbox>
-                          <OptionContent
-                            option={option}
-                            locale={locale}
+                          <CustomisationContent
+                            name={option.text[locale].displayName}
+                            description={option.text[locale].description}
+                            imageKey={option.imageKey}
+                            imageKind={option.imageKind}
                             id={`${id}-${groupIndex}-${optionIndex}`}
+                            showIllustration={false}
+                            className="flex-1"
                           />
                         </label>
                       ) : (
-                        <OptionContent
-                          option={option}
-                          locale={locale}
+                        <CustomisationContent
+                          name={option.text[locale].displayName}
+                          description={option.text[locale].description}
+                          imageKey={option.imageKey}
+                          imageKind={option.imageKind}
                           id={`${id}-${groupIndex}-${optionIndex}`}
+                          showIllustration={false}
+                          className="flex-1"
                         />
                       )}
-                      <small
+                      <CustomisationPrice
                         id={`${id}-${groupIndex}-${optionIndex}-price`}
-                        className="ml-auto text-sm whitespace-nowrap text-muted-foreground"
-                      >
-                        {!option.available ? (
-                          t("kiosk_sold_out")
-                        ) : option.priceDelta !== 0 ? (
-                          <PriceChange value={option.priceDelta} />
-                        ) : (
-                          ""
-                        )}
-                      </small>
+                        className="ml-auto"
+                        value={option.priceDelta}
+                        available={option.available}
+                      />
                       {group.kind === "quantity" && (
                         <div data-ui="quantity-control" className={quantityControl().group()}>
                           <Button
@@ -268,8 +270,11 @@ export function ProductPage({
           group.options.map((option) =>
             option.conditions &&
             selections.some((selection) => selection.optionId === option.id) ? (
-              <div key={option.id} className="my-3 space-y-2 rounded-lg bg-muted p-3 text-sm">
-                <p className="font-semibold">{option.text[locale].displayName}</p>
+              <div
+                key={option.id}
+                className="my-3 space-y-2 rounded-lg bg-surface-subtle p-3 text-sm"
+              >
+                <CustomisationContent name={option.text[locale].displayName} />
                 {option.conditions?.requires && (
                   <p>
                     {t("condition_requires")}：

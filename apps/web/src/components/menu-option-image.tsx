@@ -24,7 +24,7 @@ export function MenuOptionImage({
             setFailedKey(imageKey);
         }}
         aria-hidden="true"
-        className={`flex items-center justify-center overflow-hidden rounded-lg bg-muted ${compact ? "size-8" : "size-24"}`}
+        className={`flex items-center justify-center overflow-hidden rounded-lg bg-surface-subtle ${compact ? "size-8" : "size-24"}`}
       >
         {failedKey === imageKey ? (
           <ImageOff className="size-6 text-muted-foreground" />

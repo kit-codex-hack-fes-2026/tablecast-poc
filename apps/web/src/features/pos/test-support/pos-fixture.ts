@@ -49,6 +49,130 @@ export const posCatalogFixture: PosCatalog = {
   ],
   issues: [],
 };
+
+const mappingProduct = posSettingsFixture.products[0];
+const mappingItem = posCatalogFixture.items[0];
+if (!mappingProduct || !mappingItem) throw new Error("対応付け用の商品fixtureがありません");
+
+export const posMappingSettingsFixture: PosSettings = {
+  ...posSettingsFixture,
+  products: [
+    {
+      ...mappingProduct,
+      options: [
+        ...mappingProduct.options,
+        {
+          id: "tablecast-extra",
+          name: { ja: "特大", en: "Extra large" },
+          price: 100,
+          imageKey: null,
+          imageKind: "photograph",
+        },
+        {
+          id: "tablecast-shared",
+          name: { ja: "共通の選択肢", en: "Shared customisation" },
+          price: 0,
+          imageKey: null,
+          imageKind: "photograph",
+        },
+      ],
+    },
+    {
+      ...mappingProduct,
+      id: "tablecast-coffee",
+      name: { ja: "コーヒー", en: "Coffee" },
+      options: [
+        {
+          id: "tablecast-shared",
+          name: { ja: "共通の選択肢", en: "Shared customisation" },
+          price: 0,
+          imageKey: null,
+          imageKind: "photograph",
+        },
+      ],
+    },
+    {
+      ...mappingProduct,
+      id: "tablecast-juice",
+      name: { ja: "ジュース", en: "Juice" },
+      price: 400,
+      options: [
+        {
+          id: "tablecast-ice",
+          name: { ja: "氷", en: "Ice" },
+          price: 0,
+          imageKey: null,
+          imageKind: "photograph",
+        },
+      ],
+    },
+    {
+      ...mappingProduct,
+      id: "tablecast-cake",
+      name: { ja: "ケーキ", en: "Cake" },
+      price: 600,
+      options: [],
+    },
+  ],
+  mappings: [
+    { kind: "product", localId: "tablecast-tea", externalId: "tablecast-square-tea" },
+    { kind: "product", localId: "tablecast-coffee", externalId: "tablecast-square-tea" },
+    { kind: "product", localId: "tablecast-juice", externalId: "tablecast-square-juice" },
+    { kind: "option", localId: "tablecast-large", externalId: "tablecast-square-large" },
+    { kind: "option", localId: "tablecast-extra", externalId: "tablecast-square-large" },
+    { kind: "option", localId: "tablecast-shared", externalId: "tablecast-square-shared" },
+    { kind: "option", localId: "tablecast-ice", externalId: "tablecast-square-removed" },
+  ],
+};
+
+export const posMappingCatalogFixture: PosCatalog = {
+  ...posCatalogFixture,
+  items: [
+    {
+      ...mappingItem,
+      options: [
+        ...mappingItem.options,
+        { id: "tablecast-square-extra", name: "Extra large", price: 100, available: true },
+        { id: "tablecast-square-shared", name: "Shared customisation", price: 0, available: true },
+        {
+          id: "tablecast-square-shared-next",
+          name: "Shared replacement",
+          price: 0,
+          available: true,
+        },
+      ],
+    },
+    {
+      id: "tablecast-square-coffee",
+      name: "Coffee",
+      price: 500,
+      available: true,
+      options: [
+        { id: "tablecast-square-shared", name: "Shared customisation", price: 0, available: true },
+        {
+          id: "tablecast-square-shared-next",
+          name: "Shared replacement",
+          price: 0,
+          available: true,
+        },
+      ],
+    },
+    {
+      id: "tablecast-square-juice",
+      name: "Juice",
+      price: 400,
+      available: true,
+      options: [{ id: "tablecast-square-ice", name: "Ice", price: 0, available: true }],
+    },
+    {
+      id: "tablecast-square-cake",
+      name: "Cake",
+      price: 600,
+      available: true,
+      options: [],
+    },
+  ],
+};
 export const posCheckoutFixture: PosCheckoutView = {
   connection: posSettingsFixture.connection,
   checkout: null,

@@ -1618,5 +1618,15 @@
   "pos_device_check": "接続を確認",
   "pos_device_generate": "コードを発行",
   "pos_issue_device": "決済端末を選択してください。",
-  "pos_details": "会計内容"
+  "pos_details": "会計内容",
+  "pos_mapping_status": "対応状況",
+  "pos_mapping_search": "商品・カスタマイズを検索",
+  "pos_mapping_filter_all": "すべて",
+  "pos_mapping_filter_mapped": "対応済み",
+  "pos_mapping_filter_unmapped": "未対応",
+  "pos_mapping_filter_duplicate": "重複",
+  "pos_mapping_filter_review": "要確認",
+  "pos_mapping_unchecked": "未確認",
+  "pos_mapping_duplicate_with": "重複先: {names}",
+  "pos_mapping_parent_required": "先に商品を対応付けてください"
 }
