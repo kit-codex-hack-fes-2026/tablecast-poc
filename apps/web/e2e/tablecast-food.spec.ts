@@ -35,6 +35,18 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
   for (const name of ["ブリオッシュ", "ビーフ", "チーズなし", "マスタード"])
     await detail.getByRole("radio", { name: new RegExp(`^${name}`) }).check();
   const information = detail.getByRole("region", { name: ja.food_title, exact: true });
+  const bun = detail
+    .locator("label")
+    .filter({ has: page.getByRole("radio", { name: /^ブリオッシュ/ }) });
+  await expect(bun.getByLabel("乳: 含有", { exact: true })).toBeVisible();
+  await expect(bun.getByLabel("小麦: 含有", { exact: true })).toBeVisible();
+  await expect(bun.getByRole("radio", { name: /^ブリオッシュ/ })).toHaveAccessibleDescription(
+    /追加する具材のアレルギー.*乳/,
+  );
+  await expect(bun.getByLabel("乳: 含有", { exact: true })).toHaveAttribute(
+    "data-variant",
+    "inactive",
+  );
   await expect(information.getByText(ja.food_selection_complete, { exact: true })).toBeVisible();
   await expect(information.getByLabel("乳: 含有", { exact: true })).toBeVisible();
   await expect(information.getByText("マスタード", { exact: false })).toHaveCount(0);
@@ -62,8 +74,13 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
       .locator('[data-ui="product-detail-body"]')
       .evaluate((element) => (element.scrollTop = 0));
     await expect(information.locator("details,summary,[data-slot=accordion]")).toHaveCount(0);
-    const foodBox = await information.boundingBox();
-    expect(foodBox?.height).toBeLessThan(160);
+    for (const name of [ja.food_allergens, ja.food_dietary])
+      expect(
+        await information
+          .getByRole("list", { name, exact: true })
+          .evaluate((element) => element.scrollWidth <= element.clientWidth),
+      ).toBe(true);
+    await expect(information.getByText(ja.food_current_selection, { exact: true })).toBeVisible();
     const firstOption = detail.getByRole("radio", { name: /^ブリオッシュ/ });
     await expect(firstOption).toBeInViewport();
     const header = detail.locator('[data-ui="product-detail-header"]');
@@ -84,6 +101,21 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
     });
   }
   await page.setViewportSize({ width: 1180, height: 820 });
+  await information
+    .getByRole("button", { name: `${ja.food_halal}: ${ja.food_unknown}`, exact: true })
+    .click();
+  const foodPopover = page.getByRole("dialog", {
+    name: `${ja.food_halal}: ${ja.food_unknown}`,
+    exact: true,
+  });
+  await expect(
+    foodPopover.getByText(`${ja.food_halal_certification}: ${ja.food_certification_unknown}`, {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(foodPopover).toHaveCSS("opacity", "1");
+  await page.screenshot({ path: testInfo.outputPath("tablecast-food-halal-1180x820.png") });
+  await foodPopover.getByRole("button", { name: ja.common_close, exact: true }).click();
   await detail.getByRole("button", { name: ja.kiosk_add, exact: true }).click();
   await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
   await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();

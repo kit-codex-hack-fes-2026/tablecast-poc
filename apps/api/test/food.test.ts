@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { productFoodErrors, productFoodInformation } from "../src/modules/catalog/food";
+import {
+  productFoodErrors,
+  productFoodInformation,
+  productOptionAllergens,
+} from "../src/modules/catalog/food";
 import { foodResultSchema } from "../src/modules/catalog/food-model";
 import { readConfiguration } from "../src/modules/configuration/food-compatibility";
 import { foodClassification, foodProfileSchema, unknownFoodProfile } from "../src/schema";
@@ -32,6 +36,19 @@ describe("食事制限の集合とenumの判定理由", () => {
         { optionId: "lettuce", quantity: 1 },
       ]).allergens.milk,
     ).toBe("not_used");
+  });
+  it("選択肢の注記は追加具材だけを合算し、除去対象や固定部分を含有として表示しない", () => {
+    const product = foodProduct();
+    const option = product.modifiers[0]?.options.find((item) => item.id === "extra-cheese");
+    if (!option) throw new Error("選択肢がありません");
+    option.foodChanges = { add: ["cheese", "bun"], remove: [] };
+    expect(productOptionAllergens(product)).toMatchObject({
+      "no-cheese": { contains: [], unverified: false },
+      lettuce: { contains: [], unverified: false },
+      "extra-cheese": { contains: ["wheat", "milk"], unverified: false },
+    });
+    option.foodChanges = undefined;
+    expect(productOptionAllergens(product)[option.id]).toEqual({ contains: [], unverified: true });
   });
   it("追加は除去に優先し、選択の順序と重複数量で定性的な判定を変えない", () => {
     const product = foodProduct();

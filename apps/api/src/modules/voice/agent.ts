@@ -107,7 +107,12 @@ export function createCastTools(
       inputSchema: foodQuerySchema,
       execute: async (input) => {
         guard();
-        return getProductFoodInformation(services, actor, input);
+        const { optionAllergens: _optionAllergens, ...result } = await getProductFoodInformation(
+          services,
+          actor,
+          input,
+        );
+        return result;
       },
     }),
     getCatalog: castTool({

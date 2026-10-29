@@ -4,7 +4,7 @@ import type { Actor } from "../auth/model";
 import type { foodPreviewSchema } from "../configuration/model";
 import type { foodQuerySchema } from "./model";
 import { DomainError, ensure } from "../../platform/errors";
-import { productFoodErrors, productFoodInformation } from "./food";
+import { productFoodErrors, productFoodInformation, productOptionAllergens } from "./food";
 import { priceCart } from "./pricing";
 import { getCatalog } from "./queries";
 
@@ -46,6 +46,7 @@ export async function getProductFoodInformation(
   ensure(product, "PRODUCT_NOT_FOUND", 404);
   return {
     configVersion: catalog.version,
+    optionAllergens: productOptionAllergens(product),
     ...previewProductFoodInformation({ product, selections: input.selections }),
   };
 }

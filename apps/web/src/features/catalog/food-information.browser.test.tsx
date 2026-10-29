@@ -11,6 +11,7 @@ import { LocaleProvider } from "../../i18n/locale";
 import { tableEndpoint } from "../../lib/api";
 import { product } from "../../test-support/tablecast-fixtures";
 import { ProductAllergens } from "../kiosk/product-allergens";
+import { useProductFoodInformation } from "../kiosk/product-food-query";
 import { FoodChangesEditor, FoodInformationEditor } from "./food-information-editor";
 import "../../styles.css";
 
@@ -82,18 +83,19 @@ function Editor() {
 
 function Selection() {
   const [selected, setSelected] = useState(false);
+  const query = useProductFoodInformation({
+    productId: product.id,
+    selections: selected ? [{ optionId: "remove-milk", quantity: 1 }] : [],
+    endpoint: tableEndpoint,
+    configVersion: 1,
+    tableSessionId: "tablecast-food-test",
+  });
   return (
     <>
       <button type="button" onClick={() => setSelected(true)}>
         乳を抜く
       </button>
-      <ProductAllergens
-        product={product}
-        selections={selected ? [{ optionId: "remove-milk", quantity: 1 }] : []}
-        endpoint={tableEndpoint}
-        configVersion={1}
-        tableSessionId="tablecast-food-test"
-      />
+      <ProductAllergens query={query} />
     </>
   );
 }
@@ -153,6 +155,60 @@ it.each(["ja", "en"] as const)(
   },
 );
 
+it("カスタマイズの再取得中は前の結果とspinnerを表示し、高さを維持する", async () => {
+  const next = Promise.withResolvers<Response>();
+  onTestFinished(() => next.resolve(Response.json({})));
+  const before = unknownFoodProfile();
+  before.allergens.milk = "contains";
+  let calls = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() =>
+      ++calls === 1
+        ? Promise.resolve(
+            Response.json({
+              configVersion: 1,
+              complete: true,
+              foodInformation: before,
+              optionAllergens: {},
+            }),
+          )
+        : next.promise,
+    ),
+  );
+  const screen = await render(
+    <QueryClientProvider client={client()}>
+      <LocaleProvider initialLocale="ja" persist={false}>
+        <Selection />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  const region = screen.getByRole("region", { name: ja.food_title, exact: true });
+  await expect.element(region.getByLabelText("乳: 含有", { exact: true })).toBeVisible();
+  await expect.element(region.getByText(ja.food_current_selection, { exact: true })).toBeVisible();
+  const beforeBox = region.element().getBoundingClientRect();
+  await screen.getByRole("button", { name: "乳を抜く", exact: true }).click();
+  await expect
+    .element(region.getByRole("status", { name: ja.food_updating, exact: true }))
+    .toBeVisible();
+  await expect.element(region.getByLabelText("乳: 含有", { exact: true })).toBeVisible();
+  expect(region.element().getBoundingClientRect().height).toBe(beforeBox.height);
+  expect(region.element().getBoundingClientRect().top).toBe(beforeBox.top);
+  next.resolve(
+    Response.json({
+      configVersion: 1,
+      complete: true,
+      foodInformation: { ...before, allergens: { milk: "not_used" } },
+      optionAllergens: {},
+    }),
+  );
+  await expect.element(region.getByText(ja.food_current_selection, { exact: true })).toBeVisible();
+  await expect.element(region.getByLabelText("乳: 含有", { exact: true })).not.toBeInTheDocument();
+  await expect
+    .element(region.getByRole("status", { name: ja.food_updating, exact: true }))
+    .not.toBeInTheDocument();
+});
+
 it("選択を変えた後の遅い応答を捨て、失敗時に入力を維持して再取得できる", async () => {
   const old = Promise.withResolvers<Response>();
   onTestFinished(() => old.resolve(Response.json({})));
@@ -180,7 +236,9 @@ it("選択を変えた後の遅い応答を捨て、失敗時に入力を維持�
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  await expect.element(screen.getByText(ja.food_updating)).toBeVisible();
+  await expect
+    .element(screen.getByRole("status", { name: ja.food_updating, exact: true }))
+    .toBeVisible();
   await screen.getByRole("button", { name: "乳を抜く" }).click();
   await screen.getByRole("button", { name: ja.food_retry }).click();
   const allergens = screen.getByRole("list", { name: ja.food_allergens });
@@ -228,7 +286,7 @@ it.each(["ja", "en"] as const)(
       `${locale === "ja" ? "小麦" : "Wheat"}: ${labels.food_unknown}`,
       { exact: true },
     );
-    await expect.element(milk).toHaveAttribute("data-variant", "destructive");
+    await expect.element(milk).toHaveAttribute("data-variant", "inactive");
     await expect.element(egg).not.toBeInTheDocument();
     await expect.element(wheat).not.toBeInTheDocument();
     await expect.element(screen.getByText(labels.food_allergens, { exact: true })).toBeVisible();
@@ -250,16 +308,46 @@ it.each(["ja", "en"] as const)(
       )
       .toHaveAttribute("data-variant", "success");
     await expect
-      .element(screen.getByText(labels.food_certification_unknown, { exact: false }))
+      .element(page.getByText(labels.food_certification_unknown, { exact: false }))
+      .not.toBeInTheDocument();
+    const trigger = screen.getByRole("button", {
+      name: `${labels.food_halal}: ${labels.food_unknown}`,
+      exact: true,
+    });
+    await trigger.click();
+    await expect
+      .element(
+        page.getByText(`${labels.food_halal_certification}: ${labels.food_certification_unknown}`, {
+          exact: true,
+        }),
+      )
       .toBeVisible();
+    await page.getByRole("button", { name: labels.common_close, exact: true }).click();
+    await expect.element(trigger).toHaveFocus();
 
     expect(screen.container.querySelector("details,summary,[data-slot=accordion]")).toBeNull();
     const row = screen.getByRole("list", { name: labels.food_dietary });
-    row.element().focus();
-    await userEvent.keyboard("[ArrowRight]");
-    await expect.poll(() => row.element().scrollLeft).toBeGreaterThan(0);
+    expect(row.element().scrollWidth).toBeLessThanOrEqual(row.element().clientWidth);
+    expect(allergens.element().scrollWidth).toBeLessThanOrEqual(allergens.element().clientWidth);
   },
 );
+
+it("29品目を狭い幅でも折り返し、横スクロールを生じさせない", async () => {
+  const value = unknownFoodProfile();
+  for (const item of foodClassification.allergens) value.allergens[item.id] = "contains";
+  const screen = await render(
+    <LocaleProvider initialLocale="ja" persist={false}>
+      <div style={{ width: 300 }}>
+        <FoodInformationView value={value} />
+      </div>
+    </LocaleProvider>,
+  );
+  const list = screen.getByRole("list", { name: ja.food_allergens, exact: true });
+  expect(list.element().children).toHaveLength(29);
+  expect(list.element().scrollWidth).toBeLessThanOrEqual(list.element().clientWidth);
+  const dietary = screen.getByRole("list", { name: ja.food_dietary, exact: true });
+  expect(dietary.element().scrollWidth).toBeLessThanOrEqual(dietary.element().clientWidth);
+});
 
 it("全品目の不使用が確認されたときだけアレルギーなしと表示する", async () => {
   const value = unknownFoodProfile();

@@ -453,5 +453,6 @@ it("選択後の食事制限を読取り専用の音声ツールで確認し、�
       },
     },
   });
+  expect(response.result).not.toHaveProperty("optionAllergens");
   expect((await getTableState(services(), device)).cart.lines).toHaveLength(0);
 });

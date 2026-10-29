@@ -106,6 +106,33 @@ export function productFoodInformation(
   return result;
 }
 
+// 選択肢で追加する具材だけの注記。除去対象や商品の固定部分を含有へ混ぜない。
+export function productOptionAllergens(product: Product) {
+  const components = new Map(product.foodInfo.components.map((item) => [item.id, item.profile]));
+  return Object.fromEntries(
+    product.modifiers.flatMap((group) =>
+      group.options.map((option) => {
+        const profiles = option.foodChanges?.add.map((id) => components.get(id)) ?? [];
+        return [
+          option.id,
+          {
+            contains: japaneseAllergenSchema.options.filter((id) =>
+              profiles.some((profile) => profile?.allergens[id] === "contains"),
+            ),
+            unverified:
+              !option.foodChanges ||
+              profiles.some((profile) =>
+                japaneseAllergenSchema.options.some(
+                  (id) => (profile?.allergens[id] ?? "unknown") === "unknown",
+                ),
+              ),
+          },
+        ] as const;
+      }),
+    ),
+  );
+}
+
 // 古い編集clientによる省略は拒否し、解除は明示した空のadd/removeで受ける。
 export function losesFoodChanges(
   before: { products: Product[] },

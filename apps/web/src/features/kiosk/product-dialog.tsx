@@ -15,6 +15,7 @@ import { useI18n } from "../../i18n/locale";
 import { type TableEndpoint } from "../../lib/api";
 import { m } from "../../paraglide/messages.js";
 import { ProductAllergens } from "./product-allergens";
+import { useProductFoodInformation } from "./product-food-query";
 import { OptionContent } from "./product-option-content";
 import { optionRow } from "./product-option-model";
 
@@ -53,6 +54,13 @@ export function ProductPage({
   }, []);
   const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const [selections, setSelections] = useState<CartLine["selections"]>(initial?.selections ?? []);
+  const food = useProductFoodInformation({
+    productId: product.id,
+    selections,
+    endpoint,
+    configVersion,
+    tableSessionId,
+  });
   function select(optionId: string, amount: number, replaceIds: string[] = []) {
     const replaced = new Set(replaceIds);
     setSelections((current) => [
@@ -68,7 +76,7 @@ export function ProductPage({
     >
       <div
         data-ui="product-detail-header"
-        className={`grid shrink-0 items-start gap-x-3 gap-y-2 bg-card p-3 @min-[36rem]/product-dialog:gap-x-5 @min-[36rem]/product-dialog:p-4 ${product.imageKey ? "grid-cols-[4rem_minmax(0,1fr)_auto] @min-[36rem]/product-dialog:grid-cols-[10rem_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}
+        className={`grid shrink-0 items-start gap-x-3 gap-y-2 bg-card p-3 pb-1 @min-[36rem]/product-dialog:gap-x-5 @min-[36rem]/product-dialog:p-4 ${product.imageKey ? "grid-cols-[4rem_minmax(0,1fr)_auto] @min-[36rem]/product-dialog:grid-cols-[10rem_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}
       >
         {product.imageKey && (
           <ProductImage
@@ -111,19 +119,13 @@ export function ProductPage({
           <div
             className={`col-span-full min-w-0 @min-[36rem]/product-dialog:col-span-1 @min-[36rem]/product-dialog:row-start-2 ${product.imageKey ? "@min-[36rem]/product-dialog:col-start-2" : "@min-[36rem]/product-dialog:col-start-1"}`}
           >
-            <ProductAllergens
-              product={product}
-              selections={selections}
-              endpoint={endpoint}
-              configVersion={configVersion}
-              tableSessionId={tableSessionId}
-            />
+            <ProductAllergens query={food} />
           </div>
         )}
       </div>
       <div
         data-ui="product-detail-body"
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 scrollbar-thin"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pt-2 scrollbar-thin"
       >
         <div
           data-ui="customisation-groups"
@@ -181,10 +183,12 @@ export function ProductPage({
                         value={option.id}
                         disabled={!option.available || busy}
                         aria-labelledby={`${id}-${groupIndex}-${optionIndex}-name`}
-                        aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
+                        aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                       ></RadioGroupItem>
                       <OptionContent
                         option={option}
+                        showAllergens={Boolean(endpoint)}
+                        allergens={food.data?.optionAllergens[option.id]}
                         locale={locale}
                         id={`${id}-${groupIndex}-${optionIndex}`}
                       />
@@ -223,10 +227,12 @@ export function ProductPage({
                             onCheckedChange={(checked) => select(option.id, checked ? 1 : 0)}
                             disabled={!option.available || busy}
                             aria-labelledby={`${id}-${groupIndex}-${optionIndex}-name`}
-                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
+                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                           ></Checkbox>
                           <OptionContent
                             option={option}
+                            showAllergens={Boolean(endpoint)}
+                            allergens={food.data?.optionAllergens[option.id]}
                             locale={locale}
                             id={`${id}-${groupIndex}-${optionIndex}`}
                           />
@@ -234,6 +240,8 @@ export function ProductPage({
                       ) : (
                         <OptionContent
                           option={option}
+                          showAllergens={Boolean(endpoint)}
+                          allergens={food.data?.optionAllergens[option.id]}
                           locale={locale}
                           id={`${id}-${groupIndex}-${optionIndex}`}
                         />
@@ -256,7 +264,7 @@ export function ProductPage({
                             size="icon-sm"
                             variant="outline"
                             type="button"
-                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
+                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                             aria-label={`${option.text[locale].displayName}: ${t("common_decrease")}`}
                             disabled={amount === 0 || busy}
                             onClick={() => select(option.id, amount - 1)}
@@ -274,7 +282,7 @@ export function ProductPage({
                             size="icon-sm"
                             variant="outline"
                             type="button"
-                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
+                            aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${endpoint ? `${id}-${groupIndex}-${optionIndex}-allergens` : ""} ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                             aria-label={`${option.text[locale].displayName}: ${t("common_increase")}`}
                             disabled={amount >= option.maxQuantity || !option.available || busy}
                             onClick={() => select(option.id, amount + 1)}

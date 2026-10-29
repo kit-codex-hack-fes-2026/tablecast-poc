@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { z } from "zod";
 import * as business from "../src/db/business-schema";
-import { foodResultSchema } from "../src/modules/catalog/food-model";
+import { foodResultSchema, japaneseAllergenSchema } from "../src/modules/catalog/food-model";
 import { getCatalog } from "../src/modules/catalog/queries";
 import { getConfigurationRelease } from "../src/modules/configuration/queries";
 import {
@@ -79,12 +79,24 @@ it("店舗境界で食事情報を照会し、公開・カート・注文に同�
   });
   expect(response.status).toBe(200);
   const result = z
-    .object({ configVersion: z.number(), complete: z.boolean(), foodInformation: foodResultSchema })
+    .object({
+      configVersion: z.number(),
+      complete: z.boolean(),
+      foodInformation: foodResultSchema,
+      optionAllergens: z.record(
+        z.string(),
+        z.object({ contains: z.array(japaneseAllergenSchema), unverified: z.boolean() }),
+      ),
+    })
     .parse(await response.json());
   expect(result).toMatchObject({
     configVersion: 2,
     complete: true,
     foodInformation: { allergens: { milk: "not_used" } },
+    optionAllergens: {
+      "extra-cheese": { contains: ["milk"], unverified: false },
+      "no-cheese": { contains: [], unverified: false },
+    },
   });
   expect((await getTableState(services, device)).cart.version).toBe(0);
   const cart = await updateCart(services, device, {

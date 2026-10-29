@@ -1,5 +1,6 @@
 import { type CartLine, productSchema } from "@tablecast/api/schema";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { afterEach, beforeEach, expect, it, onTestFinished, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 import ja from "../../../messages/ja.json";
@@ -116,17 +117,21 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
   // Given: 実在しないメディア参照と画像なしの選択肢を同じ商品に置く。
   await page.viewport(768, 1024);
   const onSave = vi.fn<(line: CartLine, pointer: boolean, origin: DOMRect) => void>();
+  const client = new QueryClient();
+  onTestFinished(() => client.clear());
   const screen = await render(
-    <LocaleProvider initialLocale={locale} persist={false}>
-      <div className="max-w-md bg-card">
-        <ProductPage
-          product={pictured}
-          busy={false}
-          onClose={vi.fn<() => void>()}
-          onSave={onSave}
-        />
-      </div>
-    </LocaleProvider>,
+    <QueryClientProvider client={client}>
+      <LocaleProvider initialLocale={locale} persist={false}>
+        <div className="max-w-md bg-card">
+          <ProductPage
+            product={pictured}
+            busy={false}
+            onClose={vi.fn<() => void>()}
+            onSave={onSave}
+          />
+        </div>
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
   await expect.element(screen.getByText("必須 · 1個選択", { exact: true })).toBeVisible();
   await expect.element(screen.getByText("任意 · 2個まで選択", { exact: true })).toBeVisible();

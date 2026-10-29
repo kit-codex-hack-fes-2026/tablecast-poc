@@ -1,3 +1,6 @@
+import type { ReactNode } from "react";
+import type { VariantProps } from "tailwind-variants";
+import { Popover } from "@base-ui/react/popover";
 import { dietaryKeys, foodClassification, type FoodProfile } from "@tablecast/api/schema";
 import {
   CircleCheck,
@@ -9,10 +12,12 @@ import {
   Sprout,
   TriangleAlert,
   WheatOff,
+  X,
 } from "lucide-react";
+import type { badgeVariants } from "./ui/badge-variants";
 import { useI18n } from "../i18n/locale";
+import { AllergenBadges } from "./allergen-badges";
 import {
-  allergenEmoji,
   crossContactSourceLabels,
   dietaryLabels,
   dietaryReasonLabels,
@@ -20,29 +25,83 @@ import {
   halalCertificationLabels,
 } from "./food-information-model";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { surfaceMotion } from "./ui/motion-variants";
 
 const dietaryStates = {
-  yes: { icon: CircleCheck, variant: "success", label: "food_yes" },
-  no: { icon: CircleX, variant: "destructive", label: "food_no" },
-  unknown: { icon: CircleHelp, variant: "inactive", label: "food_unknown" },
+  yes: { icon: CircleCheck, variant: "success" },
+  no: { icon: CircleX, variant: "destructive" },
+  unknown: { icon: CircleHelp, variant: "inactive" },
 } as const;
 const dietaryIcons = { vegan: Leaf, vegetarian: Sprout, halal: MoonStar, glutenFree: WheatOff };
 
-export function FoodInformationView({ value }: { value?: FoodProfile }) {
-  const { t, locale } = useI18n();
+function FoodDetailsBadge({
+  label,
+  variant,
+  children,
+  details,
+  dietary,
+  status,
+}: {
+  children: ReactNode;
+  details: ReactNode;
+  dietary?: string;
+  label: string;
+  status: string;
+  variant: VariantProps<typeof badgeVariants>["variant"];
+}) {
+  const { t } = useI18n();
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        render={<Badge render={<button type="button" aria-label={label} />} variant={variant} />}
+        aria-label={label}
+        data-food-dietary={dietary}
+        data-status={status}
+        className="min-h-11 gap-1.5 rounded-md py-1 text-xs [a,button]:px-2"
+      >
+        {children}
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner sideOffset={6} collisionPadding={12} className="z-50">
+          <Popover.Popup
+            className={surfaceMotion({
+              kind: "popup",
+              className:
+                "w-72 max-w-[calc(100vw-1.5rem)] rounded-xl border border-border bg-popover p-3 text-sm text-popover-foreground shadow-lg",
+            })}
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <Popover.Title className="font-semibold">{label}</Popover.Title>
+              <Popover.Close
+                render={<Button variant="ghost" size="icon-sm" aria-label={t("common_close")} />}
+              >
+                <X aria-hidden="true" />
+              </Popover.Close>
+            </div>
+            {details}
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+export function FoodInformationView({
+  value,
+  caption,
+}: {
+  caption?: ReactNode;
+  value?: FoodProfile;
+}) {
+  const { t } = useI18n();
   if (!value) return <p className="text-xs text-muted-foreground">{t("food_unrecorded")}</p>;
-  const allergens = foodClassification.allergens.map((item) => ({
-    id: item.id,
-    name: item.name[locale],
-    emoji: allergenEmoji[item.id],
-    status: value.allergens[item.id] ?? "unknown",
-  }));
-  const contact =
-    value.crossContact === "possible"
-      ? "contains"
-      : value.crossContact === "controlled"
-        ? "not_used"
-        : "unknown";
+  const contains = foodClassification.allergens
+    .filter((item) => value.allergens[item.id] === "contains")
+    .map((item) => item.id);
+  const unverified = foodClassification.allergens.some(
+    (item) => (value.allergens[item.id] ?? "unknown") === "unknown",
+  );
   const ContactIcon =
     value.crossContact === "controlled"
       ? ShieldCheck
@@ -50,110 +109,91 @@ export function FoodInformationView({ value }: { value?: FoodProfile }) {
         ? TriangleAlert
         : CircleHelp;
   const contactVariant =
-    contact === "contains" ? "destructive" : contact === "not_used" ? "success" : "inactive";
-  const halalNotes = [
-    t(halalCertificationLabels[value.halalCertification]),
-    ...value.dietary.halal.reasons.map((reason) => t(dietaryReasonLabels[reason])),
-  ].join(" · ");
+    value.crossContact === "possible"
+      ? "destructive"
+      : value.crossContact === "controlled"
+        ? "success"
+        : "inactive";
   return (
     <div className="grid min-w-0 gap-1.5 text-xs" data-ui="food-information">
-      <div className="flex min-w-0 items-start gap-2">
-        <span className="shrink-0 py-1 font-medium">{t("food_allergens")}</span>
-        <ul
-          aria-label={t("food_allergens")}
-          // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- 横長の食材一覧をキーボードでもスクロールする。
-          tabIndex={0}
-          className="flex min-w-0 gap-1.5 overflow-x-auto rounded-lg pb-1 outline-none focus-visible:ring-2 focus-visible:ring-ring scrollbar-thin"
-        >
-          {allergens
-            .filter((item) => item.status === "contains")
-            .map((item) => (
-              <li key={item.id} className="shrink-0">
-                <Badge
-                  variant="destructive"
-                  data-food-allergen={item.id}
-                  data-status="contains"
-                  aria-label={`${item.name}: ${t("food_contains")}`}
-                  title={`${item.name}: ${t("food_contains")}`}
-                  className="gap-1.5 rounded-full px-2.5 py-1 text-xs whitespace-nowrap"
-                >
-                  <span aria-hidden="true">{item.emoji}</span>
-                  {item.name}
-                </Badge>
-              </li>
-            ))}
-          {allergens.some((item) => item.status === "unknown") ? (
-            <li className="shrink-0">
-              <Badge
-                variant="inactive"
-                className="gap-1.5 rounded-full px-2.5 py-1 text-xs whitespace-nowrap"
-              >
-                <CircleHelp aria-hidden="true" />
-                {t("food_unknown")}
-              </Badge>
-            </li>
-          ) : !allergens.some((item) => item.status === "contains") ? (
-            <li className="py-1 text-muted-foreground">{t("food_allergens_none")}</li>
-          ) : null}
-        </ul>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="shrink-0 py-0.5 font-medium">{t("food_allergens")}</span>
+        <AllergenBadges contains={contains} unverified={unverified} />
+        {caption && (
+          <div className="flex min-h-6 items-center gap-2 text-muted-foreground">{caption}</div>
+        )}
       </div>
-      <div className="flex min-w-0 items-start gap-2">
-        <span className="shrink-0 py-1 font-medium">{t("food_dietary")}</span>
-        <ul
-          aria-label={t("food_dietary")}
-          // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- 食事区分の横スクロールをキーボードでも操作する。
-          tabIndex={0}
-          className="flex min-w-0 gap-1.5 overflow-x-auto rounded-lg pb-1 outline-none focus-visible:ring-2 focus-visible:ring-ring scrollbar-thin"
-        >
+      <div className="min-w-0">
+        <ul aria-label={t("food_dietary")} className="flex min-w-0 flex-wrap items-center gap-1">
+          <li aria-hidden="true" className="pr-1 font-medium">
+            {t("food_dietary")}
+          </li>
           {dietaryKeys.map((key) => {
-            const status = value.dietary[key].status;
-            const state = dietaryStates[status];
+            const assessment = value.dietary[key];
+            const state = dietaryStates[assessment.status];
             const Icon = dietaryIcons[key];
             const StatusIcon = state.icon;
             const label = t(key === "vegetarian" ? "food_vegetarian_short" : dietaryLabels[key]);
-            const statusLabel = t(status === "unknown" ? "food_unknown" : foodStatusLabels[status]);
+            const statusLabel = t(
+              assessment.status === "unknown"
+                ? "food_unknown"
+                : foodStatusLabels[assessment.status],
+            );
             return (
-              <li key={key} className="shrink-0">
-                <Badge
+              <li key={key} className="min-w-0">
+                <FoodDetailsBadge
+                  label={`${label}: ${statusLabel}`}
                   variant={state.variant}
-                  data-food-dietary={key}
-                  data-status={status}
-                  aria-label={`${label}: ${statusLabel}`}
-                  title={`${label}: ${statusLabel}`}
-                  className={`gap-1.5 rounded-md px-2 py-1 text-xs whitespace-nowrap ${status === "unknown" ? "border-dashed" : ""}`}
+                  dietary={key}
+                  status={assessment.status}
+                  details={
+                    <ul className="grid gap-2">
+                      {key === "halal" && (
+                        <li>
+                          {t("food_halal_certification")}:{" "}
+                          {t(halalCertificationLabels[value.halalCertification])}
+                        </li>
+                      )}
+                      {assessment.reasons.length ? (
+                        assessment.reasons.map((reason) => (
+                          <li key={reason}>{t(dietaryReasonLabels[reason])}</li>
+                        ))
+                      ) : (
+                        <li>{t("food_unknown")}</li>
+                      )}
+                    </ul>
+                  }
                 >
                   <Icon aria-hidden="true" />
                   {label}
                   <StatusIcon aria-hidden="true" />
-                </Badge>
+                </FoodDetailsBadge>
               </li>
             );
           })}
-          <li className="shrink-0">
-            <Badge
+          <li className="min-w-0">
+            <FoodDetailsBadge
+              label={`${t("editor_cross_contact")}: ${t(foodStatusLabels[value.crossContact])}`}
               variant={contactVariant}
-              className="gap-1.5 rounded-md px-2 py-1 text-xs whitespace-nowrap"
-              aria-label={`${t("editor_cross_contact")}: ${t(foodStatusLabels[value.crossContact])}`}
-              title={value.crossContactSources
-                .map((source) => t(crossContactSourceLabels[source]))
-                .join(" · ")}
+              status={value.crossContact}
+              details={
+                <ul className="grid gap-2">
+                  {value.crossContactSources.length ? (
+                    value.crossContactSources.map((source) => (
+                      <li key={source}>{t(crossContactSourceLabels[source])}</li>
+                    ))
+                  ) : (
+                    <li>{t(foodStatusLabels[value.crossContact])}</li>
+                  )}
+                </ul>
+              }
             >
               <ContactIcon aria-hidden="true" />
-              {value.crossContactSources.length
-                ? value.crossContactSources
-                    .map((source) => t(crossContactSourceLabels[source]))
-                    .join(" · ")
-                : t("food_cross_contact_short")}
-              : {t(foodStatusLabels[value.crossContact])}
-            </Badge>
+              {t("food_preparation")}
+            </FoodDetailsBadge>
           </li>
         </ul>
       </div>
-      {halalNotes && (
-        <p className="line-clamp-1 text-xs text-muted-foreground" title={halalNotes}>
-          {t("food_halal")}: {halalNotes}
-        </p>
-      )}
     </div>
   );
 }
