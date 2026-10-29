@@ -169,6 +169,11 @@ it.each(["ja", "en"] as const)(
       const resume = page.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
       await page.getByRole("tab", { name: new RegExp(`^${labels.kiosk_cart}`) }).click();
       const review = page.getByRole("button", { name: labels.kiosk_review, exact: true });
+      await expect.element(review).toBeVisible();
+      const checkout = review.element().closest('[data-ui="order-actions"]');
+      if (!checkout) throw new Error("注文確認の操作領域が必要です");
+      // 入場中のscaleは寸法へ乗るため、静止した面で操作領域の最小高を測る。
+      await expect.poll(() => getComputedStyle(checkout).transform).toBe("none");
       expect(resume.element().closest("[data-theme-part=voice-controls]")).not.toBeNull();
       expect(document.querySelector("[data-theme-part=header]")?.contains(resume.element())).toBe(
         false,
