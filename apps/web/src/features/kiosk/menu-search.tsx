@@ -41,10 +41,13 @@ export function KioskMenu({
   const trigger = useRef<HTMLButtonElement>(null);
   const focusInput = useRef(false);
   const focusTrigger = useRef(false);
+  // 外部同期によるdraft変更と区別し、未送信の実入力だけをdebounceする。
+  const editedQuery = useRef<string | undefined>(undefined);
   const submitted = useRef<UiSectionInput["search"]>(undefined);
   const previous = useRef({ search, active, version: catalog.version });
   const send = useCallback(
     (query: string, offset = 0) => {
+      editedQuery.current = undefined;
       const value = query.trim();
       const clearing = !value && (search || submitted.current);
       submitted.current = value ? { query: value, offset } : null;
@@ -74,8 +77,10 @@ export function KioskMenu({
         !ownUpdate ||
         previous.current.active !== active ||
         previous.current.version !== catalog.version
-      )
+      ) {
+        editedQuery.current = undefined;
         setDraft(search?.query ?? "");
+      }
       if (
         !ownUpdate &&
         (previous.current.search?.query !== search?.query ||
@@ -95,15 +100,22 @@ export function KioskMenu({
     return undefined;
   }, [search, active, catalog.version, opened]);
   const runSearch = useEffectEvent(
-    (query: string, previousQuery: string | undefined, previousOffset: number) => {
+    (
+      query: string,
+      previousQuery: string | undefined,
+      previousOffset: number,
+      previousVersion: number,
+    ) => {
       if (
         !opened ||
         !active ||
         composing ||
+        editedQuery.current?.trim() !== query ||
         draft.trim() !== query ||
         !query ||
         search?.query !== previousQuery ||
         (search?.offset ?? 0) !== previousOffset ||
+        catalog.version !== previousVersion ||
         query === search?.query
       )
         return;
@@ -112,10 +124,21 @@ export function KioskMenu({
   );
   useEffect(() => {
     const query = draft.trim();
-    if (!opened || !active || composing || !query || query === search?.query) return undefined;
-    const timeout = setTimeout(() => runSearch(query, search?.query, search?.offset ?? 0), 250);
+    if (
+      !opened ||
+      !active ||
+      composing ||
+      !query ||
+      editedQuery.current?.trim() !== query ||
+      query === search?.query
+    )
+      return undefined;
+    const timeout = setTimeout(
+      () => runSearch(query, search?.query, search?.offset ?? 0, catalog.version),
+      250,
+    );
     return () => clearTimeout(timeout);
-  }, [draft, search, active, composing, opened]);
+  }, [draft, search, active, composing, opened, catalog.version]);
 
   const hasQuery = Boolean(draft.trim());
   const updating = hasQuery && (pending || composing || draft.trim() !== search?.query);
@@ -164,12 +187,14 @@ export function KioskMenu({
               }}
               onCompositionStart={() => setComposing(true)}
               onCompositionEnd={(event) => {
+                editedQuery.current = event.currentTarget.value;
                 setLocallyOpened(true);
                 setDraft(event.currentTarget.value);
                 setComposing(false);
                 if (!event.currentTarget.value.trim()) send("");
               }}
               onChange={(event) => {
+                editedQuery.current = event.target.value;
                 setLocallyOpened(true);
                 setDraft(event.target.value);
                 if (!event.target.value.trim() && !composing) send("");
@@ -232,6 +257,7 @@ export function KioskMenu({
           opened
             ? undefined
             : () => {
+                editedQuery.current = undefined;
                 focusInput.current = true;
                 setLocallyOpened(true);
                 setDraft("");

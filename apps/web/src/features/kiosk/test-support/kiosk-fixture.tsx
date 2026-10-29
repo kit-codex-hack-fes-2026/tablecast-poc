@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { menuSearchPage } from "@tablecast/api/catalog-search";
 import {
   type CartUpdate,
@@ -347,12 +348,13 @@ afterEach(async () => {
   }
 });
 
-export async function mountKiosk() {
+export async function mountKiosk(children?: ReactNode) {
   return render(
     <LocaleProvider initialLocale={current.locale} persist={false}>
       <QueryClientProvider client={client}>
         <MotionProvider>
           <Kiosk />
+          {children}
         </MotionProvider>
       </QueryClientProvider>
     </LocaleProvider>,
