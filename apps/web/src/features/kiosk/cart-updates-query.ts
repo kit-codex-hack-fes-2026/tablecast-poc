@@ -11,9 +11,11 @@ export function useCartUpdates({
   endpoint,
   onStart,
   onSuccess,
+  onError,
 }: {
   data: CoreState;
   endpoint: TableEndpoint;
+  onError?: (error: unknown, input: CartSubmission) => void;
   onStart: (input: CartSubmission) => void;
   onSuccess: (input: CartSubmission) => void;
 }) {
@@ -84,7 +86,8 @@ export function useCartUpdates({
       client.setQueryData<CoreState>(queryKey, (current) => latestTable(current, updated));
       onSuccess(input);
     },
-    onError: async () => {
+    onError: async (error, input) => {
+      onError?.(error, input);
       // 次の直列操作も、競合・応答消失後の古い版では送らない。
       await client.invalidateQueries({ queryKey, exact: true, refetchType: "none" });
       try {

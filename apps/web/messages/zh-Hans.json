@@ -96,7 +96,7 @@
   "kiosk_vegan": "登记为纯素",
   "kiosk_cart_empty": "购物篮为空",
   "kiosk_missing": "请完成选项选择",
-  "kiosk_review": "提交订单",
+  "kiosk_review": "发送订单",
   "kiosk_review_title": "请确认订单内容",
   "kiosk_review_note": "确认后将把此订单发送至餐厅。",
   "kiosk_confirm": "发送订单",
@@ -437,5 +437,13 @@
   "pwa_kiosk": "打开餐桌应用",
   "pwa_staff": "打开员工应用",
   "kiosk_cart_limit": "购物车最多可加入{count}个项目。如需添加更多，请先提交本次订单。",
-  "kiosk_cart_limit_error": "购物车已满。请先提交订单或移除一个项目。"
+  "kiosk_cart_limit_error": "购物车已满。请先提交订单或移除一个项目。",
+  "kiosk_cart_added_product": "已将{count}份{product}加入购物篮",
+  "kiosk_cart_updated_product": "已更新{product}的订单内容",
+  "kiosk_cart_failed_product": "未能更新购物篮中的{product}",
+  "kiosk_ordered_items": "已订购{count}份商品",
+  "kiosk_order_failed_items": "未能发送{count}份商品的订单",
+  "kiosk_review_failed": "未能确认购物篮中的商品",
+  "kiosk_staff_request_failed": "未能发送服务员呼叫",
+  "kiosk_bill_request_failed": "未能发送结账请求"
 }

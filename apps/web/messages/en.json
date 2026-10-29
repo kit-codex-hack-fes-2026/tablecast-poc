@@ -119,7 +119,7 @@
   "kiosk_vegan": "Listed as vegan",
   "kiosk_cart_empty": "Your basket is empty",
   "kiosk_missing": "Please complete your selection",
-  "kiosk_review": "Place order",
+  "kiosk_review": "Send order",
   "kiosk_review_title": "Does everything look right?",
   "kiosk_review_note": "Confirming sends this order to the restaurant.",
   "kiosk_confirm": "Send order",
@@ -1730,5 +1730,13 @@
   "food_reason_pork_ingredients": "Contains pork-derived ingredients",
   "food_reason_alcohol": "Contains alcohol",
   "food_reason_origin_unknown": "Ingredient provenance unverified",
-  "food_reason_previous_record": "Previously recorded assessment"
+  "food_reason_previous_record": "Previously recorded assessment",
+  "kiosk_cart_added_product": "Added {count} × {product} to your basket",
+  "kiosk_cart_updated_product": "Updated your order for {product}",
+  "kiosk_cart_failed_product": "Could not update {product} in your basket",
+  "kiosk_ordered_items": "Items ordered: {count}",
+  "kiosk_order_failed_items": "Could not send the order · items: {count}",
+  "kiosk_review_failed": "Could not review the items in your basket",
+  "kiosk_staff_request_failed": "Could not send your request to staff",
+  "kiosk_bill_request_failed": "Could not send your request for the bill"
 }
