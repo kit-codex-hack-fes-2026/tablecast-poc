@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ZodError } from "zod";
 import {
   productFoodErrors,
   productFoodInformation,
@@ -6,7 +7,12 @@ import {
 } from "../src/modules/catalog/food";
 import { foodResultSchema } from "../src/modules/catalog/food-model";
 import { readConfiguration } from "../src/modules/configuration/food-compatibility";
-import { foodClassification, foodProfileSchema, unknownFoodProfile } from "../src/schema";
+import {
+  configurationSchema,
+  foodClassification,
+  foodProfileSchema,
+  unknownFoodProfile,
+} from "../src/schema";
 import { configuration } from "./configuration-fixture";
 import { foodProduct, profile } from "./food-fixture";
 
@@ -200,4 +206,69 @@ describe("食事制限の集合とenumの判定理由", () => {
     expect(converted).not.toHaveProperty("allergens");
     expect(JSON.stringify(original)).toBe(json);
   });
+});
+
+describe("保存済みの商品名の読取互換", () => {
+  it.each(["allergens", "foodInfo"] as const)(
+    "%sの旧設定は未定義の転写だけ表示名で補い、追加言語と原本を保つ",
+    (kind) => {
+      const { foodInfo, ...product } = foodProduct();
+      const original = {
+        ...configuration,
+        products: [
+          {
+            ...product,
+            ...(kind === "foodInfo"
+              ? { foodInfo }
+              : {
+                  allergens: {
+                    contains: ["milk"],
+                    evidence: "verified",
+                    crossContact: "unknown",
+                    vegan: "no",
+                    note: { ja: "乳を登録", en: "Milk recorded" },
+                  },
+                }),
+            text: {
+              ja: { displayName: "旧商品名", speechName: "別の発音", transliteration: undefined },
+              en: { displayName: "Previous name", speechName: "Different pronunciation" },
+              ko: { displayName: "이전 이름" },
+              fr: { displayName: "Ancien nom", transliteration: "Transcription conservée" },
+            },
+          },
+        ],
+      };
+      const before = structuredClone(original);
+      const converted = readConfiguration(original).products[0];
+      expect(converted?.text.ja.transliteration).toBe("旧商品名");
+      expect(converted?.text.en?.transliteration).toBe("Previous name");
+      expect(converted?.text.ko?.transliteration).toBe("이전 이름");
+      expect(converted?.text.fr?.transliteration).toBe("Transcription conservée");
+      expect(converted?.text.ja.speechName).toBe("別の発音");
+      expect(converted?.foodInfo).toMatchObject(
+        kind === "foodInfo" ? foodInfo : { base: { allergens: { milk: "contains" } } },
+      );
+      expect(original).toStrictEqual(before);
+      expect(configurationSchema.safeParse(original).success).toBe(false);
+    },
+  );
+  it.each(["", "  ", null, 17, false, {}, []])(
+    "明示された不正な転写%sを読取時にも拒否する",
+    (transliteration) => {
+      const product = foodProduct();
+      const original = {
+        ...configuration,
+        products: [
+          {
+            ...product,
+            text: { ...product.text, ja: { ...product.text.ja, transliteration } },
+          },
+        ],
+      };
+      const before = structuredClone(original);
+      expect(() => readConfiguration(original)).toThrow(ZodError);
+      expect(original).toStrictEqual(before);
+      expect(configurationSchema.safeParse(original).success).toBe(false);
+    },
+  );
 });
