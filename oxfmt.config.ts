@@ -6,6 +6,12 @@ export default defineConfig({
     "bun.lock",
     // 収録証跡は生バイトのハッシュを保持する。制作入力・設定は引き続き検査する。
     "apps/presentation/assets/openscreen/**/*.json",
+    ".agents/skills/conventional-commit/**",
+    ".agents/skills/fullstack-web-testing/**",
+    ".agents/skills/github-issue-pr-ops/**",
+    ".agents/skills/github-project-ops/**",
+    ".agents/skills/minimum-impl/**",
+    ".agents/skills/openscreen-demo-video/**",
     ".agents/skills/animate/**",
     ".agents/skills/emil-design-eng/**",
     ".agents/skills/hyperframes-core/**",

@@ -14,7 +14,7 @@
     {
       "id": 3,
       "prompt": "ProjectsにTypeがある。機能・修正・文書・epicを起票して。",
-      "expected_output": "それぞれfeat・fix・docs・epicラベルを付け、Projectsとの重複を許容する。"
+      "expected_output": "主目的に合う既存ラベルを使い、分類の追加は対象の運用に合わせる。Projectsとの重複を許容する。"
     },
     {
       "id": 4,
@@ -30,6 +30,21 @@
       "id": 6,
       "prompt": "大きい機能をIssueに分割して。",
       "expected_output": "成果と受け入れ条件で分け、実行体制をスコープに含めない。"
+    },
+    {
+      "id": 7,
+      "prompt": "APIの認可を修正した。既定ブランチはmainで、Projectsとstagingは使っていない。IssueからPRまで進めて。",
+      "expected_output": "認可の検証コマンドと結果をテキストで示し、mainを統合先とするDraft PRを作る。Projectsやstagingを新設せず、画像の添付を要求しない。"
+    },
+    {
+      "id": 8,
+      "prompt": "英語でPRを作って。リポジトリには独自のPRテンプレートがある。コミットはfeat(ui):で始まっている。",
+      "expected_output": "利用先のテンプレートを優先し、英語の自然なタイトルと本文を作る。コミットのtypeやGitmojiをタイトルへ転用しない。"
+    },
+    {
+      "id": 9,
+      "prompt": "P1のレビュー指摘に対応してpushした。古いheadのCIとpreviewは成功している。レビュー対応を完了して。",
+      "expected_output": "修正と検証を最新headへ照合し、現在のCIとpreviewを確認する。対応したSHAと結果をスレッドへ返信し、解消を確認して解決する。古い成功を新しいheadの根拠にせず、マージ許可とも扱わない。"
     }
   ]
 }

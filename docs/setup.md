@@ -148,6 +148,10 @@ Langfuse公式skillとGrafana公式の`loki`・`tempo`・`promql`・`dashboardin
 
 repo skillsは個人のglobal skillsへコピーしない。同じ外部skillをpluginとglobal配置の両方から導入済みなら、取得元と適用対象を確認して一方を選ぶ。各タスクでは `AGENTS.md` の入口から必要なskill本文と参照先を読む。skillsの所有・更新は [静的解析](static-analysis.md#skillsと追加pluginの所有) に従う。
 
+外部skillsの更新はリポジトリルートで `bunx skills update --project -y` を実行する。今回確認したCLIは1.7.4。`skills-lock.json`の取得元・固定refと差分を確認し、本文・同梱ファイル・lockfileを同じ差分へ含める。上流本文は整形・翻訳せず、TableCast固有の契約はAGENTS.mdとdocsへ置く。新たな外部skillを導入したらOxfmtとGit hookの除外も合わせる。
+
+GitHubへの画像・動画添付は[添付手順](../.agents/skills/github-issue-pr-ops/references/attachments.md)に従い、標準GitHub CLIの`--attach`を使う。認証済みの`gh 2.99.0`以上と対象リポジトリへの書き込み権限が必要で、実行時に対象コマンドの`--help`で対応を確認する。`github-image-upload`や独自アップロード処理は不要である。添付後の表示・再生確認は引き続きブラウザーで行う。
+
 動画制作のHyperFrames Core・Animation・Creativeもrepo skillsとして共有する。導入時のHyperFrames 0.8.33の公開元コミットへ固定しており、通常はcloneだけで参照できる。[動画制作スキルの取得元・復元コマンド](../apps/presentation/TOOLS.md#制作スキルの固定と復元)に従い、描画ライブラリの更新とは分けて管理する。
 
 ### MCP設定の配置と確認
@@ -183,7 +187,7 @@ PRを作成する各開発者は[Codex Cloudの公式セットアップ](https:/
 @codex review
 ```
 
-Codexの受付反応とレビュー結果を確認する。指摘への対応と再レビューは[PR運用のレビュー対応](../.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#レビュー対応)に従う。
+Codexの受付反応とレビュー結果を確認する。指摘への対応と再レビューは[PR運用のレビュー対応](../.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#レビュー対応)に従う。TableCastではCodex CloudのP0・P1もマージ前に必ず対応し、push・rebase後に追加レビューが必要ならPRへ`@codex review`を投稿する。
 
 ## 3. 最初の画面確認
 
