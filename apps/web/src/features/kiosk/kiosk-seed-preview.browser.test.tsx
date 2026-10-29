@@ -114,7 +114,7 @@ it.each(["ja", "en", "zh-Hans", "ko"] as const)(
       await Promise.all(images.map((image) => image.decode()));
       const photo = dialog.element().querySelector('[data-ui="product-detail-image"]');
       if (!photo) throw new Error("商品写真が必要です");
-      await expect.poll(() => getComputedStyle(dialog.element()).transform).toBe("none");
+      await expect.poll(() => getComputedStyle(dialog.element()).opacity).toBe("1");
       await page.screenshot({
         path: `../../../test-results/tablecast-order-dialog-${locale}-${width}.png`,
       });

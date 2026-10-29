@@ -229,7 +229,10 @@ function MenuCategories({
         data-ui="menu-categories"
         inert={searchOpen}
         aria-hidden={searchOpen || undefined}
-        className="-m-1.5 flex min-w-0 gap-2 overflow-x-auto p-1.5 scrollbar-thin"
+        className={cn(
+          "-m-1.5 flex min-w-0 gap-2 overflow-x-auto p-1.5 scrollbar-thin",
+          searchOpen && "invisible",
+        )}
         aria-label={t("kiosk_menu")}
       >
         <Button
