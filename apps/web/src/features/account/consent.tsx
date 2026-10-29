@@ -96,6 +96,7 @@ export function Consent() {
         </dl>
         <div className="mt-6 w-full text-left">
           <DataTable
+            defaultSort={{ id: "name", desc: false }}
             {...collection}
             searchLabel={t("stores_search")}
             searchPlaceholder={t("stores_search")}
@@ -154,7 +155,11 @@ function consentStoreColumns(
   selectable: boolean,
 ): DataTableColumn<ConsentStore>[] {
   return [
-    { accessorKey: "name", header: t("admin_store"), meta: { icon: Store } },
+    {
+      accessorKey: "name",
+      header: t("admin_store"),
+      meta: { icon: Store, sortLabel: t("org_name") },
+    },
     {
       accessorKey: "role",
       meta: { icon: ShieldCheck },

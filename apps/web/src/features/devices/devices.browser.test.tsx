@@ -194,10 +194,10 @@ it("日本語の端末コードと卓をURLで復元し、明示承認まで送�
     ),
   ).toEqual(["tablecast-second", "tablecast-first"]);
   await search.fill("T02");
-  await page.getByRole("combobox", { name: labels.collection_sort, exact: true }).click();
+  await page.getByRole("combobox", { name: labels.collection_sort_direction, exact: true }).click();
   await page
     .getByRole("option", {
-      name: `${labels.collection_table_name} · ${labels.collection_sort_ascending}`,
+      name: labels.collection_sort_ascending,
       exact: true,
     })
     .click();

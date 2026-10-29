@@ -174,6 +174,7 @@ function DailyTable({
   ];
   return (
     <DataTable
+      defaultSort={{ id: "day", desc: false }}
       {...collection}
       data={data}
       columns={columns}

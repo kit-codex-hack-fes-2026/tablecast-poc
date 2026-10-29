@@ -29,6 +29,7 @@ export function StatisticsTable({
   const columns = useMemo(() => statisticsColumns(t, locale, view), [t, locale, view]);
   return (
     <DataTable
+      defaultSort={{ id: "name", desc: false }}
       {...collection}
       pending={pending}
       data={rows}

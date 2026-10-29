@@ -26,6 +26,7 @@ function ControlledPagination({
   return (
     <LocaleProvider initialLocale="ja" persist={false}>
       <DataTable
+        defaultSort={{ id: "name", desc: false }}
         data={data}
         columns={[{ accessorKey: "name", header: "店舗名" }]}
         getRowId={(row) => row.id}
@@ -75,6 +76,7 @@ test("日本語の表は初回読込で列と領域を保ち、再取得で検�
   const view = (pending: boolean, data: { id: string; name: string }[], error?: Error) => (
     <LocaleProvider initialLocale="ja" persist={false}>
       <DataTable
+        defaultSort={{ id: "name", desc: false }}
         columns={columns}
         data={data}
         pending={pending}
@@ -110,24 +112,30 @@ test("表の検索・昇降順の並べ替え・ページ移動で対象行を�
   const data = Array.from({ length: 25 }, (_, index) => ({
     id: String(index + 1),
     name: `店舗${String(index + 1).padStart(3, "0")}`,
+    count: 25 - index,
   }));
   await render(
     <LocaleProvider initialLocale="ja" persist={false}>
       <DataTable
+        defaultSort={{ id: "name", desc: false }}
         columns={[
           {
             accessorKey: "name",
             sortFn: "text",
             header: "店舗名",
           },
+          { accessorKey: "count", header: "数量" },
         ]}
-        data={data}
+        data={data.toReversed()}
         getRowId={(row) => row.id}
         searchLabel="店舗を検索"
       />
     </LocaleProvider>,
   );
   await expect.element(page.getByRole("cell", { name: "店舗001", exact: true })).toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "並べ替え対象", exact: true }))
+    .toHaveTextContent("店舗名");
   await expect
     .element(page.getByRole("cell", { name: "店舗025", exact: true }))
     .not.toBeInTheDocument();
@@ -137,8 +145,17 @@ test("表の検索・昇降順の並べ替え・ページ移動で対象行を�
   await expect.element(page.getByRole("cell", { name: "店舗025", exact: true })).toBeVisible();
   await expect.element(next).toBeDisabled();
   await previous.click();
-  await page.getByRole("combobox", { name: "並べ替え", exact: true }).click();
-  await page.getByRole("option", { name: "店舗名 · 降順", exact: true }).click();
+  await page.getByRole("combobox", { name: "並び順", exact: true }).click();
+  await page.getByRole("option", { name: "降順", exact: true }).click();
+  await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗025");
+  const sortField = page.getByRole("combobox", { name: "並べ替え対象", exact: true });
+  const direction = page.getByRole("combobox", { name: "並び順", exact: true });
+  await sortField.click();
+  await page.getByRole("option", { name: "数量", exact: true }).click();
+  await expect.element(direction).toHaveTextContent("降順");
+  await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗001");
+  await sortField.click();
+  await page.getByRole("option", { name: "店舗名", exact: true }).click();
   await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗025");
   await page.getByRole("searchbox").fill("店舗003");
   await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗003");
@@ -149,5 +166,33 @@ test("表の検索・昇降順の並べ替え・ページ移動で対象行を�
   await expect.element(next).toBeEnabled();
   await page.getByRole("button", { name: "リセット", exact: true }).click();
   await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗001");
+  await expect
+    .element(page.getByRole("combobox", { name: "並べ替え対象", exact: true }))
+    .toHaveTextContent("店舗名");
+  await expect.element(direction).toHaveTextContent("昇順");
   await expect.element(page.getByRole("button", { name: "リセット", exact: true })).toBeDisabled();
+  const initialViewport = { width: window.innerWidth, height: window.innerHeight };
+  try {
+    for (const [width, height] of [
+      [402, 874],
+      [1180, 820],
+      [1512, 982],
+    ] as const) {
+      await page.viewport(width, height);
+      const fieldBounds = sortField.element().getBoundingClientRect();
+      const directionBounds = direction.element().getBoundingClientRect();
+      const searchBounds = page.getByRole("searchbox").element().getBoundingClientRect();
+      const resetBounds = page
+        .getByRole("button", { name: "リセット", exact: true })
+        .element()
+        .getBoundingClientRect();
+      expect(Math.abs(searchBounds.bottom - resetBounds.bottom)).toBeLessThan(1);
+      expect(resetBounds.left).toBeGreaterThanOrEqual(searchBounds.right);
+      expect(Math.abs(fieldBounds.top - directionBounds.top)).toBeLessThan(1);
+      expect(directionBounds.left).toBeGreaterThanOrEqual(fieldBounds.right);
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
+    }
+  } finally {
+    await page.viewport(initialViewport.width, initialViewport.height);
+  }
 });

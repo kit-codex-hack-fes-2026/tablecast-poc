@@ -76,6 +76,7 @@ export function Members() {
       <ErrorNotice error={query.error || change.error} onRetry={() => void query.refetch()} />
 
       <DataTable
+        defaultSort={{ id: "createdAt", desc: false }}
         {...collection}
         data={query.data.members}
         columns={columns}
@@ -99,7 +100,7 @@ function memberColumns(
       id: "user",
       accessorFn: (row) => `${row.user.name} ${row.user.email}`,
       header: t("org_members"),
-      meta: { icon: Users, rowHeader: true },
+      meta: { icon: Users, rowHeader: true, sortLabel: t("collection_member_name") },
       cell: ({ row }) => (
         <div className="min-w-56 max-w-sm">
           <UserIdentity user={row.original.user} />

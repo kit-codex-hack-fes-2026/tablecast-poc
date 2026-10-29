@@ -16,6 +16,7 @@ it.each(["", "対象"])("SSRは範囲外ページを検索後の件数で補正�
       LocaleContext.Provider,
       { value: { locale: "ja", setLocale: () => {} } },
       createElement(DataTable<(typeof data)[number]>, {
+        defaultSort: { id: "name", desc: false },
         data,
         columns: [{ accessorKey: "name", header: "店舗名" }],
         getRowId: (row) => row.id,

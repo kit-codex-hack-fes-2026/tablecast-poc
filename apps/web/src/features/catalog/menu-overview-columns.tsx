@@ -21,10 +21,14 @@ export function menuOverviewColumns(
   locale: ReturnType<typeof useI18n>["locale"],
 ): DataTableColumn<OptionRow>[] {
   return [
-    { accessorKey: "group", header: t("editor_modifiers"), meta: { icon: Layers } },
+    {
+      accessorKey: "group",
+      header: t("editor_modifiers"),
+      meta: { icon: Layers, sortLabel: t("collection_group_name") },
+    },
     {
       accessorKey: "name",
-      meta: { icon: Package },
+      meta: { icon: Package, sortLabel: t("collection_option_name") },
       header: t("editor_options"),
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
@@ -42,7 +46,7 @@ export function menuOverviewColumns(
     },
     {
       accessorKey: "price",
-      meta: { icon: Banknote, align: "right" },
+      meta: { icon: Banknote, align: "right", sortLabel: t("collection_price_delta") },
       header: t("editor_price_delta"),
       cell: ({ row }) => money(row.original.price, locale),
     },

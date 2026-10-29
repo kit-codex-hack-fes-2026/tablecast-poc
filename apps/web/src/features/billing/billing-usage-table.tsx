@@ -35,6 +35,7 @@ export function UsageTable({
   const columns = useMemo(() => usageColumns(t, locale, canManage), [t, locale, canManage]);
   return (
     <DataTable
+      defaultSort={{ id: "startedAt", desc: true }}
       {...collection}
       filtersActive={filtersActive}
       onReset={onReset}
@@ -61,7 +62,7 @@ function usageColumns(
     {
       id: "tableName",
       accessorFn: (row) => (row.demo ? t("demo_title") : (row.tableName ?? "")),
-      meta: { icon: TableProperties },
+      meta: { icon: TableProperties, sortLabel: t("collection_table_name") },
       header: t("admin_table"),
       cell: ({ row }) => (row.original.demo ? t("demo_title") : (row.original.tableName ?? "—")),
     },

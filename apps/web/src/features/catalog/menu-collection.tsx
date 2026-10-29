@@ -4,7 +4,7 @@ import { skipToken, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CircleCheck, CircleSlash, List, Plus, Tags } from "lucide-react";
 import { useMemo } from "react";
-import { CollectionSort } from "../../components/collection-sort";
+import { CollectionSelect } from "../../components/collection-select";
 import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
 import { ImageProvider } from "../../components/image-provider";
@@ -97,13 +97,13 @@ function MenuListCollection({
   function renderFilters() {
     const categories = configuration?.categories ?? [];
     return (
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-3">
+      <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2">
         <div className="flex flex-col gap-2 text-sm font-medium">
           <span className="flex items-center gap-2">
             <Tags aria-hidden className="size-4" />
             {t("editor_category")}
           </span>
-          <CollectionSort
+          <CollectionSelect
             label={t("editor_category")}
             value={search.category ?? ""}
             onValueChange={(value) =>
@@ -124,7 +124,7 @@ function MenuListCollection({
             <CircleCheck aria-hidden className="size-4" />
             {t("menu_availability")}
           </span>
-          <CollectionSort
+          <CollectionSelect
             label={t("menu_availability")}
             value={search.availability ?? ""}
             onValueChange={(value) =>
@@ -160,6 +160,9 @@ function MenuListCollection({
     };
     return (
       <DataTable
+        defaultSort={
+          search.q?.trim() ? { label: t("collection_sort_relevance") } : { id: "name", desc: false }
+        }
         data={data}
         filters={section === "products" ? renderFilters() : undefined}
         filtersActive={!!search.category || !!search.availability}

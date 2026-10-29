@@ -33,6 +33,7 @@ export function AccountSessions({ controller }: { controller: AccountController 
         {t("account_sessions")}
       </h2>
       <DataTable
+        defaultSort={{ id: "createdAt", desc: true }}
         {...collection}
         searchLabel={t("account_sessions_search")}
         searchPlaceholder={t("account_sessions_search")}
@@ -68,7 +69,7 @@ function loginSessionColumns(
     {
       id: "userAgent",
       accessorFn: (row) => sessionDeviceName(row.userAgent, t("account_device")),
-      meta: { icon: Monitor },
+      meta: { icon: Monitor, sortLabel: t("collection_device_name") },
       header: t("account_device"),
       cell: ({ row }) => (
         <div className="flex max-w-sm items-center gap-3">
