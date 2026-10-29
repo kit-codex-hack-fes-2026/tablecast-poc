@@ -18,6 +18,9 @@ export function OptionContent({
   showAllergens?: boolean;
 }) {
   const { t } = useI18n();
+  const hasAllergens = Boolean(
+    allergens && (allergens.contains.length > 0 || allergens.unverified),
+  );
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
       <MenuOptionImage
@@ -31,7 +34,7 @@ export function OptionContent({
           {option.text[locale].displayName}
         </span>
         {showAllergens && (
-          <div id={`${id}-allergens`} className="mt-0.5 min-h-6">
+          <div id={`${id}-allergens`} className={hasAllergens ? "mt-0.5" : undefined}>
             {allergens && (allergens.contains.length > 0 || allergens.unverified) && (
               <AllergenBadges
                 contains={allergens.contains}

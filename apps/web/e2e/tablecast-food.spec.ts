@@ -83,6 +83,15 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
     await expect(information.getByText(ja.food_current_selection, { exact: true })).toBeVisible();
     const firstOption = detail.getByRole("radio", { name: /^ブリオッシュ/ });
     await expect(firstOption).toBeInViewport();
+    const nameBox = await detail.getByRole("heading", { level: 2 }).boundingBox();
+    const priceBox = await detail.locator('[data-ui="product-detail-price"]').boundingBox();
+    const informationBox = await information.boundingBox();
+    expect(nameBox && priceBox && informationBox).toBeTruthy();
+    if (!nameBox || !priceBox || !informationBox)
+      throw new Error("商品見出しの寸法を取得できません");
+    expect(informationBox.y - priceBox.y - priceBox.height).toBeGreaterThan(
+      priceBox.y - nameBox.y - nameBox.height,
+    );
     const header = detail.locator('[data-ui="product-detail-header"]');
     await expect(header.getByRole("region", { name: ja.food_title })).toBeVisible();
     const images = detail.locator("img");
@@ -101,15 +110,25 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
     });
   }
   await page.setViewportSize({ width: 1180, height: 820 });
+  const lettuce = detail
+    .locator("label")
+    .filter({ has: page.getByRole("radio", { name: /^レタス包み/ }) });
+  const lettuceName = await lettuce.getByText("レタス包み", { exact: true }).boundingBox();
+  const lettuceControl = await lettuce.getByRole("radio", { name: /^レタス包み/ }).boundingBox();
+  if (!lettuceName || !lettuceControl) throw new Error("選択肢の寸法を取得できません");
+  expect(
+    Math.abs(lettuceName.y + lettuceName.height / 2 - lettuceControl.y - lettuceControl.height / 2),
+  ).toBeLessThan(1);
+  await expect(lettuce.getByRole("list")).toHaveCount(0);
   await information
     .getByRole("button", { name: `${ja.food_halal}: ${ja.food_unknown}`, exact: true })
     .click();
   const foodPopover = page.getByRole("dialog", {
-    name: `${ja.food_halal}: ${ja.food_unknown}`,
+    name: ja.food_halal,
     exact: true,
   });
   await expect(
-    foodPopover.getByText(`${ja.food_halal_certification}: ${ja.food_certification_unknown}`, {
+    foodPopover.getByText(ja.food_certification_unknown, {
       exact: true,
     }),
   ).toBeVisible();

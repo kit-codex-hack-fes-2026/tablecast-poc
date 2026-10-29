@@ -25,7 +25,6 @@ import {
   halalCertificationLabels,
 } from "./food-information-model";
 import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
 import { surfaceMotion } from "./ui/motion-variants";
 
 const dietaryStates = {
@@ -37,6 +36,7 @@ const dietaryIcons = { vegan: Leaf, vegetarian: Sprout, halal: MoonStar, glutenF
 
 function FoodDetailsBadge({
   label,
+  title,
   variant,
   children,
   details,
@@ -48,19 +48,23 @@ function FoodDetailsBadge({
   dietary?: string;
   label: string;
   status: string;
+  title: string;
   variant: VariantProps<typeof badgeVariants>["variant"];
 }) {
   const { t } = useI18n();
   return (
     <Popover.Root>
       <Popover.Trigger
-        render={<Badge render={<button type="button" aria-label={label} />} variant={variant} />}
+        render={<button type="button" aria-label={label} />}
         aria-label={label}
         data-food-dietary={dietary}
         data-status={status}
-        className="min-h-11 gap-1.5 rounded-md py-1 text-xs [a,button]:px-2"
+        data-variant={variant}
+        className="inline-flex min-h-6 min-w-6 max-w-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {children}
+        <Badge variant={variant} className="gap-1.5 rounded-md px-2 py-0.5 text-xs">
+          {children}
+        </Badge>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner sideOffset={6} collisionPadding={12} className="z-50">
@@ -68,15 +72,16 @@ function FoodDetailsBadge({
             className={surfaceMotion({
               kind: "popup",
               className:
-                "w-72 max-w-[calc(100vw-1.5rem)] rounded-xl border border-border bg-popover p-3 text-sm text-popover-foreground shadow-lg",
+                "w-max max-w-[min(16rem,calc(100vw-1.5rem))] rounded-lg border border-border bg-popover p-2.5 text-xs text-popover-foreground shadow-lg",
             })}
           >
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <Popover.Title className="font-semibold">{label}</Popover.Title>
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <Popover.Title className="font-semibold">{title}</Popover.Title>
               <Popover.Close
-                render={<Button variant="ghost" size="icon-sm" aria-label={t("common_close")} />}
+                aria-label={t("common_close")}
+                className="inline-flex size-6 shrink-0 items-center justify-center rounded-md outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <X aria-hidden="true" />
+                <X className="size-3.5" aria-hidden="true" />
               </Popover.Close>
             </div>
             {details}
@@ -115,19 +120,20 @@ export function FoodInformationView({
         ? "success"
         : "inactive";
   return (
-    <div className="grid min-w-0 gap-1.5 text-xs" data-ui="food-information">
+    <div
+      className="grid min-w-0 grid-cols-[max-content_minmax(0,1fr)] items-start gap-2 text-xs"
+      data-ui="food-information"
+    >
+      <span className="py-0.5 font-medium">{t("food_allergens")}</span>
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="shrink-0 py-0.5 font-medium">{t("food_allergens")}</span>
         <AllergenBadges contains={contains} unverified={unverified} />
         {caption && (
           <div className="flex min-h-6 items-center gap-2 text-muted-foreground">{caption}</div>
         )}
       </div>
+      <span className="py-0.5 font-medium">{t("food_dietary")}</span>
       <div className="min-w-0">
-        <ul aria-label={t("food_dietary")} className="flex min-w-0 flex-wrap items-center gap-1">
-          <li aria-hidden="true" className="pr-1 font-medium">
-            {t("food_dietary")}
-          </li>
+        <ul aria-label={t("food_dietary")} className="flex min-w-0 flex-wrap items-center gap-1.5">
           {dietaryKeys.map((key) => {
             const assessment = value.dietary[key];
             const state = dietaryStates[assessment.status];
@@ -143,24 +149,31 @@ export function FoodInformationView({
               <li key={key} className="min-w-0">
                 <FoodDetailsBadge
                   label={`${label}: ${statusLabel}`}
+                  title={label}
                   variant={state.variant}
                   dietary={key}
                   status={assessment.status}
                   details={
-                    <ul className="grid gap-2">
+                    <ul className="grid gap-1">
                       {key === "halal" && (
-                        <li>
-                          {t("food_halal_certification")}:{" "}
-                          {t(halalCertificationLabels[value.halalCertification])}
-                        </li>
+                        <li>{t(halalCertificationLabels[value.halalCertification])}</li>
                       )}
-                      {assessment.reasons.length ? (
-                        assessment.reasons.map((reason) => (
-                          <li key={reason}>{t(dietaryReasonLabels[reason])}</li>
-                        ))
-                      ) : (
-                        <li>{t("food_unknown")}</li>
-                      )}
+                      {assessment.reasons
+                        .filter(
+                          (reason) =>
+                            key !== "halal" ||
+                            (reason !== "ingredients_confirmed" && reason !== "previous_record"),
+                        )
+                        .map((reason) => (
+                          <li key={reason}>
+                            {t(
+                              reason === "ingredients_confirmed"
+                                ? "food_ingredients_checked"
+                                : dietaryReasonLabels[reason],
+                            )}
+                          </li>
+                        ))}
+                      {key !== "halal" && !assessment.reasons.length && <li>{statusLabel}</li>}
                     </ul>
                   }
                 >
@@ -174,10 +187,11 @@ export function FoodInformationView({
           <li className="min-w-0">
             <FoodDetailsBadge
               label={`${t("editor_cross_contact")}: ${t(foodStatusLabels[value.crossContact])}`}
+              title={t("food_preparation")}
               variant={contactVariant}
               status={value.crossContact}
               details={
-                <ul className="grid gap-2">
+                <ul className="grid gap-1">
                   {value.crossContactSources.length ? (
                     value.crossContactSources.map((source) => (
                       <li key={source}>{t(crossContactSourceLabels[source])}</li>

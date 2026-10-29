@@ -317,7 +317,7 @@ it.each(["ja", "en"] as const)(
     await trigger.click();
     await expect
       .element(
-        page.getByText(`${labels.food_halal_certification}: ${labels.food_certification_unknown}`, {
+        page.getByText(labels.food_certification_unknown, {
           exact: true,
         }),
       )
@@ -327,6 +327,10 @@ it.each(["ja", "en"] as const)(
 
     expect(screen.container.querySelector("details,summary,[data-slot=accordion]")).toBeNull();
     const row = screen.getByRole("list", { name: labels.food_dietary });
+    expect(row.element().getBoundingClientRect().left).toBe(
+      allergens.element().getBoundingClientRect().left,
+    );
+    expect(trigger.element().getBoundingClientRect().height).toBeLessThanOrEqual(28);
     expect(row.element().scrollWidth).toBeLessThanOrEqual(row.element().clientWidth);
     expect(allergens.element().scrollWidth).toBeLessThanOrEqual(allergens.element().clientWidth);
   },
@@ -346,6 +350,17 @@ it("29品目を狭い幅でも折り返し、横スクロールを生じさせ�
   expect(list.element().children).toHaveLength(29);
   expect(list.element().scrollWidth).toBeLessThanOrEqual(list.element().clientWidth);
   const dietary = screen.getByRole("list", { name: ja.food_dietary, exact: true });
+  const firstOnRows = new Map<number, number>();
+  for (const item of list.element().children) {
+    const box = item.getBoundingClientRect();
+    if (!firstOnRows.has(box.top)) firstOnRows.set(box.top, box.left);
+  }
+  expect(firstOnRows.size).toBeGreaterThan(1);
+  for (const left of firstOnRows.values())
+    expect(left).toBe(list.element().getBoundingClientRect().left);
+  expect(dietary.element().getBoundingClientRect().left).toBe(
+    list.element().getBoundingClientRect().left,
+  );
   expect(dietary.element().scrollWidth).toBeLessThanOrEqual(dietary.element().clientWidth);
 });
 

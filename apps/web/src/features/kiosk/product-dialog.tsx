@@ -76,7 +76,7 @@ export function ProductPage({
     >
       <div
         data-ui="product-detail-header"
-        className={`grid shrink-0 items-start gap-x-3 gap-y-2 bg-card p-3 pb-1 @min-[36rem]/product-dialog:gap-x-5 @min-[36rem]/product-dialog:p-4 ${product.imageKey ? "grid-cols-[4rem_minmax(0,1fr)_auto] @min-[36rem]/product-dialog:grid-cols-[10rem_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}
+        className={`grid shrink-0 items-start gap-x-3 gap-y-4 bg-card p-3 pb-1 @min-[36rem]/product-dialog:gap-x-5 @min-[36rem]/product-dialog:p-4 ${product.imageKey ? "grid-cols-[4rem_minmax(0,1fr)_auto] @min-[36rem]/product-dialog:grid-cols-[10rem_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}
       >
         {product.imageKey && (
           <ProductImage
@@ -99,7 +99,7 @@ export function ProductPage({
           >
             {product.text[locale].displayName}
           </h2>
-          <div className="mt-3 text-lg font-semibold">
+          <div data-ui="product-detail-price" className="mt-1 text-lg font-semibold">
             <Money taxIncluded value={product.price} />
           </div>
         </div>
