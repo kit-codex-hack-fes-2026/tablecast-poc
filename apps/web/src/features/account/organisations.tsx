@@ -34,6 +34,7 @@ export function Organisations() {
       />
       <ErrorNotice query={stores} />
       <DataTable
+        defaultSort={{ id: "name", desc: false }}
         {...collection}
         data={stores.data.stores}
         columns={columns}

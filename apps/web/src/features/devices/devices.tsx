@@ -61,6 +61,7 @@ export function Devices() {
       />
       <ErrorNotice error={devices.error || revoke.error} onRetry={() => void devices.refetch()} />
       <DataTable
+        defaultSort={{ id: "createdAt", desc: true }}
         {...collection}
         data={devices.data.devices}
         columns={columns}
@@ -189,6 +190,7 @@ export function RegisterDevice({
               )}
             </form.Field>
             <DataTable
+              defaultSort={{ id: "name", desc: false }}
               {...collection}
               data={devices.data.tables}
               columns={columns}

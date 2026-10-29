@@ -62,6 +62,7 @@ export function SettingsDrafts() {
 
       <ErrorNotice error={drafts.error || create.error} onRetry={() => void drafts.refetch()} />
       <DataTable
+        defaultSort={{ id: "updatedAt", desc: true }}
         {...collection}
         data={drafts.data.drafts}
         columns={columns}

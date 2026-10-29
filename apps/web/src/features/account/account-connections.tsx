@@ -37,6 +37,7 @@ export function AccountConnections({ controller }: { controller: AccountControll
         {t("account_connections")}
       </h2>
       <DataTable
+        defaultSort={{ id: "createdAt", desc: true }}
         {...collection}
         searchLabel={t("account_connections_search")}
         searchPlaceholder={t("account_connections_search")}

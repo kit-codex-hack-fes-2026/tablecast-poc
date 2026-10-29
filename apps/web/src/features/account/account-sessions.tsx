@@ -33,6 +33,7 @@ export function AccountSessions({ controller }: { controller: AccountController 
         {t("account_sessions")}
       </h2>
       <DataTable
+        defaultSort={{ id: "createdAt", desc: true }}
         {...collection}
         searchLabel={t("account_sessions_search")}
         searchPlaceholder={t("account_sessions_search")}

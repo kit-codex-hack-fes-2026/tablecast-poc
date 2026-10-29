@@ -96,6 +96,7 @@ export function Consent() {
         </dl>
         <div className="mt-6 w-full text-left">
           <DataTable
+            defaultSort={{ id: "name", desc: false }}
             {...collection}
             searchLabel={t("stores_search")}
             searchPlaceholder={t("stores_search")}

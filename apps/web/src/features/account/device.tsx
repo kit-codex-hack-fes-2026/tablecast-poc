@@ -27,6 +27,7 @@ export function DeviceApproval() {
       <p>{t("admin_store")}</p>
       <ErrorNotice query={stores} />
       <DataTable
+        defaultSort={{ id: "name", desc: false }}
         {...collection}
         searchLabel={t("stores_search")}
         searchPlaceholder={t("stores_search")}

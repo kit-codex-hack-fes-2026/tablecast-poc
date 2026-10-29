@@ -315,6 +315,9 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
   expect(router.state.location.search.q).toBeUndefined();
   expect(router.state.location.search.sort).toBeUndefined();
   expect(router.state.location.search.zoom).toBe(50);
+  await expect
+    .element(screen.getByRole("combobox", { name: ja.collection_sort, exact: true }))
+    .toHaveTextContent(ja.floor_sort_attention);
   await screen.getByRole("combobox", { name: ja.collection_sort, exact: true }).click();
   await page
     .getByRole("option", {

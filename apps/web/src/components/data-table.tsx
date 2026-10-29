@@ -1,4 +1,5 @@
 import {
+  type ColumnSort,
   flexRender,
   type OnChangeFn,
   type PaginationState,
@@ -16,6 +17,7 @@ import { Table, TableCell, TableHead } from "./ui/table";
 export function DataTable<T extends RowData>({
   data,
   columns,
+  defaultSort,
   getRowId,
   searchLabel,
   searchPlaceholder,
@@ -37,6 +39,7 @@ export function DataTable<T extends RowData>({
 }: {
   columns: DataTableColumn<T>[];
   data: T[];
+  defaultSort: ColumnSort | { label: string };
   empty?: string;
   error?: unknown;
   filters?: ReactNode;
@@ -58,6 +61,12 @@ export function DataTable<T extends RowData>({
 }) {
   const { t } = useI18n();
   const [filter, setFilter] = useState("");
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const requestedSorting = state?.sorting ?? sorting;
+  const effectiveSorting = useMemo(
+    () => (requestedSorting.length ? requestedSorting : "id" in defaultSort ? [defaultSort] : []),
+    [requestedSorting, defaultSort],
+  );
   const bounded = useBoundedPagination({
     enabled: pagination,
     ready: !pending && !error,
@@ -73,11 +82,12 @@ export function DataTable<T extends RowData>({
     state: {
       globalFilter: filter,
       ...state,
+      sorting: effectiveSorting,
       ...bounded.state,
     },
     onGlobalFilterChange: onGlobalFilterChange ?? setFilter,
     ...bounded.options,
-    ...(onSortingChange ? { onSortingChange } : {}),
+    onSortingChange: onSortingChange ?? setSorting,
     manualFiltering,
     globalFilterFn: "includesString",
     manualPagination: !pagination,
@@ -174,6 +184,8 @@ export function DataTable<T extends RowData>({
       )}
       <TableControls
         table={table}
+        sourceOrderLabel={"label" in defaultSort ? defaultSort.label : undefined}
+        sortingActive={requestedSorting.length > 0}
         searchLabel={searchLabel}
         searchPlaceholder={searchPlaceholder}
         searchValue={state?.globalFilter ?? filter}

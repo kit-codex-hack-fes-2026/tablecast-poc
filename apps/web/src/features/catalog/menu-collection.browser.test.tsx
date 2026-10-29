@@ -268,7 +268,7 @@ for (const alias of ["moon drink", "月の酒"] as const) {
 
 it("価格を金額順に並べ、URLの昇降順を履歴と詳細の往復で復元する", async () => {
   const value = structuredClone(catalog);
-  value.configuration.products = [10000, 900, 50].map((price) => ({
+  value.configuration.products = [900, 10000, 50].map((price) => ({
     ...structuredClone(product),
     id: `tablecast-price-${price}`,
     price,
@@ -308,6 +308,25 @@ it("価格を金額順に並べ、URLの昇降順を履歴と詳細の往復で�
   expect(router.state.location.search).toMatchObject({ sort: "price:desc" });
   await screen.getByRole("button", { name: ja.collection_reset, exact: true }).click();
   expect(router.state.location.search).toEqual({});
+  const sort = screen.getByRole("combobox", { name: ja.collection_sort, exact: true });
+  await expect.element(sort).toHaveTextContent(ja.collection_sort_configured);
+  await expect.element(first().getByRole("link", { name: "料理 900", exact: true })).toBeVisible();
+  await search.fill("料理");
+  await expect.element(sort).toHaveTextContent(ja.collection_sort_relevance);
+  await sort.click();
+  await page
+    .getByRole("option", {
+      name: `${ja.admin_unit_price} · ${ja.collection_sort_ascending}`,
+      exact: true,
+    })
+    .click();
+  await expect.element(first().getByRole("link", { name: "料理 50", exact: true })).toBeVisible();
+  await sort.click();
+  await page.getByRole("option", { name: ja.collection_sort_relevance, exact: true }).click();
+  await expect.element(first().getByRole("link", { name: "料理 900", exact: true })).toBeVisible();
+  expect(router.state.location.search.sort).toBeUndefined();
+  await search.fill("");
+  await expect.element(sort).toHaveTextContent(ja.collection_sort_configured);
 });
 
 vi.mock("../store/store-context", () => ({

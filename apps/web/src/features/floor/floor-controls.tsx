@@ -1,5 +1,4 @@
 import {
-  ArrowDownUp,
   Bell,
   CircleDashed,
   CircleDollarSign,
@@ -67,7 +66,9 @@ export function FloorControls({
     { value: "due", label: t("admin_due"), icon: CircleDollarSign },
   ];
   const sortOptions = [
-    { value: "", label: t("collection_sort_default"), icon: ArrowDownUp },
+    ...(view === "list"
+      ? [{ value: "", label: t("floor_sort_attention"), icon: TriangleAlert }]
+      : []),
     ...fields.flatMap((field) => [
       {
         ...field,
@@ -139,7 +140,7 @@ export function FloorControls({
         sort={
           <CollectionSort
             options={sortOptions}
-            value={sort ?? ""}
+            value={sort ?? (view === "timeline" ? "table:asc" : "")}
             onValueChange={(next) => onSortChange(floorSortValues.find((value) => value === next))}
             disabled={disabled}
           />

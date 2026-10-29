@@ -55,6 +55,7 @@ export function McpSessions() {
       <ErrorNotice error={revoke.error} />
 
       <DataTable
+        defaultSort={{ id: "updatedAt", desc: true }}
         {...collection}
         data={sessions.data?.sessions ?? []}
         pending={sessions.isPending}

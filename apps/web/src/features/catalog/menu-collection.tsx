@@ -160,6 +160,9 @@ function MenuListCollection({
     };
     return (
       <DataTable
+        defaultSort={{
+          label: t(search.q?.trim() ? "collection_sort_relevance" : "collection_sort_configured"),
+        }}
         data={data}
         filters={section === "products" ? renderFilters() : undefined}
         filtersActive={!!search.category || !!search.availability}

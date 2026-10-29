@@ -11,6 +11,8 @@ import { Button } from "./ui/button";
 
 export function TableControls<T extends RowData>({
   table,
+  sourceOrderLabel,
+  sortingActive,
   searchLabel,
   searchPlaceholder,
   searchValue,
@@ -30,6 +32,8 @@ export function TableControls<T extends RowData>({
   searchLabel?: string;
   searchPlaceholder?: string;
   searchValue: string;
+  sortingActive: boolean;
+  sourceOrderLabel?: string;
   table: ReactTable<typeof features, T>;
 }) {
   const { t } = useI18n();
@@ -41,7 +45,7 @@ export function TableControls<T extends RowData>({
         (column.columnDef.meta?.sortLabel || typeof column.columnDef.header === "string"),
     );
   const sorting = table.state.sorting[0];
-  const hasCriteria = !!searchValue || filtersActive || table.state.sorting.length > 0;
+  const hasCriteria = !!searchValue || filtersActive || sortingActive;
   function resetCriteria() {
     if (onReset) onReset();
     else {
@@ -83,7 +87,7 @@ export function TableControls<T extends RowData>({
               if (resetPageOnSort) table.setPageIndex(0);
             }}
             options={[
-              { value: "", label: t("collection_sort_default"), icon: List },
+              ...(sourceOrderLabel ? [{ value: "", label: sourceOrderLabel, icon: List }] : []),
               ...sortable.flatMap((column) =>
                 [false, true].map((desc) => ({
                   value: `${column.id}:${desc ? "desc" : "asc"}`,

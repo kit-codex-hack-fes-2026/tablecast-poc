@@ -76,6 +76,7 @@ export function Members() {
       <ErrorNotice error={query.error || change.error} onRetry={() => void query.refetch()} />
 
       <DataTable
+        defaultSort={{ id: "createdAt", desc: false }}
         {...collection}
         data={query.data.members}
         columns={columns}

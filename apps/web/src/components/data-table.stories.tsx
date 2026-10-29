@@ -9,6 +9,7 @@ const meta = {
     layout: "padded",
   },
   args: {
+    defaultSort: { id: "name", desc: false },
     data: [
       { id: "tea", name: "ほうじ茶", count: 3 },
       { id: "rice", name: "季節の御膳", count: 2 },

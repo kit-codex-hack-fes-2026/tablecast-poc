@@ -80,6 +80,7 @@ export function VisitHistoryTable({
   );
   return (
     <DataTable
+      defaultSort={{ id: "openedAt", desc: true }}
       {...collection}
       tableLabel={t("admin_history")}
       searchLabel={t("collection_search_visits")}

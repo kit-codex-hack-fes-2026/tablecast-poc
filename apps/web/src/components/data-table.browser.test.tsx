@@ -26,6 +26,7 @@ function ControlledPagination({
   return (
     <LocaleProvider initialLocale="ja" persist={false}>
       <DataTable
+        defaultSort={{ id: "name", desc: false }}
         data={data}
         columns={[{ accessorKey: "name", header: "店舗名" }]}
         getRowId={(row) => row.id}
@@ -75,6 +76,7 @@ test("日本語の表は初回読込で列と領域を保ち、再取得で検�
   const view = (pending: boolean, data: { id: string; name: string }[], error?: Error) => (
     <LocaleProvider initialLocale="ja" persist={false}>
       <DataTable
+        defaultSort={{ id: "name", desc: false }}
         columns={columns}
         data={data}
         pending={pending}
@@ -114,6 +116,7 @@ test("表の検索・昇降順の並べ替え・ページ移動で対象行を�
   await render(
     <LocaleProvider initialLocale="ja" persist={false}>
       <DataTable
+        defaultSort={{ id: "name", desc: false }}
         columns={[
           {
             accessorKey: "name",
@@ -121,13 +124,16 @@ test("表の検索・昇降順の並べ替え・ページ移動で対象行を�
             header: "店舗名",
           },
         ]}
-        data={data}
+        data={data.toReversed()}
         getRowId={(row) => row.id}
         searchLabel="店舗を検索"
       />
     </LocaleProvider>,
   );
   await expect.element(page.getByRole("cell", { name: "店舗001", exact: true })).toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "並べ替え", exact: true }))
+    .toHaveTextContent("店舗名 · 昇順");
   await expect
     .element(page.getByRole("cell", { name: "店舗025", exact: true }))
     .not.toBeInTheDocument();
@@ -149,5 +155,8 @@ test("表の検索・昇降順の並べ替え・ページ移動で対象行を�
   await expect.element(next).toBeEnabled();
   await page.getByRole("button", { name: "リセット", exact: true }).click();
   await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗001");
+  await expect
+    .element(page.getByRole("combobox", { name: "並べ替え", exact: true }))
+    .toHaveTextContent("店舗名 · 昇順");
   await expect.element(page.getByRole("button", { name: "リセット", exact: true })).toBeDisabled();
 });
