@@ -97,7 +97,7 @@ function MenuListCollection({
   function renderFilters() {
     const categories = configuration?.categories ?? [];
     return (
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-3">
+      <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2">
         <div className="flex flex-col gap-2 text-sm font-medium">
           <span className="flex items-center gap-2">
             <Tags aria-hidden className="size-4" />

@@ -181,6 +181,13 @@ test("表の検索・昇降順の並べ替え・ページ移動で対象行を�
       await page.viewport(width, height);
       const fieldBounds = sortField.element().getBoundingClientRect();
       const directionBounds = direction.element().getBoundingClientRect();
+      const searchBounds = page.getByRole("searchbox").element().getBoundingClientRect();
+      const resetBounds = page
+        .getByRole("button", { name: "リセット", exact: true })
+        .element()
+        .getBoundingClientRect();
+      expect(Math.abs(searchBounds.bottom - resetBounds.bottom)).toBeLessThan(1);
+      expect(resetBounds.left).toBeGreaterThanOrEqual(searchBounds.right);
       expect(Math.abs(fieldBounds.top - directionBounds.top)).toBeLessThan(1);
       expect(directionBounds.left).toBeGreaterThanOrEqual(fieldBounds.right);
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);

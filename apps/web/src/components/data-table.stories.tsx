@@ -15,7 +15,7 @@ const meta = {
       { id: "rice", name: "季節の御膳", count: 2 },
     ],
     columns: [
-      { accessorKey: "name", header: "商品", meta: { icon: Package } },
+      { accessorKey: "name", header: "商品", meta: { icon: Package, sortLabel: "商品名" } },
       { accessorKey: "count", header: "数量", meta: { icon: Hash, align: "right" } },
     ],
     getRowId: (row) => row.id,
@@ -34,7 +34,11 @@ export const 英語: Story = {
     searchLabel: "Search products",
     searchPlaceholder: "Search by product name",
     columns: [
-      { accessorKey: "name", header: "Product", meta: { icon: Package } },
+      {
+        accessorKey: "name",
+        header: "Product",
+        meta: { icon: Package, sortLabel: "Product name" },
+      },
       { accessorKey: "count", header: "Quantity", meta: { icon: Hash, align: "right" } },
     ],
   },

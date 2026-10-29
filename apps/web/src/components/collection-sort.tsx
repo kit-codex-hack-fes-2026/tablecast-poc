@@ -1,4 +1,4 @@
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, type LucideIcon } from "lucide-react";
+import { ArrowDownUp, ArrowDownWideNarrow, ArrowUpNarrowWide, type LucideIcon } from "lucide-react";
 import { useI18n } from "../i18n/locale";
 import { CollectionSelect } from "./collection-select";
 
@@ -22,10 +22,13 @@ export function CollectionSort({
 }) {
   const { t } = useI18n();
   return (
-    <div className="flex min-w-0 items-center gap-2">
-      <div className="min-w-0 flex-1">
+    <div className="grid min-w-0 grid-cols-2 gap-3">
+      <div className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+        <span className="flex items-center gap-2 whitespace-nowrap">
+          <ArrowDownUp aria-hidden className="size-4 shrink-0" />
+          {t("collection_sort_field")}
+        </span>
         <CollectionSelect
-          className="px-2 text-sm"
           label={t("collection_sort_field")}
           options={options}
           value={value}
@@ -33,9 +36,11 @@ export function CollectionSort({
           disabled={disabled}
         />
       </div>
-      <div className="w-36 shrink-0">
+      <div className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+        <span className="flex items-center gap-2 whitespace-nowrap">
+          {t("collection_sort_direction")}
+        </span>
         <CollectionSelect
-          className="px-2 text-sm"
           label={t("collection_sort_direction")}
           options={[
             { value: "asc", label: t("collection_sort_ascending"), icon: ArrowUpNarrowWide },

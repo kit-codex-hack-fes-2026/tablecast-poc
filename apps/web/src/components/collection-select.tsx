@@ -8,9 +8,7 @@ export function CollectionSelect({
   onValueChange,
   disabled,
   label,
-  className,
 }: {
-  className?: string;
   disabled?: boolean;
   label: string;
   onValueChange: (value: string) => void;
@@ -28,7 +26,7 @@ export function CollectionSelect({
       }}
       disabled={disabled}
     >
-      <SelectTrigger aria-label={label} className={`whitespace-nowrap ${className ?? ""}`}>
+      <SelectTrigger aria-label={label} className="whitespace-nowrap px-2 text-sm">
         {selected && (
           <span className="flex min-w-0 items-center gap-2 text-left" title={selected.label}>
             <selected.icon aria-hidden className="size-4 shrink-0" />

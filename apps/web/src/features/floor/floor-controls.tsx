@@ -99,31 +99,40 @@ export function FloorControls({
         }}
         filters={
           view === "list" && (
-            <Select
-              items={filters}
-              value={filter}
-              onValueChange={(next) => {
-                if (next) onFilterChange(next);
-              }}
-              disabled={disabled}
-            >
-              <SelectTrigger aria-label={t("floor_filters")}>
-                <span className="flex min-w-0 items-center gap-2 text-left">
-                  <FilterIcon aria-hidden className="size-4 shrink-0" />
-                  <SelectValue />
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {filters.map(({ value, label, icon: Icon }) => (
-                  <SelectItem key={value} value={value}>
-                    <span className="flex items-center gap-2">
-                      <Icon aria-hidden className="size-4 shrink-0" />
-                      {label}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col gap-2 text-sm font-medium">
+              <span className="flex items-center gap-2">
+                <FilterIcon aria-hidden className="size-4 shrink-0" />
+                {t("floor_filters")}
+              </span>
+              <Select
+                items={filters}
+                value={filter}
+                onValueChange={(next) => {
+                  if (next) onFilterChange(next);
+                }}
+                disabled={disabled}
+              >
+                <SelectTrigger
+                  aria-label={t("floor_filters")}
+                  className="whitespace-nowrap px-2 text-sm"
+                >
+                  <span className="flex min-w-0 items-center gap-2 text-left">
+                    <FilterIcon aria-hidden className="size-4 shrink-0" />
+                    <SelectValue />
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {filters.map(({ value, label, icon: Icon }) => (
+                    <SelectItem key={value} value={value}>
+                      <span className="flex items-center gap-2">
+                        <Icon aria-hidden className="size-4 shrink-0" />
+                        {label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )
         }
         sort={
