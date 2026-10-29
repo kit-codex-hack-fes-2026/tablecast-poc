@@ -1,4 +1,5 @@
 import type { Locale } from "@tablecast/api/schema";
+import { Languages } from "lucide-react";
 import { useMemo } from "react";
 import { Flag } from "./flag";
 import { languageFlag } from "./flags";
@@ -12,7 +13,11 @@ export function LanguageLabel({ locale, compact = false }: { compact?: boolean; 
   );
   return (
     <span lang={locale} className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      {flag && <Flag src={flag} />}
+      {flag ? (
+        <Flag src={flag} />
+      ) : compact ? (
+        <Languages className="size-4" aria-hidden="true" />
+      ) : null}
       <span className={compact ? "sr-only" : undefined}>{name}</span>
     </span>
   );

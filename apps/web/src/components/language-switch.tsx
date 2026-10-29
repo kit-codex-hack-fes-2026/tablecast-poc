@@ -1,5 +1,4 @@
 import type { Locale } from "@tablecast/api/schema";
-import { Languages } from "lucide-react";
 import { useI18n } from "../i18n/locale";
 import { LanguageLabel } from "./language-label";
 import { Button } from "./ui/button";
@@ -61,7 +60,11 @@ export function LanguageSwitch({
             aria-label={t("common_language")}
             className="w-auto border-0 bg-transparent shadow-none"
           >
-            <Languages className="size-4" />
+            <span className="inline-flex items-center gap-1.5">
+              {otherLanguages.map((language) => (
+                <LanguageLabel key={language} locale={language} compact />
+              ))}
+            </span>
           </SelectTrigger>
           <SelectContent>
             {otherLanguages.map((language) => (

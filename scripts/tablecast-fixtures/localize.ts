@@ -85,12 +85,14 @@ function productText(product: Product) {
   const ingredients = product.allergens.contains.map((key) => allergens[key] ?? [key, key]);
   const chineseNote = `本合成演示记录的过敏原：${ingredients.map((item) => item[0]).join("、") || "尚无记录"}。配料选择可能改变成分，制作和供餐时的交叉接触尚未确认。请向店员确认。`;
   const koreanNote = `합성 데모에 등록된 알레르기 유발 성분: ${ingredients.map((item) => item[1]).join(", ") || "등록 정보 없음"}. 선택 재료에 따라 성분이 달라질 수 있으며 조리와 제공 중 교차 접촉은 확인되지 않았습니다. 직원에게 확인해 주세요.`;
+  const kind = seedSakeKinds.find((item) => product.text.ja.displayName.endsWith(` ${item.ja}`));
+  if (kind) text.en.description = `${text.en.description} ${kind.description}`;
   const description = product.tags.includes("sake")
     ? seedSakeDescriptions.get(product.text.ja.displayName.split(" ")[1] ?? "")
     : seedProductDescriptions.get(product.text.ja.displayName);
   if (!description) throw new Error(`seedの商品説明訳がありません: ${product.id}`);
-  text["zh-Hans"].description = description["zh-Hans"];
-  text.ko.description = description.ko;
+  text["zh-Hans"].description = `${description["zh-Hans"]}${kind ? `。${kind.zhDescription}` : ""}`;
+  text.ko.description = `${description.ko}${kind ? `. ${kind.koDescription}` : ""}`;
   if (product.id.startsWith("tablecast-hanul-")) {
     text["zh-Hans"].description +=
       " 以上为虚构演示登记的原料。完整调味料、选项引起的成分变化和交叉接触均未确认。清真、犹太洁食等宗教认证及纯素适用性未确认。原料名称或去除肉类不保证适用性，请咨询店员。";

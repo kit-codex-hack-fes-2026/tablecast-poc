@@ -12,6 +12,7 @@ import { defineConfig } from "vite";
 import { z } from "zod";
 import { modeOptions } from "../../scripts/tablecast-deploy-config.ts";
 import { apiCloudflareConfig } from "../api/cloudflare.config.ts";
+import paraglideConfig from "./project.inlang/paraglide.config";
 
 export default defineConfig(async ({ command, mode, isPreview }) => {
   const tablecastEnv = z
@@ -88,9 +89,7 @@ export default defineConfig(async ({ command, mode, isPreview }) => {
       }),
       paraglideVitePlugin({
         project: "./project.inlang",
-        outdir: "./src/paraglide",
-        strategy: ["cookie", "custom-tablecast-default", "baseLocale"],
-        cookieName: "tablecast_locale",
+        ...paraglideConfig,
       }),
       tanstackStart(),
       react(),

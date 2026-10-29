@@ -274,6 +274,8 @@ bun run test:browser
 bun run test:e2e
 ```
 
+翻訳の出力先・言語解決順・`tablecast_locale` Cookie名は`apps/web/project.inlang/paraglide.config.ts`を正本として公式CLIとViteで共用する。CLI再生成でCookie名を既定値へ戻さず、SSRの再読込・redirectでも選択言語を維持する。
+
 `test:browser`は実行前にParaglideの`locale-modules`を公式CLIで生成し、翻訳のmodule数を減らす。通常のcodegenと公開buildは`message-modules`を使い、`build:storybook`も自身でこの形式へ戻してからbuildする。同じ`src/paraglide`を共有するため、Browser試験・codegen・dev/watch・buildを同じcheckoutで重ねない。テストだけを直接`vitest`で起動する場合は、先に`bun run --cwd apps/web i18n:compile --output-structure locale-modules`で準備する。
 
 ローカルの`check`と各`test`コマンドは通常どおり全件を実行する。PRのCIはGitHub Compare APIで検証した差分から対象を選び、通常のWeb変更にはVitest標準の`related --run`を使う。共有入口や不明な差分、選択結果が0件のソース変更は全件へ戻す。選択範囲と実行しないjobの扱いは[CIの実行対象](testing.md#ciのジョブとキャッシュ)を参照する。

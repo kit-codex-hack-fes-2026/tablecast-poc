@@ -106,3 +106,22 @@ it("店側UIは客側の中国語設定を受け継がず日英で表示する",
     .toHaveAttribute("aria-pressed", "true");
   expect(page.getByText("简体中文").elements()).toHaveLength(0);
 });
+
+it("追加言語の入口は対応言語を全てアイコンで表示し、旗がない言語にも代替アイコンを示す", async () => {
+  await render(
+    <LocaleProvider initialLocale="ja" persist={false}>
+      <LanguageSwitch
+        availableLanguages={["ja", "en", "zh-Hans", "ko", "fr", "eo"]}
+        onChange={vi.fn<() => void>()}
+      />
+    </LocaleProvider>,
+  );
+  const trigger = page.getByRole("combobox").element();
+  expect(
+    [...trigger.querySelectorAll("span[lang]")].map((item) => item.getAttribute("lang")),
+  ).toEqual(["zh-Hans", "ko", "fr", "eo"]);
+  expect(trigger.querySelectorAll("img")).toHaveLength(3);
+  expect(trigger.querySelector('[lang="eo"] svg')).not.toBeNull();
+  for (const label of trigger.querySelectorAll("span[lang] > span"))
+    expect(label.classList.contains("sr-only")).toBe(true);
+});
