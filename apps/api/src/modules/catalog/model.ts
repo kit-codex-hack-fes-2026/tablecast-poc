@@ -8,7 +8,8 @@ const contentSchema = z
     description: z.string().max(3000),
     aliases: z.array(z.string().max(100)).max(30).default([]),
   })
-  .strict();
+  .strict()
+  .meta({ id: "tablecastLocalizedContent" });
 
 export const bilingualSchema = z
   .object({ ja: contentSchema, en: contentSchema })
