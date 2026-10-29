@@ -72,7 +72,6 @@ import { KioskVoicePanel } from "./kiosk-voice-panel";
 import { KioskMenu } from "./menu-search";
 import { useTablePresentation } from "./presentation-query";
 import { ProductPage } from "./product-dialog";
-import { useProductFoodInformation } from "./product-food-query";
 import { StaffAssistance } from "./staff-assistance";
 import { latestTable } from "./table-cache";
 import {
@@ -256,15 +255,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
     };
   }
   const selection = selectedItem();
-  // 初回の食品情報が揃ってからDialogを開き、途中の小さい代替画面を表示しない。
-  const productFood = useProductFoodInformation({
-    productId: selection?.product.id,
-    selections: selection?.line?.selections,
-    endpoint,
-    configVersion: data.configVersion,
-    tableSessionId: data.id,
-  });
-  const productOpen = productFood.status !== "pending";
+  const productOpen = Boolean(selection);
   const speed = useMutation({
     scope: { id: `tablecast-speed-${data.id}` },
     mutationFn: (value: number) =>
@@ -932,15 +923,6 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
                           orderPane={orderPane}
                         />
                       </div>
-                      {productFood.isLoading && (
-                        <span
-                          role="status"
-                          aria-label={t("food_updating")}
-                          className="absolute right-4 top-4 z-20 rounded-lg bg-card p-2 shadow-sm"
-                        >
-                          <LoaderCircle aria-hidden className="size-5 motion-safe:animate-spin" />
-                        </span>
-                      )}
                       <Dialog
                         open={productOpen}
                         modal={false}

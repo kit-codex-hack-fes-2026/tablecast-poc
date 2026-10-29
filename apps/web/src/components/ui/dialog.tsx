@@ -86,7 +86,7 @@ export function DialogContent({
               popup({
                 className: cn(
                   surfaceMotion({
-                    kind: side === "pane" ? "fade" : side === "center" ? "dialog" : side,
+                    kind: side === "pane" ? "scale" : side === "center" ? "dialog" : side,
                   }),
                   typeof className === "function" ? className(state) : className,
                 ),

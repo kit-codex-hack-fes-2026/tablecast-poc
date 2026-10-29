@@ -72,7 +72,7 @@ it.each(["入力変更", "クリア"])(
   },
 );
 
-it("初回の食品情報が揃ったDialogを開き、再取得中の位置と自然高を保つ", async () => {
+it("初回応答を待たずDialogと本体に沿うSkeletonを開き、取得後も位置と自然高を保つ", async () => {
   fixture.current.uiSection = "menu";
   const first = Promise.withResolvers<void>();
   const second = Promise.withResolvers<void>();
@@ -92,13 +92,13 @@ it("初回の食品情報が揃ったDialogを開き、再取得中の位置と�
   try {
     await page.getByRole("button", { name: new RegExp(product.text.ja.displayName) }).click();
     const dialog = page.getByRole("dialog", { name: product.text.ja.displayName, exact: true });
+    await expect.element(dialog).toBeVisible();
     await expect
-      .element(page.getByRole("status", { name: ja.food_updating, exact: true }))
+      .element(dialog.getByRole("status", { name: ja.food_updating, exact: true }))
       .toBeVisible();
-    await expect.element(dialog).not.toBeInTheDocument();
-    first.resolve();
     const choice = dialog.getByRole("radio", { name: "90 mL", exact: true });
     await expect.element(choice).toBeVisible();
+    expect(dialog.element().querySelector('[data-ui="food-information-skeleton"]')).not.toBeNull();
     const detail = dialog.element().querySelector('[data-ui="product-detail"]');
     const groups = dialog.element().querySelector('[data-ui="customisation-groups"]');
     if (!(detail instanceof HTMLElement) || !groups) throw new Error("詳細と選択肢が必要です");
@@ -112,14 +112,24 @@ it("初回の食品情報が揃ったDialogを開き、再取得中の位置と�
     expect(bounds.left - paneBounds.left).toBeCloseTo(24, 0);
     expect(paneBounds.right - bounds.right).toBeCloseTo(24, 0);
     const before = groups.getBoundingClientRect();
+    first.resolve();
+    await expect
+      .poll(() => dialog.element().querySelector('[data-ui="food-information-skeleton"]'))
+      .toBeNull();
+    // Skeletonとbadgeのfont描画によるサブピクセルの丸めだけを許容する。
+    expect(groups.getBoundingClientRect().top).toBeCloseTo(before.top, 0);
+    expect(groups.getBoundingClientRect().height).toBeCloseTo(before.height, 0);
+    expect(dialog.element().getBoundingClientRect().height).toBeCloseTo(bounds.height, 0);
+    const loadedGroups = groups.getBoundingClientRect();
+    const loadedBounds = dialog.element().getBoundingClientRect();
     await choice.click();
     await reached.promise;
     await expect
       .element(dialog.getByRole("region", { name: ja.food_title, exact: true }))
       .toHaveAttribute("aria-busy", "true");
-    expect(groups.getBoundingClientRect().top).toBeCloseTo(before.top, 1);
-    expect(groups.getBoundingClientRect().height).toBeCloseTo(before.height, 1);
-    expect(dialog.element().getBoundingClientRect().height).toBeCloseTo(bounds.height, 1);
+    expect(groups.getBoundingClientRect().top).toBeCloseTo(loadedGroups.top, 1);
+    expect(groups.getBoundingClientRect().height).toBeCloseTo(loadedGroups.height, 1);
+    expect(dialog.element().getBoundingClientRect().height).toBeCloseTo(loadedBounds.height, 1);
     second.resolve();
     await expect
       .element(dialog.getByRole("region", { name: ja.food_title, exact: true }))

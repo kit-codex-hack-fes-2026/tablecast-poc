@@ -148,6 +148,7 @@ export function ProductPage({
                       <OptionContent
                         option={option}
                         showAllergens={Boolean(endpoint)}
+                        allergensPending={food.isPending}
                         allergens={food.data?.optionAllergens[option.id]}
                         locale={locale}
                         id={`${id}-${groupIndex}-${optionIndex}`}
@@ -195,6 +196,7 @@ export function ProductPage({
                           <OptionContent
                             option={option}
                             showAllergens={Boolean(endpoint)}
+                            allergensPending={food.isPending}
                             allergens={food.data?.optionAllergens[option.id]}
                             locale={locale}
                             id={`${id}-${groupIndex}-${optionIndex}`}
@@ -204,6 +206,7 @@ export function ProductPage({
                         <OptionContent
                           option={option}
                           showAllergens={Boolean(endpoint)}
+                          allergensPending={food.isPending}
                           allergens={food.data?.optionAllergens[option.id]}
                           locale={locale}
                           id={`${id}-${groupIndex}-${optionIndex}`}
