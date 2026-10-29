@@ -279,6 +279,10 @@ ComponentとE2Eのbrowser取得・OS依存導入は、通常の連続stepで実�
 
 DBはケース開始時のtemplate差し替えで初期化するため、後処理でプロフィール・公開版・下書きをAPI経由で元へ戻さない。閉卓後の更新適用など製品の保証はケース本体で確認し、fixtureは取得したBrowserContext・プロセス群・storageの解放を担う。後処理の一つが失敗しても残りを実行し、元の失敗と後処理の失敗を区別する。
 
+会員E2Eの追加BrowserContextはspec専用の `tablecast-customer.fixture.ts` が生成直後から所有し、操作本体の終了後に逆順で一つずつ閉じる。操作の固定phaseと本体終了、各closeの開始・完了・失敗、経過時間と結果状態だけを最大64行へ記録し、入力値・URL・Cookie・会員情報を出さない。closeの例外は集約して再送出し、Playwrightの標準reporterが保持する本体の失敗と区別する。
+
+操作本体・追加context用fixture setup・beforeEachは既存の90秒、個別assertionは15秒、retryは0を維持する。[Playwright標準の時間管理](https://playwright.dev/docs/test-timeouts#test-timeout)により、本体終了後のfixture teardownとafterEachには別枠の90秒が共有される。各contextへ90秒を追加したり、本体の期限を延長したりしない。既存runtime fixtureの個別期限は変更しない。
+
 ケース間では配信clientディレクトリもビルド成果物から復元し、PWA試験が変更したService Workerや追加ファイルを持ち越さない。ケース内の`restartWeb()`は変更を維持する。
 
 通常CIはWorkersだけをbuildし、手動カタログworkflowでStorybook・Emailを生成する。TurboキャッシュはSHA付きのキーで保存し、共通prefixで以前の成果物を復元する。
