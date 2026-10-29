@@ -1,6 +1,6 @@
 import type { CartLine, Product } from "@tablecast/api/schema";
 import { useQuery } from "@tanstack/react-query";
-import { ErrorNotice } from "../../components/error-notice";
+import { RefreshCw } from "lucide-react";
 import { FoodInformationView } from "../../components/food-information";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -40,23 +40,35 @@ export function ProductAllergens({
     retry: false,
   });
   return (
-    <section
-      className="mt-6 grid gap-4 rounded-2xl bg-surface-subtle p-4"
-      aria-label={t("food_title")}
-    >
-      <h3 className="text-sm font-semibold">{t("food_title")}</h3>
-      {(query.isPending || query.isFetching) && <p role="status">{t("food_updating")}</p>}
+    <section className="grid min-w-0 gap-1.5" aria-label={t("food_title")}>
+      {(query.isPending || query.isFetching) && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {t("food_updating")}
+        </p>
+      )}
       {query.isError && (
         <>
-          <ErrorNotice error={query.error} />
-          <Button type="button" variant="outline" onClick={() => void query.refetch()}>
+          <p role="alert" className="text-xs text-destructive">
+            {t("food_failed")}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="w-fit"
+            onClick={() => void query.refetch()}
+          >
+            <RefreshCw aria-hidden="true" />
             {t("food_retry")}
           </Button>
         </>
       )}
       {query.data && !query.isFetching && !query.isError && (
         <>
-          <p role="status">
+          <p
+            role="status"
+            className={query.data.complete ? "sr-only" : "text-xs text-muted-foreground"}
+          >
             {t(query.data.complete ? "food_selection_complete" : "food_selection_incomplete")}
           </p>
           <FoodInformationView value={query.data.foodInformation} />

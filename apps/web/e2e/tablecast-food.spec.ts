@@ -36,17 +36,20 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
     await detail.getByRole("radio", { name: new RegExp(`^${name}`) }).check();
   const information = detail.getByRole("region", { name: ja.food_title, exact: true });
   await expect(information.getByText(ja.food_selection_complete, { exact: true })).toBeVisible();
-  const contains = information.getByText(ja.food_contains, { exact: true }).locator("..");
-  await expect(contains).toContainText("乳");
+  await expect(information.getByLabel("乳: 含有", { exact: true })).toBeVisible();
   await detail.getByRole("radio", { name: /^レタス包み/ }).check();
   await detail.getByRole("radio", { name: /^植物由来パティ/ }).check();
   await expect(information.getByText(ja.food_selection_complete, { exact: true })).toBeVisible();
-  await expect(contains).not.toContainText("乳");
+  await expect(information.getByLabel("乳: 含有", { exact: true })).toHaveCount(0);
+  await expect(information.getByLabel("乳: 不使用", { exact: true })).toHaveAttribute(
+    "data-status",
+    "not_used",
+  );
   await expect(
-    information.getByText(`${ja.food_vegan}: ${ja.food_yes}`, { exact: true }),
+    information.getByLabel(`${ja.food_vegan}: ${ja.food_yes}`, { exact: true }),
   ).toBeVisible();
   await expect(
-    information.getByText(`${ja.editor_cross_contact}: ${ja.editor_unknown}`, { exact: true }),
+    information.getByLabel(`${ja.editor_cross_contact}: ${ja.editor_unknown}`, { exact: true }),
   ).toBeVisible();
   for (const viewport of [
     { width: 1180, height: 820 },
@@ -54,7 +57,28 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
     { width: 1512, height: 982 },
   ]) {
     await page.setViewportSize(viewport);
-    await information.scrollIntoViewIfNeeded();
+    await detail.getByRole("heading", { level: 2 }).focus();
+    await detail
+      .locator('[data-ui="product-detail-body"]')
+      .evaluate((element) => (element.scrollTop = 0));
+    await expect(information.locator("details,summary,[data-slot=accordion]")).toHaveCount(0);
+    const foodBox = await information.boundingBox();
+    expect(foodBox?.height).toBeLessThan(160);
+    const firstOption = detail.getByRole("radio", { name: /^ブリオッシュ/ });
+    await expect(firstOption).toBeInViewport();
+    const header = detail.locator('[data-ui="product-detail-header"]');
+    await expect(header.getByRole("region", { name: ja.food_title })).toBeVisible();
+    const images = detail.locator("img");
+    await expect
+      .poll(() =>
+        images.evaluateAll((items) =>
+          items.every(
+            (image) =>
+              image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
+          ),
+        ),
+      )
+      .toBe(true);
     await page.screenshot({
       path: testInfo.outputPath(`tablecast-food-${viewport.width}x${viewport.height}.png`),
     });

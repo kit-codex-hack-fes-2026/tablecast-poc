@@ -5,7 +5,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ConditionSummary } from "../../components/condition-summary";
 import { ErrorNotice } from "../../components/error-notice";
 import { Money, PriceChange } from "../../components/money";
-import { ProductFoodInformationSources } from "../../components/product-food-information";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -69,7 +68,7 @@ export function ProductPage({
     >
       <div
         data-ui="product-detail-header"
-        className={`grid shrink-0 items-start gap-5 bg-card p-4 ${product.imageKey ? "grid-cols-[8rem_minmax(0,1fr)] @min-[36rem]/product-dialog:grid-cols-[10rem_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}
+        className={`grid shrink-0 items-start gap-x-3 gap-y-2 bg-card p-3 @min-[36rem]/product-dialog:gap-x-5 @min-[36rem]/product-dialog:p-4 ${product.imageKey ? "grid-cols-[4rem_minmax(0,1fr)_auto] @min-[36rem]/product-dialog:grid-cols-[10rem_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}
       >
         {product.imageKey && (
           <ProductImage
@@ -77,15 +76,19 @@ export function ProductPage({
             width={160}
             height={160}
             sizes={`${imageSize}px`}
-            className="col-start-1 row-span-2 row-start-1 size-32 rounded-lg object-top-left @min-[36rem]/product-dialog:row-span-1 @min-[36rem]/product-dialog:size-40"
+            className="col-start-1 row-start-1 size-16 rounded-lg object-top-left @min-[36rem]/product-dialog:row-span-2 @min-[36rem]/product-dialog:size-40"
             src={`/media/${product.imageKey}`}
             alt={product.text[locale].displayName}
           />
         )}
         <div
-          className={`min-w-0 py-2 ${product.imageKey ? "col-start-2 row-start-2 @min-[36rem]/product-dialog:row-start-1" : "col-start-1 row-start-1"}`}
+          className={`min-w-0 ${product.imageKey ? "col-start-2 row-start-1" : "col-start-1 row-start-1"}`}
         >
-          <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold outline-none">
+          <h2
+            ref={heading}
+            tabIndex={-1}
+            className="text-base font-semibold outline-none @min-[36rem]/product-dialog:text-lg"
+          >
             {product.text[locale].displayName}
           </h2>
           <div className="mt-3 text-lg font-semibold">
@@ -95,19 +98,33 @@ export function ProductPage({
         <Button
           variant="outline"
           size="sm"
-          className={`row-start-1 justify-self-end ${product.imageKey ? "col-start-2 @min-[36rem]/product-dialog:col-start-3" : "col-start-2"}`}
+          className={`row-start-1 justify-self-end @max-[36rem]/product-dialog:size-11 @max-[36rem]/product-dialog:p-0 ${product.imageKey ? "col-start-3" : "col-start-2"}`}
           onClick={onClose}
           disabled={busy}
         >
           <X />
-          {t("common_close")}
+          <span className="sr-only @min-[36rem]/product-dialog:not-sr-only">
+            {t("common_close")}
+          </span>
         </Button>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 scrollbar-thin">
-        <p className="mb-2 text-sm leading-relaxed">{product.text[locale].description}</p>
-        {product.modifiers.length > 0 && (
-          <p className="mb-6 text-sm text-muted-foreground">{t("kiosk_option_price_note")}</p>
+        {endpoint && (
+          <div
+            className={`col-span-full min-w-0 @min-[36rem]/product-dialog:col-span-1 @min-[36rem]/product-dialog:row-start-2 ${product.imageKey ? "@min-[36rem]/product-dialog:col-start-2" : "@min-[36rem]/product-dialog:col-start-1"}`}
+          >
+            <ProductAllergens
+              product={product}
+              selections={selections}
+              endpoint={endpoint}
+              configVersion={configVersion}
+              tableSessionId={tableSessionId}
+            />
+          </div>
         )}
+      </div>
+      <div
+        data-ui="product-detail-body"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 scrollbar-thin"
+      >
         <div
           data-ui="customisation-groups"
           className="grid items-start gap-6 @min-[36rem]/product-dialog:grid-cols-2"
@@ -273,17 +290,8 @@ export function ProductPage({
             </fieldset>
           ))}
         </div>
-        {endpoint ? (
-          <ProductAllergens
-            product={product}
-            selections={selections}
-            endpoint={endpoint}
-            configVersion={configVersion}
-            tableSessionId={tableSessionId}
-          />
-        ) : (
-          <ProductFoodInformationSources product={product} />
-        )}
+
+        <p className="mt-4 text-sm leading-relaxed">{product.text[locale].description}</p>
         {product.modifiers.flatMap((group) =>
           group.options.map((option) =>
             option.conditions &&

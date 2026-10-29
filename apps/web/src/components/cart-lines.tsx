@@ -212,16 +212,13 @@ export function CartLines({
                       </div>
                     )}
                   </div>
-                  <details>
-                    <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">
-                      {t("food_title")}
-                    </summary>
+                  <section aria-label={t("food_title")}>
                     {line.total === undefined ? (
                       <p role="status">{t("food_updating")}</p>
                     ) : (
                       <FoodInformationView value={line.foodInformation} />
                     )}
-                  </details>
+                  </section>
                   {line.conditionIssues?.map((issue) => {
                     const expression = product?.modifiers
                       .flatMap((group) => group.options)

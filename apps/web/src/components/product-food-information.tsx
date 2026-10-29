@@ -11,13 +11,13 @@ export function ProductFoodInformationSources({ product }: { product: Product })
       <h3 className="font-medium">{t("food_base")}</h3>
       <FoodInformationView value={product.foodInfo.base} />
       {product.foodInfo.components.map((component) => (
-        <details key={component.id}>
-          <summary className="min-h-11 cursor-pointer py-3 font-medium">
+        <section key={component.id}>
+          <h4 className="py-2 font-medium">
             {component.name[locale]}
             {defaults.has(component.id) ? ` · ${t("food_default_component")}` : ""}
-          </summary>
+          </h4>
           <FoodInformationView value={component.profile} />
-        </details>
+        </section>
       ))}
     </div>
   );

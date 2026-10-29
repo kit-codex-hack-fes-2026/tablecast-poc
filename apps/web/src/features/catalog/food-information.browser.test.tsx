@@ -6,6 +6,7 @@ import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
+import { FoodInformationView } from "../../components/food-information";
 import { LocaleProvider } from "../../i18n/locale";
 import { tableEndpoint } from "../../lib/api";
 import { product } from "../../test-support/tablecast-fixtures";
@@ -175,8 +176,8 @@ it("選択を変えた後の遅い応答を捨て、失敗時に入力を維持�
   await expect.element(screen.getByText(ja.food_updating)).toBeVisible();
   await screen.getByRole("button", { name: "乳を抜く" }).click();
   await screen.getByRole("button", { name: ja.food_retry }).click();
-  await screen.getByText(ja.food_ingredient_basis, { exact: true }).click();
-  await expect.element(screen.getByText(updated.basis.ja)).toBeVisible();
+  const milk = screen.getByLabelText("乳: 不使用", { exact: true });
+  await expect.element(milk).toBeVisible();
   old.resolve(
     Response.json({
       configVersion: 1,
@@ -191,5 +192,60 @@ it("選択を変えた後の遅い応答を捨て、失敗時に入力を維持�
   await expect.poll(() => calls).toBe(3);
   await expect.element(page.getByText(ja.food_selection_complete)).toBeVisible();
   await expect.element(screen.getByText("古い乳含有の応答")).not.toBeInTheDocument();
-  await expect.element(screen.getByText(updated.basis.ja)).toBeVisible();
+  await expect.element(milk).toHaveAttribute("data-status", "not_used");
+  await expect.element(screen.getByLabelText("乳: 含有", { exact: true })).not.toBeInTheDocument();
 });
+
+it.each(["ja", "en"] as const)(
+  "%sで3状態を色・アイコン・名前付きバッジにして折り畳まず表示する",
+  async (locale) => {
+    const labels = locale === "ja" ? ja : en;
+    const value = unknownFoodProfile();
+    value.allergens = { milk: "contains", egg: "not_used" };
+    value.basis = { ja: "原材料の長い説明", en: "Long ingredient explanation" };
+    value.dietary.vegan = { status: "no", basis: value.basis };
+    value.dietary.vegetarian = { status: "yes", basis: value.basis };
+    value.dietary.halal.basis = { ja: "認証未確認", en: "Certification unverified" };
+    const screen = await render(
+      <LocaleProvider initialLocale={locale} persist={false}>
+        <FoodInformationView value={value} />
+      </LocaleProvider>,
+    );
+    const milk = screen.getByLabelText(
+      `${locale === "ja" ? "乳" : "Milk"}: ${labels.food_contains}`,
+      { exact: true },
+    );
+    const egg = screen.getByLabelText(
+      `${locale === "ja" ? "卵" : "Egg"}: ${labels.food_not_used_short}`,
+      { exact: true },
+    );
+    const wheat = screen.getByLabelText(
+      `${locale === "ja" ? "小麦" : "Wheat"}: ${labels.food_unknown}`,
+      { exact: true },
+    );
+    await expect.element(milk).toHaveAttribute("data-variant", "destructive");
+    await expect.element(egg).toHaveAttribute("data-variant", "success");
+    await expect.element(wheat).toHaveAttribute("data-variant", "inactive");
+    for (const item of [milk, egg, wheat])
+      expect(item.element().querySelector("svg[aria-hidden=true]")).not.toBeNull();
+    await expect.element(screen.getByRole("list", { name: labels.food_allergens })).toBeVisible();
+    await expect
+      .element(
+        screen.getByLabelText(`${labels.food_vegetarian_short}: ${labels.food_yes}`, {
+          exact: true,
+        }),
+      )
+      .toHaveAttribute("data-variant", "success");
+    await expect
+      .element(screen.getByText(value.dietary.halal.basis[locale], { exact: false }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByText(value.basis[locale], { exact: true }))
+      .not.toBeInTheDocument();
+    expect(screen.container.querySelector("details,summary,[data-slot=accordion]")).toBeNull();
+    const row = screen.getByRole("list", { name: labels.food_allergens });
+    row.element().focus();
+    await userEvent.keyboard("[ArrowRight]");
+    await expect.poll(() => row.element().scrollLeft).toBeGreaterThan(0);
+  },
+);
