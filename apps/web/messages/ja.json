@@ -1578,10 +1578,11 @@
   "food_ingredient_basis": "登録原材料・調理条件の根拠",
   "kiosk_cart_limit": "注文かごは最大{count}行です。先に注文を送信すると、続けて追加できます。",
   "kiosk_cart_limit_error": "注文かごの上限に達しました。先に注文を送信するか、商品を減らしてください。",
-  "food_allergens": "アレルゲン",
+  "food_allergens": "アレルギー",
   "food_not_used_short": "不使用",
   "food_unknown": "未確認",
   "food_vegetarian_short": "ベジタリアン",
   "food_cross_contact_short": "混入",
-  "food_failed": "食事情報を取得できません"
+  "food_failed": "食事情報を取得できません",
+  "food_allergens_none": "なし"
 }

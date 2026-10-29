@@ -23,8 +23,8 @@ export function allergenRecord(
     crossContact: "unknown",
     vegan: "unknown",
     note: {
-      ja: `合成デモの登録原材料・調理情報：${ingredients[0]}。未登録の選択・追加品による成分の違いと、製造・調理・提供時の混入は未確認です。アレルギーはスタッフにご確認ください。`,
-      en: `Recorded ingredients and preparation for this fictional demo: ${ingredients[1]}. Unrecorded ingredient changes from options or extras and cross-contact during production, preparation and service are unverified. Please ask staff about allergies.`,
+      ja: `原材料・調理情報：${ingredients[0]}。`,
+      en: `Ingredients and preparation: ${ingredients[1]}.`,
     },
   });
 }

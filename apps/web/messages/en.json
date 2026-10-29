@@ -1583,5 +1583,6 @@
   "food_unknown": "Unverified",
   "food_vegetarian_short": "Vegetarian",
   "food_cross_contact_short": "Cross-contact",
-  "food_failed": "Food information unavailable"
+  "food_failed": "Food information unavailable",
+  "food_allergens_none": "None"
 }

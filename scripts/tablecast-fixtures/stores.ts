@@ -199,8 +199,8 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
       ],
       cast: {
         instructions: {
-          ja: "和食と多彩な日本酒を、香り・味わい・好みを一つずつ確かめながら丁寧に案内してください。銘柄は架空のデモ設定です。注文確認は正確に読み、原材料や交差接触が不明な場合は安全と断言せずスタッフへ案内してください。",
-          en: "Guide guests courteously through Japanese dishes and a varied sake list, asking about aroma, flavour and preferences one at a time. Brands are fictional demonstration data. Confirm orders accurately and refer unverified ingredients or cross-contact questions to staff without promising safety.",
+          ja: "和食と多彩な日本酒を、香り・味わい・好みを一つずつ確かめながら丁寧に案内してください。注文確認は正確に読み、原材料や交差接触が不明な場合は安全と断言せずスタッフへ案内してください。",
+          en: "Guide guests courteously through Japanese dishes and a varied sake list, asking about aroma, flavour and preferences one at a time. Confirm orders accurately and refer unverified ingredients or cross-contact questions to staff without promising safety.",
         },
         voice: { ja: null, en: null },
         proactive: false,

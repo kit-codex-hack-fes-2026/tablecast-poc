@@ -363,8 +363,8 @@ const drinks: KoreanMenuItem[] = [
     price: 780,
     category: "korean-alcohol",
     ingredients: [
-      "架空銘柄の米を原料とする焼酎。アルコール16%、360mlの瓶で提供します",
-      "Fictional rice-based soju, 16% ABV, served as a 360ml bottle",
+      "米を原料とする焼酎。アルコール16%、360mlの瓶で提供します",
+      "rice-based soju, 16% ABV, served as a 360ml bottle",
     ],
     contains: [],
     spice: "none",
@@ -379,8 +379,8 @@ const drinks: KoreanMenuItem[] = [
     price: 880,
     category: "korean-alcohol",
     ingredients: [
-      "架空銘柄の米の焼酎にゆず果汁と糖類を合わせます。アルコール13%、360ml瓶です",
-      "Fictional rice soju mixed with yuzu juice and sugar, 13% ABV, in a 360ml bottle",
+      "米の焼酎にゆず果汁と糖類を合わせます。アルコール13%、360ml瓶です",
+      "rice soju mixed with yuzu juice and sugar, 13% ABV, in a 360ml bottle",
     ],
     contains: [],
     spice: "none",
@@ -395,8 +395,8 @@ const drinks: KoreanMenuItem[] = [
     price: 880,
     category: "korean-alcohol",
     ingredients: [
-      "架空銘柄。米と小麦由来の発酵素材を使う白いにごり酒。アルコール6%、750ml瓶です",
-      "Fictional cloudy white rice wine made with rice and wheat-derived fermentation ingredients, 6% ABV, in a 750ml bottle",
+      "米と小麦由来の発酵素材を使う白いにごり酒。アルコール6%、750ml瓶です",
+      "cloudy white rice wine made with rice and wheat-derived fermentation ingredients, 6% ABV, in a 750ml bottle",
     ],
     contains: ["wheat"],
     spice: "none",
@@ -411,8 +411,8 @@ const drinks: KoreanMenuItem[] = [
     price: 980,
     category: "korean-alcohol",
     ingredients: [
-      "架空銘柄。米、栗、小麦由来の発酵素材を使うにごり酒。アルコール6%、750ml瓶です",
-      "Fictional cloudy rice wine made with rice, chestnut and wheat-derived fermentation ingredients, 6% ABV, in a 750ml bottle",
+      "米、栗、小麦由来の発酵素材を使うにごり酒。アルコール6%、750ml瓶です",
+      "cloudy rice wine made with rice, chestnut and wheat-derived fermentation ingredients, 6% ABV, in a 750ml bottle",
     ],
     contains: ["wheat"],
     spice: "none",
@@ -428,8 +428,8 @@ const drinks: KoreanMenuItem[] = [
     price: 780,
     category: "korean-alcohol",
     ingredients: [
-      "架空銘柄の大麦麦芽とホップを使うラガー。アルコール4.5%、330ml瓶です",
-      "Fictional lager brewed with barley malt and hops, 4.5% ABV, in a 330ml bottle",
+      "大麦麦芽とホップを使うラガー。アルコール4.5%、330ml瓶です",
+      "lager brewed with barley malt and hops, 4.5% ABV, in a 330ml bottle",
     ],
     contains: ["barley"],
     spice: "none",
@@ -656,8 +656,8 @@ const koreanDemoModifierGroups: Record<string, Modifier> = {
 };
 
 const commonNote = {
-  ja: "架空デモの登録材料です。調味料の全成分・選択変更による成分差・交差接触は未確認です。ハラール、コーシャ等の宗教認証とヴィーガン適合は未確認です。材料名や肉抜きだけで適合を保証せず、スタッフへ確認してください。",
-  en: "These are recorded ingredients for a fictional demo. Full condiment ingredients, changes from options and cross-contact are unverified. Halal, kosher and other religious certification, and vegan suitability, are unverified. Ingredients or removing meat do not guarantee suitability; ask staff.",
+  ja: "調味料の全成分・選択変更による成分差・交差接触は未確認です。ハラール、コーシャ等の宗教認証とヴィーガン適合は未確認です。材料名や肉抜きだけで適合を保証せず、スタッフへ確認してください。",
+  en: "Full condiment ingredients, changes from options and cross-contact are unverified. Halal, kosher and other religious certification, and vegan suitability, are unverified. Ingredients or removing meat do not guarantee suitability; ask staff.",
 };
 
 export function koreanDemoStore(profile: "demo" | "history" | "smoke") {
@@ -767,7 +767,7 @@ export function koreanDemoStore(profile: "demo" | "history" | "smoke") {
       cast: {
         instructions: {
           ja: "韓国食堂ハヌル三条店の接客担当です。料理の日本語名と材料、辛さ、取り分けの量を一つずつ説明してください。卓上調理は必ずスタッフが加熱機器を操作し、十分な加熱と熱い器への注意を案内します。辛さ控えめでも辛味は残る商品があります。宗教認証・ヴィーガン適合・交差接触は未確認です。肉抜き、植物性の具材やノンアルコールという名前だけで安全・適合を保証せず、スタッフへつないでください。",
-          en: "You host guests at the fictional Hanul Sanjo Korean kitchen. Explain dishes, ingredients, heat and sharing portions one point at a time. Staff must operate tabletop heaters; explain thorough cooking and hot-vessel precautions. Milder dishes may still contain chilli. Religious certification, vegan suitability and cross-contact are unverified. Do not promise safety or suitability from meat removal, plant ingredients or a non-alcoholic name alone; ask staff to help.",
+          en: "You host guests at Hanul Sanjo Korean kitchen. Explain dishes, ingredients, heat and sharing portions one point at a time. Staff must operate tabletop heaters; explain thorough cooking and hot-vessel precautions. Milder dishes may still contain chilli. Religious certification, vegan suitability and cross-contact are unverified. Do not promise safety or suitability from meat removal, plant ingredients or a non-alcoholic name alone; ask staff to help.",
         },
         voice: { ja: null, en: null },
         proactive: false,

@@ -1,4 +1,4 @@
-import { type Product, unknownFoodProfile } from "@tablecast/api/schema";
+import { foodClassification, type Product, unknownFoodProfile } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { afterEach, expect, it, onTestFinished, vi } from "vitest";
@@ -117,11 +117,9 @@ it.each(["ja", "en"] as const)(
     const halal = screen.getByRole("group", { name: labels.food_halal, exact: true });
     await userEvent.selectOptions(halal.getByRole("combobox"), "no");
     await halal.getByRole("tab", { name: "日本語", exact: true }).click();
-    await halal.getByRole("textbox").fill("架空レシピにアルコールを含む。認証なし。");
+    await halal.getByRole("textbox").fill("原材料にアルコールを含む。認証なし。");
     await halal.getByRole("tab", { name: "English", exact: true }).click();
-    await halal
-      .getByRole("textbox")
-      .fill("The fictional recipe contains alcohol. No certification.");
+    await halal.getByRole("textbox").fill("Contains alcohol. No certification.");
     await screen
       .getByText(locale === "ja" ? "乳の具材" : "Milk component", { exact: true })
       .first()
@@ -176,8 +174,8 @@ it("選択を変えた後の遅い応答を捨て、失敗時に入力を維持�
   await expect.element(screen.getByText(ja.food_updating)).toBeVisible();
   await screen.getByRole("button", { name: "乳を抜く" }).click();
   await screen.getByRole("button", { name: ja.food_retry }).click();
-  const milk = screen.getByLabelText("乳: 不使用", { exact: true });
-  await expect.element(milk).toBeVisible();
+  const allergens = screen.getByRole("list", { name: ja.food_allergens });
+  await expect.element(allergens.getByText(ja.food_unknown, { exact: true })).toBeVisible();
   old.resolve(
     Response.json({
       configVersion: 1,
@@ -192,12 +190,14 @@ it("選択を変えた後の遅い応答を捨て、失敗時に入力を維持�
   await expect.poll(() => calls).toBe(3);
   await expect.element(page.getByText(ja.food_selection_complete)).toBeVisible();
   await expect.element(screen.getByText("古い乳含有の応答")).not.toBeInTheDocument();
-  await expect.element(milk).toHaveAttribute("data-status", "not_used");
+  await expect
+    .element(screen.getByLabelText("乳: 不使用", { exact: true }))
+    .not.toBeInTheDocument();
   await expect.element(screen.getByLabelText("乳: 含有", { exact: true })).not.toBeInTheDocument();
 });
 
 it.each(["ja", "en"] as const)(
-  "%sで3状態を色・アイコン・名前付きバッジにして折り畳まず表示する",
+  "%sで分類名を示し、含有だけを表示して食事区分の適合と不適合を区別する",
   async (locale) => {
     const labels = locale === "ja" ? ja : en;
     const value = unknownFoodProfile();
@@ -224,10 +224,18 @@ it.each(["ja", "en"] as const)(
       { exact: true },
     );
     await expect.element(milk).toHaveAttribute("data-variant", "destructive");
-    await expect.element(egg).toHaveAttribute("data-variant", "success");
-    await expect.element(wheat).toHaveAttribute("data-variant", "inactive");
-    for (const item of [milk, egg, wheat])
-      expect(item.element().querySelector("svg[aria-hidden=true]")).not.toBeNull();
+    await expect.element(egg).not.toBeInTheDocument();
+    await expect.element(wheat).not.toBeInTheDocument();
+    await expect.element(screen.getByText(labels.food_allergens, { exact: true })).toBeVisible();
+    await expect.element(screen.getByText(labels.food_dietary, { exact: true })).toBeVisible();
+    const allergens = screen.getByRole("list", { name: labels.food_allergens });
+    await expect.element(allergens.getByText(labels.food_unknown, { exact: true })).toBeVisible();
+    await expect
+      .element(allergens.getByText(labels.food_allergens_none, { exact: true }))
+      .not.toBeInTheDocument();
+    await expect
+      .element(screen.getByLabelText(`${labels.food_vegan}: ${labels.food_no}`, { exact: true }))
+      .toHaveAttribute("data-variant", "destructive");
     await expect.element(screen.getByRole("list", { name: labels.food_allergens })).toBeVisible();
     await expect
       .element(
@@ -243,9 +251,27 @@ it.each(["ja", "en"] as const)(
       .element(screen.getByText(value.basis[locale], { exact: true }))
       .not.toBeInTheDocument();
     expect(screen.container.querySelector("details,summary,[data-slot=accordion]")).toBeNull();
-    const row = screen.getByRole("list", { name: labels.food_allergens });
+    const row = screen.getByRole("list", { name: labels.food_dietary });
     row.element().focus();
     await userEvent.keyboard("[ArrowRight]");
     await expect.poll(() => row.element().scrollLeft).toBeGreaterThan(0);
   },
 );
+
+it("全品目の不使用が確認されたときだけアレルギーなしと表示する", async () => {
+  const value = unknownFoodProfile();
+  for (const item of foodClassification.allergens) value.allergens[item.id] = "not_used";
+  const screen = await render(
+    <LocaleProvider initialLocale="ja" persist={false}>
+      <FoodInformationView value={value} />
+    </LocaleProvider>,
+  );
+  const allergens = screen.getByRole("list", { name: ja.food_allergens });
+  await expect.element(allergens.getByText(ja.food_allergens_none, { exact: true })).toBeVisible();
+  await expect
+    .element(allergens.getByText(ja.food_unknown, { exact: true }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(screen.getByLabelText("乳: 不使用", { exact: true }))
+    .not.toBeInTheDocument();
+});

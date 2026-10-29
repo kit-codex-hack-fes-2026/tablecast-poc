@@ -109,8 +109,8 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
       price: 880,
       category: "craft-beer",
       ingredients: [
-        "架空銘柄。麦芽とホップ、柑橘を思わせる香りと明瞭な苦味。アルコール6.5%。基本容量280ml",
-        "Fictional beer brewed with malt and hops, citrus-like aromas and a firm bitterness; 6.5% ABV, base serving 280ml",
+        "麦芽とホップ、柑橘を思わせる香りと明瞭な苦味。アルコール6.5%。基本容量280ml",
+        "beer brewed with malt and hops, citrus-like aromas and a firm bitterness; 6.5% ABV, base serving 280ml",
       ],
       contains: ["barley"],
       modifiers: [serving],
@@ -123,8 +123,8 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
       price: 820,
       category: "craft-beer",
       ingredients: [
-        "架空銘柄。麦芽とホップ、穏やかな苦味。アルコール5.0%。基本容量280ml",
-        "Fictional beer brewed with malt and hops, with a gentle bitterness; 5.0% ABV, base serving 280ml",
+        "麦芽とホップ、穏やかな苦味。アルコール5.0%。基本容量280ml",
+        "beer brewed with malt and hops, with a gentle bitterness; 5.0% ABV, base serving 280ml",
       ],
       contains: ["barley"],
       modifiers: [serving],
@@ -136,8 +136,8 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
       price: 920,
       category: "craft-beer",
       ingredients: [
-        "架空銘柄。焙煎麦芽の香り。アルコール6.0%。基本容量280ml。本日は売切です",
-        "Fictional beer with roasted-malt aromas; 6.0% ABV, base serving 280ml. Sold out today",
+        "焙煎麦芽の香り。アルコール6.0%。基本容量280ml。本日は売切です",
+        "beer with roasted-malt aromas; 6.0% ABV, base serving 280ml. Sold out today",
       ],
       contains: ["barley"],
       modifiers: [serving],
@@ -224,8 +224,8 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
     ],
     cast: {
       instructions: {
-        ja: "西海岸のタップルームのように親しみやすく案内します。バーガーの必須選択を一つずつ確認し、同じ卓の別の注文は別行に保ち、誰の訂正か曖昧なら確認します。ビールの苦味の好みを聞き、飲まない客にはソフトドリンクを案内します。合計と有料追加を明示し、明示承認後に注文します。宗教や食習慣、植物由来パティだけを根拠に適合を断言せず、不明な原材料や交差接触はスタッフへ引き継ぎます。銘柄とレシピは合成デモです。",
-        en: "Offer a friendly West Coast taproom welcome. Ask for required burger choices one at a time. Keep different burgers on separate lines in the shared table order and clarify ambiguous corrections. Ask about preferred bitterness and offer soft drinks to guests who do not drink alcohol. State extras and totals before explicit order approval. Do not infer dietary or religious suitability from identity or a plant-based patty; refer unverified ingredients and cross-contact to staff. Brands and recipes are fictional demo data.",
+        ja: "西海岸のタップルームのように親しみやすく案内します。バーガーの必須選択を一つずつ確認し、同じ卓の別の注文は別行に保ち、誰の訂正か曖昧なら確認します。ビールの苦味の好みを聞き、飲まない客にはソフトドリンクを案内します。合計と有料追加を明示し、明示承認後に注文します。宗教や食習慣、植物由来パティだけを根拠に適合を断言せず、不明な原材料や交差接触はスタッフへ引き継ぎます。",
+        en: "Offer a friendly West Coast taproom welcome. Ask for required burger choices one at a time. Keep different burgers on separate lines in the shared table order and clarify ambiguous corrections. Ask about preferred bitterness and offer soft drinks to guests who do not drink alcohol. State extras and totals before explicit order approval. Do not infer dietary or religious suitability from identity or a plant-based patty; refer unverified ingredients and cross-contact to staff.",
       },
       voice: { ja: null, en: null },
       proactive: false,

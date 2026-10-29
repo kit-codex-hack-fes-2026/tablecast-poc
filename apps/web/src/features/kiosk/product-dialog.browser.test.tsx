@@ -132,7 +132,7 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
   await expect.element(screen.getByText("任意 · 2個まで選択", { exact: true })).toBeVisible();
   await expect
     .element(screen.getByText(labels.kiosk_option_price_note, { exact: true }))
-    .toBeVisible();
+    .not.toBeInTheDocument();
   await expect
     .element(screen.getByText(`-${money(20, locale)}${ja.price_tax_included}`, { exact: true }))
     .toBeVisible();

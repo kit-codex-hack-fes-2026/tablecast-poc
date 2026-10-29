@@ -41,10 +41,9 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
   await detail.getByRole("radio", { name: /^植物由来パティ/ }).check();
   await expect(information.getByText(ja.food_selection_complete, { exact: true })).toBeVisible();
   await expect(information.getByLabel("乳: 含有", { exact: true })).toHaveCount(0);
-  await expect(information.getByLabel("乳: 不使用", { exact: true })).toHaveAttribute(
-    "data-status",
-    "not_used",
-  );
+  await expect(information.getByLabel("乳: 不使用", { exact: true })).toHaveCount(0);
+  await expect(information.getByText(ja.food_allergens, { exact: true })).toBeVisible();
+  await expect(information.getByText(ja.food_dietary, { exact: true })).toBeVisible();
   await expect(
     information.getByLabel(`${ja.food_vegan}: ${ja.food_yes}`, { exact: true }),
   ).toBeVisible();

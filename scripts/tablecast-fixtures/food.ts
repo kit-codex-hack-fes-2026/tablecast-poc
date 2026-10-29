@@ -8,48 +8,47 @@ import {
   unknownFoodProfile,
 } from "@tablecast/api/schema";
 
-// 確認範囲を列挙した架空レシピだけに使う。実店舗の適合・認証を表さない。
-function demoFoodProfile(
+// 登録した原材料と確認範囲からprofileを作り、未確認の判定は補わない。
+function recipeFoodProfile(
   contains: JapaneseAllergen[],
   states: Partial<Record<(typeof dietaryKeys)[number], "no" | "unknown" | "yes">> = {},
-  recipe: readonly [string, string] = [
-    "この具材の合成レシピ",
-    "The synthetic recipe for this component",
-  ],
+  recipe: readonly [string, string] = ["この具材の原材料", "Ingredients for this component"],
   complete = true,
 ): FoodProfile {
   const profile = unknownFoodProfile();
-  profile.basis = {
-    ja: `架空デモの登録原材料・調理情報：${recipe[0]}。29品目を原材料として確認した合成設定値です。製造・調理・提供時の混入は未確認です。`,
-    en: `Recorded ingredients and preparation for this fictional demo: ${recipe[1]}. The 29 ingredients were checked for this synthetic recipe. Cross-contact during production, preparation and service is unverified.`,
-  };
+  profile.basis = { ja: recipe[0], en: recipe[1] };
   for (const id of japaneseAllergenSchema.options)
     if (complete || contains.includes(id))
       profile.allergens[id] = contains.includes(id) ? "contains" : "not_used";
-  if (!complete)
-    profile.basis = {
-      ja: `架空デモの登録原材料：${recipe[0]}。未登録の原材料と交差接触は未確認です。`,
-      en: `Recorded ingredients for this fictional demo: ${recipe[1]}. Unlisted ingredients and cross-contact are unverified.`,
-    };
-  for (const key of dietaryKeys)
+  for (const key of dietaryKeys) {
+    const status = states[key] ?? "unknown";
     profile.dietary[key] = {
-      status: states[key] ?? "unknown",
-      basis: {
-        ja: `架空レシピの確認：${recipe[0]}。${key === "halal" ? " ハラール認証なし。対応は架空の原材料・調理条件の登録に基づきます。" : ""}`,
-        en: `Fictional recipe assessment: ${recipe[1]}.${key === "halal" ? " No halal certification. Suitability is a recorded fictional ingredient and preparation assessment." : ""}`,
-      },
+      status,
+      basis:
+        key === "halal" && status === "unknown"
+          ? {
+              ja: "原材料の由来・ハラール認証は未確認です。",
+              en: "Ingredient provenance and halal certification are unverified.",
+            }
+          : key === "halal" && status === "yes"
+            ? {
+                ja: "豚由来原料・アルコールは不使用です。ハラール認証は未確認です。",
+                en: "No pork-derived ingredients or alcohol are used. Halal certification is unverified.",
+              }
+            : { ja: recipe[0], en: recipe[1] },
     };
+  }
   return profile;
 }
 
 const plant = { vegan: "yes", vegetarian: "yes", glutenFree: "yes" } as const;
 const egg = () =>
-  demoFoodProfile(["egg"], { vegan: "no", vegetarian: "yes", glutenFree: "yes" }, [
+  recipeFoodProfile(["egg"], { vegan: "no", vegetarian: "yes", glutenFree: "yes" }, [
     "鶏卵",
     "Hen's egg",
   ]);
 const cheese = () =>
-  demoFoodProfile(["milk"], { vegan: "no", vegetarian: "yes", glutenFree: "yes" }, [
+  recipeFoodProfile(["milk"], { vegan: "no", vegetarian: "yes", glutenFree: "yes" }, [
     "乳と微生物由来レンネットのチーズ",
     "Milk cheese made with microbial rennet",
   ]);
@@ -61,7 +60,7 @@ export function withDemoFoodChanges(input: Product): Product {
     ["-hotpot-extras-cheese", cheese()],
     [
       "-seasoning-tare",
-      demoFoodProfile(
+      recipeFoodProfile(
         ["wheat", "soya"],
         { vegan: "unknown", vegetarian: "unknown", glutenFree: "no" },
         [
@@ -73,7 +72,7 @@ export function withDemoFoodChanges(input: Product): Product {
     ],
     [
       "-hotpot-extras-ramyeon",
-      demoFoodProfile(
+      recipeFoodProfile(
         ["wheat", "egg"],
         { vegan: "no", vegetarian: "unknown", glutenFree: "no" },
         ["小麦と卵を含む麺。調味料は未確認", "Wheat and egg noodles; seasoning is unverified"],
@@ -93,7 +92,7 @@ export function withDemoFoodChanges(input: Product): Product {
     option.foodChanges = { add: [id], remove: [] };
   }
   if (product.id.endsWith("-edamame"))
-    product.foodInfo.base = demoFoodProfile(["soya"], { ...plant, halal: "yes" }, [
+    product.foodInfo.base = recipeFoodProfile(["soya"], { ...plant, halal: "yes" }, [
       product.text.ja.description,
       product.text.en.description,
     ]);
@@ -101,8 +100,8 @@ export function withDemoFoodChanges(input: Product): Product {
     product.foodInfo.base.dietary.halal = {
       status: "no",
       basis: {
-        ja: "架空デモの登録レシピに飲用アルコールを含みます。",
-        en: "The registered fictional recipe contains alcoholic drink.",
+        ja: "飲用アルコールを含みます。",
+        en: "Contains alcohol.",
       },
     };
   return product;
@@ -110,7 +109,7 @@ export function withDemoFoodChanges(input: Product): Product {
 
 export function koreanFoodInformation(product: Product): Product {
   if (!product.id.endsWith("-bibimbap")) return product;
-  const base = demoFoodProfile(
+  const base = recipeFoodProfile(
     ["sesame", "soya", "wheat"],
     { vegan: "yes", vegetarian: "yes", glutenFree: "no" },
     [
@@ -125,7 +124,7 @@ export function koreanFoodInformation(product: Product): Product {
       {
         id: "beef",
         name: { ja: "牛肉", en: "Beef" },
-        profile: demoFoodProfile(["beef"], { vegan: "no", vegetarian: "no", glutenFree: "yes" }, [
+        profile: recipeFoodProfile(["beef"], { vegan: "no", vegetarian: "no", glutenFree: "yes" }, [
           "牛肉",
           "Beef",
         ]),
@@ -133,7 +132,7 @@ export function koreanFoodInformation(product: Product): Product {
       {
         id: "tofu",
         name: { ja: "豆腐", en: "Tofu" },
-        profile: demoFoodProfile(["soya"], plant, [
+        profile: recipeFoodProfile(["soya"], plant, [
           "大豆と凝固剤の豆腐",
           "Tofu made with soya and coagulant",
         ]),
@@ -159,51 +158,52 @@ export function koreanFoodInformation(product: Product): Product {
 export function westwardFoodInformation(product: Product): Product {
   const result = structuredClone(product);
   const definitions = {
-    brioche: demoFoodProfile(
+    brioche: recipeFoodProfile(
       ["wheat", "egg", "milk"],
       { vegan: "no", vegetarian: "yes", glutenFree: "no" },
       ["小麦・卵・乳のブリオッシュ", "Wheat, egg and milk brioche"],
     ),
-    wholemeal: demoFoodProfile(["wheat"], { ...plant, glutenFree: "no" }, [
+    wholemeal: recipeFoodProfile(["wheat"], { ...plant, glutenFree: "no" }, [
       "小麦・水・酵母・塩の全粒粉バンズ",
       "Wholemeal bun made with wheat, water, yeast and salt",
     ]),
-    lettuce: demoFoodProfile([], plant, ["レタス", "Lettuce"]),
-    beef: demoFoodProfile(["beef"], { vegan: "no", vegetarian: "no", glutenFree: "yes" }, [
+    lettuce: recipeFoodProfile([], plant, ["レタス", "Lettuce"]),
+    beef: recipeFoodProfile(["beef"], { vegan: "no", vegetarian: "no", glutenFree: "yes" }, [
       "十分に加熱した牛肉",
       "Fully cooked beef",
     ]),
-    chicken: demoFoodProfile(["chicken"], { vegan: "no", vegetarian: "no", glutenFree: "yes" }, [
+    chicken: recipeFoodProfile(["chicken"], { vegan: "no", vegetarian: "no", glutenFree: "yes" }, [
       "十分に加熱した鶏肉",
       "Fully cooked chicken",
     ]),
-    patties: demoFoodProfile(["soya"], plant, [
+    patties: recipeFoodProfile(["soya"], plant, [
       "大豆・きのこ・塩の植物由来パティ",
       "Plant-based patty made with soya, mushrooms and salt",
     ]),
     cheddar: cheese(),
     pepperJack: cheese(),
-    house: demoFoodProfile(["egg", "soya"], { vegan: "no", vegetarian: "yes", glutenFree: "yes" }, [
-      "卵・大豆油・酢・マスタードのソース",
-      "Egg, soya oil, vinegar and mustard sauce",
-    ]),
-    mustard: demoFoodProfile([], plant, [
+    house: recipeFoodProfile(
+      ["egg", "soya"],
+      { vegan: "no", vegetarian: "yes", glutenFree: "yes" },
+      ["卵・大豆油・酢・マスタードのソース", "Egg, soya oil, vinegar and mustard sauce"],
+    ),
+    mustard: recipeFoodProfile([], plant, [
       "からし種・酢・塩のマスタード",
       "Mustard made with mustard seeds, vinegar and salt",
     ]),
-    bbq: demoFoodProfile(["wheat", "soya"], { ...plant, glutenFree: "no" }, [
+    bbq: recipeFoodProfile(["wheat", "soya"], { ...plant, glutenFree: "no" }, [
       "トマト・しょうゆ・砂糖のBBQソース",
       "Tomato, soy sauce and sugar BBQ sauce",
     ]),
-    avocado: demoFoodProfile([], plant, ["アボカド", "Avocado"]),
-    bacon: demoFoodProfile(
+    avocado: recipeFoodProfile([], plant, ["アボカド", "Avocado"]),
+    bacon: recipeFoodProfile(
       ["pork"],
       { vegan: "no", vegetarian: "no", halal: "no", glutenFree: "yes" },
       ["豚肉・塩のベーコン", "Pork and salt bacon"],
     ),
-    onion: demoFoodProfile([], plant, ["玉ねぎ", "Onion"]),
-    tomato: demoFoodProfile([], plant, ["トマト", "Tomato"]),
-    pickle: demoFoodProfile([], plant, [
+    onion: recipeFoodProfile([], plant, ["玉ねぎ", "Onion"]),
+    tomato: recipeFoodProfile([], plant, ["トマト", "Tomato"]),
+    pickle: recipeFoodProfile([], plant, [
       "きゅうり・酢・塩のピクルス",
       "Cucumber, vinegar and salt pickles",
     ]),
@@ -243,7 +243,7 @@ export function westwardFoodInformation(product: Product): Product {
   result.foodInfo = {
     base:
       isBurger || product.id.endsWith("-fries")
-        ? demoFoodProfile([], plant, [
+        ? recipeFoodProfile([], plant, [
             "固定の塩・こしょう・調理条件",
             "Fixed salt, pepper and preparation conditions",
           ])
@@ -285,15 +285,15 @@ export function westwardFoodInformation(product: Product): Product {
     result.foodInfo.base.dietary.halal = {
       status: "no",
       basis: {
-        ja: "架空のビールの登録レシピにアルコールを含みます。",
-        en: "The fictional beer recipe contains alcohol.",
+        ja: "ビールにアルコールを含みます。",
+        en: "The beer contains alcohol.",
       },
     };
     result.foodInfo.base.dietary.glutenFree = {
       status: "no",
       basis: {
-        ja: "架空のビールは大麦麦芽を使い、グルテン除去はしていません。",
-        en: "The fictional beer uses barley malt without gluten removal.",
+        ja: "大麦麦芽を使用し、グルテン除去はしていません。",
+        en: "Made with barley malt without gluten removal.",
       },
     };
   }
