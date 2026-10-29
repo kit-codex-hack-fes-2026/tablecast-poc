@@ -3,7 +3,7 @@ import { type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useSta
 import type { VoiceCamera, VoiceCameraState } from "./voice-model";
 import { useI18n } from "../../i18n/locale";
 import { LocalCameraControls, LocalCameraOverlay } from "./local-camera-controls";
-import { captureCameraFrame } from "./local-camera-dom";
+import { captureCameraFrame, localCameraDefaults } from "./local-camera-dom";
 
 export function LocalCameraFrame() {
   const camera = useLocalCamera();
@@ -252,8 +252,8 @@ export function LocalCamera({
   const { t } = useI18n();
   const video = useRef<HTMLVideoElement>(null);
   const cameraWindow = useRef<HTMLDivElement>(null);
-  const [aspectRatio, setAspectRatio] = useState(4 / 3);
-  const [preferredWidth, setPreferredWidth] = useState(128);
+  const [aspectRatio, setAspectRatio] = useState(localCameraDefaults.aspectRatio);
+  const [preferredWidth, setPreferredWidth] = useState(localCameraDefaults.width);
   const [bounds, setBounds] = useState({ width: 320, height: 240 });
   const drag = useRef<null | { pointerId: number; width: number; x: number; y: number }>(null);
   const maxWidth = Math.min(320, bounds.width, bounds.height * aspectRatio);

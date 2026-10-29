@@ -8,13 +8,17 @@ const uiSectionSchema = z.enum(["menu", "cart", "orders", "bill"]);
 
 export type UiSection = z.infer<typeof uiSectionSchema>;
 
+const menuSearchQuerySchema = z.string().max(100).trim();
+
 export const menuSearchInputSchema = z
   .object({
-    query: z.string().max(100),
+    query: menuSearchQuerySchema.min(1),
     offset: z.number().int().min(0).max(maxConfigurationProducts).optional(),
   })
   .strict();
 export const savedMenuSearchSchema = menuSearchInputSchema.extend({
+  // 旧版の空検索は読取時に通常一覧として扱う。
+  query: menuSearchQuerySchema,
   offset: z.number().int().nonnegative(),
   configVersion: z.number().int().positive(),
 });
