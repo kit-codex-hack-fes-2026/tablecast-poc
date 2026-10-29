@@ -292,7 +292,10 @@ it("2000商品の検索ページも実HTTPで8件・2往復・300msの予算を�
       {
         method: "PATCH",
         headers: { Cookie: `tablecast.device=${deviceToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ section: "menu", search: { query: "", offset: 1992 } }),
+        body: JSON.stringify({
+          section: "menu",
+          search: { query: product.text.ja.displayName, offset: 1992 },
+        }),
       },
       { ...env, TABLECAST_DB: measured.database },
       context,

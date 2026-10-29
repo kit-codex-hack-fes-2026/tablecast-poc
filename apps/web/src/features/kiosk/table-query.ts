@@ -175,7 +175,8 @@ export function useTableResources(data: CoreState, endpoint: TableEndpoint, refr
           { queryKey: tableOrdersKey(endpoint, data.id) },
           { cancelRefetch: false },
         );
-      if (affected.core) refresh();
+      // 通知前に始まった取得へまとめず、新しいcursorの卓状態を取り直す。
+      if (affected.core) void client.invalidateQueries({ queryKey: tableKey, exact: true });
     },
     endpoint.client,
   );
