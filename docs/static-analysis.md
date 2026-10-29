@@ -91,7 +91,7 @@ rootの`format`・`format:check`はリポジトリ全体を一度だけ処理し
 pre-commitは変更ファイルへのformat/lintとfallowの差分検査、commit-msgはコミット規約を検査する。formatと解析のgroupを並列実行し、解析はcodegenを一度完了してからlintとfallowを並列実行する。生成中のParaglideを読まず、codegenの失敗もcommitを止める。実行内容は[lefthook.yml](../lefthook.yml)が正本であり、重い全ブラウザー試験・有料音声試験を毎commitへ入れない。変更別の確認範囲は[テスト戦略](testing.md#変更に応じた検証)に従う。
 部分stageを壊さない。`git add .` や無関係な差分の自動stageは禁止。formatterの自動stageを使う場合は部分stageを保全できる挙動を先に検証する。
 pre-pushは設定せず、push時に全体検証を繰り返さない。無課金の全体検証はCIで実行し、ローカルで必要な場合は `bun run check` を使う。
-commit-msgはrootの `commitlint.config.ts` を使う。公式の `@commitlint/config-conventional` と本文・Issue参照必須の組込みルールを採用し、Gitmojiの先頭検査だけを追加する。CIの静的解析ジョブは履歴を取得し、PRではbaseからheadまで、mainへのpushでは直前のコミットを同じ設定で検査する。
+commit-msgはrootの `commitlint.config.ts` を使う。公式の `@commitlint/config-conventional` と本文・Issue参照必須の組込みルールを採用し、Gitmojiの先頭検査だけを追加する。本文の行長は制限せず、GitHub上で作るマージcommitにも同じ扱いを適用する。CIの静的解析ジョブは履歴を取得し、PRではbaseからheadまで、mainへのpushでは直前のコミットを同じ設定で検査する。
 失敗時の `--no-verify`、skip、全ignoreを通常手順にしない。起動した別worktreeのGit設定を変更しない。
 
 ## fallow

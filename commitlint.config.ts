@@ -16,6 +16,7 @@ const config: UserConfig = {
   ],
   rules: {
     "body-empty": [2, "never"],
+    "body-max-line-length": [0],
     "gitmoji-required": [2, "always"],
     "header-max-length": [2, "always", 100],
     "references-empty": [2, "never"],
