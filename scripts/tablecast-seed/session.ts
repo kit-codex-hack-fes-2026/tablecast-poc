@@ -54,6 +54,7 @@ function sessionQueries(db: Database, statements: (BatchItem<"sqlite"> | SeedEve
     if ("kind" in statement) events.push(statement);
     else queries.push(statement);
   }
+  events.sort((left, right) => left.at - right.at);
   // 全列数を含めてもD1の100 bind制限に収まる行数に区切る。
   for (let offset = 0; offset < events.length; offset += 16) {
     queries.push(

@@ -23,6 +23,33 @@ type RefreshEnv = Pick<TablecastEnv, "TABLECAST_DB" | "TABLECAST_ENV" | "TABLECA
 function refreshedSeedFood(current: Configuration, seed: Configuration): Configuration {
   return configurationSchema.parse({
     ...current,
+    cast: {
+      ...current.cast,
+      instructions: Object.fromEntries(
+        Object.entries(current.cast.instructions).map(([locale, value]) => [
+          locale,
+          typeof value === "string"
+            ? value
+                .replace(
+                  "宗教認証・ヴィーガン適合・交差接触は未確認です。",
+                  "食事対応は選択後の業務APIを確認します。厨房器具は共用で、ハラール認証はありません。",
+                )
+                .replace(
+                  "Religious certification, vegan suitability and cross-contact are unverified.",
+                  "Use the business tools for dietary suitability after customisation. Kitchen equipment is shared and the restaurant has no halal certification.",
+                )
+                .replace(
+                  "宗教认证、纯素适用性和交叉接触尚未确认；",
+                  "按所选配置查询饮食信息。厨房设备共用，未取得清真认证；",
+                )
+                .replace(
+                  "종교 인증, 비건 적합성과 교차 접촉은 미확인입니다.",
+                  "선택한 구성의 식사 정보를 업무 도구로 확인합니다. 주방 기구는 공용이며 할랄 인증을 받지 않았습니다.",
+                )
+            : value,
+        ]),
+      ),
+    },
     products: current.products.map((product) => {
       const fixture = seed.products.find((item) => item.id === product.id);
       if (!fixture) return product;
@@ -141,6 +168,13 @@ export async function refreshStagingSeed(env: RefreshEnv) {
             and(
               eq(business.confirmations.store_id, fixture.id),
               inArray(business.confirmations.status, ["pending", "read"]),
+              inArray(
+                business.confirmations.table_session_id,
+                db
+                  .select({ id: business.tableSessions.id })
+                  .from(business.tableSessions)
+                  .where(eq(business.tableSessions.kind, "table")),
+              ),
               sql`changes()=1`,
             ),
           ),

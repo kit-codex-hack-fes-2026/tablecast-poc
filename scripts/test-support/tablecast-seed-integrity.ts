@@ -15,8 +15,8 @@ export async function seedIntegrity(env: TablecastEnv, credentials: DemoCredenti
   expect(counts).toMatchObject({
     stores: 3,
     tables: 36,
-    historicalSessions: 600,
-    orders: 2415,
+    historicalSessions: 900,
+    orders: 3615,
   });
   expect(counts.events).toBeGreaterThanOrEqual(20_000);
   const catalogs = {
@@ -33,18 +33,18 @@ export async function seedIntegrity(env: TablecastEnv, credentials: DemoCredenti
   }
   expect(
     products.find((product) => product.id === "tablecast-komorebi-karaage")?.foodInfo.base,
-  ).toMatchObject({ allergens: { wheat: "contains", soya: "contains" }, crossContact: "unknown" });
+  ).toMatchObject({ allergens: { wheat: "contains", soya: "contains" }, crossContact: "possible" });
   expect(
     products.find((product) => product.id === "tablecast-komorebi-pickles")?.foodInfo.base
       .allergens,
-  ).toEqual({});
+  ).toMatchObject({ wheat: "not_used", soya: "not_used" });
   expect(products.some((product) => product.foodInfo.components.length > 0)).toBe(true);
   expect(await db.get(sql`SELECT COUNT(DISTINCT organization_id) AS count FROM stores`)).toEqual({
     count: 3,
   });
   expect(
     await db.get(
-      sql`SELECT COUNT(DISTINCT CAST((opened_at-${tablecastHistoryBaseTime})/86400000 AS INTEGER)) AS days FROM table_sessions WHERE id LIKE '%-history-%'`,
+      sql`SELECT COUNT(DISTINCT CAST((opened_at-${tablecastHistoryBaseTime})/86400000 AS INTEGER)) AS days FROM table_sessions WHERE id LIKE '%-history-%' AND id NOT LIKE '%-plugin-history-%'`,
     ),
   ).toEqual({ days: 30 });
   expect(
@@ -59,7 +59,7 @@ export async function seedIntegrity(env: TablecastEnv, credentials: DemoCredenti
   ).toEqual({ count: 6 });
   expect({
     results: await db.all(
-      sql`SELECT s.id FROM table_sessions s WHERE status='closed' AND (SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.table_session_id=s.id)!=(SELECT COALESCE(SUM(amount),0) FROM payments p WHERE p.table_session_id=s.id)`,
+      sql`SELECT s.id FROM table_sessions s WHERE status='closed' AND (SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.table_session_id=s.id AND o.status NOT IN ('cancelled','rejected'))+COALESCE(json_extract(s.plan_json,'$.rules.pricePerPerson')*s.guest_count,0)+(SELECT COALESCE(SUM(amount),0) FROM payments p WHERE p.table_session_id=s.id AND p.kind='adjustment')!=(SELECT COALESCE(SUM(amount),0) FROM payments p WHERE p.table_session_id=s.id AND p.kind='payment')`,
     ),
   }).toMatchObject({ results: [] });
   expect({
@@ -107,7 +107,7 @@ export async function assertSeedIcons(env: TablecastEnv) {
   const db = createDatabase(env.TABLECAST_DB);
   const seededIcons = {
     results: await db.all<{ url: null | string }>(
-      sql`SELECT image AS url FROM user UNION ALL SELECT logo AS url FROM organization`,
+      sql`SELECT image AS url FROM user WHERE image IS NOT NULL UNION ALL SELECT logo AS url FROM organization`,
     ),
   };
   expect(seededIcons.results.length).toBe(12);

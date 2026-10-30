@@ -61,7 +61,7 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
     information.getByLabel(`${ja.food_vegan}: ${ja.food_yes}`, { exact: true }),
   ).toBeVisible();
   await expect(
-    information.getByLabel(`${ja.editor_cross_contact}: ${ja.editor_unknown}`, { exact: true }),
+    information.getByLabel(`${ja.editor_cross_contact}: ${ja.editor_possible}`, { exact: true }),
   ).toBeVisible();
   for (const viewport of [
     { width: 1180, height: 820 },
@@ -121,14 +121,14 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
   ).toBeLessThan(1);
   await expect(lettuce.getByRole("list")).toHaveCount(0);
   await information
-    .getByRole("button", { name: `${ja.food_halal}: ${ja.food_unknown}`, exact: true })
+    .getByRole("button", { name: `${ja.food_halal}: ${ja.food_yes}`, exact: true })
     .click();
   const foodPopover = page.getByRole("dialog", {
     name: ja.food_halal,
     exact: true,
   });
   await expect(
-    foodPopover.getByText(ja.food_certification_unknown, {
+    foodPopover.getByText(ja.food_not_certified, {
       exact: true,
     }),
   ).toBeVisible();
@@ -147,10 +147,10 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
     allergens: { milk: "not_used", egg: "not_used", wheat: "not_used", soya: "contains" },
     dietary: {
       vegan: { status: "yes" },
-      halal: { status: "unknown" },
+      halal: { status: "yes" },
       glutenFree: { status: "yes" },
     },
-    crossContact: "unknown",
+    crossContact: "possible",
   });
   const draft = configDraftSchema.parse(
     await (await page.request.post(`${api}/drafts`, { headers })).json(),
@@ -174,7 +174,7 @@ test("seedの具材変更をAPIで合算して注文へ固定し、管理画面�
     saved.configuration.products.find((product) => product.id === productId)?.foodInfo.base,
   ).toMatchObject({
     crossContact: "possible",
-    crossContactSources: ["shared_frying_oil"],
+    crossContactSources: ["shared_equipment", "shared_frying_oil"],
     halalCertification: "not_certified",
   });
   await page.getByRole("tab", { name: "ブリオッシュ", exact: true }).click();

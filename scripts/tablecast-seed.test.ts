@@ -19,7 +19,7 @@ const { deploymentOwner, stores, tableSessions } = business;
 
 const execute = promisify(execFile);
 
-it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行しても営業中の卓と残額を変えない", async () => {
+it("隔離した実D1へ3か月の900履歴と3600注文を投入し、再実行しても営業中の卓と残額を変えない", async () => {
   // Given: 現在のworktreeのDBを使わない独立したWorkers binding。
   const directory = await mkdtemp(join(tmpdir(), "tablecast-seed-test-"));
   const configPath = join(directory, "wrangler.json");
