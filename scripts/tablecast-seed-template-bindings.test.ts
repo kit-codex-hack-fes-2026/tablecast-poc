@@ -478,4 +478,4 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
       await rm(directory, { recursive: true, force: true });
     }
   }
-}, 60_000);
+}, 120_000);

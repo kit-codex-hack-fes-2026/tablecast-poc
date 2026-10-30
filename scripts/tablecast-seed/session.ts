@@ -47,7 +47,7 @@ export function event(
   };
 }
 
-function sessionQueries(db: Database, statements: (BatchItem<"sqlite"> | SeedEvent)[]) {
+export function sessionQueries(db: Database, statements: (BatchItem<"sqlite"> | SeedEvent)[]) {
   const queries: BatchItem<"sqlite">[] = [];
   const events: SeedEvent[] = [];
   for (const statement of statements) {
@@ -72,7 +72,7 @@ function sessionQueries(db: Database, statements: (BatchItem<"sqlite"> | SeedEve
   return queries;
 }
 
-export async function insertSession(db: Database, statements: (BatchItem<"sqlite"> | SeedEvent)[]) {
+async function insertSession(db: Database, statements: (BatchItem<"sqlite"> | SeedEvent)[]) {
   const [first, ...rest] = sessionQueries(db, statements);
   if (first) await db.batch([first, ...rest]);
 }

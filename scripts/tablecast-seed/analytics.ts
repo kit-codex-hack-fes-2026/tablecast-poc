@@ -4,7 +4,7 @@ import { type CartLine, type Product } from "@tablecast/api/schema";
 import { and, eq, like } from "drizzle-orm";
 import { type BatchItem } from "drizzle-orm/batch";
 import { type Owner, type SeedEvent, type Store } from "../tablecast-seed-data.ts";
-import { confirmation, event, insertSession, order, payment, snapshotFor } from "./session.ts";
+import { confirmation, event, order, payment, sessionQueries, snapshotFor } from "./session.ts";
 
 const tablecastAnalyticsPeriods = [
   { month: "2026-09", startsAt: Date.UTC(2026, 8, 1, 8), sessions: 40 },
@@ -87,6 +87,7 @@ export async function seedPluginAnalytics(db: Database, store: Store, owner: Own
   const dishes = products.filter((product) => !drinks.includes(product));
   if (!featured.length || !drinks.length || !dishes.length)
     throw new Error("分析seedに必要な料理と飲料がありません。");
+  const pending: BatchItem<"sqlite">[] = [];
   for (const period of tablecastAnalyticsPeriods) {
     for (let index = 0; index < period.sessions; index++) {
       const sessionId = `${store.id}-plugin-history-${period.month}-${String(index).padStart(3, "0")}`;
@@ -198,7 +199,16 @@ export async function seedPluginAnalytics(db: Database, store: Store, owner: Own
         event(store.id, sessionId, "billing.payment", { amount: total }, closedAt - 1000, true),
         event(store.id, sessionId, "table.closed", {}, closedAt, true),
       );
-      await insertSession(db, statements);
+      const queries = sessionQueries(db, statements);
+      // セッションを分断せず64 SQL以内でまとめ、remote bindingの往復を減らす。
+      if (pending.length + queries.length > 64) {
+        const [first, ...rest] = pending;
+        if (first) await db.batch([first, ...rest]);
+        pending.length = 0;
+      }
+      pending.push(...queries);
     }
   }
+  const [first, ...rest] = pending;
+  if (first) await db.batch([first, ...rest]);
 }
