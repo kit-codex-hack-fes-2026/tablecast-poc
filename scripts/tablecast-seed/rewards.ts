@@ -1,9 +1,9 @@
-import { business, type Database, identity } from "@tablecast/api/db";
+import { business, identity } from "@tablecast/api/db";
 import { couponRuleSchema, customerConsentVersion, pointRulesSchema } from "@tablecast/api/schema";
 import { and, eq, like, sql } from "drizzle-orm";
 import { type BatchItem } from "drizzle-orm/batch";
 import { createHash } from "node:crypto";
-import { type Owner, type Store } from "../tablecast-seed-data.ts";
+import { type Owner, type SeedDatabase, type Store } from "../tablecast-seed-data.ts";
 
 // 名前・メール・購買履歴は全て架空。個人記憶や共有への同意は作らない。
 const members = [
@@ -27,7 +27,7 @@ function seedId(key: string) {
 }
 
 /** 会員の閾値前後・ポイント残高・発券条件を既存schemaで用意する。 */
-export async function seedPluginRewards(db: Database, store: Store, owner: Owner) {
+export async function seedPluginRewards(db: SeedDatabase, store: Store, owner: Owner) {
   const joinedAt = Date.UTC(2026, 7, 31);
   const rules = pointRulesSchema.parse({ enabled: true, kind: "visit", points: 10, unitYen: 100 });
   const visits = await db

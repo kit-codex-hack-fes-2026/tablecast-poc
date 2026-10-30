@@ -1,23 +1,21 @@
 import { configurationErrors, isHostedEmulator } from "@tablecast/api/bootstrap";
-import { business, createDatabase, identity } from "@tablecast/api/db";
+import { business, identity } from "@tablecast/api/db";
 import { type Configuration, configurationSchema } from "@tablecast/api/schema";
 import { and, count, eq, inArray, like, sql } from "drizzle-orm";
-import { mkdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
-import { getPlatformProxy } from "wrangler";
 import { apiSdkConfiguration } from "../apps/api/cloudflare.config.ts";
+import { deploymentDatabase } from "./tablecast-deploy-api.ts";
 import {
   deploymentOptions,
   deploymentTarget,
-  tablecastAccountId,
   tablecastAdoptedResources,
   tablecastRepository,
 } from "./tablecast-deploy-config.ts";
 import { demoStores } from "./tablecast-fixtures.ts";
+import { type SeedDatabase } from "./tablecast-seed-data.ts";
 import { seedPluginAnalytics } from "./tablecast-seed/analytics.ts";
 import { seedPluginRewards } from "./tablecast-seed/rewards.ts";
 
-type RefreshEnv = Pick<TablecastEnv, "TABLECAST_DB" | "TABLECAST_ENV" | "TABLECAST_PUBLIC_ORIGIN">;
+type RefreshEnv = Pick<TablecastEnv, "TABLECAST_ENV" | "TABLECAST_PUBLIC_ORIGIN">;
 
 /** 既存の商品名・価格・販売状態・独自商品・声・店舗設定を保ち、seedの商品情報だけ更新する。 */
 function refreshedSeedFood(current: Configuration, seed: Configuration): Configuration {
@@ -84,10 +82,9 @@ function refreshedSeedFood(current: Configuration, seed: Configuration): Configu
 }
 
 /** 運用者が明示実行するstaging専用seed更新。認証・卓・手動履歴・下書きは削除しない。 */
-export async function refreshStagingSeed(env: RefreshEnv) {
+export async function refreshStagingSeed(env: RefreshEnv, db: SeedDatabase) {
   if (env.TABLECAST_ENV !== "staging" || !isHostedEmulator(env))
     throw new Error("staging以外のseedは更新できません。");
-  const db = createDatabase(env.TABLECAST_DB);
   const ownership = await db.select().from(business.deploymentOwner);
   if (
     ownership.length !== 1 ||
@@ -237,44 +234,26 @@ async function main() {
     "false",
   );
   const api = apiSdkConfiguration(options.api);
-  const directory = resolve(import.meta.dirname, "../.local/tablecast-staging-seed");
-  await mkdir(directory, { recursive: true, mode: 0o700 });
-  const configPath = resolve(directory, "storage.json");
   // DBの指定は通常配備と同じcloudflare.config.tsから取得する。
-  await writeFile(
-    configPath,
+  const binding = api.d1_databases.find((item) => item.binding === "TABLECAST_DB");
+  if (!binding?.database_id) throw new Error("stagingのD1 bindingがありません。");
+  console.info(
     JSON.stringify({
-      name: "tablecast-staging-seed",
-      account_id: tablecastAccountId,
-      compatibility_date: api.compatibility_date,
-      compatibility_flags: api.compatibility_flags,
-      d1_databases: api.d1_databases.map((binding) => ({ ...binding, remote: true })),
-    }),
-  );
-  const platform = await getPlatformProxy<Pick<TablecastEnv, "TABLECAST_DB">>({
-    configPath,
-    envFiles: [],
-    remoteBindings: true,
-    persist: false,
-  });
-  try {
-    console.info(
-      JSON.stringify({
-        sha,
-        stores: await refreshStagingSeed({
-          ...platform.env,
+      sha,
+      stores: await refreshStagingSeed(
+        {
           TABLECAST_ENV: "staging",
           TABLECAST_PUBLIC_ORIGIN: target.origin,
-        }),
-      }),
-    );
-  } finally {
-    await platform.dispose();
-  }
+        },
+        deploymentDatabase(binding.database_id),
+      ),
+    }),
+  );
 }
 
 if (import.meta.main)
   await main().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : error);
+    if (error instanceof Error && error.cause instanceof Error) console.error(error.cause.message);
     process.exitCode = 1;
   });

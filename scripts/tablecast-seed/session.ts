@@ -1,10 +1,15 @@
 import { confirmationText, type PlanContext, priceCart } from "@tablecast/api/bootstrap";
-import { business, type Database } from "@tablecast/api/db";
+import { business } from "@tablecast/api/db";
 import { resolveText } from "@tablecast/api/localization";
 import { type CartLine, type Configuration, type Snapshot } from "@tablecast/api/schema";
 import { and, eq, inArray, like, or } from "drizzle-orm";
 import { type BatchItem } from "drizzle-orm/batch";
-import { type Owner, type SeedEvent, type Store } from "../tablecast-seed-data.ts";
+import {
+  type Owner,
+  type SeedDatabase,
+  type SeedEvent,
+  type Store,
+} from "../tablecast-seed-data.ts";
 
 export const tablecastHistoryBaseTime = Date.UTC(2026, 7, 1, 0, 0, 0);
 
@@ -47,7 +52,7 @@ export function event(
   };
 }
 
-export function sessionQueries(db: Database, statements: (BatchItem<"sqlite"> | SeedEvent)[]) {
+export function sessionQueries(db: SeedDatabase, statements: (BatchItem<"sqlite"> | SeedEvent)[]) {
   const queries: BatchItem<"sqlite">[] = [];
   const events: SeedEvent[] = [];
   for (const statement of statements) {
@@ -72,7 +77,7 @@ export function sessionQueries(db: Database, statements: (BatchItem<"sqlite"> | 
   return queries;
 }
 
-async function insertSession(db: Database, statements: (BatchItem<"sqlite"> | SeedEvent)[]) {
+async function insertSession(db: SeedDatabase, statements: (BatchItem<"sqlite"> | SeedEvent)[]) {
   const [first, ...rest] = sessionQueries(db, statements);
   if (first) await db.batch([first, ...rest]);
 }
@@ -114,7 +119,7 @@ export function snapshotFor(
   };
 }
 
-export function confirmation(db: Database, storeId: string, snapshot: Snapshot, at: number) {
+export function confirmation(db: SeedDatabase, storeId: string, snapshot: Snapshot, at: number) {
   return db.insert(business.confirmations).values({
     id: snapshot.id,
     store_id: storeId,
@@ -130,7 +135,7 @@ export function confirmation(db: Database, storeId: string, snapshot: Snapshot, 
 }
 
 export function order(
-  db: Database,
+  db: SeedDatabase,
   storeId: string,
   snapshot: Snapshot,
   status: "accepted" | "cancelled" | "served" | "submitted",
@@ -151,7 +156,7 @@ export function order(
 }
 
 export function payment(
-  db: Database,
+  db: SeedDatabase,
   storeId: string,
   sessionId: string,
   userId: string,
@@ -172,7 +177,7 @@ export function payment(
 }
 
 export async function seedCurrentTables(
-  db: Database,
+  db: SeedDatabase,
   store: Store,
   owner: Owner,
   baseTime: number,
@@ -368,7 +373,7 @@ export async function seedCurrentTables(
   if (first) await db.batch([first, ...rest]);
 }
 
-export async function seedHistory(db: Database, store: Store, owner: Owner) {
+export async function seedHistory(db: SeedDatabase, store: Store, owner: Owner) {
   const previous = await db
     .select({ id: business.tableSessions.id })
     .from(business.tableSessions)

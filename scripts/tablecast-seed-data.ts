@@ -32,6 +32,8 @@ export type Store = ReturnType<typeof demoStores>[number] & { configVersion?: nu
 
 export type Owner = { id: string; userId: string };
 
+export type SeedDatabase = Pick<Database, "all" | "batch" | "insert" | "select" | "update">;
+
 export type SeedEvent = {
   at: number;
   data: string;

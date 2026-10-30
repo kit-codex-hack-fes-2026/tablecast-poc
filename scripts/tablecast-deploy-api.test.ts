@@ -1,5 +1,7 @@
+import { business } from "@tablecast/api/db";
+import { eq, sql } from "drizzle-orm";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { currentRevision } from "./tablecast-deploy-api.ts";
+import { currentRevision, deploymentDatabase } from "./tablecast-deploy-api.ts";
 import { deploymentTarget, tablecastRepository } from "./tablecast-deploy-config.ts";
 
 const execute = vi.hoisted(() =>
@@ -8,6 +10,83 @@ const execute = vi.hoisted(() =>
 vi.mock("node:child_process", async () => {
   const { promisify } = await import("node:util");
   return { execFile: Object.assign(vi.fn(), { [promisify.custom]: execute }) };
+});
+
+describe("配備用D1 REST接続", () => {
+  const meta = {
+    duration: 1,
+    size_after: 4096,
+    rows_read: 1,
+    rows_written: 0,
+    last_row_id: 0,
+    changed_db: false,
+    changes: 0,
+  };
+  function result(columns: string[], rows: (null | number | string)[][], changes = 0) {
+    return {
+      success: true,
+      meta: { ...meta, changes, changed_db: changes > 0 },
+      results: { columns, rows },
+    };
+  }
+
+  test("単一のselect・get・生のallをDrizzleの結果へ戻す", async () => {
+    const request = vi
+      .fn<(path: string, method?: string, body?: unknown) => Promise<unknown>>()
+      .mockResolvedValue([
+        {
+          success: true,
+          results: result(
+            ["repository", "environment", "seeded"],
+            [["tablecast", "tablecast-staging", 1]],
+          ).results,
+        },
+      ]);
+    const db = deploymentDatabase("tablecast-test", request);
+    expect(await db.select().from(business.deploymentOwner).get()).toEqual({
+      repository: "tablecast",
+      environment: "tablecast-staging",
+      seeded: 1,
+    });
+    expect(
+      await db.all(sql`SELECT repository, environment, seeded FROM tablecast_deployment_owner`),
+    ).toEqual([{ repository: "tablecast", environment: "tablecast-staging", seeded: 1 }]);
+  });
+
+  test("更新と読取を一つのbatchへ送り、CASのchangesを保持する", async () => {
+    const request = vi
+      .fn<(path: string, method?: string, body?: unknown) => Promise<unknown>>()
+      .mockResolvedValue([result([], [], 1), result(["seeded"], [[1]])]);
+    const db = deploymentDatabase("tablecast-test", request);
+    const [updated, selected] = await db.batch([
+      db
+        .update(business.deploymentOwner)
+        .set({ seeded: 1 })
+        .where(eq(business.deploymentOwner.repository, "tablecast's fixture")),
+      db.select({ seeded: business.deploymentOwner.seeded }).from(business.deploymentOwner),
+    ]);
+    expect(updated.meta.changes).toBe(1);
+    expect(selected).toEqual([{ seeded: 1 }]);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[0]?.slice(0, 2)).toEqual(["d1/database/tablecast-test/raw", "POST"]);
+    expect(request.mock.calls[0]?.[2]).toMatchObject({
+      batch: [{ params: [1, "tablecast's fixture"] }, { params: [] }],
+    });
+  });
+
+  test("件数・列・更新メタデータが欠けた応答を成功として扱わない", async () => {
+    const request = vi
+      .fn<(path: string, method?: string, body?: unknown) => Promise<unknown>>()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([result(["seeded"], [[1, 2]])])
+      .mockResolvedValueOnce([{ success: true, results: { columns: [], rows: [] } }]);
+    const db = deploymentDatabase("tablecast-test", request);
+    await expect(db.select().from(business.deploymentOwner)).rejects.toThrow("Failed query");
+    await expect(db.select().from(business.deploymentOwner)).rejects.toThrow("Failed query");
+    await expect(db.update(business.deploymentOwner).set({ seeded: 1 })).rejects.toThrow(
+      "Failed query",
+    );
+  });
 });
 
 const sha = "a".repeat(40);
