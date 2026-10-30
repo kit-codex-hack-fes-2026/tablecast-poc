@@ -220,14 +220,14 @@ jobs:
           if-no-files-found: error
 
   components-tests:
-    name: "Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook, shard ${{ matrix.shard }}/3)"
+    name: "Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook, shard ${{ matrix.shard }}/4)"
     if: ${{ !inputs.catalog_pr }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -256,7 +256,7 @@ jobs:
         run: |
           bun run i18n:compile --output-structure locale-modules
           if [ "$TABLECAST_TEST_MODE" = full ]; then
-            bun --no-env-file ../../scripts/tablecast-changed-vitest.ts --project browser --project storybook --project browser-performance --shard=${{ matrix.shard }}/3
+            bun --no-env-file ../../scripts/tablecast-changed-vitest.ts --project browser --project storybook --project browser-performance --shard=${{ matrix.shard }}/4
           else
             bun --no-env-file ../../scripts/tablecast-changed-vitest.ts --project browser --project storybook --project browser-performance
           fi
