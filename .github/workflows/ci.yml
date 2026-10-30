@@ -1,44 +1,18 @@
-name: TableCast staging seed operation
-
+name: TableCast staging seed operation cleanup
 on:
   workflow_dispatch:
     inputs:
       staging_reset:
-        description: seed追加更新の実行確認としてtablecast-stagingを入力
         type: string
         required: true
-
 permissions:
   contents: read
-  pull-requests: read
-
 concurrency:
   group: tablecast-deploy-staging
-  cancel-in-progress: false
-
+  cancel-in-progress: true
 jobs:
-  seed:
-    if: inputs.staging_reset == 'tablecast-staging'
+  cleanup:
+    if: ${{ false }}
     runs-on: ubuntu-latest
-    environment: staging
-    timeout-minutes: 15
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: dbbd52d7d690afceea41fe920ae19f91
-      TABLECAST_RELEASE_SHA: f52d9386e92f7578b51e7e44486844e43784fcb9
-      TABLECAST_SEED_CONFIRM: tablecast-staging
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: f52d9386e92f7578b51e7e44486844e43784fcb9
-      - uses: ./.github/actions/tablecast-setup
-        with:
-          codegen: 'false'
-      - name: 対象stagingとPRの版を照合する
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          test "$(gh api repos/$GITHUB_REPOSITORY/commits/staging --jq .sha)" = "b018668bcf89bd977c61efe3c59629b78bc535b0"
-          test "$(gh api repos/$GITHUB_REPOSITORY/pulls/477 --jq .head.sha)" = "$TABLECAST_RELEASE_SHA"
-      - name: 認証・端末・既存営業データを保ってseedを追加更新する
-        run: bun --no-env-file run db:seed:staging
+      - run: 'true'
