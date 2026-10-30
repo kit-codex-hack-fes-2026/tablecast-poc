@@ -184,9 +184,6 @@ it.each(["ja", "en"] as const)(
         expect(bounds.right).toBeLessThanOrEqual(width);
         expect(bounds.bottom).toBeLessThanOrEqual(height);
       }
-      await page.screenshot({
-        path: `../../../test-results/tablecast-test-only-layout-${locale}-${width}.png`,
-      });
       await userEvent.keyboard("{Escape}");
       expect(tools.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
@@ -398,9 +395,6 @@ it.each(["ja", "en"] as const)(
         ),
       ].flatMap((element) => element.getAnimations().map((animation) => animation.finished)),
     );
-    await page.screenshot({
-      path: `../../../test-results/tablecast-test-only-fallback-${locale}-ipad.png`,
-    });
     image.element().dispatchEvent(new Event("error"));
     await expect.element(image).not.toBeInTheDocument();
     expect(header.getBoundingClientRect().height).toBe(64);

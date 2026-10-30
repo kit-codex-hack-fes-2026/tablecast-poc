@@ -57,7 +57,6 @@ it.each(["ja", "en"] as const)(
       exact: true,
     });
     await expect.element(selected).toHaveFocus();
-    await page.screenshot({ path: `../../test-results/tablecast-date-picker-${locale}.png` });
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
     await userEvent.keyboard("{ArrowRight}{Enter}");
     await expect.element(input).toHaveValue(calendarInputValue("2024-03-01", locale));
@@ -216,9 +215,5 @@ it.each([
     const onSameRow =
       buttonBounds.top + buttonBounds.height / 2 === inputBounds.top + inputBounds.height / 2;
     expect(onSameRow).toBe(sameRow);
-    if (width === 390)
-      await page.screenshot({
-        path: `../../test-results/tablecast-date-input-${includeTime ? "datetime" : "date"}-390.png`,
-      });
   },
 );

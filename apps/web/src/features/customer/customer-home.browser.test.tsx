@@ -215,7 +215,6 @@ it.each(["ja", "en"] as const)(
     await expect
       .element(page.getByRole("link", { name: labels.customer_memories_view, exact: true }))
       .toHaveAttribute("href", "/member/tablecast-first/memories");
-    await page.screenshot({ path: `../../../test-results/tablecast-member-card-${locale}.png` });
   },
 );
 

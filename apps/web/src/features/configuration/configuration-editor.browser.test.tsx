@@ -85,10 +85,6 @@ it.each([
       .click();
     await expect.element(input).toHaveValue(edited);
     await page.viewport(width, 1100);
-    await page.screenshot({
-      path: `../../../test-results/tablecast-cast-editor-${locale}-${width}.png`,
-      fullPage: true,
-    });
     await page
       .getByRole("tab", { name: locale === "ja" ? "プレビュー" : "Preview", exact: true })
       .click();

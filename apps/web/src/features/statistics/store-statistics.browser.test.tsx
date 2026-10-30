@@ -307,10 +307,6 @@ it("英語の狭い画面でも欠損と数量表を確認でき、更新後も�
   await userEvent.keyboard("{ArrowRight}");
   await expect.poll(() => region.element().scrollLeft).toBeGreaterThan(0);
   await expect.element(region).toHaveFocus();
-  await page.screenshot({
-    path: "../../../test-results/tablecast-statistics-mobile-en.png",
-    fullPage: true,
-  });
 });
 
 it("ホームの準備状態は実データを使い、導入・商品・統計をリンクとして辿れる", async () => {
@@ -345,18 +341,6 @@ it.each([
       .toBeVisible();
     await expect.element(page.getByRole("link", { name: plugin, exact: true })).toBeVisible();
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
-    await page.screenshot({
-      path: `../../../test-results/tablecast-home-${locale}-${width}.png`,
-      fullPage: true,
-    });
-    page
-      .getByRole("link", { name: plugin, exact: true })
-      .element()
-      .scrollIntoView({ block: "center" });
-    await page.screenshot({
-      path: `../../../test-results/tablecast-home-setup-${locale}-${width}.png`,
-      fullPage: true,
-    });
   },
 );
 
@@ -379,9 +363,5 @@ it.each([390, 881])(
       from.element().getBoundingClientRect().bottom,
     );
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
-    await page.screenshot({
-      path: `../../../test-results/tablecast-statistics-dates-${width}.png`,
-      fullPage: true,
-    });
   },
 );

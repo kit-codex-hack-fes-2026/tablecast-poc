@@ -159,10 +159,6 @@ it("MCPとSkillsへ移っても選択店舗とグループの展開を保ち、�
   await expect.element(group("メニュー・接客")).toHaveAttribute("aria-expanded", "true");
   await expect.element(group("会員施策")).toHaveAttribute("aria-expanded", "false");
   await expect.element(picker()).toMatchTextContent("本店");
-  await page.screenshot({
-    path: "../../../test-results/tablecast-sidebar-persistence.png",
-    fullPage: false,
-  });
 });
 it("連携画面から店舗を切り替え、組織・請求リンク・次回の選択を更新する", async () => {
   const { view, router } = await show("/account/integrations/plugins");

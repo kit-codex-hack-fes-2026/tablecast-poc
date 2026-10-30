@@ -219,11 +219,15 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-  components:
-    name: "Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)"
+  components-tests:
+    name: "Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook, shard ${{ matrix.shard }}/2)"
     if: ${{ !inputs.catalog_pr }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -231,34 +235,50 @@ jobs:
       - uses: ./.github/actions/tablecast-test-selection
         id: plan
       - uses: ./.github/actions/tablecast-setup
-        if: steps.plan.outputs.components != 'none'
+        if: steps.plan.outputs.components != 'none' && (steps.plan.outputs.components == 'full' || matrix.shard == 1)
         with:
           codegen: "false"
       # composite内のpost action登録を並行させず、runnerの共有状態を順番に更新する。
-      - if: steps.plan.outputs.components != 'none'
+      - if: steps.plan.outputs.components != 'none' && (steps.plan.outputs.components == 'full' || matrix.shard == 1)
         uses: ./.github/actions/tablecast-browser
         with:
           browsers: chromium webkit
-      - if: steps.plan.outputs.components != 'none'
+      - if: steps.plan.outputs.components != 'none' && (steps.plan.outputs.components == 'full' || matrix.shard == 1)
         uses: ./.github/actions/tablecast-browser-deps
         with:
           browsers: chromium webkit
-      - if: steps.plan.outputs.components != 'none'
+      - if: steps.plan.outputs.components != 'none' && (steps.plan.outputs.components == 'full' || matrix.shard == 1)
         working-directory: apps/web
         env:
           TABLECAST_TEST_MODE: ${{ steps.plan.outputs.components }}
           TABLECAST_TEST_FILES: ${{ steps.plan.outputs.files }}
         run: |
           bun run i18n:compile --output-structure locale-modules
-          bun --no-env-file ../../scripts/tablecast-changed-vitest.ts --project browser --project storybook --project browser-performance
+          if [ "$TABLECAST_TEST_MODE" = full ]; then
+            bun --no-env-file ../../scripts/tablecast-changed-vitest.ts --project browser --project storybook --project browser-performance --shard=${{ matrix.shard }}/2
+          else
+            bun --no-env-file ../../scripts/tablecast-changed-vitest.ts --project browser --project storybook --project browser-performance
+          fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
-          name: tablecast-components-${{ github.event.pull_request.head.sha || github.sha }}
+          name: tablecast-components-${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.shard }}
           path: |
             apps/web/test-results/browser/**/*.png
             apps/web/test-results/attachments/failure-screenshots/**/*.png
           retention-days: 1
+
+  components:
+    name: "Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)"
+    needs: [components-tests]
+    if: ${{ always() && !inputs.catalog_pr }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: 全shardの成功を確認
+        env:
+          TABLECAST_COMPONENT_RESULT: ${{ needs.components-tests.result }}
+        run: test "$TABLECAST_COMPONENT_RESULT" = success
 
   e2e:
     name: "E2E Test: 注文・ログイン・会計 (Playwright, ${{ matrix.browser }}, shard ${{ matrix.shard }}/2)"
