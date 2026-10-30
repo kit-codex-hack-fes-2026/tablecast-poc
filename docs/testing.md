@@ -241,9 +241,9 @@ workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツ
 
 Component Testは準備・実行・終了と集約を含む待ち時間を3分以下にする。全件実行だけVitest標準の`--shard=1/4`〜`--shard=4/4`で別runnerへ分配し、全shardの成功を従来名の必須チェックへ集約する。失敗・取消・準備失敗は成功にせず、`fail-fast: false`で全shardの診断を残す。PRの`related --run`はshard 1だけで実行し、対象0件なら既存の全件fallbackを使う。少数の関連fileを分割して、空shardが全件fallbackを起こす重複を避ける。ローカルの`test:browser`は分割しない。Component jobは約900MBのBun取得cacheの復元を省き、固定lockから直接依存を取得する。試験成功結果のcacheではなく、依存準備の展開待ちを除く変更である。
 
-UIの保証はChromiumのfeature統合とStorybookのplay/a11yを主担当とする。WebKitはnative日付入力、QR decode、カメラ、focusとportal、ペインの縦横切替、会話のscroll、画像decode、ゲームiframeへ絞る。reduced motionは共通Motion・RouteMotion・商品画像と注文の動き・会話候補の所有部品で確認し、同じ業務操作の全fileを繰り返さない。API応答・cache・通知順・検索・注文承認・スタッフ呼出の全分岐はChromiumで保持する。
+UIの保証はChromiumのfeature統合とStorybookのplay/a11yを主担当とする。WebKitはnative日付入力、QR decode、カメラ、focusとportal、ペインの縦横切替、会話のscroll、画像decode、ゲームiframeへ絞る。reduced motionは共通Motion・RouteMotion・商品画像の所有部品で確認し、同じ業務操作の全fileを繰り返さない。API応答・cache・通知順・検索・注文承認・スタッフ呼出の全分岐はChromiumで保持する。
 
-4言語×3寸法×2engineで成功画面を撮るだけの`kiosk-seed-preview.browser.test.tsx`は削除する。多言語の商品名は`product-name.browser.test.tsx`、seedの商品カードは`product-menu.stories.tsx`、実画像decode・転送量・CLSは既存の`tablecast-image-performance.spec.ts`、Dialog・カート操作は`kiosk-order-ui.browser.test.tsx`、縦横・狭幅は`kiosk-layout.browser.test.tsx`が所有する。同じ配置になる1512pxと1180px、224pxと240pxの反復も除き、横配置・縦配置・狭幅・最小会話欄・広い会話欄の代表を残す。成功時PNGの収集は全Browser試験から除き、失敗時の標準撮影を維持する。pixel比較をしない画像収集を独立した回帰保証と扱わない。
+4言語×3寸法×2engineで成功画面を撮るだけの`kiosk-seed-preview.browser.test.tsx`は削除する。翻訳の解決・意味訳と転写の必須性・fallbackはAPI unitの`localization.test.ts`、辞書・補間・生成fallbackはWeb unitの`messages.test.ts`、言語と通貨の対応は`currency-model.test.ts`、意味訳と転写の見える配置は代表一言語の`product-name.browser.test.tsx`、seedの商品カードは`product-menu.stories.tsx`、実画像decode・転送量・CLSは既存の`tablecast-image-performance.spec.ts`、Dialog・カート操作は`kiosk-order-ui.browser.test.tsx`、縦横・狭幅は`kiosk-layout.browser.test.tsx`が所有する。翻訳と通貨の対応表をBrowserで全言語展開せず、切替操作とprovider接続だけを代表で確認する。ProductMenuとseedメニューの言語別Storyも削り、長い英語と狭幅のStoryを配置の代表として残す。同じ配置になる1512pxと1180px、224pxと240pxの反復も除き、横配置・縦配置・狭幅・最小会話欄・広い会話欄の代表を残す。成功時PNGの収集は全Browser試験から除き、失敗時の標準撮影を維持する。pixel比較をしない画像収集を独立した回帰保証と扱わない。
 
 PRのマージ前に保証するE2EはChromiumであり、WebKit固有の回帰はstaging統合後のpush CIで検出する。stagingのWebKitが失敗した場合はstaging配備へ進めず、修正後の両browser成功を確認してからreleaseの受入判定を行う。PR CI成功をiPad実機やWebKitの確認済みと扱わない。
 

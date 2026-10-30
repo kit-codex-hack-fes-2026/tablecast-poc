@@ -106,8 +106,6 @@ const browser = (performance = false) =>
                   "src/components/motion-system.browser.test.tsx",
                   "src/components/route-motion.browser.test.tsx",
                   "src/components/product-image.browser.test.tsx",
-                  "src/features/kiosk/kiosk-order-motion.browser.test.tsx",
-                  "src/features/kiosk/voice-service-ui.browser.test.tsx",
                 ],
               },
               {

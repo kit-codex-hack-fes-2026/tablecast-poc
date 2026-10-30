@@ -35,21 +35,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const SeedMenu: Story = { name: "seedの店舗設定と商品画像", args: { catalog: seedCatalog } };
-export const SeedMenuEnglish: Story = {
-  ...SeedMenu,
-  name: "seedの店舗設定と商品画像・英語",
-  globals: { locale: "en" },
-};
-export const SeedMenuChinese: Story = {
-  ...SeedMenu,
-  name: "seedの店舗設定と商品画像・簡体字中国語",
-  globals: { locale: "zh-Hans" },
-};
-export const SeedMenuKorean: Story = {
-  ...SeedMenu,
-  name: "seedの店舗設定と商品画像・韓国語",
-  globals: { locale: "ko" },
-};
 export const SeedProductDetails: Story = {
   name: "seedの日本酒と温度・容量・選択肢画像",
   render: () => <ProductPage product={seedProduct} busy={false} onClose={fn()} onSave={fn()} />,
