@@ -239,12 +239,17 @@ it("12卓の行を3端末幅で見渡し、帯の詳細はhover・focus・クリ
   );
   const viewport = screen.getByRole("region", { name: ja.floor_timeline, exact: true });
   await expect.element(viewport).toBeVisible();
-  for (const [name, width, height] of [
-    ["iphone17", 402, 874],
-    ["ipad11", 1180, 820],
-    ["macbook14", 1512, 982],
+  const centre = viewport.element().scrollLeft + viewport.element().clientWidth / 2;
+  for (const [width, height] of [
+    [402, 874],
+    [1180, 820],
+    [1512, 982],
   ] as const) {
     await page.viewport(width, height);
+    // ResizeObserverの中央時刻の補正を待ち、後続のhoverと競合させない。
+    await expect
+      .poll(() => viewport.element().scrollLeft + viewport.element().clientWidth / 2)
+      .toBeCloseTo(centre, 0);
     const rows = Array.from(document.querySelectorAll<HTMLElement>("[data-floor-row]"));
     expect(rows).toHaveLength(12);
     expect(rows.every((row) => row.getBoundingClientRect().height === 64)).toBe(true);
@@ -264,7 +269,6 @@ it("12卓の行を3端末幅で見渡し、帯の詳細はhover・focus・クリ
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       document.documentElement.clientWidth,
     );
-    await page.screenshot({ path: `../../../test-results/tablecast-floor-dense-${name}.png` });
   }
   const band = viewport.getByRole("button", { name: /^T01 · 1 / });
   // 時間制の終了予定ではなく、実際に利用した4時間の幅を保つ
@@ -313,7 +317,6 @@ it("12卓の行を3端末幅で見渡し、帯の詳細はhover・focus・クリ
   await expect
     .element(page.getByRole("dialog").getByText(ja.admin_due, { exact: true }))
     .toBeVisible();
-  await page.screenshot({ path: "../../../test-results/tablecast-floor-band-detail.png" });
   await userEvent.keyboard("{Escape}");
   await expect.element(band).toHaveFocus();
   await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();

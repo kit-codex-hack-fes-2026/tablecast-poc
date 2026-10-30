@@ -97,8 +97,4 @@ it("利用のない期間は0を表示し、狭い日本語画面でも日付を
       page.getByRole("figure").getByText("2026年10月31日(土) · 0 分", { exact: true }).first(),
     )
     .toBeVisible();
-  await page.screenshot({
-    path: "../../../test-results/tablecast-billing-chart-narrow-ja.png",
-    fullPage: true,
-  });
 });

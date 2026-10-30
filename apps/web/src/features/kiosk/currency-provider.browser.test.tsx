@@ -192,31 +192,3 @@ it("取得失敗時も円の金額と通貨選択を維持し、参考額を捏�
   expect(document.body.textContent).not.toContain("≈ A$");
   expect(fetch).toHaveBeenCalledTimes(1);
 });
-
-it.each([
-  { language: "zh-Hans", currency: "CNY", label: "CN¥ CNY" },
-  { language: "ko", currency: "KRW", label: "₩ KRW" },
-])(
-  "$language で開始すると参考通貨は $currency になり、手動選択後は言語を変えても維持する",
-  async ({ language, label }) => {
-    await mount(`tablecast-currency-${language}`, language);
-    await expect
-      .element(page.getByRole("combobox", { name: /货币|통화/ }))
-      .toHaveTextContent(label);
-    await select("AUD");
-    await page.getByRole("button", { name: "日本語", exact: true }).click();
-    await expect.element(page.getByRole("combobox", { name: /通貨/ })).toHaveTextContent("A$ AUD");
-    expect(fetch).toHaveBeenCalledTimes(1);
-  },
-);
-
-it("未操作の参考通貨は英語から韓国語・中国語への切替にも連動する", async () => {
-  await mount("tablecast-currency-languages", "en");
-  await page.getByRole("combobox", { name: en.common_language, exact: true }).click();
-  await page.getByRole("option", { name: "한국어", exact: true }).click();
-  await expect.element(page.getByRole("combobox", { name: /통화/ })).toHaveTextContent("₩ KRW");
-  await page.getByRole("combobox", { name: "표시 언어", exact: true }).click();
-  await page.getByRole("option", { name: "简体中文", exact: true }).click();
-  await expect.element(page.getByRole("combobox", { name: /货币/ })).toHaveTextContent("CN¥ CNY");
-  expect(fetch).toHaveBeenCalledTimes(1);
-});

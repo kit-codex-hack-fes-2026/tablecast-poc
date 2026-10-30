@@ -1,7 +1,7 @@
 import { type TableEvent } from "@tablecast/api/schema";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
-import { page, server } from "vitest/browser";
+import { page } from "vitest/browser";
 import { z } from "zod";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
@@ -168,9 +168,6 @@ it("開始案内・候補選択・参考情報・言語切替・終了を同じ�
     await screen.getByRole("button", { name: ja.kiosk_reference_expand }).click();
     await expect.element(screen.getByRole("dialog")).toBeVisible();
     await screen.getByRole("button", { name: ja.common_close, exact: true }).click();
-    await page.screenshot({
-      path: `../../../test-results/tablecast-voice-reference-${server.browser}.png`,
-    });
     await screen.getByRole("button", { name: "English", exact: true }).click();
     expect(VoicePeer.instances).toHaveLength(1);
     expect(source.getAudioTracks()[0]?.readyState).toBe("live");

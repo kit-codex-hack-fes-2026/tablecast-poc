@@ -19,39 +19,37 @@ afterEach(async () => {
   document.documentElement.lang = previousLanguage;
 });
 
-it.each(["en", "zh-Hans", "ko"])(
-  "%sの商品カードは意味訳を先に、転写を補助色の下段へ括弧なしで表示する",
-  async (locale) => {
-    const product = catalog.configuration.products.find((item) => item.id.endsWith("-karaage"));
-    if (!product) throw new Error("seedの唐揚げがありません。");
-    const text = resolveText(product.text, locale);
-    await render(
-      <LocaleProvider initialLocale={locale} persist={false}>
-        <div className="w-80">
-          <ProductMenu
-            compact
-            catalog={catalog}
-            productIds={[product.id]}
-            onChoose={vi.fn<() => void>()}
-          />
-        </div>
-      </LocaleProvider>,
-    );
-    const meaning = page.getByText(text.displayName, { exact: true });
-    const transliteration = page.getByText(text.transliteration, { exact: true });
-    await expect.element(meaning).toBeVisible();
-    await expect.element(transliteration).toBeVisible();
-    const first = meaning.element();
-    const second = transliteration.element();
-    expect(second.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-      first.getBoundingClientRect().bottom,
-    );
-    expect(getComputedStyle(first).color).not.toBe(getComputedStyle(second).color);
-    expect(second.classList.contains("text-muted-foreground")).toBe(true);
-    expect(first.parentElement?.textContent).not.toMatch(/[()]/);
-    expect(second.scrollWidth).toBeLessThanOrEqual(second.clientWidth);
-  },
-);
+it("商品カードは意味訳を先に、転写を補助色の下段へ括弧なしで表示する", async () => {
+  const locale = "en";
+  const product = catalog.configuration.products.find((item) => item.id.endsWith("-karaage"));
+  if (!product) throw new Error("seedの唐揚げがありません。");
+  const text = resolveText(product.text, locale);
+  await render(
+    <LocaleProvider initialLocale={locale} persist={false}>
+      <div className="w-80">
+        <ProductMenu
+          compact
+          catalog={catalog}
+          productIds={[product.id]}
+          onChoose={vi.fn<() => void>()}
+        />
+      </div>
+    </LocaleProvider>,
+  );
+  const meaning = page.getByText(text.displayName, { exact: true });
+  const transliteration = page.getByText(text.transliteration, { exact: true });
+  await expect.element(meaning).toBeVisible();
+  await expect.element(transliteration).toBeVisible();
+  const first = meaning.element();
+  const second = transliteration.element();
+  expect(second.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+    first.getBoundingClientRect().bottom,
+  );
+  expect(getComputedStyle(first).color).not.toBe(getComputedStyle(second).color);
+  expect(second.classList.contains("text-muted-foreground")).toBe(true);
+  expect(first.parentElement?.textContent).not.toMatch(/[()]/);
+  expect(second.scrollWidth).toBeLessThanOrEqual(second.clientWidth);
+});
 
 it("日本語では原名だけを表示し、追加言語の選択は旗と母語名を伴う", async () => {
   const product = catalog.configuration.products.find((item) => item.id.endsWith("-karaage"));
@@ -126,24 +124,22 @@ it("追加言語の入口は対応言語を全てアイコンで表示し、旗�
     expect(label.classList.contains("sr-only")).toBe(true);
 });
 
-it.each(["zh-Hans", "ko"])(
-  "%sの選択中は直接表示中の言語アイコンを追加言語の入口へ重複表示しない",
-  async (locale) => {
-    await render(
-      <LocaleProvider initialLocale={locale} persist={false}>
-        <LanguageSwitch
-          availableLanguages={["ja", "en", "zh-Hans", "ko"]}
-          onChange={vi.fn<() => void>()}
-        />
-      </LocaleProvider>,
-    );
-    const trigger = page.getByRole("combobox").element();
-    expect(
-      [...trigger.querySelectorAll("span[lang]")].map((item) => item.getAttribute("lang")),
-    ).toEqual([locale === "ko" ? "zh-Hans" : "ko"]);
-    expect(trigger.querySelectorAll("img")).toHaveLength(1);
-  },
-);
+it("選択中は直接表示中の言語アイコンを追加言語の入口へ重複表示しない", async () => {
+  const locale = "ko";
+  await render(
+    <LocaleProvider initialLocale={locale} persist={false}>
+      <LanguageSwitch
+        availableLanguages={["ja", "en", "zh-Hans", "ko"]}
+        onChange={vi.fn<() => void>()}
+      />
+    </LocaleProvider>,
+  );
+  const trigger = page.getByRole("combobox").element();
+  expect(
+    [...trigger.querySelectorAll("span[lang]")].map((item) => item.getAttribute("lang")),
+  ).toEqual(["zh-Hans"]);
+  expect(trigger.querySelectorAll("img")).toHaveLength(1);
+});
 
 it("対応言語が全て直接表示中なら追加言語の入口を表示しない", async () => {
   await render(

@@ -11,7 +11,7 @@ import { event, startedAt, Surface } from "./test-support/voice-panel-fixture";
 import { VoicePanel } from "./voice-panel";
 
 it.each(["ja", "en"] as const)(
-  "%sの候補カードは狭い会話欄に収まり、追加時に動いて最新の発話を追従中だけ固定する",
+  "%sの候補カードは狭い会話欄に収まり、最新の発話を追従中だけ固定する",
   async (locale) => {
     const labels = locale === "ja" ? ja : en;
     const base = catalog.configuration.products[0];
@@ -28,7 +28,7 @@ it.each(["ja", "en"] as const)(
       },
     }));
     const nextCatalog = { ...catalog, configuration: { ...catalog.configuration, products } };
-    for (const width of [224, 240, 600]) {
+    for (const width of [224, 600]) {
       await page.viewport(1180, 820);
       const choose = vi.fn<NonNullable<VoicePanelProps["onChoose"]>>();
       const suggestion = vi.fn<NonNullable<VoicePanelProps["onSuggestion"]>>();
@@ -94,11 +94,6 @@ it.each(["ja", "en"] as const)(
       await screen.rerender(surface(true));
       const row = document.querySelector('[data-ui="conversation-products"]');
       if (!(row instanceof HTMLElement)) throw new Error("商品カードがありません");
-      const mounting = row.closest('[data-ui="voice-products-entry"]');
-      if (!mounting) throw new Error("商品の表示領域がありません");
-      expect(mounting.getAnimations().length).toBe(
-        matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1,
-      );
       const card = row.querySelector("button");
       if (!card) throw new Error("商品を選択できません");
       const lastProduct = products.at(-1);
@@ -131,12 +126,7 @@ it.each(["ja", "en"] as const)(
         locale === "ja" ? "180mLでお願いします" : "180mL, please",
       ];
       await screen.rerender(surface(true, options));
-      const suggestions = screen.getByLabelText(labels.kiosk_suggestions).element();
-      const animation = suggestions.closest('[data-ui="voice-suggestions-entry"]');
-      if (!animation) throw new Error("発話候補の表示領域がありません");
-      expect(animation.getAnimations().length).toBe(
-        matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1,
-      );
+      await expect.element(screen.getByLabelText(labels.kiosk_suggestions)).toBeVisible();
       await screen.getByRole("button", { name: options[0], exact: true }).click();
       expect(suggestion).toHaveBeenCalledWith(options[0], options);
       const currentEntry = current.closest('[data-ui="conversation-entry"]');

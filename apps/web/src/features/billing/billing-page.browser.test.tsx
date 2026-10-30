@@ -104,22 +104,10 @@ it("ownerの利用明細・空の請求履歴を表示し、キーボードで�
   expect(document.body.textContent).not.toContain("AIの準備が完了しています");
   await expect.element(page.getByText("請求書はまだありません")).toBeVisible();
   await page.viewport(1366, 1100);
-  await page.screenshot({
-    path: "../../../test-results/tablecast-billing-overview.png",
-    fullPage: false,
-  });
   await userEvent.click(page.getByRole("img", { name: "AI音声接客の時間", exact: true }));
   await userEvent.keyboard("{Home}");
-  await page.screenshot({
-    path: "../../../test-results/tablecast-billing-daily.png",
-    fullPage: false,
-  });
   await userEvent.click(page.getByRole("link", { name: "プランを比較・変更" }));
   await expect.element(page.getByRole("heading", { name: "プラン一覧・変更" })).toBeVisible();
-  await page.screenshot({
-    path: "../../../test-results/tablecast-billing-plans.png",
-    fullPage: false,
-  });
   const filter = page.getByRole("searchbox", { name: "卓名で絞り込み" });
   await userEvent.click(filter);
   await userEvent.type(filter, "T01");
@@ -136,11 +124,6 @@ it("ownerの利用明細・空の請求履歴を表示し、キーボードで�
       ),
     )
     .toBe(true);
-  await page.viewport(1366, 1100);
-  await page.screenshot({
-    path: "../../../test-results/tablecast-billing-owner.png",
-    fullPage: false,
-  });
 });
 it("無料プランは定期請求なしと示し、AIプランだけCheckoutへ進める", async () => {
   const { fetch } = await show({
@@ -244,10 +227,6 @@ it("取得失敗から再試行し、狭い日本語画面でも操作できる"
   await userEvent.click(page.getByRole("button", { name: "もう一度試す" }));
   await expect.element(page.getByText("AI音声接客を開始できません")).toBeVisible();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
-  await page.screenshot({
-    path: "../../../test-results/tablecast-billing-narrow-ja.png",
-    fullPage: true,
-  });
 });
 it("組織切替で期間・検索・ページを初期化し、旧組織の遅い応答を表示しない", async () => {
   const { fetch } = await show();

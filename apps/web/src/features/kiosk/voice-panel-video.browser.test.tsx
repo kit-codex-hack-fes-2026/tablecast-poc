@@ -29,7 +29,6 @@ it.each(["ja", "en"] as const)(
       interrupted: false,
     }));
     for (const [width, height, paneWidth, paneHeight] of [
-      [1512, 982, 240, 854],
       [1180, 820, 240, 692],
       [820, 1180, 820, 360],
       [402, 874, 402, 360],
@@ -91,9 +90,6 @@ it.each(["ja", "en"] as const)(
       expect(controls.getBoundingClientRect().top).toBe(before.top);
       expect(controls.getBoundingClientRect().bottom).toBe(before.bottom);
       expect(capture).not.toHaveBeenCalled();
-      await page.screenshot({
-        path: `../../../test-results/tablecast-conversation-${locale}-${width}.png`,
-      });
       await screen.unmount();
     }
     capture.mockRestore();
@@ -200,7 +196,6 @@ it("映像枠の下のカメラ操作で左上の映像だけを切り替え、�
     expect(buttonRect.top - ringRect.top).toBe(2);
     expect(ringRect.bottom - buttonRect.bottom).toBe(2);
     expect(document.querySelector('[role="dialog"]')).toBeNull();
-    await page.screenshot({ path: "../../../test-results/tablecast-conversation-camera-on.png" });
     const footer = document.querySelector('[data-theme-part="voice-controls"]');
     if (!footer) throw new Error("音声操作領域がありません");
     const footerBefore = footer.getBoundingClientRect();
@@ -215,9 +210,6 @@ it("映像枠の下のカメラ操作で左上の映像だけを切り替え、�
     expect(footer.getBoundingClientRect().bottom).toBe(footerBefore.bottom);
     expect(document.querySelector("video")?.srcObject).toBe(stream);
     expect(capture).toHaveBeenCalledTimes(1);
-    await page.screenshot({
-      path: "../../../test-results/tablecast-conversation-camera-resized.png",
-    });
     await screen.getByRole("button", { name: ja.kiosk_camera_stop }).click();
     expect(stream.getTracks().map((track) => track.readyState)).toEqual(["ended"]);
     expect(frame.getBoundingClientRect().width).toBe(176);

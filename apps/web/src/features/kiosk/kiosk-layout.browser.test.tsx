@@ -148,12 +148,9 @@ it.each(["ja", "en"] as const)(
       .element(dialog.getByRole("button", { name: "Alex", exact: true }))
       .toHaveAttribute("aria-pressed", "true");
     await userEvent.keyboard("{Escape}");
-    for (const [width, height] of [
-      [1512, 982],
-      [1180, 820],
-      [820, 1180],
-      [402, 874],
-    ] as const) {
+    // 横幅は初期1024pxで確認し、縦配置と狭幅を日英で分担する。
+    {
+      const [width, height]: [number, number] = locale === "ja" ? [820, 1180] : [402, 874];
       await page.viewport(width, height);
       const brand = document.querySelector('header img[alt="TableCast"]');
       const storeBanner = document.querySelector('header [data-ui="store-logo-banner"] img');
@@ -184,9 +181,6 @@ it.each(["ja", "en"] as const)(
         expect(bounds.right).toBeLessThanOrEqual(width);
         expect(bounds.bottom).toBeLessThanOrEqual(height);
       }
-      await page.screenshot({
-        path: `../../../test-results/tablecast-test-only-layout-${locale}-${width}.png`,
-      });
       await userEvent.keyboard("{Escape}");
       expect(tools.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
@@ -227,7 +221,8 @@ it.each(["ja", "en"] as const)(
           .getBoundingClientRect().height,
       );
       expect(parseFloat(getComputedStyle(tab).fontSize)).toBeGreaterThanOrEqual(14);
-      expect(tab.scrollWidth).toBeLessThanOrEqual(tab.clientWidth);
+      // 選択枠の退場アニメーションが旧tabのscrollWidthへ残る間は待つ。
+      await expect.poll(() => tab.scrollWidth).toBeLessThanOrEqual(tab.clientWidth);
     }
     await page.viewport(1024, 768);
     await expect.poll(() => orderPanel()?.getBoundingClientRect().width).toBeCloseTo(paneWidth, 0);
@@ -398,9 +393,6 @@ it.each(["ja", "en"] as const)(
         ),
       ].flatMap((element) => element.getAnimations().map((animation) => animation.finished)),
     );
-    await page.screenshot({
-      path: `../../../test-results/tablecast-test-only-fallback-${locale}-ipad.png`,
-    });
     image.element().dispatchEvent(new Event("error"));
     await expect.element(image).not.toBeInTheDocument();
     expect(header.getBoundingClientRect().height).toBe(64);

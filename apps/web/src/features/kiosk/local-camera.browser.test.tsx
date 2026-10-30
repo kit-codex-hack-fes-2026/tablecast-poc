@@ -206,7 +206,6 @@ it("権限拒否を表示し、自動再試行せず明示操作で再開でき�
   if (!message) throw new Error("カメラの支援技術向けエラーがありません");
   expect(message.getBoundingClientRect().width).toBeLessThanOrEqual(1);
   expect(message.getBoundingClientRect().height).toBeLessThanOrEqual(1);
-  await page.screenshot({ path: "../../../test-results/tablecast-camera-permission.png" });
   expect(capture).toHaveBeenCalledTimes(1);
   await screen.getByRole("button", { name: new RegExp(ja.kiosk_camera_start) }).click();
   await expect.element(screen.getByRole("button", { name: ja.kiosk_camera_stop })).toBeVisible();
@@ -256,7 +255,6 @@ it("カメラ切替の取得待ちも選択入口とfocusを保ち、旧トラ�
   expect(selectBounds.width).toBeGreaterThanOrEqual(44);
   expect(toggleBounds.height).toBeGreaterThanOrEqual(44);
   expect(toggleBounds.right).toBeLessThanOrEqual(selectBounds.left);
-  await page.screenshot({ path: "../../../test-results/tablecast-camera-devices.png" });
   const trigger = cameraSelect.element();
   try {
     await cameraSelect.click();
@@ -354,9 +352,6 @@ it.each([
     const toggle = page.getByRole("button", { name: ja.kiosk_camera_stop }).element();
     expect(toggle.getBoundingClientRect().top).toBeGreaterThanOrEqual(before.bottom);
     expect(toggle.getBoundingClientRect().left).toBe(before.left);
-    await page.screenshot({
-      path: `../../../test-results/tablecast-camera-${sourceWidth}-${sourceHeight}.png`,
-    });
     await page.getByRole("button", { name: ja.kiosk_camera_stop }).click();
     expect(frame.getBoundingClientRect().width).toBe(before.width);
     expect(frame.getBoundingClientRect().height).toBe(before.height);

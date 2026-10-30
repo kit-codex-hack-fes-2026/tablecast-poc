@@ -26,15 +26,11 @@ it.each(["ja", "en"] as const)(
     await mountKiosk();
     const welcome = page.getByRole("button", { name: labels.kiosk_welcome_start, exact: true });
     await expect.element(welcome).toBeVisible();
-    await page.screenshot({ path: `../../../test-results/tablecast-welcome-${locale}-1180.png` });
     await page.getByRole("button", { name: labels.kiosk_input_settings, exact: true }).click();
     const settings = page.getByRole("dialog", { name: labels.kiosk_input_settings, exact: true });
     await expect
       .element(settings.getByRole("combobox", { name: labels.kiosk_microphone_input }))
       .toBeVisible();
-    await page.screenshot({
-      path: `../../../test-results/tablecast-welcome-settings-${locale}-1180.png`,
-    });
     await userEvent.keyboard("{Escape}");
     expect(start).not.toHaveBeenCalled();
     await welcome.click();

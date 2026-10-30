@@ -38,7 +38,6 @@ it.each(["ja", "en"] as const)(
       exact: true,
     });
     await expect.element(selected).toHaveFocus();
-    await page.screenshot({ path: `../../test-results/tablecast-month-${locale}.png` });
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
     await page
       .getByRole("button", { name: locale === "ja" ? "前年" : "Previous year", exact: true })

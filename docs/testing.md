@@ -239,9 +239,15 @@ workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツ
 
 全体の完了時間は3〜4分を目標とする。E2EはActionsのbrowser・shard matrixを使う。PRはChromiumを2分割の計2job、staging/mainへのpushと手動実行はChromium・WebKitを各2分割の計4jobで検査する。Playwrightの`--project`と`--shard=1/2`・`--shard=2/2`で対象を選び、各jobで4workersを使う。既存の`fullyParallel: true`によりケース単位で分配し、イベントごとに選ばれた全shardの成功を集約チェックの条件とする。PRの製品プレビューはbuild・images成功後に先行配備する。静的検査・API・Browser・E2Eはマージ条件に残し、プレビュー到達を検査完了とは扱わない。staging・本番配備は両browserを含む全必須検査の成功を待つ。失敗時のtrace・画像artifact名にはbrowserとshard番号を含める。公開リポジトリで無料の標準Linux runnerを使い、ブラウザー本体・OS依存も対象browserだけ準備する。build・migration・seedは各jobで一度ずつ実行するため、待ち時間と総runner時間の両方を確認する。分割は[Playwright標準のsharding](https://playwright.dev/docs/test-sharding)を使い、ローカルで分配だけを確認する場合は`bun run test:e2e --project=tablecast-chromium --shard=1/2 --list`を実行する。ケースの隔離と`retries: 0`を維持し、ローカルの`bun run test:e2e`は従来どおり両browserを実行する。
 
+Component Testは準備・実行・終了と集約を含む待ち時間を3分以下にする。全件実行だけVitest標準の`--shard=1/4`〜`--shard=4/4`で別runnerへ分配し、全shardの成功を従来名の必須チェックへ集約する。失敗・取消・準備失敗は成功にせず、`fail-fast: false`で全shardの診断を残す。PRの`related --run`はshard 1だけで実行し、対象0件なら既存の全件fallbackを使う。少数の関連fileを分割して、空shardが全件fallbackを起こす重複を避ける。ローカルの`test:browser`は分割しない。Component jobは約900MBのBun取得cacheの復元を省き、固定lockから直接依存を取得する。試験成功結果のcacheではなく、依存準備の展開待ちを除く変更である。
+
+UIの保証はChromiumのfeature統合とStorybookのplay/a11yを主担当とする。WebKitはnative日付入力、QR decode、カメラ、focusとportal、ペインの縦横切替、会話のscroll、画像decode、ゲームiframeへ絞る。reduced motionは共通Motion・RouteMotion・商品画像の所有部品で確認し、同じ業務操作の全fileを繰り返さない。API応答・cache・通知順・検索・注文承認・スタッフ呼出の全分岐はChromiumで保持する。
+
+4言語×3寸法×2engineで成功画面を撮るだけの`kiosk-seed-preview.browser.test.tsx`は削除する。翻訳の解決・意味訳と転写の必須性・fallbackはAPI unitの`localization.test.ts`、辞書・補間・生成fallbackはWeb unitの`messages.test.ts`、言語と通貨の対応は`currency-model.test.ts`、意味訳と転写の見える配置は代表一言語の`product-name.browser.test.tsx`、seedの商品カードは`product-menu.stories.tsx`、実画像decode・転送量・CLSは既存の`tablecast-image-performance.spec.ts`、Dialog・カート操作は`kiosk-order-ui.browser.test.tsx`、縦横・狭幅は`kiosk-layout.browser.test.tsx`が所有する。翻訳と通貨の対応表をBrowserで全言語展開せず、切替操作とprovider接続だけを代表で確認する。ProductMenuとseedメニューの言語別Storyも削り、長い英語と狭幅のStoryを配置の代表として残す。同じ配置になる1512pxと1180px、224pxと240pxの反復も除き、横配置・縦配置・狭幅・最小会話欄・広い会話欄の代表を残す。成功時PNGの収集は全Browser試験から除き、失敗時の標準撮影を維持する。pixel比較をしない画像収集を独立した回帰保証と扱わない。
+
 PRのマージ前に保証するE2EはChromiumであり、WebKit固有の回帰はstaging統合後のpush CIで検出する。stagingのWebKitが失敗した場合はstaging配備へ進めず、修正後の両browser成功を確認してからreleaseの受入判定を行う。PR CI成功をiPad実機やWebKitの確認済みと扱わない。
 
-Component Testの失敗PNGは従来の`test-results/browser`とVitestの`test-results/attachments/failure-screenshots`から`tablecast-components-<SHA>`、E2Eの失敗資料は`tablecast-e2e-<browser>-<shard>`へ1日保存する。Component Testは標準の`screenshotFailures: true`、E2Eは`screenshot: "only-on-failure"`を使う。pixel比較や観測に使わない成功時のPNG・動画を明示的に毎回生成せず、標準の失敗診断用の一時撮影は維持する。表示・focus・寸法・画像読込・転送量・CLSのassertionは維持し、viewport変更後の寸法は撮影を暗黙の待機にせず`expect.poll`で確認する。Component TestのartifactへCookieを含む可能性のあるtraceは追加しない。目視確認用の画像・動画は必要な作業で別途取得する。
+Component Testの失敗PNGは従来の`test-results/browser`とVitestの`test-results/attachments/failure-screenshots`から`tablecast-components-<SHA>-<shard>`、E2Eの失敗資料は`tablecast-e2e-<browser>-<shard>`へ1日保存する。Component Testは標準の`screenshotFailures: true`、E2Eは`screenshot: "only-on-failure"`を使う。pixel比較や観測に使わない成功時のPNG・動画を明示的に毎回生成せず、標準の失敗診断用の一時撮影は維持する。表示・focus・寸法・画像読込・転送量・CLSのassertionは維持し、viewport変更後の寸法は撮影を暗黙の待機にせず`expect.poll`で確認する。Component TestのartifactへCookieを含む可能性のあるtraceは追加しない。目視確認用の画像・動画は必要な作業で別途取得する。
 
 Playwrightのreport用git差分収集は`captureGitInfo.diff: false`とし、浅いcheckoutの不足baseをmetadataのために取得しない。コミット情報と試験本体の`--only-changed`用の履歴取得は維持する。CIが先行取得したMailpit imageはglobal setupの`docker create --pull=missing`で再利用し、同じtagを再度pullしない。ローカルでimageがない場合はcreateが取得する。
 
@@ -348,7 +354,7 @@ E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、�
 | Vitest Browserのfile/session | fileごとiframe/moduleを作り直すが、同じsessionのBrowserContextは再利用され得る             | `cleanup()`や`isolate=true`をCookie/storage初期化と扱わない。永続化を試さない`LocaleProvider`は`persist={false}`、永続化caseは自分のキーの初期値と復元を所有する |
 | E2Eのworker/case             | worker専用D1/R2/DO・registry・配信資産と、case単位の標準BrowserContext/Cookie jar          | writer停止後に閉じたtemplateからstate/assetsを復元し、Mailpitを消去する。追加contextはcaseがcloseし、自分のprocess/containerだけを停止する                       |
 
-Browserの同時file数は`browser`・`storybook`各projectの`maxWorkers: 2`で制限する。Chromium/WebKitへの展開後は3poolで最大6fileを並列実行し、全件を直列化しない。Vitestの版によっては既定のCPU由来の枠がpoolごとに適用されるため、CLIの値だけで全poolを制限できると仮定しない。版更新時は実効scopeと準備・実行・全体時間を確認し、contextの過剰生成による操作待ちをtimeoutやretryで隠さない。
+Browserの同時file数は`browser`・`storybook`各projectの`maxWorkers: 2`で制限する。全件CIの4shardは別runner・別cache・別出力先で実行し、同じcheckoutで複数CLIを同時起動しない。Vitestの版によっては既定のCPU由来の枠がpoolごとに適用されるため、CLIの値だけで全poolを制限できると仮定しない。版更新時は実効scopeと準備・実行・全体時間を確認し、contextの過剰生成による操作待ちをtimeoutやretryで隠さない。
 
 Kioskのカート・通知統合では、起動時の`enumerateDevices()`も外部I/Oとして固定し、実端末のマイク列挙を業務caseへ持ち込まない。本番Kiosk・VoiceConnection・Query・HTTP clientは維持し、デバイス一覧・選択・切替の保証は`voice-connection-track.test.ts`が所有する。不要I/Oを除いた局所成功だけで、CIの描画・操作待ちが解消したとは判断しない。
 

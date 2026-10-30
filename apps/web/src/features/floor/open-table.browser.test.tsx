@@ -49,10 +49,6 @@ it("接客言語は旗と名称で選び、矢印キーによる変更を開始�
   await userEvent.keyboard("{ArrowRight}");
   await expect.element(page.getByRole("radio", { name: "English", exact: true })).toBeChecked();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
-  await page.screenshot({
-    path: "../../../test-results/tablecast-language-selection.png",
-    fullPage: true,
-  });
   await userEvent.click(page.getByRole("button", { name: "ご利用を開始" }));
   await expect
     .poll(() => requests)

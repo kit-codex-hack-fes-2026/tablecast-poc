@@ -230,7 +230,6 @@ it("日本語で同卓の閉卓・利用中を選び、戻ると時間軸と横�
     .element(screen.getByRole("searchbox", { name: labels.floor_search, exact: true }))
     .toHaveAttribute("placeholder", labels.floor_search_placeholder);
   await page.viewport(402, 874);
-  await page.screenshot({ path: "../../../test-results/tablecast-floor-slider-iphone17.png" });
   const narrowCentre = viewport.element().scrollLeft + viewport.element().clientWidth / 2;
   await page.viewport(1180, 820);
   // 幅変更後のメディアクエリと中央時刻の復元を観測してから、次の横移動を行う。
