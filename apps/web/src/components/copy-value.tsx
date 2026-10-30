@@ -10,7 +10,15 @@ import { Button } from "./ui/button";
  * 秘密を固定Storyへ埋め込まない。
  * Clipboard APIが使える安全なcontextで使用する。
  */
-export function CopyValue({ label, value }: { label: string; value: string }) {
+export function CopyValue({
+  label,
+  value,
+  wrap = false,
+}: {
+  label: string;
+  value: string;
+  wrap?: boolean;
+}) {
   const { t } = useI18n();
   const [status, setStatus] = useState<"copied" | "error" | "idle">("idle");
   async function copy() {
@@ -38,11 +46,11 @@ export function CopyValue({ label, value }: { label: string; value: string }) {
       </div>
       <textarea
         readOnly
-        wrap="off"
+        wrap={wrap ? "soft" : "off"}
         rows={value.split("\n").length}
         value={value}
         aria-label={label}
-        className="block w-full resize-none rounded-lg border border-border bg-secondary/50 p-3 font-mono text-sm leading-relaxed"
+        className={`block w-full resize-none rounded-lg border border-border bg-secondary/50 p-3 font-mono text-sm leading-relaxed ${wrap ? "field-sizing-content" : ""}`}
       />
       <span role="status" className="block min-h-5 text-sm">
         <span key={status} className="block motion-safe:animate-tablecast-state">

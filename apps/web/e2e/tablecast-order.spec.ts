@@ -43,7 +43,7 @@ test("端末認可後に4言語を切り替え、スタッフと注文・提供�
     });
     expect(opened.ok()).toBeTruthy();
     tableStateSchema.parse(await opened.json());
-    await guest.goto("/");
+    await guest.goto("/pair");
     await guest.getByRole("button", { name: "English", exact: true }).click();
     await guest.getByRole("button", { name: en.pair_begin, exact: true }).click();
     const pairingCode = guest.getByLabel(en.admin_pair_code);
@@ -64,6 +64,7 @@ test("端末認可後に4言語を切り替え、スタッフと注文・提供�
         .getByRole("button"),
     ).toHaveAttribute("aria-pressed", "true");
     await staff.getByRole("button", { name: labels.admin_approve, exact: true }).click();
+    await expect(guest).toHaveURL(/\/$/);
     await expect(guest.getByRole("banner").getByText(vacant.name, { exact: true })).toBeVisible();
     await expect(guest.getByRole("tab", { name: en.kiosk_menu, exact: true })).toBeVisible();
     for (const language of [

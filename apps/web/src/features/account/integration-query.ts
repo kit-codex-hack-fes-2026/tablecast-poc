@@ -1,13 +1,10 @@
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import connection from "../../../../../plugins/tablecast/.mcp.json";
 
 export function integrationConnection(origin: string) {
-  const staging = origin === "https://tablecast-staging.kit-codex.workers.dev";
   return {
-    staging,
-    name: staging ? "tablecast-staging" : "tablecast",
-    endpoint: staging ? `${origin}/mcp` : connection.mcpServers.tablecast.url,
+    name: "tablecast",
+    endpoint: `${origin}/mcp`,
   };
 }
 

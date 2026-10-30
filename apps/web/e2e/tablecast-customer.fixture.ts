@@ -4,13 +4,9 @@ import { test as base } from "./support/test";
 type MemberDevice = "first" | "pwa" | "second" | "ssr" | "tablet";
 type MemberPhase =
   | "complete"
-  | "coupon"
   | "first-registration"
   | "history"
   | "leave"
-  | "membership"
-  | "memory"
-  | "payment"
   | "pwa-sign-in"
   | "qr"
   | "return"

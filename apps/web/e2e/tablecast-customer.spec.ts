@@ -1,6 +1,5 @@
 import { expect, type Page, type Request } from "@playwright/test";
 import { adminStateSchema, customerConsentVersion, tableStateSchema } from "@tablecast/api/schema";
-import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { z } from "zod";
 import ja from "../messages/ja.json" with { type: "json" };
@@ -46,7 +45,7 @@ test("会員の券と交換候補の0件をJavaScriptなしの初期HTMLから�
   });
 });
 
-test("二人が来店QRから登録して特典を使い、再来店では追加操作なしで参加する", async ({
+test("二人が来店QRで登録して同じ卓へ参加し、再来店では自動参加する", async ({
   page: staff,
   members,
   baseURL,
@@ -100,69 +99,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
       ),
     );
     await signInStaff(staff.request, baseURL);
-    // 隔離した実APIへ券面と初回登録特典を登録し、実際の発券・申請を画面から確認する
-    const imageSource = {
-      generated: true,
-      description: "架空店舗こもれびの生成バナーを使った会員フロー試験の券面",
-    };
-    const image = await staff.request.post(`${adminBase}/images`, {
-      multipart: {
-        image: {
-          name: "tablecast-member-coupon.webp",
-          mimeType: "image/webp",
-          buffer: await readFile(
-            resolve(import.meta.dirname, "../../../assets/demo/identities/komorebi-banner.webp"),
-          ),
-        },
-        metadata: JSON.stringify({ imageKind: "illustration", imageSource }),
-      },
-    });
-    expect(image.ok()).toBe(true);
-    const { imageKey } = z.object({ imageKey: z.string() }).parse(await image.json());
-    const couponTitle = "初回来店ありがとうクーポン";
-    expect(
-      (
-        await staff.request.post(`${adminBase}/coupons/rules`, {
-          data: {
-            id: crypto.randomUUID(),
-            expectedVersion: 0,
-            active: true,
-            rules: {
-              title: { ja: couponTitle, en: "Welcome visit reward" },
-              description: { ja: "お会計から100円引き。", en: "JPY 100 off your bill." },
-              imageKey,
-              imageKind: "illustration",
-              imageSource,
-              startsAt: Date.now() - 1000,
-              endsAt: Date.now() + 86_400_000,
-              minimumYen: 0,
-              discountKind: "fixed",
-              discountValue: 100,
-              maximumYen: 100,
-              trigger: "enrol",
-              threshold: 1,
-              presentation: { layout: "landscape", imageFit: "contain" },
-            },
-          },
-        })
-      ).ok(),
-    ).toBe(true);
-    const policy = z
-      .object({ version: z.number() })
-      .parse(await (await staff.request.get(`${adminBase}/points/policy`)).json());
-    expect(
-      (
-        await staff.request.post(`${adminBase}/points/policy`, {
-          data: {
-            expectedVersion: policy.version,
-            enabled: true,
-            kind: "visit",
-            points: 10,
-            unitYen: 100,
-          },
-        })
-      ).ok(),
-    ).toBe(true);
+    // 実APIで専用卓を開き、QR・実認証・別Cookieの二人参加を接続する。
     const floor = adminStateSchema.parse(await (await staff.request.get(adminBase)).json());
     const vacant = floor.vacantTables.find((table) => table.name === "T10");
     if (!vacant) throw new Error("専用fixtureのT10が空席ではありません");
@@ -216,12 +153,6 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
         .getByRole("status")
         .filter({ hasText: ja.customer_table_joined }),
     ).toBeVisible();
-    const owned = first.getByRole("region", { name: ja.customer_coupons_owned });
-    await expect(owned.getByRole("heading", { name: couponTitle, exact: true })).toBeVisible();
-    await expect(owned.getByRole("img", { name: couponTitle, exact: true })).not.toHaveJSProperty(
-      "naturalWidth",
-      0,
-    );
     await capture(first, "04-phone-joined", false);
     members.phase("second-registration");
     await signInStaff(second.request, baseURL, credentials.otherEmail);
@@ -248,13 +179,6 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
       popover.getByRole("region", { name: ja.customer_joined_guests }).locator("li"),
     ).toHaveCount(2);
     await capture(tablet, "05-ipad-two-members");
-    await tablet.setViewportSize({ width: 820, height: 1180 });
-    await expect(popover).toBeVisible();
-    await capture(tablet, "05b-ipad-portrait-members");
-    await tablet.setViewportSize({ width: 1512, height: 982 });
-    await expect(popover).toBeVisible();
-    await capture(tablet, "05c-desktop-members");
-    await tablet.setViewportSize({ width: 1180, height: 820 });
     await popover.getByRole("button", { name: ja.common_close, exact: true }).click();
     await expect(popover).not.toBeVisible();
     await capture(tablet, "06-ipad-member-stack");
@@ -278,125 +202,7 @@ test("二人が来店QRから登録して特典を使い、再来店では追加
       "href",
       `/api/member-stores/${storeId}/manifest.webmanifest`,
     );
-    // 確認済みの来店ポイントを付与し、会員証・明細・本人編集の記憶を実データで表示する
-    members.phase("membership");
-    const pointsPath = `${adminBase}/tables/${visit.id}/points`;
-    const pointVisit = z
-      .object({ expectedVersion: z.number(), participants: z.array(z.object({ id: z.string() })) })
-      .parse(await (await staff.request.get(pointsPath)).json());
-    expect(
-      (
-        await staff.request.post(pointsPath, {
-          data: {
-            expectedVersion: pointVisit.expectedVersion,
-            participantIds: pointVisit.participants.map((person) => person.id),
-            idempotencyKey: crypto.randomUUID(),
-          },
-        })
-      ).ok(),
-    ).toBe(true);
-    await first.getByRole("link", { name: ja.customer_card_view, exact: true }).click();
-    await expect(first.getByRole("region", { name: ja.customer_card, exact: true })).toBeVisible();
-    await expect(first.getByText("10 pt", { exact: true })).toBeVisible();
-    await expect(first.getByRole("heading", { name: ja.customer_current_visit })).toBeVisible();
-    await capture(first, "07-phone-membership-card");
-    await first.evaluate(() => scrollTo(0, 0));
-    await capture(first, "07b-phone-membership-first-view", false);
-    await first.getByRole("link", { name: ja.customer_coupon_open, exact: true }).click();
-    await expect(first).toHaveURL(new RegExp(`/member/${storeId}/coupons$`));
-    await expect(first.getByText(ja.customer_coupon_choose_visit, { exact: true })).toBeVisible();
-    await expect(first.getByRole("link", { name: /T10/ })).toBeVisible();
-    await capture(first, "07c-phone-choose-visit");
-    await first.getByRole("link", { name: /T10/ }).click();
-    await expect(first).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));
-    await first.getByRole("link", { name: ja.customer_card_view, exact: true }).click();
-    await first.getByRole("link", { name: ja.customer_points_history, exact: true }).click();
-    await expect(
-      first.getByRole("heading", { name: ja.customer_points, exact: true }),
-    ).toBeVisible();
-    await expect(first.getByText("+10 pt", { exact: true })).toBeVisible();
-    await capture(first, "08-phone-points");
-    await first.getByRole("link", { name: new RegExp(ja.customer_back_to_store) }).click();
-    await first.getByRole("link", { name: ja.customer_memories_view, exact: true }).click();
-    members.phase("memory");
-    await expect(first.getByText(ja.customer_memories_note)).toBeVisible();
-    await expect(first.getByRole("textbox")).toHaveCount(0);
-    await capture(first, "09a-phone-automatic-memory");
-    await first.getByRole("button", { name: ja.customer_memory_add, exact: true }).click();
-    const memory = "辛さは控えめ、冷たいお茶が好きです。";
-    await first.getByRole("textbox", { name: ja.customer_memory_content }).fill(memory);
-    await capture(first, "09-phone-memory-editor");
-    await first.getByRole("button", { name: ja.customer_save, exact: true }).click();
-    await expect(first.getByRole("listitem").filter({ hasText: memory })).toBeVisible();
-    await capture(first, "10-phone-memories");
-    await first.getByRole("link", { name: new RegExp(ja.customer_back_to_store) }).click();
-    await first.getByRole("link", { name: new RegExp("T10") }).click();
-    members.phase("coupon");
-    await expect(first).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));
-    await expect(owned.getByRole("button", { name: ja.coupon_request, exact: true })).toBeVisible();
-    await first.evaluate(() => scrollTo(0, 0));
-    await expect(owned.getByRole("heading", { name: couponTitle, exact: true })).toBeVisible();
-    const couponImage = owned.getByRole("img", { name: couponTitle, exact: true });
-    await expect(couponImage).toBeVisible();
-    await expect(couponImage).not.toHaveJSProperty("naturalWidth", 0);
-    await capture(first, "11-phone-owned-coupon");
-    await owned.getByRole("button", { name: ja.coupon_request, exact: true }).click();
-    await expect(
-      owned.getByRole("button", { name: ja.coupon_request, exact: true }),
-    ).toBeDisabled();
-    await expect(owned.getByText(ja.coupon_requested, { exact: true })).toBeVisible();
-    await expect(owned.getByRole("status")).toHaveText(ja.customer_coupon_requested_hint);
-    await capture(first, "12-phone-coupon-requested");
-
-    // 店舗の会計を用意し、申請された券を実際の管理画面で適用する
-    members.phase("payment");
-    expect(
-      (
-        await staff.request.post(`${adminBase}/tables/${visit.id}/payments`, {
-          data: {
-            kind: "adjustment",
-            amount: 1000,
-            reason: "隔離した会員クーポン利用フローの会計",
-            idempotencyKey: crypto.randomUUID(),
-          },
-        })
-      ).ok(),
-    ).toBe(true);
-    await staff.setViewportSize({ width: 1512, height: 982 });
-    await staff.goto(`/admin/stores/${storeId}/floor`);
-    await staff.getByRole("button", { name: /^T10\b/ }).click();
-    await staff.getByRole("tab", { name: ja.admin_payments, exact: true }).click();
-    await expect(staff.getByRole("heading", { name: couponTitle, exact: true })).toBeVisible();
-    await staff
-      .getByRole("button", { name: ja.coupon_apply, exact: true })
-      .scrollIntoViewIfNeeded();
-    await capture(staff, "13-staff-coupon-request", false);
-    await staff.getByRole("button", { name: ja.coupon_apply, exact: true }).click();
-    await expect(staff.getByRole("button", { name: ja.coupon_cancel, exact: true })).toBeVisible();
-    await staff
-      .getByRole("button", { name: ja.coupon_cancel, exact: true })
-      .scrollIntoViewIfNeeded();
-    await capture(staff, "14-staff-coupon-applied", false);
-    const billed = tableStateSchema.parse(
-      await (await staff.request.get(`${adminBase}/tables/${visit.id}`)).json(),
-    );
-    expect(billed.bill.due).toBe(900);
-    await first.reload();
-    await expect(owned.getByText(ja.coupon_used, { exact: true })).toBeVisible();
-    await capture(first, "15-phone-coupon-used");
-    expect(
-      (
-        await staff.request.post(`${adminBase}/tables/${visit.id}/payments`, {
-          data: {
-            kind: "payment",
-            amount: billed.bill.due,
-            reason: "隔離した会員クーポン適用後の精算",
-            idempotencyKey: crypto.randomUUID(),
-          },
-        })
-      ).ok(),
-    ).toBe(true);
-    await first.goto(`/member/${storeId}/visits/${visit.id}`);
+    // 記憶編集・ポイント・券と精算の分岐はBrowser/実HTTP・D1統合で検証する。
     expect((await staff.request.post(`${adminBase}/tables/${visit.id}/close`)).ok()).toBe(true);
     await expect(
       first

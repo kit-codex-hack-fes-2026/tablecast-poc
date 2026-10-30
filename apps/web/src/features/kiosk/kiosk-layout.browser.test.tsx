@@ -175,11 +175,11 @@ it.each(["ja", "en"] as const)(
       );
       for (const control of [resume, review]) {
         await expect.element(control).toBeVisible();
+        // WebKitの合成座標では56pxが55.99945pxになるため、0.01 CSS pxへ丸める。
         await expect
-          .poll(() => control.element().getBoundingClientRect().height)
+          .poll(() => Math.round(control.element().getBoundingClientRect().height * 100) / 100)
           .toBeGreaterThanOrEqual(56);
         const bounds = control.element().getBoundingClientRect();
-        expect(bounds.height).toBeGreaterThanOrEqual(56);
         expect(bounds.left).toBeGreaterThanOrEqual(0);
         expect(bounds.right).toBeLessThanOrEqual(width);
         expect(bounds.bottom).toBeLessThanOrEqual(height);

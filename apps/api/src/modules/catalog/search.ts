@@ -87,8 +87,8 @@ export function createMenuSearch(
     // 空白区切りの一括照会と、句読点を含む登録名を同じ規則で扱う。
     tokenize: /\S+/g,
   };
-  const any = new Fuse(documents, { ...options, tokenMatch: "any" });
-  const all = new Fuse(documents, { ...options, tokenMatch: "all" }, any.getIndex());
+  let any: Fuse<SearchDocument> | undefined;
+  let all: Fuse<SearchDocument> | undefined;
   return (query = "") => {
     const value = normalise(query);
     if (!value) return { ids: documents.map((item) => item.id), detail: false };
@@ -105,9 +105,17 @@ export function createMenuSearch(
     );
     if (category.length) return { ids: category.map((item) => item.id), detail: false };
 
+    // 完全一致・カテゴリ検索では不要な曖昧検索の索引を構築しない。
+    any ??= new Fuse(documents, { ...options, tokenMatch: "any" });
     const terms = value.split(" ");
     const whole =
-      terms.length > 1 ? new Set(all.search(value).map(({ refIndex }) => refIndex)) : undefined;
+      terms.length > 1
+        ? new Set(
+            (all ??= new Fuse(documents, { ...options, tokenMatch: "all" }, any.getIndex()))
+              .search(value)
+              .map(({ refIndex }) => refIndex),
+          )
+        : undefined;
     const matches = new Map(
       any.search(value).map(({ refIndex, score, item }) => [refIndex, { item, score: score ?? 1 }]),
     );

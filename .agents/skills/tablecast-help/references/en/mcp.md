@@ -7,7 +7,7 @@ description: Connect through OAuth, confirm your store and scopes, and find the 
 
 Open [Plugin installation](/account/integrations/plugins) or [Manual installation](/account/integrations/manual). These setup screens require sign-in. Add the displayed endpoint to your MCP client, sign in with OAuth, and consent to the organisation and permissions. You do not need to clone a repository or run a development server.
 
-Production and staging are separate environments. On staging, use the displayed `tablecast-staging` endpoint and compare the origins of your application and MCP connection. Avoid manually registering a second copy of a connection already supplied by a plugin.
+The connection screen uses the name `tablecast` and the current application origin followed by `/mcp`. Production and test environments hold separate data, so check that the application and MCP origins match. The public plugin connects to production. You do not need to register the same connection manually a second time.
 
 ## Confirm permissions and store
 
