@@ -9,7 +9,7 @@ import { test } from "./tablecast-customer.fixture";
 
 test.use({ viewport: { width: 402, height: 874 }, trace: "off", serviceWorkers: "block" });
 
-test("会員の券と交換候補の0件をJavaScriptなしの初期HTMLから表示する", async ({
+test("未使用券0件とseedの交換特典をJavaScriptなしの初期HTMLから表示する", async ({
   page,
   members,
   baseURL,
@@ -39,7 +39,7 @@ test("会員の券と交換候補の0件をJavaScriptなしの初期HTMLから�
     await expect(
       phone
         .getByRole("region", { name: ja.coupon_exchange })
-        .getByText(ja.customer_exchanges_empty),
+        .getByText("50ポイントで500円引き", { exact: true }),
     ).toBeVisible();
     members.phase("complete");
   });

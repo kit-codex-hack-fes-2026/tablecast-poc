@@ -1,0 +1,39 @@
+name: TableCast staging seed
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 既存ログイン・端末を保ちseedの商品説明・食事情報・分析・会員特典を更新する場合はtablecast-stagingを入力
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tablecast-deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    if: github.ref_name == 'staging' && inputs.confirm == 'tablecast-staging'
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: dbbd52d7d690afceea41fe920ae19f91
+      TABLECAST_RELEASE_SHA: ${{ github.sha }}
+      TABLECAST_SEED_CONFIRM: ${{ inputs.confirm }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/tablecast-setup
+        with:
+          codegen: "false"
+      - name: stagingの最新SHAを照合する
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$(gh api repos/$GITHUB_REPOSITORY/commits/staging --jq .sha)" = "$TABLECAST_RELEASE_SHA"
+      - name: seedの商品情報・分析履歴・会員特典を追加更新する
+        run: bun --no-env-file run db:seed:staging

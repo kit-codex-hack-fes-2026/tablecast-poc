@@ -1,5 +1,6 @@
 import { configurationErrors, priceCart } from "@tablecast/api/bootstrap";
 import { resolveText } from "@tablecast/api/localization";
+import { dietaryKeys, japaneseAllergenSchema } from "@tablecast/api/schema";
 import { searchStoreSkills } from "@tablecast/api/store-knowledge";
 import { describe, expect, it } from "vitest";
 import { demoStores } from "./tablecast-fixtures.ts";
@@ -59,23 +60,120 @@ describe("デモの構成データ", () => {
       }
     }
   });
-  it("未確認の原材料を安全と断定せず売切・必須選択の状態を含める", () => {
-    const products = demoStores("demo").flatMap((store) => store.configuration.products);
-    expect(products.some((product) => !product.available)).toBe(true);
-    expect(products.some((product) => product.modifiers.some((group) => group.min > 0))).toBe(true);
-    expect(products.some((product) => product.foodInfo.base.crossContact === "unknown")).toBe(true);
-    expect(products.some((product) => product.foodInfo.base.allergens.salmon === "contains")).toBe(
-      true,
-    );
+  it.each(["demo", "history", "smoke"] as const)(
+    "%sの全商品と具材に確認済みの食事情報を持つ",
+    (profile) => {
+      const products = demoStores(profile).flatMap((store) => store.configuration.products);
+      expect(products.some((product) => !product.available)).toBe(profile !== "smoke");
+      expect(products.some((product) => product.modifiers.some((group) => group.min > 0))).toBe(
+        true,
+      );
+      for (const product of products) {
+        const profiles = [
+          product.foodInfo.base,
+          ...product.foodInfo.components.map((item) => item.profile),
+        ];
+        for (const food of profiles) {
+          expect(Object.keys(food.allergens).sort()).toEqual(
+            [...japaneseAllergenSchema.options].sort(),
+          );
+          expect(
+            Object.values(food.allergens).every((status) =>
+              ["contains", "not_used"].includes(status),
+            ),
+          ).toBe(true);
+          for (const key of dietaryKeys) {
+            expect(["yes", "no"]).toContain(food.dietary[key].status);
+            expect(food.dietary[key].reasons.length).toBeGreaterThan(0);
+          }
+          expect(food.halalCertification).toBe("not_certified");
+          expect(food.crossContact).not.toBe("unknown");
+          expect(food.crossContact === "controlled" || food.crossContactSources.length > 0).toBe(
+            true,
+          );
+        }
+      }
+    },
+  );
+  it("魚・大麦・交換・追加・除去の食事対応と厨房の共用条件が選択後にも一致する", () => {
+    const stores = demoStores("demo");
+    const food = (productId: string, options: string[] = []) => {
+      const store = stores.find((item) =>
+        item.configuration.products.some((product) => product.id === productId),
+      );
+      if (!store) throw new Error(`商品がありません: ${productId}`);
+      const result = priceCart(
+        store.configuration,
+        [
+          {
+            id: "tablecast-food-line",
+            productId,
+            quantity: 1,
+            selections: options.map((optionId) => ({ optionId, quantity: 1 })),
+          },
+        ],
+        1,
+      );
+      const information = result.lines[0]?.foodInformation;
+      if (!information) throw new Error("選択後の食事情報がありません。");
+      return information;
+    };
+    expect(food("tablecast-komorebi-tuna-sashimi")).toMatchObject({
+      allergens: { wheat: "not_used", salmon: "not_used" },
+      crossContact: "possible",
+      dietary: {
+        vegan: { status: "no" },
+        vegetarian: { status: "no" },
+        halal: { status: "yes" },
+        glutenFree: { status: "yes" },
+      },
+    });
+    expect(food("tablecast-hanul-sikhye").dietary.glutenFree.status).toBe("no");
+    expect(food("tablecast-komorebi-beer").dietary.halal.reasons).toContain("alcohol");
     expect(
-      products.some((product) => product.foodInfo.base.dietary.vegan.status === "unknown"),
-    ).toBe(true);
-    expect(products.some((product) => product.foodInfo.base.dietary.vegan.status === "yes")).toBe(
-      true,
-    );
-    expect(products.some((product) => product.foodInfo.base.dietary.halal.status === "no")).toBe(
-      true,
-    );
+      food("tablecast-komorebi-shiitake", ["tablecast-komorebi-seasoning-tare"]).allergens.wheat,
+    ).toBe("contains");
+    expect(
+      food("tablecast-komorebi-shiitake", ["tablecast-komorebi-seasoning-salt"]).allergens.wheat,
+    ).toBe("not_used");
+    expect(food("tablecast-komorebi-udon").dietary.vegetarian.status).toBe("no");
+    expect(
+      food("tablecast-komorebi-udon", ["tablecast-komorebi-broth-kombu"]).dietary.vegan.status,
+    ).toBe("yes");
+    expect(
+      food("tablecast-komorebi-ochazuke", ["tablecast-komorebi-broth-kombu"]).dietary.vegan.status,
+    ).toBe("no");
+    expect(food("tablecast-komorebi-edamame").dietary.vegan.status).toBe("yes");
+    expect(
+      food("tablecast-hanul-bibimbap", [
+        "tablecast-hanul-bibimbap-protein-tofu",
+        "tablecast-hanul-egg-none",
+      ]).dietary.vegan.status,
+    ).toBe("yes");
+    expect(food("tablecast-hanul-samgyeopsal").allergens.soya).toBe("contains");
+    expect(
+      food("tablecast-hanul-samgyeopsal", ["tablecast-hanul-ssamjang-none"]).allergens.soya,
+    ).toBe("not_used");
+    expect(
+      food("tablecast-hanul-fried-chicken", ["tablecast-hanul-chicken-sauce-honey-mustard"])
+        .allergens.egg,
+    ).toBe("contains");
+    expect(
+      food("tablecast-koharu-westward-classic", [
+        "tablecast-koharu-bun-lettuce",
+        "tablecast-koharu-patty-plant",
+        "tablecast-koharu-cheese-none",
+        "tablecast-koharu-sauce-mustard",
+      ]),
+    ).toMatchObject({
+      dietary: { vegan: { status: "yes" } },
+      crossContact: "possible",
+    });
+    expect(food("tablecast-koharu-fries", ["tablecast-koharu-extras-bacon"])).toMatchObject({
+      allergens: { pork: "contains" },
+      dietary: { vegan: { status: "no" }, halal: { status: "no" } },
+      crossContactSources: ["shared_equipment", "shared_frying_oil"],
+    });
   });
   it("韓国店の台本で器三人分を一本分の酒とし、チヂミの訂正後は4740円になる", () => {
     const config = demoStores("demo").find(

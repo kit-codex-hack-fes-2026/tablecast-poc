@@ -15,6 +15,7 @@ import { seedIdentityIcon } from "./tablecast-seed-icons.ts";
 import { seedMenuImages } from "./tablecast-seed-media.ts";
 import { type TablecastSeedTemplate } from "./tablecast-seed-template.ts";
 import { type DemoCredentials } from "./tablecast-seed.ts";
+import { seedPluginAnalytics } from "./tablecast-seed/analytics.ts";
 import { rebuildSeedConfigurations } from "./tablecast-seed/configuration.ts";
 import {
   demoStaff,
@@ -22,6 +23,7 @@ import {
   normaliseDemoCredentials,
   refreshDemoIdentityIcons,
 } from "./tablecast-seed/identities.ts";
+import { seedPluginRewards } from "./tablecast-seed/rewards.ts";
 import { seedCurrentTables, seedHistory } from "./tablecast-seed/session.ts";
 
 export { sampleLine, tablecastHistoryBaseTime } from "./tablecast-seed/session.ts";
@@ -263,6 +265,10 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
       .onConflictDoNothing({ target: business.restaurantTables.id });
     if (credentials.profile === "history") await seedHistory(db, store, owner);
     await seedCurrentTables(db, store, owner, credentials.baseTime);
+    if (credentials.profile !== "smoke") {
+      await seedPluginAnalytics(db, store, owner);
+      await seedPluginRewards(db, store, owner);
+    }
   }
   await refreshDemoIdentityIcons(env, credentials);
   return seedCounts(db);
@@ -395,6 +401,9 @@ async function populateSeedTemplate(
         { id: `tablecast-seed-organization-${store.id}`, userId: owner.id },
         credentials.baseTime,
       );
+      const publisher = { id: `tablecast-seed-organization-${store.id}`, userId: owner.id };
+      await seedPluginAnalytics(db, store, publisher);
+      await seedPluginRewards(db, store, publisher);
     }
   } finally {
     console.timeEnd("営業中の卓のseed");

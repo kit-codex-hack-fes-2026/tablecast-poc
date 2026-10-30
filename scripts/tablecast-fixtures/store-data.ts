@@ -1,5 +1,6 @@
 import type { Food } from "./types.ts";
 import { dishes } from "./dishes.ts";
+import { seedDietary } from "./food.ts";
 import { rice } from "./rice.ts";
 
 export const stores = [
@@ -46,6 +47,7 @@ export const drinks: Food[] = [
     groups: [],
     ingredients: ["麦芽を使用したビールです", "Beer brewed with malted barley"],
     contains: [],
+    dietary: seedDietary.maltAlcohol,
   },
   {
     id: "highball",
@@ -57,6 +59,7 @@ export const drinks: Food[] = [
     groups: [],
     ingredients: ["ウイスキーと炭酸水を合わせます", "Whisky topped with sparkling water"],
     contains: [],
+    dietary: seedDietary.alcohol,
   },
   {
     id: "lemon-sour",
@@ -68,6 +71,7 @@ export const drinks: Food[] = [
     groups: [],
     ingredients: ["焼酎、レモン、炭酸水を合わせます", "Shochu, lemon and sparkling water"],
     contains: [],
+    dietary: seedDietary.alcohol,
   },
   {
     id: "plum-wine",
@@ -79,6 +83,7 @@ export const drinks: Food[] = [
     groups: [],
     ingredients: ["梅のリキュールを氷と提供します", "Japanese plum liqueur served over ice"],
     contains: [],
+    dietary: seedDietary.alcohol,
   },
   {
     id: "shochu",
@@ -90,6 +95,7 @@ export const drinks: Food[] = [
     groups: [],
     ingredients: ["芋焼酎を水で割ります", "Sweet-potato shochu diluted with water"],
     contains: [],
+    dietary: seedDietary.alcohol,
   },
   {
     id: "oolong",
@@ -101,6 +107,7 @@ export const drinks: Food[] = [
     groups: ["ice"],
     ingredients: ["烏龍茶を選んだ温度で提供します", "Oolong tea served at your chosen temperature"],
     contains: [],
+    dietary: seedDietary.plant,
     speech: "ウーロン茶",
     aliases: ["お茶"],
   },
@@ -115,6 +122,7 @@ export const drinks: Food[] = [
     groups: ["ice"],
     ingredients: ["緑茶を選んだ温度で提供します", "Green tea served at your chosen temperature"],
     contains: [],
+    dietary: seedDietary.plant,
   },
   {
     id: "yuzu-soda",
@@ -126,5 +134,6 @@ export const drinks: Food[] = [
     groups: [],
     ingredients: ["ゆず果汁と炭酸水を合わせます", "Yuzu juice mixed with sparkling water"],
     contains: [],
+    dietary: seedDietary.plant,
   },
 ];

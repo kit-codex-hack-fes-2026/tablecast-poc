@@ -5,14 +5,20 @@ import {
   type Product,
 } from "@tablecast/api/schema";
 import { demoOptionImageKey } from "./tablecast-demo-option-images.ts";
-import { koreanFoodInformation, withDemoFoodChanges } from "./tablecast-fixtures/food.ts";
-import { allergenRecord } from "./tablecast-fixtures/text.ts";
+import {
+  koreanFoodInformation,
+  recipeFoodInformation,
+  seedDietary,
+  type SeedDietary,
+  withDemoFoodChanges,
+} from "./tablecast-fixtures/food.ts";
 import { demoImageKey } from "./tablecast-seed-media.ts";
 
 type KoreanMenuItem = {
   available?: boolean;
   category: string;
   contains: JapaneseAllergen[];
+  dietary: SeedDietary;
   en: string;
   groups: string[];
   hotVessel?: boolean;
@@ -36,7 +42,8 @@ const mains: KoreanMenuItem[] = [
       "豚ばら肉300g、サンチュ6枚、にんにく、みそだれ。みそだれは大豆と小麦を含みます",
       "300g of pork belly, six lettuce leaves, garlic and ssamjang containing soya and wheat",
     ],
-    contains: ["pork", "soya", "wheat"],
+    contains: ["pork"],
+    dietary: seedDietary.meat,
     spice: "mild",
     groups: ["wraps", "ssamjang"],
     tabletop: true,
@@ -54,6 +61,7 @@ const mains: KoreanMenuItem[] = [
       "Beef, onion and carrot stir-fried with soy sauce, sugar and sesame oil",
     ],
     contains: ["beef", "soya", "wheat", "sesame"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: ["rice"],
     photo:
@@ -70,6 +78,7 @@ const mains: KoreanMenuItem[] = [
       "Chicken thigh, cabbage, sweet potato and rice cakes cooked in gochujang sauce containing soya and wheat",
     ],
     contains: ["chicken", "soya", "wheat"],
+    dietary: seedDietary.meatGluten,
     spice: "medium",
     groups: ["spice", "hotpot-extras"],
     tabletop: true,
@@ -87,6 +96,7 @@ const mains: KoreanMenuItem[] = [
       "Pork and onion stir-fried with gochujang, soy sauce and sesame oil",
     ],
     contains: ["pork", "soya", "wheat", "sesame"],
+    dietary: seedDietary.meatGluten,
     spice: "medium",
     groups: ["spice", "rice"],
     photo:
@@ -102,7 +112,8 @@ const mains: KoreanMenuItem[] = [
       "豚ばら肉をしょうがとにんにくでゆで、サンチュ6枚とみそだれを添えます",
       "Pork belly boiled with ginger and garlic, served with six lettuce leaves and ssamjang",
     ],
-    contains: ["pork", "soya", "wheat"],
+    contains: ["pork"],
+    dietary: seedDietary.meat,
     spice: "mild",
     groups: ["wraps", "ssamjang"],
     photo:
@@ -119,6 +130,7 @@ const mains: KoreanMenuItem[] = [
       "Five chicken-thigh pieces fried in wheat-flour and potato-starch coating; plain by default, with ingredients changing for the selected sauce",
     ],
     contains: ["chicken", "wheat"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: ["chicken-sauce"],
     photo:
@@ -135,6 +147,7 @@ const mains: KoreanMenuItem[] = [
       "Rice cakes and fish cake simmered in gochujang sauce containing wheat, soya and fish",
     ],
     contains: ["wheat", "soya"],
+    dietary: seedDietary.fishGluten,
     spice: "medium",
     groups: ["spice", "hotpot-extras"],
     photo:
@@ -151,6 +164,7 @@ const mains: KoreanMenuItem[] = [
       "Prawns, squid, spring onion, wheat flour and egg cooked as a pancake and cut into eight pieces",
     ],
     contains: ["prawn", "squid", "wheat", "egg"],
+    dietary: seedDietary.fishGluten,
     spice: "none",
     groups: ["dip"],
     photo:
@@ -167,6 +181,7 @@ const mains: KoreanMenuItem[] = [
       "Cabbage kimchi, wheat flour and egg cooked as a pancake and cut into six pieces; the kimchi contains fish sauce and salted prawns",
     ],
     contains: ["prawn", "wheat", "egg"],
+    dietary: seedDietary.fishGluten,
     spice: "mild",
     groups: ["dip"],
     photo:
@@ -186,6 +201,7 @@ const sides: KoreanMenuItem[] = [
       "Eight slices of a seaweed rice roll with carrot, cucumber, egg, spinach, pickled daikon and sesame oil",
     ],
     contains: ["egg", "sesame"],
+    dietary: seedDietary.eggMilk,
     spice: "none",
     groups: [],
     photo:
@@ -202,6 +218,7 @@ const sides: KoreanMenuItem[] = [
       "Rice, beef, spinach, carrot, bean sprouts, mushrooms, a fried egg and sesame oil, with gochujang served separately",
     ],
     contains: ["beef", "egg", "sesame", "soya", "wheat"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: ["rice", "bibimbap-protein", "egg", "vegetables"],
     photo:
@@ -218,6 +235,7 @@ const sides: KoreanMenuItem[] = [
       "Buckwheat and wheat noodles in chilled beef broth with half a boiled egg, cucumber and pear",
     ],
     contains: ["beef", "buckwheat", "wheat", "egg"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: ["noodles"],
     photo:
@@ -234,6 +252,7 @@ const sides: KoreanMenuItem[] = [
       "Wheat noodles topped with pork and onion in a dark fermented-soya sauce",
     ],
     contains: ["pork", "wheat", "soya"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: ["noodles"],
     photo:
@@ -250,6 +269,7 @@ const sides: KoreanMenuItem[] = [
       "Pork, tofu, cabbage kimchi and spring onion simmered together; the kimchi contains fish sauce and salted prawns",
     ],
     contains: ["pork", "soya", "prawn"],
+    dietary: seedDietary.meat,
     spice: "medium",
     groups: ["spice", "hotpot-extras", "rice"],
     hotVessel: true,
@@ -267,6 +287,7 @@ const sides: KoreanMenuItem[] = [
       "Soft tofu, clams, prawns, egg and onion simmered in chilli broth; the egg is fully cooked",
     ],
     contains: ["soya", "prawn", "egg"],
+    dietary: seedDietary.fish,
     spice: "medium",
     groups: ["spice", "hotpot-extras", "rice"],
     hotVessel: true,
@@ -284,6 +305,7 @@ const sides: KoreanMenuItem[] = [
       "Milky beef-bone broth with beef and spring onion; rice and noodles are not included, and salt is served separately",
     ],
     contains: ["beef"],
+    dietary: seedDietary.meat,
     spice: "none",
     groups: ["rice"],
     hotVessel: true,
@@ -301,6 +323,7 @@ const sides: KoreanMenuItem[] = [
       "Sweet-potato starch noodles, beef, mushrooms, spinach and carrot stir-fried with soy sauce and sesame oil",
     ],
     contains: ["beef", "soya", "wheat", "sesame"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: [],
     photo:
@@ -317,6 +340,7 @@ const sides: KoreanMenuItem[] = [
       "Four steamed dumplings with minced pork, cabbage and garlic chives in wheat wrappers",
     ],
     contains: ["pork", "wheat"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: ["dip"],
     photo:
@@ -333,6 +357,7 @@ const sides: KoreanMenuItem[] = [
       "Cabbage, daikon and cucumber kimchi made with fish sauce, salted prawns, garlic and chilli",
     ],
     contains: ["prawn"],
+    dietary: seedDietary.fish,
     spice: "medium",
     groups: [],
     photo:
@@ -349,6 +374,7 @@ const sides: KoreanMenuItem[] = [
       "Two wheat pancakes filled with brown sugar, cinnamon and peanuts; take care with the hot syrup filling",
     ],
     contains: ["wheat", "peanuts"],
+    dietary: seedDietary.plantGluten,
     spice: "none",
     groups: [],
     photo:
@@ -368,6 +394,7 @@ const drinks: KoreanMenuItem[] = [
       "rice-based soju, 16% ABV, served as a 360ml bottle",
     ],
     contains: [],
+    dietary: seedDietary.alcohol,
     spice: "none",
     groups: ["glasses"],
     photo:
@@ -384,6 +411,7 @@ const drinks: KoreanMenuItem[] = [
       "rice soju mixed with yuzu juice and sugar, 13% ABV, in a 360ml bottle",
     ],
     contains: [],
+    dietary: seedDietary.alcohol,
     spice: "none",
     groups: ["glasses"],
     photo:
@@ -400,6 +428,7 @@ const drinks: KoreanMenuItem[] = [
       "cloudy white rice wine made with rice and wheat-derived fermentation ingredients, 6% ABV, in a 750ml bottle",
     ],
     contains: ["wheat"],
+    dietary: seedDietary.maltAlcohol,
     spice: "none",
     groups: ["glasses"],
     photo:
@@ -416,6 +445,7 @@ const drinks: KoreanMenuItem[] = [
       "cloudy rice wine made with rice, chestnut and wheat-derived fermentation ingredients, 6% ABV, in a 750ml bottle",
     ],
     contains: ["wheat"],
+    dietary: seedDietary.maltAlcohol,
     spice: "none",
     groups: ["glasses"],
     available: false,
@@ -433,6 +463,7 @@ const drinks: KoreanMenuItem[] = [
       "lager brewed with barley malt and hops, 4.5% ABV, in a 330ml bottle",
     ],
     contains: [],
+    dietary: seedDietary.maltAlcohol,
     spice: "none",
     groups: [],
     photo:
@@ -449,6 +480,7 @@ const drinks: KoreanMenuItem[] = [
       "Korean-style yuja tea made with yuzu peel, juice and sugar; its base ingredients contain sugar",
     ],
     contains: [],
+    dietary: seedDietary.plant,
     spice: "none",
     groups: ["tea-temperature", "sweetness"],
     photo:
@@ -465,6 +497,7 @@ const drinks: KoreanMenuItem[] = [
       "Roasted corn infused in water, unsweetened by default",
     ],
     contains: [],
+    dietary: seedDietary.plant,
     spice: "none",
     groups: ["tea-temperature"],
     photo:
@@ -481,6 +514,7 @@ const drinks: KoreanMenuItem[] = [
       "A chilled non-alcoholic drink made with rice, barley malt and sugar; it is prepared differently from amazake",
     ],
     contains: [],
+    dietary: seedDietary.plantGluten,
     spice: "none",
     groups: ["ice"],
     photo:
@@ -494,6 +528,7 @@ const drinks: KoreanMenuItem[] = [
     category: "soft-drinks",
     ingredients: ["梨果汁、炭酸水、砂糖を合わせます", "Pear juice, sparkling water and sugar"],
     contains: [],
+    dietary: seedDietary.plant,
     spice: "none",
     groups: ["ice", "sweetness"],
     photo:
@@ -510,6 +545,7 @@ const drinks: KoreanMenuItem[] = [
       "A chilled non-alcoholic infusion of ginger, cinnamon and sugar",
     ],
     contains: [],
+    dietary: seedDietary.plant,
     spice: "mild",
     groups: ["ice", "sweetness"],
     photo:
@@ -664,8 +700,8 @@ const koreanDemoModifierGroups: Record<string, Modifier> = {
 };
 
 const commonNote = {
-  ja: "調味料の全成分・選択変更による成分差・交差接触は未確認です。ハラール、コーシャ等の宗教認証とヴィーガン適合は未確認です。材料名や肉抜きだけで適合を保証せず、スタッフへ確認してください。",
-  en: "Full condiment ingredients, changes from options and cross-contact are unverified. Halal, kosher and other religious certification, and vegan suitability, are unverified. Ingredients or removing meat do not guarantee suitability; ask staff.",
+  ja: "原材料と食事対応は選択後の表示をご確認ください。厨房の器具を共用します。ハラール認証は取得していません。",
+  en: "Check the ingredient and dietary information for your selected options. Kitchen equipment is shared. We do not hold halal certification.",
 };
 
 export function koreanDemoStore(profile: "demo" | "history" | "smoke") {
@@ -701,9 +737,15 @@ export function koreanDemoStore(profile: "demo" | "history" | "smoke") {
               "The bowl and broth are hot. Avoid touching the vessel and ask staff for help sharing or moving it.",
             ]
           : ["", ""];
+      const note = ["korean-alcohol", "soft-drinks"].includes(item.category)
+        ? {
+            ja: "飲料は専用器具で管理します。ハラール認証は取得していません。",
+            en: "Drinks are prepared with dedicated equipment. We do not hold halal certification.",
+          }
+        : commonNote;
       const description = {
-        ja: `${item.ingredients[0]}。${spice[0]}${safety[0]}${commonNote.ja}`,
-        en: `${item.ingredients[1]}. ${spice[1]} ${safety[1]} ${commonNote.en}`,
+        ja: `${item.ingredients[0]}。${spice[0]}${safety[0]}${note.ja}`,
+        en: `${item.ingredients[1]}. ${spice[1]} ${safety[1]} ${note.en}`,
       };
       return koreanFoodInformation(
         withDemoFoodChanges({
@@ -723,7 +765,11 @@ export function koreanDemoStore(profile: "demo" | "history" | "smoke") {
             if (!value) throw new Error(`韓国店の選択肢がありません: ${key}`);
             return value;
           }),
-          foodInfo: allergenRecord(item.contains),
+          foodInfo: recipeFoodInformation(
+            item.contains,
+            item.dietary,
+            item.key === "fried-chicken" ? "fried" : item.category,
+          ),
         }),
       );
     });
@@ -768,8 +814,8 @@ export function koreanDemoStore(profile: "demo" | "history" | "smoke") {
       ],
       cast: {
         instructions: {
-          ja: "韓国食堂ハヌル三条店の接客担当です。料理の日本語名と材料、辛さ、取り分けの量を一つずつ説明してください。卓上調理は必ずスタッフが加熱機器を操作し、十分な加熱と熱い器への注意を案内します。辛さ控えめでも辛味は残る商品があります。宗教認証・ヴィーガン適合・交差接触は未確認です。肉抜き、植物性の具材やノンアルコールという名前だけで安全・適合を保証せず、スタッフへつないでください。",
-          en: "You host guests at Hanul Sanjo Korean kitchen. Explain dishes, ingredients, heat and sharing portions one point at a time. Staff must operate tabletop heaters; explain thorough cooking and hot-vessel precautions. Milder dishes may still contain chilli. Religious certification, vegan suitability and cross-contact are unverified. Do not promise safety or suitability from meat removal, plant ingredients or a non-alcoholic name alone; ask staff to help.",
+          ja: "韓国食堂ハヌル三条店の接客担当です。料理の日本語名と材料、辛さ、取り分けの量を一つずつ説明してください。卓上調理は必ずスタッフが加熱機器を操作し、十分な加熱と熱い器への注意を案内します。辛さ控えめでも辛味は残る商品があります。食事対応は選択後の業務APIを確認します。厨房器具は共用で、ハラール認証はありません。肉抜き、植物性の具材やノンアルコールという名前だけで安全・適合を保証せず、スタッフへつないでください。",
+          en: "You host guests at Hanul Sanjo Korean kitchen. Explain dishes, ingredients, heat and sharing portions one point at a time. Staff must operate tabletop heaters; explain thorough cooking and hot-vessel precautions. Milder dishes may still contain chilli. Use the business tools for dietary suitability after customisation. Kitchen equipment is shared and the restaurant has no halal certification. Do not promise safety or suitability from meat removal, plant ingredients or a non-alcoholic name alone; ask staff to help.",
         },
         voice: { ja: null, en: null },
         proactive: false,

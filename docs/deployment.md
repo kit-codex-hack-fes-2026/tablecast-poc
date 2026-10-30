@@ -221,7 +221,7 @@ Storybookは`html_handling: none`でHTMLを配信し、`_redirects`でトップ�
 
 開発の標準経路は作業branch → staging → main。default branchはstagingとする。stagingは `https://tablecast-staging.kit-codex.workers.dev`、MCPは同originの`/mcp`。資源名は`tablecast-staging`、`tablecast-api-staging`、`tablecast-db-staging`、`tablecast-media-staging`。D1/R2/DO/Containerは本番・previewから分離する。
 
-配備CLIでは`TABLECAST_DEPLOY_ENV`を必須とし、未指定なら資源変更前に停止する。値は`production`、`staging`、`preview`のいずれか。previewだけ`TABLECAST_PR_NUMBER`を必須にし、他環境との併用を拒否する。CIはpush先branchから配備環境を選び、検査成功後に同じSHAの成果物を配備する。通常配備はmigrationと未投入時の共通demo seedだけを行う。既存のデータ・画像・認証secretは保持する。fixture変更を取り込み直す場合は全体リセットを明示実行する。
+配備CLIでは`TABLECAST_DEPLOY_ENV`を必須とし、未指定なら資源変更前に停止する。値は`production`、`staging`、`preview`のいずれか。previewだけ`TABLECAST_PR_NUMBER`を必須にし、他環境との併用を拒否する。CIはpush先branchから配備環境を選び、検査成功後に同じSHAの成果物を配備する。通常配備はmigrationと未投入時の共通demo seedだけを行う。既存のデータ・画像・認証secretは保持する。商品説明・食事情報とplugin用の合成営業データだけを補う場合は以下のseed明示更新を使う。認証や端末も含めて作り直す場合は全体リセットを明示実行する。
 
 ### GitHubの初期設定
 
@@ -234,6 +234,18 @@ Storybookは`html_handling: none`でHTMLを配信し、`_redirects`でトップ�
 ### stagingの公開とremote MCP
 
 stagingのWeb・模擬ログイン・同意・MCPをAccess資格なしで公開する。配備時は旧staging専用のWeb・MCP Access applicationの所有先を確認して解除し、PR previewのapplicationと共有policyは維持する。stagingへAccess service tokenは渡さない。アプリのOAuth・PKCE・resource・scope・組織／店舗認可は維持する。未認証のWebが200を返し、discoveryがstagingを参照し、未認証MCPがOAuthの401を返すことを配備後に検証する。模擬Googleログインの架空ユーザー選択も公開されるため、stagingはデモ・検証データで運用する。
+
+### staging seedの商品情報と営業データを更新する
+
+stagingへ対象変更をマージしてから、GitHub Actionsの`TableCast staging seed`をbranch `staging`、`confirm=tablecast-staging`で実行する。
+
+```sh
+gh workflow run tablecast-staging-seed.yml --ref staging -f confirm=tablecast-staging
+```
+
+`scripts/tablecast-staging-seed.ts`は通常配備と同じAPIの`cloudflare.config.ts`と採用済みD1 IDから接続先を解決し、固定origin・DB所有情報・初期投入完了・店舗ownerを検証する。通常配備と同じ`tablecast-deploy-staging`で排他し、実行元が最新staging SHAと一致することを確認する。Dashboardのvars変更やWorker再配備、R2消去は行わない。
+
+seed既存商品の説明・食事情報を版付きで更新し、未送信の注文確認を失効する。認証・端末・声・価格・売切設定・独自追加商品・下書き・過去注文は保持する。固定IDの月次履歴・会員・ポイント・特典は追加だけ行い、既存行を巻き戻さない。客画面は再読込みし、店側デモは設定元の新しい版を取り込む。対象SHA・結果の各店版と件数・MCPの取得結果を記録する。[対象データと制約](demo/agent-plugin.md)を参照する。
 
 ### staging全体のリセット
 

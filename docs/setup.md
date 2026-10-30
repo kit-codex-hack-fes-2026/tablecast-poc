@@ -422,6 +422,8 @@ bun run db:seed -- --rebuild-configuration
 
 このオプションはdevelopmentだけで利用する。対象seed店舗の公開設定を新しい版へ更新し、下書き・設定release履歴・デモの固定設定を再作成する。既存の注文・決済・注文スナップショット・会員は保持する。確認待ちの注文確認と音声状態は無効化する。全DBを消す`demo:reset`とは別の操作であり、本番・stagingの全体リセット手順へ置き換えない。実行後は各言語の商品名・説明と店舗名を確認する。
 
+公開stagingのseed商品情報・分析履歴・会員特典の追加更新は、ローカルの設定再作成を使わず[staging seedの明示更新](deployment.md#staging-seedの商品情報と営業データを更新する)に従う。認証や端末を維持して投入できる。
+
 ### 店舗資料エディタの依存
 
 店舗資料のグラフィカル編集はWeb内のTiptap 3.32.1（React、StarterKit、Markdown、画像、表、チェックリスト）を使う。Markdown拡張はbetaであり、対応外の書式を原文のまま扱う場合は原文タブを使う。YAML frontmatterは本文と分け、タブ切替だけでは原文を書き換えない。APIのSkill検査はyaml 2.9.1とmarked 17.0.6、ZIPはfflate 0.8.3を使い、Worker内で実行する。追加のPython、ZIPコマンド、別サーバーやDB migrationは不要。依存の正本はrootのbun.lockであり、通常の`bun install --frozen-lockfile`と`bun run codegen`で準備する。

@@ -6,97 +6,140 @@ import {
   type JapaneseAllergen,
   japaneseAllergenSchema,
   type Product,
-  unknownFoodProfile,
 } from "@tablecast/api/schema";
 
-// 登録した原材料と確認範囲からprofileを作り、未確認の判定は補わない。
-function recipeFoodProfile(
-  contains: JapaneseAllergen[],
-  states: Partial<Record<(typeof dietaryKeys)[number], "no" | "unknown" | "yes">> = {},
-  complete = true,
-): FoodProfile {
-  const profile = unknownFoodProfile();
+export type SeedDietary = Record<(typeof dietaryKeys)[number], "no" | "yes"> & {
+  halalReason?: "alcohol" | "ingredients_confirmed";
+};
+
+// 架空レシピの仕入れ・製造条件。牛肉・鶏肉の仕入れはハラール非対応とする。
+const plant = { vegan: "yes", vegetarian: "yes", halal: "yes", glutenFree: "yes" } as const;
+const fish = { ...plant, vegan: "no", vegetarian: "no" } as const;
+const meat = { ...fish, halal: "no" } as const;
+const eggMilk = { ...plant, vegan: "no" } as const;
+const alcohol = { ...plant, halal: "no", halalReason: "alcohol" } as const;
+export const seedDietary = {
+  plant,
+  plantGluten: { ...plant, glutenFree: "no" },
+  fish,
+  fishGluten: { ...fish, glutenFree: "no" },
+  meat,
+  meatGluten: { ...meat, glutenFree: "no" },
+  eggMilk,
+  eggMilkGluten: { ...eggMilk, glutenFree: "no" },
+  alcohol,
+  maltAlcohol: { ...alcohol, glutenFree: "no" },
+} as const satisfies Record<string, SeedDietary>;
+
+function recipeFoodProfile(contains: JapaneseAllergen[], states: SeedDietary): FoodProfile {
+  const profile: FoodProfile = {
+    allergens: {},
+    crossContact: "controlled",
+    crossContactSources: [],
+    halalCertification: "not_certified",
+    dietary: {
+      vegan: { status: states.vegan, reasons: [] },
+      vegetarian: { status: states.vegetarian, reasons: [] },
+      halal: { status: states.halal, reasons: [] },
+      glutenFree: { status: states.glutenFree, reasons: [] },
+    },
+  };
   for (const id of japaneseAllergenSchema.options)
-    if (complete || contains.includes(id))
-      profile.allergens[id] = contains.includes(id) ? "contains" : "not_used";
+    profile.allergens[id] = contains.includes(id) ? "contains" : "not_used";
   for (const key of dietaryKeys) {
-    const status = states[key] ?? "unknown";
+    const status = states[key];
     profile.dietary[key] = {
       status,
-      reasons:
-        status === "unknown"
-          ? []
-          : [
-              status === "yes"
-                ? "ingredients_confirmed"
-                : key === "vegan"
-                  ? "animal_ingredients"
-                  : key === "vegetarian"
-                    ? "meat_or_fish"
-                    : key === "glutenFree"
-                      ? "gluten_ingredients"
-                      : "pork_ingredients",
-            ],
+      reasons: [
+        status === "yes"
+          ? "ingredients_confirmed"
+          : key === "vegan"
+            ? "animal_ingredients"
+            : key === "vegetarian"
+              ? "meat_or_fish"
+              : key === "glutenFree"
+                ? "gluten_ingredients"
+                : contains.includes("pork")
+                  ? "pork_ingredients"
+                  : (states.halalReason ?? "ingredients_confirmed"),
+      ],
     };
   }
   return profile;
 }
 
-const plant = { vegan: "yes", vegetarian: "yes", glutenFree: "yes" } as const;
-const egg = () => recipeFoodProfile(["egg"], { vegan: "no", vegetarian: "yes", glutenFree: "yes" });
-const cheese = () =>
-  recipeFoodProfile(["milk"], { vegan: "no", vegetarian: "yes", glutenFree: "yes" });
+export function recipeFoodInformation(
+  contains: JapaneseAllergen[],
+  dietary: SeedDietary,
+  category: string,
+): FoodInformation {
+  const base = recipeFoodProfile(contains, dietary);
+  if (!["sake", "drinks", "craft-beer", "soft-drinks", "korean-alcohol"].includes(category)) {
+    base.crossContact = "possible";
+    base.crossContactSources =
+      category === "fried" ? ["shared_equipment", "shared_frying_oil"] : ["shared_equipment"];
+  }
+  return { base, components: [], defaultComponentIds: [] };
+}
+
+const egg = () => recipeFoodProfile(["egg"], eggMilk);
+const cheese = () => recipeFoodProfile(["milk"], eggMilk);
 
 export function withDemoFoodChanges(input: Product): Product {
   const product = structuredClone(input);
+  // 調味料は酒類・動物性出汁を使わないレシピ。麺はスープ粉末を含まない。
   const additions: [string, FoodProfile][] = [
-    ["-topping-egg", egg()],
-    ["-hotpot-extras-cheese", cheese()],
-    [
-      "-seasoning-tare",
-      recipeFoodProfile(
-        ["wheat", "soya"],
-        { vegan: "unknown", vegetarian: "unknown", glutenFree: "no" },
-        false,
-      ),
-    ],
-    [
-      "-hotpot-extras-ramyeon",
-      recipeFoodProfile(
-        ["wheat", "egg"],
-        { vegan: "no", vegetarian: "unknown", glutenFree: "no" },
-        false,
-      ),
-    ],
+    ["topping-egg", egg()],
+    ["hotpot-extras-cheese", cheese()],
+    ["seasoning-tare", recipeFoodProfile(["wheat", "soya"], seedDietary.plantGluten)],
+    ["seasoning-ponzu", recipeFoodProfile(["wheat", "soya"], seedDietary.plantGluten)],
+    ["hotpot-extras-ramyeon", recipeFoodProfile(["wheat", "egg"], seedDietary.eggMilkGluten)],
+    ["broth-bonito", recipeFoodProfile([], seedDietary.fish)],
+    ["broth-kombu", recipeFoodProfile([], plant)],
+    ["broth-chicken", recipeFoodProfile(["chicken"], seedDietary.meat)],
+    ["broth-miso", recipeFoodProfile(["soya"], plant)],
+    ["ssamjang-side", recipeFoodProfile(["wheat", "soya"], seedDietary.plantGluten)],
+    ["chicken-sauce-yangnyeom", recipeFoodProfile(["wheat", "soya"], seedDietary.plantGluten)],
+    ["chicken-sauce-soy-garlic", recipeFoodProfile(["wheat", "soya"], seedDietary.plantGluten)],
+    ["chicken-sauce-honey-mustard", recipeFoodProfile(["egg"], seedDietary.eggMilk)],
+    ["dip-soy-vinegar", recipeFoodProfile(["wheat", "soya"], seedDietary.plantGluten)],
+    ["dip-chilli", recipeFoodProfile(["wheat", "soya"], seedDietary.plantGluten)],
   ];
-  for (const option of product.modifiers.flatMap((group) => group.options)) {
-    const entry = additions.find(([suffix]) => option.id.endsWith(suffix));
-    if (!entry) continue;
-    const id = `tablecast-food-${entry[0].slice(1)}`;
-    product.foodInfo.components.push({
-      id,
-      name: { ja: option.text.ja.displayName, en: resolveText(option.text, "en").displayName },
-      profile: entry[1],
-    });
-    option.foodChanges = { add: [id], remove: [] };
+  const defaults = [
+    ["broth", "broth-bonito"],
+    ["ssamjang", "ssamjang-side"],
+    ["dip", "dip-soy-vinegar"],
+  ] as const;
+  for (const group of product.modifiers) {
+    const defaultEntry = defaults.find(([key]) => group.id.endsWith(`-${key}`));
+    const defaultId = defaultEntry ? `tablecast-food-${defaultEntry[1]}` : undefined;
+    if (defaultId) product.foodInfo.defaultComponentIds.push(defaultId);
+    for (const option of group.options) {
+      const entry = additions.find(([suffix]) => option.id.endsWith(`-${suffix}`));
+      const id = entry ? `tablecast-food-${entry[0]}` : undefined;
+      if (entry && id)
+        product.foodInfo.components.push({
+          id,
+          name: { ja: option.text.ja.displayName, en: resolveText(option.text, "en").displayName },
+          profile: entry[1],
+        });
+      if (id || defaultId)
+        option.foodChanges = {
+          add: id ? [id] : [],
+          remove: defaultId && id !== defaultId ? [defaultId] : [],
+        };
+    }
   }
-  if (product.id.endsWith("-edamame"))
-    product.foodInfo.base = recipeFoodProfile(["soya"], { ...plant, halal: "yes" });
-  if (product.tags.includes("alcohol"))
-    product.foodInfo.base.dietary.halal = {
-      status: "no",
-      reasons: ["alcohol"],
-    };
   return product;
 }
 
 export function koreanFoodInformation(product: Product): Product {
   if (!product.id.endsWith("-bibimbap")) return product;
-  const base = recipeFoodProfile(["sesame", "soya", "wheat"], {
-    vegan: "yes",
-    vegetarian: "yes",
-    glutenFree: "no",
-  });
+  const base = {
+    ...recipeFoodProfile(["sesame", "soya", "wheat"], seedDietary.plantGluten),
+    crossContact: product.foodInfo.base.crossContact,
+    crossContactSources: product.foodInfo.base.crossContactSources,
+  };
   const info: FoodInformation = {
     base,
     defaultComponentIds: ["beef", "egg"],
@@ -104,7 +147,7 @@ export function koreanFoodInformation(product: Product): Product {
       {
         id: "beef",
         name: { ja: "牛肉", en: "Beef" },
-        profile: recipeFoodProfile(["beef"], { vegan: "no", vegetarian: "no", glutenFree: "yes" }),
+        profile: recipeFoodProfile(["beef"], seedDietary.meat),
       },
       {
         id: "tofu",
@@ -132,32 +175,19 @@ export function koreanFoodInformation(product: Product): Product {
 export function westwardFoodInformation(product: Product): Product {
   const result = structuredClone(product);
   const definitions = {
-    brioche: recipeFoodProfile(["wheat", "egg", "milk"], {
-      vegan: "no",
-      vegetarian: "yes",
-      glutenFree: "no",
-    }),
+    brioche: recipeFoodProfile(["wheat", "egg", "milk"], seedDietary.eggMilkGluten),
     wholemeal: recipeFoodProfile(["wheat"], { ...plant, glutenFree: "no" }),
     lettuce: recipeFoodProfile([], plant),
-    beef: recipeFoodProfile(["beef"], { vegan: "no", vegetarian: "no", glutenFree: "yes" }),
-    chicken: recipeFoodProfile(["chicken"], { vegan: "no", vegetarian: "no", glutenFree: "yes" }),
+    beef: recipeFoodProfile(["beef"], seedDietary.meat),
+    chicken: recipeFoodProfile(["chicken"], seedDietary.meat),
     patties: recipeFoodProfile(["soya"], plant),
     cheddar: cheese(),
     pepperJack: cheese(),
-    house: recipeFoodProfile(["egg", "soya"], {
-      vegan: "no",
-      vegetarian: "yes",
-      glutenFree: "yes",
-    }),
+    house: recipeFoodProfile(["egg", "soya"], seedDietary.eggMilk),
     mustard: recipeFoodProfile([], plant),
     bbq: recipeFoodProfile(["wheat", "soya"], { ...plant, glutenFree: "no" }),
     avocado: recipeFoodProfile([], plant),
-    bacon: recipeFoodProfile(["pork"], {
-      vegan: "no",
-      vegetarian: "no",
-      halal: "no",
-      glutenFree: "yes",
-    }),
+    bacon: recipeFoodProfile(["pork"], seedDietary.meat),
     onion: recipeFoodProfile([], plant),
     tomato: recipeFoodProfile([], plant),
     pickle: recipeFoodProfile([], plant),
@@ -208,10 +238,13 @@ export function westwardFoodInformation(product: Product): Product {
   };
   const isBurger = product.categoryId === "burgers";
   result.foodInfo = {
-    base:
-      isBurger || product.id.endsWith("-fries")
-        ? recipeFoodProfile([], plant)
-        : product.foodInfo.base,
+    base: isBurger
+      ? {
+          ...recipeFoodProfile([], plant),
+          crossContact: product.foodInfo.base.crossContact,
+          crossContactSources: product.foodInfo.base.crossContactSources,
+        }
+      : product.foodInfo.base,
     components,
     defaultComponentIds: isBurger
       ? [
@@ -229,10 +262,6 @@ export function westwardFoodInformation(product: Product): Product {
         ]
       : [],
   };
-  if (product.id.endsWith("-fries")) {
-    result.foodInfo.base.crossContact = "possible";
-    result.foodInfo.base.crossContactSources = ["shared_frying_oil"];
-  }
   for (const option of result.modifiers.flatMap((group) => group.options)) {
     const entry = Object.entries(changes).find(([suffix]) => option.id.endsWith(`-${suffix}`));
     if (entry) option.foodChanges = entry[1];
@@ -248,15 +277,5 @@ export function westwardFoodInformation(product: Product): Product {
       ]),
   ]);
   result.foodInfo.components = components.filter((component) => used.has(component.id));
-  if (product.tags.includes("alcohol")) {
-    result.foodInfo.base.dietary.halal = {
-      status: "no",
-      reasons: ["alcohol"],
-    };
-    result.foodInfo.base.dietary.glutenFree = {
-      status: "no",
-      reasons: ["gluten_ingredients"],
-    };
-  }
   return result;
 }

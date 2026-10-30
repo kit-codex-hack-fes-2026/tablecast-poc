@@ -1,6 +1,6 @@
 import { createAuth } from "@tablecast/api/bootstrap";
 import { business, createDatabase, type Database, identity } from "@tablecast/api/db";
-import { configurationSchema } from "@tablecast/api/schema";
+import { configurationSchema, unknownFoodProfile } from "@tablecast/api/schema";
 import { eq, sql } from "drizzle-orm";
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -12,6 +12,7 @@ import { getPlatformProxy } from "wrangler";
 import type { DemoCredentials } from "./tablecast-seed.ts";
 import { type SeedEnv, seedPreviewDatabase } from "./tablecast-seed-data.ts";
 import { createSeedTemplate } from "./tablecast-seed-template.ts";
+import { refreshStagingSeed } from "./tablecast-staging-seed.ts";
 
 const execute = promisify(execFile);
 
@@ -99,8 +100,12 @@ async function stableSeed(db: Database, baseTime: number) {
   return {
     users: users.map((person) => ({
       ...person,
-      createdAt: person.createdAt.getTime() - baseTime,
-      updatedAt: person.updatedAt.getTime() - baseTime,
+      createdAt:
+        person.createdAt.getTime() -
+        (person.id.startsWith("tablecast-plugin-customer-") ? 0 : baseTime),
+      updatedAt:
+        person.updatedAt.getTime() -
+        (person.id.startsWith("tablecast-plugin-customer-") ? 0 : baseTime),
     })),
     organisations: organisations.map((organisation) => ({
       ...organisation,
@@ -149,18 +154,23 @@ async function currentTimes(db: Database, baseTime: number) {
   return {
     sessions: sessions.map((session) => ({
       ...session,
-      openedAt: session.openedAt - baseTime,
-      closedAt: session.closedAt === null ? null : session.closedAt - baseTime,
+      openedAt: session.openedAt - (session.id.includes("-plugin-history-") ? 0 : baseTime),
+      closedAt:
+        session.closedAt === null
+          ? null
+          : session.closedAt - (session.id.includes("-plugin-history-") ? 0 : baseTime),
     })),
     orders: orders.map((order) => ({
       ...order,
-      createdAt: order.createdAt - baseTime,
-      updatedAt: order.updatedAt - baseTime,
+      createdAt: order.createdAt - (order.id.includes("-plugin-history-") ? 0 : baseTime),
+      updatedAt: order.updatedAt - (order.id.includes("-plugin-history-") ? 0 : baseTime),
     })),
     confirmations: confirmations.map((confirmation) => ({
       ...confirmation,
-      createdAt: confirmation.createdAt - baseTime,
-      expiresAt: confirmation.expiresAt - baseTime,
+      createdAt:
+        confirmation.createdAt - (confirmation.id.includes("-plugin-history-") ? 0 : baseTime),
+      expiresAt:
+        confirmation.expiresAt - (confirmation.id.includes("-plugin-history-") ? 0 : baseTime),
     })),
   };
 }
@@ -211,7 +221,7 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
     expect(await seedPreviewDatabase(second.env, otherCredentials, template)).toBe(true);
     const firstBase = await stableSeed(first.db, credentials.baseTime);
     expect(await stableSeed(second.db, otherCredentials.baseTime)).toEqual(firstBase);
-    expect(firstBase.users).toHaveLength(8);
+    expect(firstBase.users).toHaveLength(44);
     expect(firstBase.organisations).toHaveLength(3);
     expect(firstBase.members).toHaveLength(9);
     expect(firstBase.stores).toHaveLength(3);
@@ -220,8 +230,8 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
 
     const firstTimes = await currentTimes(first.db, credentials.baseTime);
     expect(await currentTimes(second.db, otherCredentials.baseTime)).toEqual(firstTimes);
-    expect(firstTimes.sessions).toHaveLength(33);
-    expect(firstTimes.orders).toHaveLength(15);
+    expect(firstTimes.sessions).toHaveLength(333);
+    expect(firstTimes.orders).toHaveLength(1215);
     expect(
       firstTimes.sessions.find((session) => session.id === "tablecast-komorebi-table-01-session"),
     ).toMatchObject({ openedAt: -180_000 });
@@ -379,6 +389,87 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
         first.db.select().from(business.deploymentOwner),
       ]),
     ).toEqual(stagingBefore);
+    // 明示更新だけが食事情報を置き換え、ログイン・端末・営業履歴・手動商品を保つ。
+    const beforeRefresh = configurationSchema.parse(JSON.parse(published.config_json));
+    const tuna = beforeRefresh.products.find((product) => product.id.endsWith("-tuna-sashimi"));
+    if (!tuna) throw new Error("まぐろの商品がありません。");
+    tuna.foodInfo.base = unknownFoodProfile();
+    tuna.price = 1234;
+    tuna.available = false;
+    beforeRefresh.products.push({ ...structuredClone(tuna), id: "tablecast-manual-product" });
+    await first.db
+      .update(business.stores)
+      .set({ config_json: JSON.stringify(beforeRefresh) })
+      .where(eq(business.stores.id, published.id));
+    const retained = await first.db.batch([
+      first.db.select().from(identity.account),
+      first.db.select().from(identity.session),
+      first.db.select().from(business.devices),
+      first.db.select().from(business.orders),
+      first.db.select().from(business.payments),
+    ]);
+    const stagingEnv = {
+      ...first.env,
+      TABLECAST_ENV: "staging",
+      TABLECAST_PUBLIC_ORIGIN: "https://tablecast-staging.kit-codex.workers.dev",
+    };
+    await expect(
+      refreshStagingSeed({ ...stagingEnv, TABLECAST_ENV: "production" }),
+    ).rejects.toThrow("staging以外");
+    const refreshed = await refreshStagingSeed(stagingEnv);
+    expect(refreshed).toHaveLength(3);
+    expect(
+      refreshed.every(
+        (store) =>
+          store.historicalSessions === 100 &&
+          store.members === 12 &&
+          store.couponRules === 4 &&
+          store.coupons === 2,
+      ),
+    ).toBe(true);
+    const saved = await first.db
+      .select()
+      .from(business.stores)
+      .where(eq(business.stores.id, published.id))
+      .get();
+    const savedConfiguration = configurationSchema.parse(JSON.parse(saved?.config_json ?? "{}"));
+    expect(savedConfiguration.products.find((product) => product.id === tuna.id)).toMatchObject({
+      price: 1234,
+      available: false,
+      foodInfo: {
+        base: { allergens: { wheat: "not_used" }, dietary: { vegan: { status: "no" } } },
+      },
+    });
+    expect(
+      savedConfiguration.products.find((product) => product.id === "tablecast-manual-product"),
+    ).toEqual(beforeRefresh.products.at(-1));
+    expect(savedConfiguration.cast).toEqual(beforeRefresh.cast);
+    expect(
+      await first.db.batch([
+        first.db.select().from(identity.account),
+        first.db.select().from(identity.session),
+        first.db.select().from(business.devices),
+        first.db.select().from(business.orders),
+        first.db.select().from(business.payments),
+      ]),
+    ).toEqual(retained);
+    const records = await first.db.batch([
+      first.db.select().from(business.stores),
+      first.db.select().from(business.configReleases),
+      first.db.select().from(business.customerPointEntries),
+      first.db.select().from(business.customerCouponRules),
+      first.db.select().from(business.customerCoupons),
+    ]);
+    expect(await refreshStagingSeed(stagingEnv)).toEqual(refreshed);
+    expect(
+      await first.db.batch([
+        first.db.select().from(business.stores),
+        first.db.select().from(business.configReleases),
+        first.db.select().from(business.customerPointEntries),
+        first.db.select().from(business.customerCouponRules),
+        first.db.select().from(business.customerCoupons),
+      ]),
+    ).toEqual(records);
     expect(await first.db.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
   } finally {
     try {
@@ -387,4 +478,4 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
       await rm(directory, { recursive: true, force: true });
     }
   }
-}, 60_000);
+}, 120_000);

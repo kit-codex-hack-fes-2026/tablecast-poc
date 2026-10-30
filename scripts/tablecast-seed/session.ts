@@ -30,7 +30,7 @@ function syntheticSpeaker(sessionId: string, index: null | number) {
   return { id: index === null ? null : `${streamId}:${index}`, streamId, words: [] };
 }
 
-function event(
+export function event(
   storeId: string,
   sessionId: string,
   kind: string,
@@ -47,13 +47,14 @@ function event(
   };
 }
 
-function sessionQueries(db: Database, statements: (BatchItem<"sqlite"> | SeedEvent)[]) {
+export function sessionQueries(db: Database, statements: (BatchItem<"sqlite"> | SeedEvent)[]) {
   const queries: BatchItem<"sqlite">[] = [];
   const events: SeedEvent[] = [];
   for (const statement of statements) {
     if ("kind" in statement) events.push(statement);
     else queries.push(statement);
   }
+  events.sort((left, right) => left.at - right.at);
   // 全列数を含めてもD1の100 bind制限に収まる行数に区切る。
   for (let offset = 0; offset < events.length; offset += 16) {
     queries.push(
@@ -76,7 +77,7 @@ async function insertSession(db: Database, statements: (BatchItem<"sqlite"> | Se
   if (first) await db.batch([first, ...rest]);
 }
 
-function snapshotFor(
+export function snapshotFor(
   store: Store,
   sessionId: string,
   lines: CartLine[],
@@ -113,7 +114,7 @@ function snapshotFor(
   };
 }
 
-function confirmation(db: Database, storeId: string, snapshot: Snapshot, at: number) {
+export function confirmation(db: Database, storeId: string, snapshot: Snapshot, at: number) {
   return db.insert(business.confirmations).values({
     id: snapshot.id,
     store_id: storeId,
@@ -128,11 +129,11 @@ function confirmation(db: Database, storeId: string, snapshot: Snapshot, at: num
   });
 }
 
-function order(
+export function order(
   db: Database,
   storeId: string,
   snapshot: Snapshot,
-  status: "accepted" | "served" | "submitted",
+  status: "accepted" | "cancelled" | "served" | "submitted",
   at: number,
 ) {
   return db.insert(business.orders).values({
@@ -149,7 +150,7 @@ function order(
   });
 }
 
-function payment(
+export function payment(
   db: Database,
   storeId: string,
   sessionId: string,
