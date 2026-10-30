@@ -1,4 +1,4 @@
-import { drizzle } from "drizzle-orm/sqlite-proxy";
+import { drizzle, type SqliteProxyBatchItem } from "drizzle-orm/sqlite-proxy";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { z } from "zod";
@@ -9,15 +9,27 @@ import {
 } from "./tablecast-deploy-config.ts";
 const execFileAsync = promisify(execFile);
 const responseSchema = z.object({ success: z.boolean(), result: z.unknown() });
-const databaseResponseSchema = z.tuple([
+const databaseResponseSchema = z.array(
   z.object({
     success: z.literal(true),
+    meta: z.unknown(),
     results: z.object({
       columns: z.array(z.string()),
       rows: z.array(z.array(z.union([z.string(), z.number(), z.null()]))),
     }),
   }),
-]);
+);
+const databaseMetaSchema = z
+  .object({
+    duration: z.number(),
+    size_after: z.number(),
+    rows_read: z.number(),
+    rows_written: z.number(),
+    last_row_id: z.number(),
+    changed_db: z.boolean(),
+    changes: z.number(),
+  })
+  .passthrough();
 
 async function cloudflareResponse(path: string, method = "GET", body?: unknown) {
   const token = process.env.CLOUDFLARE_API_TOKEN;
@@ -47,13 +59,33 @@ export async function cloudflare(
 }
 
 export function deploymentDatabase(databaseId: string, request = cloudflare) {
-  async function raw(query: string, params: unknown[]) {
-    const [{ results }] = databaseResponseSchema.parse(
-      await request(`d1/database/${databaseId}/raw`, "POST", { sql: query, params }),
+  async function execute(body: unknown, expected: number) {
+    const results = databaseResponseSchema.parse(
+      await request(`d1/database/${databaseId}/raw`, "POST", body),
     );
-    if (results.rows.some((row) => row.length !== results.columns.length))
-      throw new Error("D1の列と行の数が一致しません。");
+    if (results.length !== expected) throw new Error("D1の結果件数が一致しません。");
+    for (const { results: result } of results)
+      if (result.rows.some((row) => row.length !== result.columns.length))
+        throw new Error("D1の列と行の数が一致しません。");
     return results;
+  }
+  type Result = z.infer<typeof databaseResponseSchema>[number];
+  function readRows({ results: { columns, rows } }: Result, rowMode?: "array" | "object") {
+    return rowMode === "object"
+      ? rows.map((row) => Object.fromEntries(columns.map((column, index) => [column, row[index]])))
+      : rows;
+  }
+  function runResult(result: Result): D1Result {
+    return {
+      success: true,
+      meta: databaseMetaSchema.parse(result.meta),
+      results: readRows(result, "object"),
+    };
+  }
+  async function single(query: string, params: unknown[]) {
+    const [result] = await execute({ sql: query, params }, 1);
+    if (!result) throw new Error("D1の結果がありません。");
+    return result;
   }
   function all(query: string, params: unknown[], rowMode?: "array"): Promise<unknown[][]>;
   function all(
@@ -71,10 +103,7 @@ export function deploymentDatabase(databaseId: string, request = cloudflare) {
     params: unknown[],
     rowMode?: "array" | "object",
   ): Promise<(Record<string, unknown> | unknown[])[]> {
-    const { columns, rows } = await raw(query, params);
-    return rowMode === "object"
-      ? rows.map((row) => Object.fromEntries(columns.map((column, index) => [column, row[index]])))
-      : rows;
+    return readRows(await single(query, params), rowMode);
   }
   function get(query: string, params: unknown[], rowMode?: "array"): Promise<undefined | unknown[]>;
   function get(
@@ -90,7 +119,24 @@ export function deploymentDatabase(databaseId: string, request = cloudflare) {
   async function get(query: string, params: unknown[], rowMode?: "array" | "object") {
     return (await all(query, params, rowMode))[0];
   }
-  return drizzle({ all, get, run: raw }, { paramsInErrors: false });
+  async function run(query: string, params: unknown[]) {
+    return runResult(await single(query, params));
+  }
+  async function batch(queries: SqliteProxyBatchItem[]) {
+    // D1 RESTの一括実行で、CASとchanges()の連鎖・ロールバックを保つ。
+    const results = await execute(
+      { batch: queries.map(({ sql, params }) => ({ sql, params })) },
+      queries.length,
+    );
+    return results.map((result, index) => {
+      const query = queries[index];
+      if (!query) throw new Error("D1のbatch入力がありません。");
+      if (query.method === "run") return runResult(result);
+      const values = readRows(result, query.rowMode);
+      return query.method === "get" ? values[0] : values;
+    });
+  }
+  return drizzle({ all, get, run, batch }, { paramsInErrors: false });
 }
 
 export async function readBucketOwner(bucket: string) {

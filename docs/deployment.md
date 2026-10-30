@@ -245,6 +245,8 @@ gh workflow run tablecast-staging-seed.yml --ref staging -f confirm=tablecast-st
 
 `scripts/tablecast-staging-seed.ts`は通常配備と同じAPIの`cloudflare.config.ts`と採用済みD1 IDから接続先を解決し、固定origin・DB所有情報・初期投入完了・店舗ownerを検証する。通常配備と同じ`tablecast-deploy-staging`で排他し、実行元が最新staging SHAと一致することを確認する。Dashboardのvars変更やWorker再配備、R2消去は行わない。
 
+DB接続は配備用のDrizzle SQLite ProxyとD1 REST APIを共用する。複数SQLはD1の`batch`へ一括送信し、原子性とCASの`changes`を保持する。遠隔binding tunnelやローカルWorkerの起動は不要。Actionsの既存`CLOUDFLARE_API_TOKEN`には対象D1の書き込み権限が必要で、接続障害時に同じ処理を再実行しても既存の営業履歴や発券状態を巻き戻さない。
+
 seed既存商品の説明・食事情報を版付きで更新し、未送信の注文確認を失効する。認証・端末・声・価格・売切設定・独自追加商品・下書き・過去注文は保持する。固定IDの月次履歴・会員・ポイント・特典は追加だけ行い、既存行を巻き戻さない。客画面は再読込みし、店側デモは設定元の新しい版を取り込む。対象SHA・結果の各店版と件数・MCPの取得結果を記録する。[対象データと制約](demo/agent-plugin.md)を参照する。
 
 ### staging全体のリセット

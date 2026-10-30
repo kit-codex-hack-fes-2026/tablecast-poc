@@ -414,9 +414,9 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
       TABLECAST_PUBLIC_ORIGIN: "https://tablecast-staging.kit-codex.workers.dev",
     };
     await expect(
-      refreshStagingSeed({ ...stagingEnv, TABLECAST_ENV: "production" }),
+      refreshStagingSeed({ ...stagingEnv, TABLECAST_ENV: "production" }, first.db),
     ).rejects.toThrow("staging以外");
-    const refreshed = await refreshStagingSeed(stagingEnv);
+    const refreshed = await refreshStagingSeed(stagingEnv, first.db);
     expect(refreshed).toHaveLength(3);
     expect(
       refreshed.every(
@@ -460,7 +460,7 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
       first.db.select().from(business.customerCouponRules),
       first.db.select().from(business.customerCoupons),
     ]);
-    expect(await refreshStagingSeed(stagingEnv)).toEqual(refreshed);
+    expect(await refreshStagingSeed(stagingEnv, first.db)).toEqual(refreshed);
     expect(
       await first.db.batch([
         first.db.select().from(business.stores),

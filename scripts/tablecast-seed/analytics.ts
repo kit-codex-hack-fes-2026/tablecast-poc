@@ -1,9 +1,14 @@
 import { type PlanContext } from "@tablecast/api/bootstrap";
-import { business, type Database } from "@tablecast/api/db";
+import { business } from "@tablecast/api/db";
 import { type CartLine, type Product } from "@tablecast/api/schema";
 import { and, eq, like } from "drizzle-orm";
 import { type BatchItem } from "drizzle-orm/batch";
-import { type Owner, type SeedEvent, type Store } from "../tablecast-seed-data.ts";
+import {
+  type Owner,
+  type SeedDatabase,
+  type SeedEvent,
+  type Store,
+} from "../tablecast-seed-data.ts";
 import { confirmation, event, order, payment, sessionQueries, snapshotFor } from "./session.ts";
 
 const tablecastAnalyticsPeriods = [
@@ -66,7 +71,7 @@ function lineFor(product: Product, index: number, excluded: string[] = []): Cart
 }
 
 /** 9月と10月を比較できる通常来店の合成履歴。既存の履歴は変更しない。 */
-export async function seedPluginAnalytics(db: Database, store: Store, owner: Owner) {
+export async function seedPluginAnalytics(db: SeedDatabase, store: Store, owner: Owner) {
   const previous = await db
     .select({ id: business.tableSessions.id })
     .from(business.tableSessions)

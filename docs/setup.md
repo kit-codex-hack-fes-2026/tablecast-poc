@@ -328,6 +328,8 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 
 開発の標準branchはstaging。stagingのWeb・模擬ログイン・MCPはCloudflare Access資格なしで公開し、PR previewはAccess保護を維持する。本番はmainへのrelease PRで更新する。常設環境・ActionsのPR作成許可・手動リセットは[配備手順](deployment.md#stagingとreleaseの運用)を参照する。ローカル終了処理で常設stagingを停止しない。
 
+既存stagingのseed更新は[明示workflow](deployment.md#staging-seedの商品情報と営業データを更新する)を使う。接続先は`cloudflare.config.ts`から取得し、既存Actions secretでD1 RESTへ接続する。遠隔binding tunnelや手動のDashboard vars設定は不要。
+
 ### 接客エディターの依存
 
 Webの接客方針はMarkdownソースと既存Streamdownのプレビューを使う。Tiptap依存は不要。既存の構造化本文は読取互換を保ち、編集した言語だけをMarkdownに変換する。rootの `bun.lock` と `bun install --frozen-lockfile` で導入する。追加の環境変数・外部サービス・ライセンスキーは不要。[接客エディター設計](prompt-editor-design.md)を参照する。
