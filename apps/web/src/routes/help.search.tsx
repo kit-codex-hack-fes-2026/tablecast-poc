@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { helpSearch } from "../lib/help-search";
+import { searchHelp } from "../lib/help-search";
 
 export const Route = createFileRoute("/help/search")({
   server: {
@@ -10,7 +10,7 @@ export const Route = createFileRoute("/help/search")({
         const locale = params.get("locale") ?? "ja";
         if (query.length > 200 || (locale !== "ja" && locale !== "en"))
           return Response.json({ error: "Invalid search query" }, { status: 400 });
-        return Response.json(query ? await helpSearch[locale].search(query, { limit: 16 }) : []);
+        return Response.json(query ? await searchHelp(query, locale) : []);
       },
     },
   },

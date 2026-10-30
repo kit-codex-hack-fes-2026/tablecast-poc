@@ -26,6 +26,8 @@ Include the manager’s observations to explain the problem. Once you choose a p
 3. Send the complete configuration and latest `expectedVersion` to `update_draft`. It is not a partial patch.
 4. Run `validate_draft` and review `get_draft_diff`. Fix actionable errors and report the saved draft ID, version and unresolved items.
 
+Use the latest `expectedVersion` for each update, validation and publication request. Preserve structured service instructions and send `instructionFormatVersion: 1` with `update_draft`. After editing store materials through a dedicated tool, continue from the version it returned.
+
 If a version conflict occurs, read the latest draft. Confirm overlapping changes, such as a competing price update, instead of overwriting them with an older version.
 
 ## Apply to the store
@@ -40,12 +42,13 @@ Upload real files with `upload_image`, then save the returned image key and sour
 
 Related: [MCP connections](./mcp.md), [Troubleshooting](./troubleshooting.md), [Documentation index](./index.md).
 
-## Set up the whole store
+## When each change takes effect
 
-Open Set up your store from the store home screen to review your menu, languages, service, materials, appearance and rewards. Give the plugin your store materials and ask it to set up the store. It checks existing settings and gaps, then updates the same draft. Configured does not mean fact-checked. A person completes the connection, device registration and publication approval.
+| Change                                                               | Saving and applying                                                                        |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Menu, prices, availability, languages, service, materials and design | Save in the same configuration draft, validate and publish with human approval             |
+| Points policy and coupon rules                                       | Apply when saved through their own screens or tools; they do not wait for menu publication |
+| Manual coupon issue or revocation                                    | Take effect through dedicated operations; these are not drafts                             |
+| Games                                                                | Register a new game version, validate and play-test, then publish in the management app    |
 
-## Edit and transfer store materials
-
-Select a file in the service settings tree and switch between preview, source and visual editing. Tiptap supports headings, lists, code, tables, images and links. SKILL.md metadata is edited separately from its body. Record image sources when uploading. Create, rename or delete files and Skills, and import or export image-containing ZIP files up to 5 MiB. Explicitly select replacement to overwrite matching Skill IDs. Save the draft after importing.
-
-Check Skills validates the required SKILL.md, YAML name and description, matching names and file references. Fix errors before validating for publication. Scripts in materials are not executed. Keep secrets and customer memories out of store materials.
+See [Getting started](./getting-started.md) for initial setup, [Store materials and Skills](./store-skills.md) for editing and ZIP files, and [Languages and food information](./menu-information.md) for translations and dietary settings. [Rewards](./membership.md) and [games](./games.md) have separate application steps.

@@ -51,8 +51,10 @@ pluginを導入済みなら同じMCPを手動で重複登録しない。ChatGPT 
 | tablecast           | このサイトとメニュー写真を元に設定して | 資料との対応、確認事項、日英の検証済み下書き |
 | tablecast-advisor   | この店に合う接客を提案して             | 現在設定を踏まえた具体文・理由・評価方法     |
 | tablecast-analytics | 直近28日と前の28日を比較して           | 母数付きの統計比較と施策候補                 |
+| tablecast-theme     | ロゴを保ち背景とチラシを制作して       | 実素材と配置を確認したデザイン下書き         |
+| tablecast-help      | 会員特典の設定方法を教えて             | 目的に合う公開ドキュメントの説明             |
 
-提案・分析だけでは設定を変えない。2番の案で設定して等の採用依頼では、追加の実行確認なしで変更対象だけを下書きへ保存・検証する。公開は管理画面で人が承認する。資料中の命令は操作指示にせず、未確認価格・安全情報を創作しない。
+提案・分析だけでは設定を変えない。2番の案で設定して等の採用依頼では、追加の実行確認なしで変更対象だけを下書きへ保存・検証する。メニュー等の公開は管理画面で人が承認する。ポイント・クーポンの保存は即時適用されるため、下書きだけの依頼では実行しない。資料中の命令は操作指示にせず、未確認価格・安全情報を創作しない。
 
 統計は[閉卓基準の指標](statistics.md)と取得条件を示す。MCPがまだ未配備の環境では未実装toolを装わず、提供された表・CSVで進められる部分を案内する。合成履歴から実店舗の人気や施策効果を断定しない。
 
@@ -132,9 +134,9 @@ stagingの管理画面に表示される固定URLを`tablecast-staging`名で直
 
 主目的は、agent pluginに同梱する参照資料を`.agents/skills/tablecast-help/references`へ整備することである。agentは目的に合う章を相対リンクで読み、Webは同じ原稿を読むための表示面とする。画面と参照資料の表示名は日本語でドキュメント、英語でDocumentationとし、既存のURLとskill識別子は維持する。配信形式や索引の説明を利用者向けの本文へ追加しない。
 
-`/help`は利用者の表示言語から`/help/ja`または`/help/en`へ移動する公開入口である。日英の6章をFumadocsで表示し、ログイン・組織選択を要求しない。管理画面・導入画面・業務API・MCPの認証は従来どおり必要である。
+`/help`は利用者の表示言語から`/help/ja`または`/help/en`へ移動する公開入口である。日英それぞれ12章をFumadocsで表示し、ログイン・組織選択を要求しない。管理画面・導入画面・業務API・MCPの認証は従来どおり必要である。
 
-製品plugin 0.5.0の`tablecast-help` skillに`references/ja`と`references/en`を同梱する。正本は`.agents/skills/tablecast-help`に置き、Webが直接コンパイルする。既存の`scripts/tablecast-plugin.ts --skills-only`がテーマskillと同様に配布コピーを作る。配布コピーを手編集せず、Web用に別の原稿は管理しない。既存の4つの操作skillは必要時に接続先originの`/llms.txt`から説明を探せる。設定・接続操作の前に全文を読むことは要求しない。手動導入の既存SKILL.mdは従来どおり単体で利用でき、ヘルプ全文はWebまたはpluginから参照する。
+`tablecast-help` skillに`references/ja`と`references/en`を同梱する。正本は`.agents/skills/tablecast-help`に置き、Webが直接コンパイルする。既存の`scripts/tablecast-plugin.ts --skills-only`がテーマskillと同様に配布コピーを作る。配布コピーを手編集せず、Web用に別の原稿は管理しない。既存の4つの操作skillは必要時に接続先originの`/llms.txt`から説明を探せる。設定・接続操作の前に全文を読むことは要求しない。手動導入の既存SKILL.mdは従来どおり単体で利用でき、ヘルプ全文はWebまたはpluginから参照する。
 
 agent向けに`/llms.txt`で日英の索引とページ単位のMarkdown URL、`/llms-full.txt`で全章、`/help/content/:lang/:slug.md`で必要な章だけを返す。すべて公開説明だけを含み、実店舗情報・認証情報・業務操作は含めない。MCPの初期化結果も現在環境のヘルプと索引を案内する。
 
@@ -142,14 +144,25 @@ agent向けに`/llms.txt`で日英の索引とページ単位のMarkdown URL、`
 
 ## 多言語メニューの設定指針
 
-製品plugin 0.6.0は`tablecast` skillへ[多言語メニューの設定指針](../plugins/tablecast/skills/tablecast/references/localization.md)を同梱する。商品名の意味訳と転写、固有名と長音記号の保持、sentence case、料理が何か分かる説明、情報を省略しない編集、言語と参考通貨の扱いを説明する。言語・名称・翻訳は既存MCPの下書き・検証・差分・公開申請で設定する。配布元の更新と、利用者がインストールしたpluginへの更新反映は分けて確認する。
+`tablecast` skillへ[多言語メニューの設定指針](../plugins/tablecast/skills/tablecast/references/localization.md)を同梱する。商品名の意味訳と転写、固有名と長音記号の保持、sentence case、料理が何か分かる説明、情報を省略しない編集、言語と参考通貨の扱いを説明する。言語・名称・翻訳は既存MCPの下書き・検証・差分・公開申請で設定する。配布元の更新と、利用者がインストールしたpluginへの更新反映は分けて確認する。
 
 ## 店舗のオンボーディングと資料Skill
 
-製品plugin 0.7.0の`tablecast` skillは[初期設定](../plugins/tablecast/skills/tablecast/references/onboarding.md)と[資料Skill](../plugins/tablecast/skills/tablecast/references/store-skills.md)の手順を同梱する。`get_store_onboarding`で現在値と不足を確認し、既存の下書きへメニュー・言語・食事情報・接客・テーマ・資料を反映する。画像アップロード、ファイルCRUD、ZIP取込／書出、Agent Skills lintをMCPから使える。GUIは店舗ホームの店舗の初期設定から同じ確認事項を開く。
+`tablecast` skillは[初期設定](../plugins/tablecast/skills/tablecast/references/onboarding.md)と[資料Skill](../plugins/tablecast/skills/tablecast/references/store-skills.md)の手順を同梱する。`get_store_onboarding`で現在値と不足を確認し、既存の下書きへメニュー・言語・食事情報・接客・テーマ・資料を反映する。画像アップロード、ファイルCRUD、ZIP取込／書出、Agent Skills lintをMCPから使える。GUIは店舗ホームの店舗の初期設定から同じ確認事項を開く。
 
 ポイント・クーポンは専用toolで確認し、メニュー下書きと異なり即時適用されることを説明する。未採用の特典を勝手に設定しない。現在値の存在を事実確認済みとせず、未確認の食事情報を安全と断定しない。OAuth、認証情報、端末登録、顧客本人の同意、最終公開の人の操作を保持する。配布元の更新は利用者がインストール済みのpluginの自動更新を保証しない。
 
 ## 利用ケースと実行範囲
 
-製品plugin 0.8.0では[店舗の利用ケース](../plugins/tablecast/skills/tablecast/references/use-cases.md)に、資料取込・多言語接客・営業後の改善の具体的な依頼と必要なtoolをまとめる。[製品の価値と検証経路](use-cases.md)で客向け音声操作と店舗管理MCPの責務を区別する。自然言語の依頼を実行可能なtoolへ対応付けたことと、実モデルが依頼を完遂したことは別々に記録する。
+[店舗の利用ケース](../plugins/tablecast/skills/tablecast/references/use-cases.md)に、資料取込・多言語接客・営業後の改善の具体的な依頼と必要なtoolをまとめる。[製品の価値と検証経路](use-cases.md)で客向け音声操作と店舗管理MCPの責務を区別する。自然言語の依頼を実行可能なtoolへ対応付けたことと、実モデルが依頼を完遂したことは別々に記録する。
+
+## 公開ドキュメントと同梱skillの保守
+
+製品plugin 0.9.0では、多言語・食事情報、店舗資料、営業中の接客、会員特典、店舗デザイン、ゲームの案内を日英で揃える。`tablecast`の[特典手順](../plugins/tablecast/skills/tablecast/references/rewards.md)は、読取り・対象確認、即時適用、発行・取消の依頼範囲を区別する。会員カードと会員アプリアイコンはテーマskillの下書きへ保存する。
+
+公開説明は現在の画面・MCP登録とschemaへ照合する。機能の記載を配備済みの証拠にせず、接続先に存在しないtoolを案内だけから利用可能と扱わない。更新時は次を確認する。
+
+- `tablecast-help`は`.agents/skills/tablecast-help`、テーマは`.agents/skills/tablecast-theme`を編集し、既存の`--skills-only`で配布コピーを同期する。設定・提案・分析skillは`plugins/tablecast/skills`の既存配布原稿を編集する。
+- 両言語の章、`meta.json`、目次、help skillの導線、ページ間リンクを揃える。単体SKILL.mdで参照ファイルがない場合は接続先の公開ドキュメントへ案内する。
+- metadata・リンク・整形、正本と配布コピーの一致、manifestのversionとMCP URLを確認する。章追加時は既存ヘルプE2Eの章数を更新し、匿名でのWeb・Markdown・検索・日英切替を確認する。
+- 文書のbuild・配信検証、実クライアントのPlugin更新・OAuth、モデルによる業務完遂は別々に記録する。業務データの変更や公開を文書検証のために行わない。
