@@ -67,9 +67,7 @@ export async function setUiSection(
   const search = parsed.data.search;
   ensure(search == null || parsed.data.section === "menu", "INVALID_INPUT", 422);
   const catalog =
-    productId || search
-      ? (known?.catalog ?? (await getCatalog(services, actor.storeId, actor.demoId)))
-      : null;
+    known?.catalog ?? (productId ? await getCatalog(services, actor.storeId, actor.demoId) : null);
   ensure(
     !productId || catalog?.configuration.products.some((product) => product.id === productId),
     "PRODUCT_NOT_FOUND",
@@ -89,11 +87,8 @@ export async function setUiSection(
                 menu_search_json:
                   search === null
                     ? null
-                    : JSON.stringify({
-                        ...search,
-                        offset: search.offset ?? 0,
-                        configVersion: catalog?.version,
-                      }),
+                    : // 検索は更新batch内の公開版へ結び付け、版の取得だけで全設定を再検証しない。
+                      sql`json_set(${JSON.stringify({ ...search, offset: search.offset ?? 0 })}, '$.configVersion', ${sessionConfigVersion(actor.storeId, session.id)})`,
               }
             : {}),
           mutation_id: mutation,

@@ -281,6 +281,8 @@ DBはケース開始時のtemplate差し替えで初期化するため、後処�
 
 会員E2Eの追加BrowserContextはspec専用の `tablecast-customer.fixture.ts` が生成直後から所有し、操作本体の終了後に逆順で一つずつ閉じる。操作の固定phaseと本体終了、各closeの開始・完了・失敗、経過時間と結果状態だけを最大64行へ記録し、入力値・URL・Cookie・会員情報を出さない。closeの例外は集約して再送出し、Playwrightの標準reporterが保持する本体の失敗と区別する。
 
+会員の代表経路はQRから実ログイン・同意・別Cookieの二人参加・閉卓・再来店の自動参加・退出・PWAのログイン復帰を接続する。記憶の編集は`customer-features.browser.test.tsx`とAPIの`customer-memory`、ポイント・券の発行/申請/適用/取消は既存のCustomer/Rewards Browserと実HTTP・D1の`customer-rewards-http.test.ts`で検証する。これらの独立した操作と端末寸法の全組合せを同じE2Eへ重ねず、90秒内で最後の再来店と退出まで確認する。
+
 操作本体・追加context用fixture setup・beforeEachは既存の90秒、個別assertionは15秒、retryは0を維持する。[Playwright標準の時間管理](https://playwright.dev/docs/test-timeouts#test-timeout)により、本体終了後のfixture teardownとafterEachには別枠の90秒が共有される。各contextへ90秒を追加したり、本体の期限を延長したりしない。既存runtime fixtureの個別期限は変更しない。
 
 ケース間では配信clientディレクトリもビルド成果物から復元し、PWA試験が変更したService Workerや追加ファイルを持ち越さない。ケース内の`restartWeb()`は変更を維持する。

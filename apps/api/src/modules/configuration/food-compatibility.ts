@@ -54,6 +54,8 @@ export function legacyFoodInformation(
 }
 
 export function readConfiguration(value: unknown) {
+  const current = configurationSchema.safeParse(value);
+  if (current.success) return current.data;
   const record = storedConfigurationSchema.parse(value);
   return configurationSchema.parse({
     ...record,
