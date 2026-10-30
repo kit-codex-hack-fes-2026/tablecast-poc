@@ -219,7 +219,7 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-  components-tests:
+  components:
     name: "Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook, shard ${{ matrix.shard }}/4)"
     if: ${{ !inputs.catalog_pr }}
     runs-on: ubuntu-latest
@@ -268,18 +268,6 @@ jobs:
             apps/web/test-results/browser/**/*.png
             apps/web/test-results/attachments/failure-screenshots/**/*.png
           retention-days: 1
-
-  components:
-    name: "Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)"
-    needs: [components-tests]
-    if: ${{ always() && !inputs.catalog_pr }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 1
-    steps:
-      - name: 全shardの成功を確認
-        env:
-          TABLECAST_COMPONENT_RESULT: ${{ needs.components-tests.result }}
-        run: test "$TABLECAST_COMPONENT_RESULT" = success
 
   e2e:
     name: "E2E Test: 注文・ログイン・会計 (Playwright, ${{ matrix.browser }}, shard ${{ matrix.shard }}/2)"
