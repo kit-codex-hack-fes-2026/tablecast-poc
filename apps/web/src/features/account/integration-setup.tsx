@@ -67,10 +67,9 @@ export function IntegrationSetup({
   mode: "manual" | "plugins";
 }) {
   const { t, locale } = useI18n();
-  const { endpoint, name, staging } = connection;
+  const { endpoint, name } = connection;
   return (
     <IntegrationsShell publicGuide>
-      {staging && <p>{t("mcp_staging_connection")}</p>}
       <Link
         to="/help/$lang/$"
         params={{ lang: locale, _splat: "mcp" }}
@@ -189,9 +188,9 @@ export function IntegrationSetup({
       <Guide title={t("mcp_scenarios_title")} icon={<MessagesSquare className="size-5" />}>
         <p className="text-sm text-muted-foreground">{t("mcp_scenarios_hint")}</p>
         <div className="space-y-5">
-          <CopyValue label={t("mcp_scenario_setup")} value={t("mcp_prompt_setup")} />
-          <CopyValue label={t("mcp_scenario_advisor")} value={t("mcp_prompt_advisor")} />
-          <CopyValue label={t("mcp_scenario_analytics")} value={t("mcp_prompt_analytics")} />
+          <CopyValue wrap label={t("mcp_scenario_setup")} value={t("mcp_prompt_setup")} />
+          <CopyValue wrap label={t("mcp_scenario_advisor")} value={t("mcp_prompt_advisor")} />
+          <CopyValue wrap label={t("mcp_scenario_analytics")} value={t("mcp_prompt_analytics")} />
         </div>
       </Guide>
       <Guide title={t("mcp_scopes")} icon={<ShieldCheck className="size-5" />}>

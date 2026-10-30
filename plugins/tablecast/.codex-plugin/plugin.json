@@ -1,6 +1,6 @@
 {
   "name": "tablecast",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "店舗の初期設定、資料Skill・画像・ZIP、メニュー・接客・テーマの設定、営業分析と卓上ゲーム制作を支援します。",
   "author": {
     "name": "TableCast"
@@ -13,7 +13,7 @@
     "developerName": "TableCast",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
-    "defaultPrompt": "TableCastの現在のメニューと接客を確認して、改善できる点を具体的に提案して。設定はまだ変更しないで。",
+    "defaultPrompt": "現在の店舗と公開メニューを確認して。地酒の選び方、料理の食べ方、多言語での案内について、登録情報を根拠に改善案を3つ提案して。各案に対象商品、具体的な接客文、未確認事項、効果を確かめる方法を添えて。価格や食材を推測せず、設定はまだ変更しないで。",
     "composerIcon": "./assets/tablecast-composer.png",
     "logo": "./assets/tablecast-icon.png",
     "logoDark": "./assets/tablecast-symbol-white.png"

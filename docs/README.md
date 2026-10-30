@@ -16,6 +16,10 @@ Web/APIを2 Workersに保ち、音声はブラウザーからGPT-Liveへ直接�
 
 組織のキー発行・サブスク・利用料金・運営収支は [課金・請求](billing.md) を参照する。
 
+[製品の価値と検証経路](use-cases.md)から、利用場面・Agent Pluginの依頼例・技術上の裏付けを確認できる。
+
+発表用の完成原稿は[スライド](presentation/pitch.md)、競合作品とMobbinからの構成判断は[発表方針](presentation/strategy.md)へまとめる。
+
 ## 文書一覧
 
 | 文書                                                 | 所有する仕様                                          |

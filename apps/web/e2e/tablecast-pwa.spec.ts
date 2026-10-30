@@ -20,7 +20,7 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
     "href",
     "/tablecast-kiosk.webmanifest",
   );
-  const brand = page.getByRole("img", { name: "TableCast", exact: true });
+  const brand = page.getByRole("banner").getByRole("img", { name: "TableCast", exact: true });
   await expect(brand).toBeVisible();
   await expect(brand).toHaveJSProperty("naturalWidth", 500);
   for (const icon of await page.locator('link[rel="icon"], link[rel="apple-touch-icon"]').all()) {
@@ -131,8 +131,9 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
   await page.reload();
   await expect(page.getByRole("heading", { name: "接続を確認してください" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Check your connection" })).toBeVisible();
-  await expect(brand).toBeVisible();
-  await expect(brand).toHaveJSProperty("naturalWidth", 500);
+  const offlineBrand = page.getByRole("img", { name: "TableCast", exact: true });
+  await expect(offlineBrand).toBeVisible();
+  await expect(offlineBrand).toHaveJSProperty("naturalWidth", 500);
   await runtime.setOnline(true);
   await page.getByRole("link", { name: "店側アプリ / Staff app" }).click();
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(

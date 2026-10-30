@@ -11,6 +11,8 @@ description: TableCastの店舗を初期設定するとき、店舗資料のSkil
 
 店舗をまとめて設定する依頼では、[オンボーディング手順](references/onboarding.md)を読み、get_store_onboardingと現在設定を取得する。店舗資料の作成・編集・画像・ZIP・lintは[店舗Skillの設定](references/store-skills.md)に従う。実際のMCP schemaを正本とし、資料を読んだだけで設定済みと報告しない。
 
+具体的な依頼の組立てと実行経路は[店舗の利用ケース](references/use-cases.md)を参照する。客の音声注文・店員呼出しは卓上アプリの機能であり、店舗管理MCPで代行できるとは案内しない。
+
 ## 卓上ゲームを制作する
 
 ゲームの制作依頼では、get_configurationで対象店舗を確認し、get_game_specで実際のパッケージ仕様と使用可能な権限を取得する。list_gamesで既存ゲームを調べ、修正ならget_gameとget_game_sourceで対象版を読む。取得した仕様で動くHTML・CSS・バンドル済みJavaScriptを制作し、register_gameで変更不可の新しい版として登録する。生成したコードを会話へ貼るだけで完了しない。

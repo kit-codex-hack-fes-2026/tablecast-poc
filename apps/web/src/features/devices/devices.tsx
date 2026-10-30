@@ -138,6 +138,11 @@ export function RegisterDevice({
         {t("device_title")}
       </Button>
       <PageHeader title={t("admin_pair")} description={t("device_register_note")} />
+      <p className="text-sm text-muted-foreground">
+        <Link to="/pair" className="inline-flex min-h-11 items-center underline underline-offset-4">
+          {t("device_pair_open")}
+        </Link>
+      </p>
       <DeviceQrReader
         onRead={(code) => {
           form.setFieldValue("userCode", code);

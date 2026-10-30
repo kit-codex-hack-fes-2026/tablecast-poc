@@ -18,6 +18,7 @@ import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MemberRouteImport } from './routes/member'
 import { Route as OrganisationsRouteImport } from './routes/organisations'
+import { Route as PairRouteImport } from './routes/pair'
 import { Route as PasskeySetupRouteImport } from './routes/passkey-setup'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
@@ -113,6 +114,11 @@ const MemberRoute = MemberRouteImport.update({
 const OrganisationsRoute = OrganisationsRouteImport.update({
   id: '/organisations',
   path: '/organisations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PairRoute = PairRouteImport.update({
+  id: '/pair',
+  path: '/pair',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PasskeySetupRoute = PasskeySetupRouteImport.update({
@@ -407,6 +413,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/member': typeof MemberRouteWithChildren
   '/organisations': typeof OrganisationsRoute
+  '/pair': typeof PairRoute
   '/passkey-setup': typeof PasskeySetupRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -468,6 +475,7 @@ export interface FileRoutesByTo {
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/organisations': typeof OrganisationsRoute
+  '/pair': typeof PairRoute
   '/passkey-setup': typeof PasskeySetupRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -529,6 +537,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/member': typeof MemberRouteWithChildren
   '/organisations': typeof OrganisationsRoute
+  '/pair': typeof PairRoute
   '/passkey-setup': typeof PasskeySetupRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -593,6 +602,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/member'
     | '/organisations'
+    | '/pair'
     | '/passkey-setup'
     | '/register'
     | '/reset-password'
@@ -654,6 +664,7 @@ export interface FileRouteTypes {
     | '/llms.txt'
     | '/login'
     | '/organisations'
+    | '/pair'
     | '/passkey-setup'
     | '/register'
     | '/reset-password'
@@ -714,6 +725,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/member'
     | '/organisations'
+    | '/pair'
     | '/passkey-setup'
     | '/register'
     | '/reset-password'
@@ -777,6 +789,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MemberRoute: typeof MemberRouteWithChildren
   OrganisationsRoute: typeof OrganisationsRoute
+  PairRoute: typeof PairRoute
   PasskeySetupRoute: typeof PasskeySetupRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -860,6 +873,13 @@ declare module '@tanstack/react-router' {
       path: '/organisations'
       fullPath: '/organisations'
       preLoaderRoute: typeof OrganisationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pair': {
+      id: '/pair'
+      path: '/pair'
+      fullPath: '/pair'
+      preLoaderRoute: typeof PairRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/passkey-setup': {
@@ -1334,6 +1354,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MemberRoute: MemberRouteWithChildren,
   OrganisationsRoute: OrganisationsRoute,
+  PairRoute: PairRoute,
   PasskeySetupRoute: PasskeySetupRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,

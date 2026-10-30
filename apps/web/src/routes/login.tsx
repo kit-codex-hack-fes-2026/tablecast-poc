@@ -6,7 +6,6 @@ import {
   memberLoginBrandingOptions,
   memberStoreLoginBrandingOptions,
 } from "../features/account/member-login-query";
-import { readEvaluationEnvironment } from "../lib/evaluation-environment";
 
 export const Route = createFileRoute("/login")({
   staticData: { document: { title: "auth_sign_in", description: "head_login_description" } },
@@ -19,24 +18,21 @@ export const Route = createFileRoute("/login")({
     storeId: memberStoreLoginId(search.returnTo),
   }),
   loader: async ({ deps, context }) => {
-    const [evaluation, memberStore] = await Promise.all([
-      readEvaluationEnvironment(),
-      deps.code
-        ? context.queryClient
-            .fetchQuery(memberLoginBrandingOptions(deps.code))
+    const memberStore = deps.code
+      ? await context.queryClient
+          .fetchQuery(memberLoginBrandingOptions(deps.code))
+          .catch(() => undefined)
+      : deps.storeId
+        ? await context.queryClient
+            .fetchQuery(memberStoreLoginBrandingOptions(deps.storeId))
             .catch(() => undefined)
-        : deps.storeId
-          ? context.queryClient
-              .fetchQuery(memberStoreLoginBrandingOptions(deps.storeId))
-              .catch(() => undefined)
-          : undefined,
-    ]);
-    return { evaluation, memberStore };
+        : undefined;
+    return { memberStore };
   },
   component: LoginPage,
 });
 
 function LoginPage() {
-  const { evaluation, memberStore } = Route.useLoaderData();
-  return <Login evaluation={evaluation} memberStore={memberStore} />;
+  const { memberStore } = Route.useLoaderData();
+  return <Login memberStore={memberStore} />;
 }

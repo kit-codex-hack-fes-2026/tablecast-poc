@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Kiosk } from "../features/kiosk/kiosk";
+import { Landing } from "../features/kiosk/landing";
 import { tableCatalogOptions, tableOptions } from "../features/kiosk/table-query";
-import { readEvaluationEnvironment } from "../lib/evaluation-environment";
 
 export const Route = createFileRoute("/")({
   staticData: { document: { title: "head_guest", description: "head_guest_description" } },
@@ -11,12 +11,17 @@ export const Route = createFileRoute("/")({
       await context.queryClient.ensureQueryData(
         tableCatalogOptions(table.storeId, table.configVersion),
       );
-    return { evaluation: await readEvaluationEnvironment(), document: { store: table?.storeName } };
+    return {
+      connected: table !== null,
+      document: table
+        ? { store: table.storeName }
+        : { title: "head_landing" as const, description: "head_landing_description" as const },
+    };
   },
   component: IndexPage,
 });
 
 function IndexPage() {
-  const { evaluation } = Route.useLoaderData();
-  return <Kiosk evaluation={evaluation} />;
+  const { connected } = Route.useLoaderData();
+  return connected ? <Kiosk /> : <Landing />;
 }

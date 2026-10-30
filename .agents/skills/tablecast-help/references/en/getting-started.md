@@ -15,7 +15,7 @@ You can ask an agent to prepare a bilingual draft from menu photographs, leaving
 
 ## Prepare the tabletop iPad
 
-Register the device from the store’s device page and confirm its store and table. Allow microphone access on the iPad. Check the menu, required choices, basket and order confirmation. See [Troubleshooting](./troubleshooting.md) if voice is unavailable.
+Open [Device pairing](/pair) on the iPad and generate a pairing code. Staff scan the QR code or enter the code on the store’s device page, check the store and table, then approve the connection. The guest screen opens on the iPad after approval. Allow microphone access on the iPad. Check the menu, required choices, basket and order confirmation. See [Troubleshooting](./troubleshooting.md) if voice is unavailable.
 
 ## During service
 
