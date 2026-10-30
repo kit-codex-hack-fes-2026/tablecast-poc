@@ -1,5 +1,6 @@
 import { business, createDatabase } from "@tablecast/api/db";
 import { migrateImageAssets } from "@tablecast/api/media-migration";
+import { bindings } from "cf/config";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { getPlatformProxy } from "wrangler";
@@ -135,6 +136,10 @@ export async function prepareStorage({
               compatibilityDate: "2026-09-03",
               workersDev: true,
               previewUrls: false,
+              env: {
+                TABLECAST_ENV: bindings.text(target.environment),
+                TABLECAST_PR_NUMBER: bindings.text(target.pr ?? ""),
+              },
             },
             "maintenance",
           );

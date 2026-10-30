@@ -239,6 +239,8 @@ stagingのWeb・模擬ログイン・同意・MCPをAccess資格なしで公開�
 
 GitHub ActionsのCIからRun workflowを開き、branchにstaging、`staging_reset`に`tablecast-staging`を指定する。検査・ビルド後、通常配備と同じ排他制御下で全体リセットする。初回は現在のstaging headと配備SHAの一致が必要。対象SHA・workflow結果を記録する。
 
+メンテナンス用Web Workerにも`TABLECAST_ENV`と`TABLECAST_PR_NUMBER`を設定し、リセット後の再配備でも通常の所有確認を維持する。
+
 D1とR2の資源ID・所有台帳・migration履歴は保持し、schemaに定義された全業務・認証データとR2画像を消去する。D1はDrizzleの同一batch内で外部キー検証を遅延し、全削除後に再検証する。WebとAPIをメンテナンス応答へ切り替え、OAuth Container applicationだけを退役して再作成する。DO namespace ID・SQLite storage・Worker名は保持し、StoreEventsには業務データを保存しない。最新demoを投入し、同じSHAを配備・疎通確認後に完了する。全アカウント、OAuthクライアント、セッション、MCP tokenが失われるため、ログインとMCP認可をやり直す。
 
 R2の`tablecast/staging-reset.json`へ対象SHAとメンテナンス・runtime退役・画像消去・DB消去の到達工程を記録する。記録が残る間、通常配備は停止する。CIの手動リセットを再実行すると、所有情報を再確認し、現在のCI成功版で初期化を再開する。記録を手で消して部分状態を公開しない。固定URL、本番・PR資源は削除しない。データのdown migrationは行わない。
