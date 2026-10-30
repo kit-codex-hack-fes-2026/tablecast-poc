@@ -5,7 +5,7 @@
 - list_store_skillsでツリー・metadata・lintを取得する。本文はread_store_skill_fileで必要なファイルだけ読む。続きを読むときは返された版をexpectedVersionへ指定する。
 - 既存下書きをget_draft_diffで確認するかcreate_draftし、edit_store_skillへdraftId・最新expectedVersion・actionを渡す。create-skill、rename-skill、delete-skill、put-file、rename-file、delete-fileがある。put-fileは作成・更新共通。Skill名変更はfrontmatterのnameへ反映されるが、ファイル改名後の参照リンクは確認・修正する。SKILL.mdだけの削除・改名はできない。
 - SKILL.mdは先頭のYAML frontmatterにnameとdescriptionを持つ。nameはフォルダー名と同じ英小文字・数字・ハイフン、64文字以内、先頭末尾や連続のハイフンは禁止。descriptionは1～1024文字。本文は短い案内と参照リンクにし、詳細をreferences/*.mdへ分ける。任意のlicense、compatibility、metadata、allowed-toolsはAgent Skills仕様に従う。allowed-toolsは接客へ実行権限を与えない。
-- 画像はupload_imageで実ファイルを保存し、put-fileへpath・imageKey・imageKind・imageSource・altを渡す。Markdownから![説明](assets/photo.webp)のように相対参照する。生成画像はillustrationとgenerated=trueを使い、写真と偽らない。画像キーやBase64を創作しない。
+- 画像はupload_imageで実ファイルを保存し、put-fileへpath・imageKey・imageKind・imageSource・altを渡す。Markdownから`![説明](assets/photo.webp)`のように相対参照する。生成画像はillustrationとgenerated=trueを使い、写真と偽らない。画像キーやBase64を創作しない。
 - ZIPは単体のSKILL.mdをルートに置くか、skill-id/SKILL.mdと参照・画像を複数フォルダーに置く。5MiBまで。import_store_skillsへ実ZIPのBase64 data、またはChatGPT添付のfileを渡す。fileとdataを併記しない。同名Skillの置換はreplaceExisting=trueを明示した場合だけ行う。
 - TableCastが書き出すZIPはtablecast-skills.jsonに画像の出所とaltを持つ。別ツールが作った画像入りZIPでmanifestがない場合は、利用者が確認したimageMetadataを指定する。取込はパス・容量・ZIP整合性・Skill全体を検査してから下書きを一度更新する。失敗時は部分取込されたと報告しない。
 - export_store_skillsはresource_linkを返す。resources/readで取得したblobを実ZIPとして保存する。リンクを取得しただけでダウンロード済みと報告しない。対応しないクライアントでは管理画面のZIP書出を案内する。

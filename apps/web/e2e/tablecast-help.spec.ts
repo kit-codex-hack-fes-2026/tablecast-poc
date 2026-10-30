@@ -15,7 +15,7 @@ test("未認証で日英のドキュメントとMarkdownを辿れ、管理画面
   const paths = [...listing.matchAll(/\]\((\/help\/content\/[^)]+\.md)\)/g)].map(
     (match) => match[1],
   );
-  expect(new Set(paths).size).toBe(12);
+  expect(new Set(paths).size).toBe(24);
   for (const path of paths) {
     if (!path) throw new Error("索引にMarkdown URLが必要");
     const markdown = await request.get(path);
@@ -133,7 +133,7 @@ test("ドキュメントをSSRで読み、関連章・言語・モバイル目�
   const helpGroup = page.getByRole("region", { name: "ドキュメント", exact: true });
   const groupTrigger = helpGroup.getByRole("button", { name: "ドキュメント", exact: true });
   await expect(groupTrigger).toHaveAttribute("aria-expanded", "true");
-  await expect(helpGroup.getByRole("link")).toHaveCount(6);
+  await expect(helpGroup.getByRole("link")).toHaveCount(12);
   await groupTrigger.click();
   await expect(helpGroup.getByRole("link", { name: "はじめに", exact: true })).toBeHidden();
   await groupTrigger.press("Enter");
