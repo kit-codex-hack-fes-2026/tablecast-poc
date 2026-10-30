@@ -41,6 +41,7 @@ import { ImageProvider } from "../../components/image-provider";
 import { LanguageSwitch } from "../../components/language-switch";
 import { LoadingState } from "../../components/loading-state";
 import { Money } from "../../components/money";
+import { ProductMenuPending } from "../../components/product-menu-pending";
 import { StoreLogo } from "../../components/store-logo";
 import { StoreTheme } from "../../components/store-theme";
 import { Badge } from "../../components/ui/badge";
@@ -545,9 +546,7 @@ function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
             onChange={changeScreen}
           />
         ) : catalog.isPending ? (
-          <div className="p-4">
-            <LoadingState cards />
-          </div>
+          <ProductMenuPending />
         ) : null}
         <ErrorNotice query={catalog} />
       </Tabs.Panel>
