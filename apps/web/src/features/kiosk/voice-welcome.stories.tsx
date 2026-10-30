@@ -43,6 +43,19 @@ export const English: Story = {
   render: Welcome.render,
 };
 
+export const Calling: Story = {
+  name: "呼び出し待受中の初期案内",
+  args: { standby: { status: "armed", onStop: fn() } },
+  render: Welcome.render,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText(/すみませんと声をかけるか/)).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "音声を停止" }));
+    await expect(args.standby?.onStop).toHaveBeenCalledOnce();
+    await expect(args.onStart).not.toHaveBeenCalled();
+  },
+};
+
 export const Compact: Story = {
   name: "iPadの既定240px幅の初期案内",
   render: (args) => (

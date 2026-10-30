@@ -1852,14 +1852,5 @@
   "onboarding_steps": "Setup checklist",
   "onboarding_next": "Continue with the next check",
   "onboarding_human_checks": "Connection, device and publication checks",
-  "kiosk_standby_enable": "Enable hands-free calling (trial)",
-  "kiosk_standby_disable": "Turn off hands-free calling",
-  "kiosk_standby_off": "Hands-free calling is off",
-  "kiosk_standby_preparing": "Preparing on-device detection…",
-  "kiosk_standby_armed": "Listening for a call or gesture",
-  "kiosk_standby_conversation": "Calling detection resumes after 60 seconds of silence",
-  "kiosk_standby_suspended": "Paused while the screen was hidden. Enable again to resume.",
-  "kiosk_standby_error": "Calling detection could not start. Check camera and microphone permissions, or use the voice button.",
-  "kiosk_standby_note": "Uses this device’s camera and microphone. Say excuse me, raise a hand, look at the screen or cross your index fingers for the bill. Detection accuracy is being evaluated.",
-  "kiosk_standby_language": "This calling language is not enabled for this restaurant. Please ask a member of staff."
+  "kiosk_welcome_calling": "Say excuse me or raise a hand to call us."
 }

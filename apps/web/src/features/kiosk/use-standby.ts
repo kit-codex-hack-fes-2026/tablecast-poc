@@ -21,6 +21,8 @@ class StandbyController {
   private listeners = new Set<() => void>();
   private runtime?: LocalStandby;
   private enabled = false;
+  private attempted = false;
+  private observing = false;
   private generation = 0;
   private context?: StandbyContext;
   constructor(private voice: VoiceConnection) {}
@@ -35,27 +37,27 @@ class StandbyController {
     if (this.context?.locale !== context.locale && ["armed", "preparing"].includes(this.status))
       this.disable();
     this.context = context;
-    if (context.disabled) this.disable();
+    if (context.disabled) {
+      if (this.enabled) this.disable();
+    } else this.startAutomatically();
   }
   private emit(status: StandbyStatus) {
     this.status = status;
     for (const listener of this.listeners) listener();
   }
   disable = () => {
+    this.attempted = true;
     this.enabled = false;
     this.generation++;
     void this.runtime?.stop();
     this.emit("off");
   };
-  private async arm(audioContext?: AudioContext) {
+  private async arm() {
     const version = ++this.generation;
     this.emit("preparing");
     try {
       const { LocalStandby: Capture } = await loadStandby();
-      if (!this.enabled || version !== this.generation) {
-        void audioContext?.close();
-        return;
-      }
+      if (!this.enabled || version !== this.generation) return;
       const capture = new Capture(
         (next) => {
           if (version !== this.generation) return;
@@ -91,9 +93,8 @@ class StandbyController {
         },
       );
       this.runtime = capture;
-      await capture.start(audioContext, this.voice.getSnapshot().microphone?.selectedId);
+      await capture.start(undefined, this.voice.getSnapshot().microphone?.selectedId);
     } catch {
-      void audioContext?.close();
       if (version === this.generation) {
         this.enabled = false;
         this.emit("error");
@@ -101,6 +102,7 @@ class StandbyController {
     }
   }
   observe() {
+    this.observing = true;
     let previous = this.voice.getSnapshot().status;
     const unsubscribe = this.voice.subscribe(() => {
       const view = this.voice.getSnapshot();
@@ -119,35 +121,39 @@ class StandbyController {
       }
     });
     const visibility = () => {
-      if (!this.enabled || document.visibilityState === "visible") return;
+      if (document.visibilityState === "visible") {
+        this.startAutomatically();
+        return;
+      }
+      if (!this.enabled) return;
       this.disable();
       this.emit("suspended");
       void this.voice.stop();
     };
     document.addEventListener("visibilitychange", visibility);
+    this.startAutomatically();
     return () => {
+      this.observing = false;
       unsubscribe();
       document.removeEventListener("visibilitychange", visibility);
       this.disable();
+      this.attempted = false;
     };
   }
-  toggle = () => {
-    if (this.enabled) {
-      this.disable();
-      return;
-    }
+  private startAutomatically() {
     if (
+      !this.observing ||
+      this.attempted ||
       !this.context ||
       this.context.disabled ||
       !["idle", "paused", "error"].includes(this.voice.getSnapshot().status) ||
       document.visibilityState !== "visible"
     )
       return;
+    this.attempted = true;
     this.enabled = true;
-    const context = typeof AudioContext === "undefined" ? undefined : new AudioContext();
-    void context?.resume();
-    void this.arm(context);
-  };
+    void this.arm();
+  }
 }
 
 export function useStandby({ voice, ...context }: StandbyContext & { voice: VoiceConnection }) {
@@ -166,5 +172,5 @@ export function useStandby({ voice, ...context }: StandbyContext & { voice: Voic
     const dispose = controller.observe();
     return () => dispose();
   }, [controller]);
-  return { status, toggle: controller.toggle, disable: controller.disable };
+  return { status, disable: controller.disable };
 }

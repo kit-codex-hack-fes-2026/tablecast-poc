@@ -1852,14 +1852,5 @@
   "onboarding_steps": "設定チェックリスト",
   "onboarding_next": "次の確認に進む",
   "onboarding_human_checks": "接続・端末・公開の確認事項",
-  "kiosk_standby_enable": "声・動作で呼び出す（試験）",
-  "kiosk_standby_disable": "声・動作の待受を停止",
-  "kiosk_standby_off": "呼び出し待受は停止中",
-  "kiosk_standby_preparing": "端末内の検出を準備しています…",
-  "kiosk_standby_armed": "声・動作による呼び出しを待受中",
-  "kiosk_standby_conversation": "60秒の無音で呼び出し待受に戻ります",
-  "kiosk_standby_suspended": "画面が非表示になったため停止しました。再開には待受を有効にしてください。",
-  "kiosk_standby_error": "待受を開始できません。カメラ・マイクの許可を確認するか、音声開始ボタンをご利用ください。",
-  "kiosk_standby_note": "この端末のカメラとマイクを使います。すみません・挙手・画面への注視で呼び出し、人差し指を交差して会計を相談できます。検出精度は評価中です。",
-  "kiosk_standby_language": "この呼出語の言語は店舗で有効になっていません。スタッフへご確認ください。"
+  "kiosk_welcome_calling": "すみませんと声をかけるか、手を挙げて呼び出せます。"
 }

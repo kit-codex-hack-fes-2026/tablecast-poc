@@ -17,6 +17,7 @@ export function VoiceWelcome({
   view,
   ...props
 }: {
+  calling?: boolean;
   disabled?: boolean;
   hasContent: boolean;
   onStart: () => void;
@@ -26,7 +27,15 @@ export function VoiceWelcome({
   return <WelcomeContent {...props} />;
 }
 
-function WelcomeContent({ onStart, disabled }: { disabled?: boolean; onStart: () => void }) {
+function WelcomeContent({
+  onStart,
+  disabled,
+  calling,
+}: {
+  calling?: boolean;
+  disabled?: boolean;
+  onStart: () => void;
+}) {
   const { t } = useI18n();
   const pulse = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -48,6 +57,7 @@ function WelcomeContent({ onStart, disabled }: { disabled?: boolean; onStart: ()
         <h3 className="text-xl font-semibold leading-snug">{t("kiosk_welcome_title")}</h3>
         <p className="max-w-72 text-sm leading-relaxed text-muted-foreground [@container_history_(max-height:280px)]:hidden">
           {t("kiosk_welcome_description")}
+          {calling && <> {t("kiosk_welcome_calling")}</>}
         </p>
       </div>
       <span className="relative inline-flex max-w-full rounded-xl">

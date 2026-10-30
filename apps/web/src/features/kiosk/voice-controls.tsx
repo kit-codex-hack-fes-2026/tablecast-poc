@@ -7,7 +7,6 @@ import type { VoicePanelProps } from "./voice-panel";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { MicrophoneNotice, MicrophoneSettings } from "./microphone-settings";
-import { StandbyControl } from "./standby-control";
 
 const AudioWaveform = lazy(() =>
   import("./audio-waveform").then((module) => ({ default: module.AudioWaveform })),
@@ -181,7 +180,12 @@ export function VoiceControls({
         </div>
       )}
       <div className="flex min-w-0 items-center gap-2">
-        <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />
+        <VoiceToggle
+          view={view}
+          standby={standby}
+          onStart={onStart}
+          controlDisabled={controlDisabled}
+        />
         {onMicrophoneChange && onMicrophoneRefresh && (
           <MicrophoneSettings
             view={view}
@@ -192,25 +196,31 @@ export function VoiceControls({
           />
         )}
       </div>
-      {standby && <StandbyControl {...standby} />}
     </footer>
   );
 }
 
 function VoiceToggle({
   view,
+  standby,
   onStart,
   controlDisabled,
-}: Pick<VoicePanelProps, "controlDisabled" | "onStart" | "view">) {
+}: Pick<VoicePanelProps, "controlDisabled" | "onStart" | "standby" | "view">) {
   const { t } = useI18n();
+  const waiting =
+    standby &&
+    ["idle", "paused", "error"].includes(view.status) &&
+    ["preparing", "armed", "connecting"].includes(standby.status);
   const active =
-    view.error === "active" || !["idle", "paused", "error", "stopping"].includes(view.status);
+    waiting ||
+    view.error === "active" ||
+    !["idle", "paused", "error", "stopping"].includes(view.status);
   return (
     <span className="inline-flex w-full min-w-0 rounded-xl bg-(image:--voice-spectrum) p-0.5 shadow-control-dark">
       <Button
         className="h-auto min-h-14 w-full min-w-0 whitespace-normal rounded-[inherit] px-3 py-2 text-center text-sm"
         variant="voice"
-        onClick={onStart}
+        onClick={waiting ? standby.onStop : onStart}
         disabled={controlDisabled}
       >
         {active ? <MicOff /> : <Mic />}

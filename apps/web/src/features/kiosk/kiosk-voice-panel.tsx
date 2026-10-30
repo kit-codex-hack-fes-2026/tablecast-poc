@@ -39,15 +39,7 @@ export function KioskVoicePanel({
       {...props}
       standby={{
         status: standby.status,
-        onToggle: () => {
-          camera.stop();
-          standby.toggle();
-        },
-        disabled:
-          standbyBlocked ||
-          (!["off", "suspended", "error"].includes(standby.status)
-            ? false
-            : !["idle", "paused", "error"].includes(view.status)),
+        onStop: standby.disable,
       }}
       onStart={() => {
         standby.disable();

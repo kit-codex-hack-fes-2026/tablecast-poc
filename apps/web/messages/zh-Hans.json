@@ -446,14 +446,5 @@
   "kiosk_review_failed": "未能确认购物篮中的商品",
   "kiosk_staff_request_failed": "未能发送服务员呼叫",
   "kiosk_bill_request_failed": "未能发送结账请求",
-  "kiosk_standby_enable": "启用语音和手势呼叫（试用）",
-  "kiosk_standby_disable": "关闭语音和手势呼叫",
-  "kiosk_standby_off": "呼叫待机已关闭",
-  "kiosk_standby_preparing": "正在准备设备端检测…",
-  "kiosk_standby_armed": "正在等待语音或手势呼叫",
-  "kiosk_standby_conversation": "静音60秒后返回呼叫待机",
-  "kiosk_standby_suspended": "屏幕隐藏后已暂停，请重新启用。",
-  "kiosk_standby_error": "无法启动呼叫待机，请检查摄像头和麦克风权限，或使用语音按钮。",
-  "kiosk_standby_note": "使用此设备的摄像头和麦克风。说服务员、举手或注视屏幕即可呼叫，交叉食指可咨询结账。检测准确度正在评估中。",
-  "kiosk_standby_language": "此餐厅尚未启用该呼叫语言，请咨询工作人员。"
+  "kiosk_welcome_calling": "说声不好意思，或举手呼叫我们。"
 }

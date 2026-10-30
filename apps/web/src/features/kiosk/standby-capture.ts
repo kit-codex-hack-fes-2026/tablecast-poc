@@ -47,7 +47,6 @@ export class LocalStandby {
       return;
     }
     const context = audioContext ?? new AudioContext();
-    void context.resume();
     const capture: Capture = {
       abort: new AbortController(),
       context,
@@ -93,6 +92,13 @@ export class LocalStandby {
         this.onStatus("error");
       }
     };
+    // 自動開始でAudioContextが保留された場合は、既存画面への操作で再開する。
+    const resumeAudio = () => {
+      if (context.state !== "running") void context.resume().catch(fail);
+    };
+    document.addEventListener("pointerdown", resumeAudio, { signal });
+    document.addEventListener("keydown", resumeAudio, { signal });
+    resumeAudio();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
