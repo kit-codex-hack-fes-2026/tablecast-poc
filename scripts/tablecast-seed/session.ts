@@ -30,7 +30,7 @@ function syntheticSpeaker(sessionId: string, index: null | number) {
   return { id: index === null ? null : `${streamId}:${index}`, streamId, words: [] };
 }
 
-function event(
+export function event(
   storeId: string,
   sessionId: string,
   kind: string,
@@ -71,12 +71,12 @@ function sessionQueries(db: Database, statements: (BatchItem<"sqlite"> | SeedEve
   return queries;
 }
 
-async function insertSession(db: Database, statements: (BatchItem<"sqlite"> | SeedEvent)[]) {
+export async function insertSession(db: Database, statements: (BatchItem<"sqlite"> | SeedEvent)[]) {
   const [first, ...rest] = sessionQueries(db, statements);
   if (first) await db.batch([first, ...rest]);
 }
 
-function snapshotFor(
+export function snapshotFor(
   store: Store,
   sessionId: string,
   lines: CartLine[],
@@ -113,7 +113,7 @@ function snapshotFor(
   };
 }
 
-function confirmation(db: Database, storeId: string, snapshot: Snapshot, at: number) {
+export function confirmation(db: Database, storeId: string, snapshot: Snapshot, at: number) {
   return db.insert(business.confirmations).values({
     id: snapshot.id,
     store_id: storeId,
@@ -128,11 +128,11 @@ function confirmation(db: Database, storeId: string, snapshot: Snapshot, at: num
   });
 }
 
-function order(
+export function order(
   db: Database,
   storeId: string,
   snapshot: Snapshot,
-  status: "accepted" | "served" | "submitted",
+  status: "accepted" | "cancelled" | "served" | "submitted",
   at: number,
 ) {
   return db.insert(business.orders).values({
@@ -149,7 +149,7 @@ function order(
   });
 }
 
-function payment(
+export function payment(
   db: Database,
   storeId: string,
   sessionId: string,

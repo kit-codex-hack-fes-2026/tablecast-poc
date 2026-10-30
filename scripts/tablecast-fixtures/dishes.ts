@@ -1,4 +1,5 @@
 import type { Food } from "./types.ts";
+import { seedDietary } from "./food.ts";
 export const dishes: Food[] = [
   {
     id: "sashimi",
@@ -13,6 +14,7 @@ export const dishes: Food[] = [
       "Three slices each of tuna, salmon and sea bream, served raw",
     ],
     contains: ["salmon"],
+    dietary: seedDietary.fish,
     speech: "おつくり三種盛り",
   },
   {
@@ -28,6 +30,7 @@ export const dishes: Food[] = [
       "Five pieces of chicken thigh fried in a wheat-flour and soy coating",
     ],
     contains: ["chicken", "wheat", "soya"],
+    dietary: seedDietary.meatGluten,
   },
   {
     id: "salmon-sashimi",
@@ -39,6 +42,7 @@ export const dishes: Food[] = [
     groups: ["garnish"],
     ingredients: ["さけを生で提供します", "Salmon, served raw"],
     contains: ["salmon"],
+    dietary: seedDietary.fish,
   },
   {
     id: "tuna-sashimi",
@@ -50,6 +54,7 @@ export const dishes: Food[] = [
     groups: ["garnish"],
     ingredients: ["まぐろの赤身を生で提供します", "Lean tuna, served raw"],
     contains: [],
+    dietary: seedDietary.fish,
   },
   {
     id: "yakitori",
@@ -63,7 +68,8 @@ export const dishes: Food[] = [
       "鶏もも肉とねぎを焼きます。たれには小麦と大豆を含みます",
       "Grilled chicken thigh and spring onion; the glaze contains wheat and soya",
     ],
-    contains: ["chicken", "wheat", "soya"],
+    contains: ["chicken"],
+    dietary: seedDietary.meat,
   },
   {
     id: "tsukune",
@@ -77,7 +83,8 @@ export const dishes: Food[] = [
       "鶏ひき肉、卵、小麦粉を合わせて焼きます",
       "Grilled chicken meatballs made with egg and wheat flour",
     ],
-    contains: ["chicken", "egg", "wheat", "soya"],
+    contains: ["chicken", "egg", "wheat"],
+    dietary: seedDietary.meatGluten,
   },
   {
     id: "tamagoyaki",
@@ -92,6 +99,7 @@ export const dishes: Food[] = [
       "Rolled eggs with bonito broth, served in four pieces",
     ],
     contains: ["egg"],
+    dietary: seedDietary.fish,
     speech: "だし巻きたまご",
   },
   {
@@ -104,6 +112,7 @@ export const dishes: Food[] = [
     groups: [],
     ingredients: ["大豆を塩ゆでします", "Soya beans boiled in salted water"],
     contains: ["soya"],
+    dietary: seedDietary.plant,
   },
   {
     id: "tofu",
@@ -115,6 +124,7 @@ export const dishes: Food[] = [
     groups: ["garnish"],
     ingredients: ["大豆の豆腐に薬味を添えます", "Chilled soya tofu with garnishes"],
     contains: ["soya"],
+    dietary: seedDietary.plant,
   },
   {
     id: "pickles",
@@ -125,10 +135,11 @@ export const dishes: Food[] = [
     image: "pickles",
     groups: [],
     ingredients: [
-      "季節によって野菜と漬け床が変わります。詳しい原材料は未登録です",
-      "Vegetables and pickling ingredients vary; full ingredients are not recorded",
+      "きゅうり、大根、にんじんを米酢、塩、砂糖で漬けます",
+      "Cucumber, daikon and carrot pickled in rice vinegar, salt and sugar",
     ],
-    contains: null,
+    contains: [],
+    dietary: seedDietary.plant,
   },
   {
     id: "potato-salad",
@@ -143,6 +154,7 @@ export const dishes: Food[] = [
       "Potato and cucumber with egg mayonnaise",
     ],
     contains: ["egg"],
+    dietary: seedDietary.eggMilk,
   },
   {
     id: "cucumber",
@@ -157,6 +169,7 @@ export const dishes: Food[] = [
       "Cucumber dressed with sesame oil and soy sauce",
     ],
     contains: ["sesame", "wheat", "soya"],
+    dietary: seedDietary.plantGluten,
   },
   {
     id: "mackerel",
@@ -168,6 +181,7 @@ export const dishes: Food[] = [
     groups: ["garnish"],
     ingredients: ["さばを塩焼きにします", "Mackerel grilled with salt"],
     contains: ["mackerel"],
+    dietary: seedDietary.fish,
   },
   {
     id: "hokke",
@@ -179,6 +193,7 @@ export const dishes: Food[] = [
     groups: ["garnish"],
     ingredients: ["ほっけの干物を焼きます", "Dried Atka mackerel, grilled"],
     contains: [],
+    dietary: seedDietary.fish,
   },
   {
     id: "aubergine",
@@ -193,6 +208,7 @@ export const dishes: Food[] = [
       "Aubergine grilled with a soya-miso glaze",
     ],
     contains: ["soya"],
+    dietary: seedDietary.plant,
   },
   {
     id: "shiitake",
@@ -206,7 +222,8 @@ export const dishes: Food[] = [
       "しいたけを炭火で焼きます。たれには小麦と大豆を含みます",
       "Charcoal-grilled shiitake; the glaze contains wheat and soya",
     ],
-    contains: ["wheat", "soya"],
+    contains: [],
+    dietary: seedDietary.plant,
   },
   {
     id: "mixed-tempura",
@@ -221,6 +238,7 @@ export const dishes: Food[] = [
       "Two prawns, aubergine, pumpkin and shishito peppers fried in a wheat-flour and egg batter",
     ],
     contains: ["prawn", "wheat", "egg"],
+    dietary: seedDietary.fishGluten,
   },
   {
     id: "prawn-tempura",
@@ -232,6 +250,7 @@ export const dishes: Food[] = [
     groups: [],
     ingredients: ["海老を小麦粉と卵の衣で揚げます", "Prawns fried in a wheat-flour and egg batter"],
     contains: ["prawn", "wheat", "egg"],
+    dietary: seedDietary.fishGluten,
     speech: "えびの天ぷら",
   },
   {
@@ -247,6 +266,7 @@ export const dishes: Food[] = [
       "Fried soya tofu in bonito broth with soy sauce",
     ],
     contains: ["soya", "wheat"],
+    dietary: seedDietary.fishGluten,
   },
   {
     id: "nikujaga",
@@ -261,6 +281,7 @@ export const dishes: Food[] = [
       "Beef, potatoes and onion simmered in soy sauce",
     ],
     contains: ["beef", "wheat", "soya"],
+    dietary: seedDietary.meatGluten,
   },
   {
     id: "kakuni",
@@ -275,5 +296,6 @@ export const dishes: Food[] = [
       "Pork belly braised with soy sauce, sugar and ginger",
     ],
     contains: ["pork", "wheat", "soya"],
+    dietary: seedDietary.meatGluten,
   },
 ];

@@ -1,8 +1,13 @@
 import type { JapaneseAllergen, Modifier, Product } from "@tablecast/api/schema";
 import { configurationSchema } from "@tablecast/api/schema";
 import { demoImageKey } from "../tablecast-seed-media.ts";
-import { westwardFoodInformation } from "./food.ts";
-import { allergenRecord, bilingual } from "./text.ts";
+import {
+  recipeFoodInformation,
+  seedDietary,
+  type SeedDietary,
+  westwardFoodInformation,
+} from "./food.ts";
+import { bilingual } from "./text.ts";
 import { westwardModifiers } from "./westward-modifiers.ts";
 
 export function westwardConfiguration(storeId: string, profile: "demo" | "history" | "smoke") {
@@ -10,7 +15,8 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
   const menu: {
     available?: boolean;
     category: string;
-    contains: JapaneseAllergen[] | null;
+    contains: JapaneseAllergen[];
+    dietary: SeedDietary;
     en: string;
     image?: string;
     ingredients: readonly [string, string];
@@ -30,6 +36,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "Brioche, fully cooked beef, cheddar, lettuce, tomato, onion, pickles and an egg-based sauce",
       ],
       contains: ["wheat", "egg", "milk"],
+      dietary: seedDietary.meatGluten,
       modifiers: [bun, patty, cheese, omit, sauce, extras],
       image: "westward-burger.png",
     },
@@ -44,6 +51,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "Brioche, fully cooked chicken, cheddar, vegetables and an egg-based sauce",
       ],
       contains: ["wheat", "egg", "milk"],
+      dietary: seedDietary.meatGluten,
       modifiers: [bun, cheese, omit, sauce, extras],
     },
     {
@@ -53,10 +61,11 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
       price: 1480,
       category: "burgers",
       ingredients: [
-        "植物由来パティ、きのこ、ブリオッシュ、チェダー、野菜、卵入りソース。ヴィーガン対応や製造原材料の詳細は未確認です",
-        "Plant-based patty, mushrooms, brioche, cheddar, vegetables and an egg-based sauce; vegan suitability and full production ingredients are unverified",
+        "大豆ときのこのパティ、きのこ、ブリオッシュ、チェダー、野菜、卵と大豆入りソース",
+        "Soya and mushroom patty, mushrooms, brioche, cheddar, vegetables and an egg-and-soya sauce",
       ],
-      contains: null,
+      contains: ["wheat", "egg", "milk", "soya"],
+      dietary: seedDietary.eggMilkGluten,
       modifiers: [bun, cheese, omit, sauce, extras],
     },
     {
@@ -70,6 +79,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "Potatoes and salt; frying oil is shared with other dishes",
       ],
       contains: [],
+      dietary: seedDietary.plant,
       modifiers: [extras],
     },
     {
@@ -80,6 +90,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
       category: "sides",
       ingredients: ["玉ねぎ、小麦粉と卵の衣", "Onion in a wheat-flour and egg batter"],
       contains: ["wheat", "egg"],
+      dietary: seedDietary.eggMilkGluten,
     },
     {
       key: "slaw",
@@ -89,6 +100,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
       category: "sides",
       ingredients: ["キャベツ、にんじん、卵入りマヨネーズ", "Cabbage, carrot and egg mayonnaise"],
       contains: ["egg"],
+      dietary: seedDietary.eggMilk,
     },
     {
       key: "pickles",
@@ -97,10 +109,11 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
       price: 380,
       category: "sides",
       ingredients: [
-        "野菜の酢漬け。漬け液の詳細は未登録です",
-        "Pickled vegetables; full pickling ingredients are not recorded",
+        "きゅうり、にんじん、玉ねぎを米酢、塩、砂糖で漬けます",
+        "Cucumber, carrot and onion pickled in rice vinegar, salt and sugar",
       ],
-      contains: null,
+      contains: [],
+      dietary: seedDietary.plant,
     },
     {
       key: "westward-ipa",
@@ -113,6 +126,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "beer brewed with malt and hops, citrus-like aromas and a firm bitterness; 6.5% ABV, base serving 280ml",
       ],
       contains: [],
+      dietary: seedDietary.maltAlcohol,
       modifiers: [serving],
       image: "westward-ipa.png",
     },
@@ -127,6 +141,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "beer brewed with malt and hops, with a gentle bitterness; 5.0% ABV, base serving 280ml",
       ],
       contains: [],
+      dietary: seedDietary.maltAlcohol,
       modifiers: [serving],
     },
     {
@@ -140,6 +155,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         "beer with roasted-malt aromas; 6.0% ABV, base serving 280ml. Sold out today",
       ],
       contains: [],
+      dietary: seedDietary.maltAlcohol,
       modifiers: [serving],
       available: false,
     },
@@ -151,6 +167,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
       category: "soft-drinks",
       ingredients: ["ゆず果汁と炭酸水", "Yuzu juice and sparkling water"],
       contains: [],
+      dietary: seedDietary.plant,
       image: "yuzu-soda.png",
     },
     {
@@ -161,6 +178,7 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
       category: "soft-drinks",
       ingredients: ["冷たい烏龍茶", "Chilled oolong tea"],
       contains: [],
+      dietary: seedDietary.plant,
       image: "oolong.png",
     },
   ];
@@ -187,7 +205,11 @@ export function westwardConfiguration(storeId: string, profile: "demo" | "histor
         imageKey: demoImageKey(`westward-${item.key}.webp`),
         imageKind: "illustration",
         modifiers: item.modifiers ?? [],
-        foodInfo: allergenRecord(item.contains),
+        foodInfo: recipeFoodInformation(
+          item.contains,
+          item.dietary,
+          ["fries", "onion-rings"].includes(item.key) ? "fried" : item.category,
+        ),
       });
     });
   return configurationSchema.parse({

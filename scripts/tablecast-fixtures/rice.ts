@@ -1,4 +1,5 @@
 import type { Food } from "./types.ts";
+import { seedDietary } from "./food.ts";
 export const rice: Food[] = [
   {
     id: "onigiri",
@@ -10,6 +11,7 @@ export const rice: Food[] = [
     groups: [],
     ingredients: ["ご飯にしょうゆを塗って焼きます", "Rice balls grilled with soy sauce"],
     contains: ["wheat", "soya"],
+    dietary: seedDietary.plantGluten,
   },
   {
     id: "ochazuke",
@@ -24,6 +26,7 @@ export const rice: Food[] = [
       "Rice and grilled salmon with your chosen broth",
     ],
     contains: ["salmon"],
+    dietary: seedDietary.fish,
   },
   {
     id: "udon",
@@ -38,6 +41,7 @@ export const rice: Food[] = [
       "Wheat udon noodles in your chosen broth",
     ],
     contains: ["wheat"],
+    dietary: seedDietary.plantGluten,
     speech: "しめのかけうどん",
   },
 ];

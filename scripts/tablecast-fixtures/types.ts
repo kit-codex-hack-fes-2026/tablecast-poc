@@ -1,4 +1,5 @@
 import type { JapaneseAllergen, Modifier } from "@tablecast/api/schema";
+import type { SeedDietary } from "./food.ts";
 
 export type GroupKey =
   | "broth"
@@ -23,7 +24,8 @@ export type Group = {
 export type Food = {
   aliases?: string[];
   category: string;
-  contains: JapaneseAllergen[] | null;
+  contains: JapaneseAllergen[];
+  dietary: SeedDietary;
   en: string;
   groups: GroupKey[];
   id: string;

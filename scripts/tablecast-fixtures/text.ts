@@ -1,5 +1,4 @@
-import type { JapaneseAllergen, Product } from "@tablecast/api/schema";
-import { unknownFoodProfile } from "@tablecast/api/schema";
+import type { Product } from "@tablecast/api/schema";
 
 export function bilingual(
   ja: string,
@@ -23,10 +22,4 @@ export function bilingual(
       aliases: [],
     },
   };
-}
-
-export function allergenRecord(contains: JapaneseAllergen[] | null): Product["foodInfo"] {
-  const base = unknownFoodProfile();
-  for (const id of contains ?? []) base.allergens[id] = "contains";
-  return { base, components: [], defaultComponentIds: [] };
 }

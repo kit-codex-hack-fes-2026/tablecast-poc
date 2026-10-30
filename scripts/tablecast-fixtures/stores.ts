@@ -4,13 +4,13 @@ import type { GroupKey } from "./types.ts";
 import { demoOptionImageKey } from "../tablecast-demo-option-images.ts";
 import { koreanDemoStore } from "../tablecast-korean-demo.ts";
 import { demoImageKey, demoStoreBanner, demoStoreLogo } from "../tablecast-seed-media.ts";
-import { withDemoFoodChanges } from "./food.ts";
+import { recipeFoodInformation, seedDietary, withDemoFoodChanges } from "./food.ts";
 import { komorebiSkills } from "./komorebi-knowledge.ts";
 import { localizeSeedConfiguration } from "./localize.ts";
 import { groupDefinitions } from "./modifiers.ts";
 import { sakeKinds, sakes } from "./sake.ts";
 import { categories, drinks, foods, stores } from "./store-data.ts";
-import { allergenRecord, bilingual } from "./text.ts";
+import { bilingual } from "./text.ts";
 import { westwardConfiguration } from "./westward.ts";
 
 export function demoStores(profile: "demo" | "history" | "smoke") {
@@ -67,7 +67,7 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
           imageKey: demoImageKey(`komorebi-sake-${id}.webp`),
           imageKind: "illustration",
           modifiers: modifiers(kind === "sparkling" ? ["serving"] : ["temperature", "serving"]),
-          foodInfo: allergenRecord([]),
+          foodInfo: recipeFoodInformation([], seedDietary.alcohol, "sake"),
         };
       },
     );
@@ -100,7 +100,7 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
         imageKey: demoImageKey(`komorebi-${item.id}.webp`),
         imageKind: "illustration",
         modifiers: modifiers(item.groups),
-        foodInfo: allergenRecord(item.contains),
+        foodInfo: recipeFoodInformation(item.contains, item.dietary, item.category),
       });
     });
     const featuredIds = [

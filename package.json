@@ -13,6 +13,7 @@
     "dev:prepare": "bun run dev:config && bun run db:migrate && bun run db:seed",
     "dev": "sh scripts/tablecast-env.sh 'portless \"web.$TABLECAST_HOST\" bunx --no-install turbo run dev --filter=@tablecast/web'",
     "dev:parity": "sh scripts/tablecast-env.sh 'portless \"web.$TABLECAST_HOST\" bunx --no-install turbo run preview --filter=@tablecast/web'",
+    "db:seed:staging": "bun --no-env-file scripts/tablecast-staging-seed.ts",
     "db:seed": "sh scripts/tablecast-env.sh 'bun --env-file=.local/.env scripts/tablecast-seed.ts'",
     "demo:reset": "sh scripts/tablecast-env.sh 'NODE_ENV=development bun scripts/tablecast-runtime.ts --reset && bun --env-file=.local/.env scripts/tablecast-seed.ts --reset'",
     "demo:play": "sh scripts/tablecast-env.sh 'bun --env-file=.local/.env scripts/tablecast-demo.ts'",

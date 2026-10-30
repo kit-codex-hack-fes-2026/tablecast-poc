@@ -1,6 +1,6 @@
 import { business, createDatabase } from "@tablecast/api/db";
 import { configurationSchema } from "@tablecast/api/schema";
-import { eq, inArray, sql } from "drizzle-orm";
+import { count, eq, inArray, sql } from "drizzle-orm";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -83,7 +83,49 @@ it("再投入で別IDの営業中卓と閉じた初期卓と未会計を保ち�
     try {
       const db = createDatabase(platform.env.TABLECAST_DB);
       const initial = await seedDemoDatabase(platform.env, credentials);
-      expect(initial).toMatchObject({ stores: 3, tables: 36, historicalSessions: 0, orders: 15 });
+      expect(initial).toMatchObject({
+        stores: 3,
+        tables: 36,
+        historicalSessions: 300,
+        orders: 1215,
+      });
+      const monthly = await db
+        .select({
+          store: tableSessions.store_id,
+          month: sql<string>`strftime('%Y-%m',${tableSessions.closed_at}/1000,'unixepoch','+9 hours')`,
+          sessions: count(),
+        })
+        .from(tableSessions)
+        .where(sql`${tableSessions.id} LIKE '%-plugin-history-%'`)
+        .groupBy(
+          tableSessions.store_id,
+          sql`strftime('%Y-%m',${tableSessions.closed_at}/1000,'unixepoch','+9 hours')`,
+        );
+      expect(monthly).toHaveLength(6);
+      expect(monthly.filter((row) => row.month === "2026-09").map((row) => row.sessions)).toEqual([
+        40, 40, 40,
+      ]);
+      expect(monthly.filter((row) => row.month === "2026-10").map((row) => row.sessions)).toEqual([
+        60, 60, 60,
+      ]);
+      const memberVisits = await db
+        .select({
+          membership: business.customerMemberships.id,
+          active: business.customerMemberships.active,
+          visits: count(business.customerPointAllocations.sessionId),
+        })
+        .from(business.customerMemberships)
+        .leftJoin(
+          business.customerPointAllocations,
+          eq(business.customerPointAllocations.membershipId, business.customerMemberships.id),
+        )
+        .where(eq(business.customerMemberships.storeId, "tablecast-komorebi"))
+        .groupBy(business.customerMemberships.id);
+      expect(memberVisits).toHaveLength(12);
+      expect(memberVisits.filter((row) => row.active && row.visits >= 3)).toHaveLength(7);
+      expect(memberVisits.map((row) => row.visits).sort((left, right) => left - right)).toEqual([
+        0, 0, 1, 2, 2, 3, 3, 4, 5, 6, 8, 10,
+      ]);
       const liveId = "tablecast-current-manual-open";
       const historyId = "tablecast-current-manual-closed";
       const originalLiveId = "tablecast-komorebi-table-01-session";
