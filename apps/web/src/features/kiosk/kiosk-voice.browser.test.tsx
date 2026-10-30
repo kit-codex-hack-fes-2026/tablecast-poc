@@ -7,10 +7,13 @@ import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import "../../styles.css";
-import { fixtureValue } from "../../test-support/fixture-value";
 import { Kiosk } from "./kiosk";
 import { fixture, requests } from "./test-support/kiosk-fixture";
 import { VoicePanel } from "./voice-panel";
+
+vi.mock("@ricky0123/vad-web", () => ({
+  MicVAD: { new: async () => ({ start: async () => {}, destroy: async () => {} }) },
+}));
 
 it.each(["listening", "speaking"] as const)(
   "%sでは小さなorbと実波形を表示し、停止しても下部操作の位置を保つ",
@@ -139,11 +142,23 @@ it.each(["listening", "speaking"] as const)(
 );
 
 it("音声開始が失敗しても実Queryのカートと画面操作を維持する", async () => {
-  // APIの開始拒否まで実WebRTCを通し、OSのマイク取得だけを無音トラックに置き換える。
+  // APIの開始拒否まで実WebRTCを通し、captureと端末内推論の外部境界を固定する。
   const audio = new AudioContext();
   const stream = audio.createMediaStreamDestination().stream;
+  const captures: MediaStream[] = [];
+  vi.stubGlobal(
+    "Worker",
+    class extends EventTarget {
+      postMessage() {}
+      terminate() {}
+    },
+  );
   try {
-    vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(stream);
+    vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(async () => {
+      const capture = stream.clone();
+      captures.push(capture);
+      return capture;
+    });
     await render(
       <LocaleProvider initialLocale="ja" persist={false}>
         <QueryClientProvider client={fixture.client}>
@@ -154,10 +169,10 @@ it("音声開始が失敗しても実Queryのカートと画面操作を維持�
       </LocaleProvider>,
     );
     await expect
-      .element(page.getByRole("button", { name: ja.kiosk_voice_resume, exact: true }))
+      .element(page.getByRole("button", { name: ja.kiosk_welcome_start, exact: true }))
       .toBeVisible();
     const before = structuredClone(fixture.current.cart);
-    await page.getByRole("button", { name: ja.kiosk_voice_resume, exact: true }).click();
+    await page.getByRole("button", { name: ja.kiosk_welcome_start, exact: true }).click();
     await expect
       .element(page.getByText(/音声サービスの準備が整い次第ご利用いただけます。/))
       .toBeVisible();
@@ -167,8 +182,14 @@ it("音声開始が失敗しても実Queryのカートと画面操作を維持�
       .toHaveAttribute("aria-selected", "true");
     expect(fixture.client.getQueryData<TableState>(["tablecast-table"])?.cart).toEqual(before);
     expect(requests.filter((request) => request.url.endsWith("/voice/start"))).toHaveLength(1);
-    expect(fixtureValue(stream.getAudioTracks()[0]).readyState).toBe("ended");
+    expect(captures.length).toBeGreaterThan(0);
+    expect(
+      captures.every((capture) =>
+        capture.getTracks().every((track) => track.readyState === "ended"),
+      ),
+    ).toBe(true);
   } finally {
+    for (const capture of captures) capture.getTracks().forEach((track) => track.stop());
     stream.getTracks().forEach((track) => track.stop());
     await audio.close();
   }
