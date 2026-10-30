@@ -44,20 +44,43 @@ function management(
     else if (path === "r2/buckets")
       result = { buckets: bucketOwner ? [{ name: target.bucket }] : [] };
     else if (path === `d1/database/${databaseId}/raw`) {
-      const query = z
-        .object({ sql: z.string(), params: z.array(valueSchema) })
+      const querySchema = z.object({ sql: z.string(), params: z.array(valueSchema) });
+      const body = z
+        .union([querySchema, z.object({ batch: z.array(querySchema) })])
         .parse(JSON.parse(z.string().parse(init?.body)));
-      const statement = sqlite.prepare(query.sql);
-      statement.setReturnArrays(true);
-      result = [
-        {
-          success: true,
-          results: {
-            columns: statement.columns().map((column) => column.name),
-            rows: z.array(z.array(valueSchema)).parse(statement.all(...query.params)),
-          },
-        },
-      ];
+      const batch = "batch" in body;
+      if (batch) sqlite.exec("BEGIN");
+      try {
+        result = (batch ? body.batch : [body]).map((query) => {
+          const before = z
+            .object({ changes: z.number() })
+            .parse(sqlite.prepare("SELECT total_changes() AS changes").get());
+          const statement = sqlite.prepare(query.sql);
+          statement.setReturnArrays(true);
+          const rows = z.array(z.array(valueSchema)).parse(statement.all(...query.params));
+          const after = z
+            .object({ changes: z.number() })
+            .parse(sqlite.prepare("SELECT total_changes() AS changes").get());
+          const changes = after.changes - before.changes;
+          return {
+            success: true,
+            meta: {
+              duration: 0,
+              size_after: 0,
+              rows_read: rows.length,
+              rows_written: changes,
+              last_row_id: 0,
+              changed_db: changes > 0,
+              changes,
+            },
+            results: { columns: statement.columns().map((column) => column.name), rows },
+          };
+        });
+        if (batch) sqlite.exec("COMMIT");
+      } catch (error) {
+        if (batch) sqlite.exec("ROLLBACK");
+        throw error;
+      }
     } else if (path?.startsWith(`r2/buckets/${target.bucket}/objects/`))
       return Response.json(bucketOwner);
     else throw new Error(`未定義の管理API: ${init?.method} ${path}`);
@@ -77,6 +100,29 @@ async function resources(create: boolean) {
 }
 
 describe("D1管理APIのRC版Drizzle接続", () => {
+  test("実SQLiteのbatchで更新meta・読取・失敗時のロールバックを維持する", async () => {
+    using sqlite = new DatabaseSync(":memory:");
+    management(sqlite);
+    const db = deploymentDatabase(databaseId);
+    await db.run(
+      sql`CREATE TABLE tablecast_deployment_owner(repository TEXT PRIMARY KEY, environment TEXT NOT NULL, seeded INTEGER NOT NULL DEFAULT 0)`,
+    );
+    await db.insert(business.deploymentOwner).values(owner);
+    const [updated, selected] = await db.batch([
+      db.update(business.deploymentOwner).set({ seeded: 1 }),
+      db.select().from(business.deploymentOwner),
+    ]);
+    expect(updated.meta.changes).toBe(1);
+    expect(selected).toEqual([{ ...owner, seeded: 1 }]);
+    await expect(
+      db.batch([
+        db.update(business.deploymentOwner).set({ seeded: 0 }),
+        db.insert(business.deploymentOwner).values(owner),
+      ]),
+    ).rejects.toThrow("UNIQUE constraint failed");
+    expect(await db.select().from(business.deploymentOwner)).toEqual([{ ...owner, seeded: 1 }]);
+  });
+
   test("実SQLiteの挿入・型変換・配列とオブジェクト形式・空のgetを維持する", async () => {
     using sqlite = new DatabaseSync(":memory:");
     const fetch = management(sqlite);
