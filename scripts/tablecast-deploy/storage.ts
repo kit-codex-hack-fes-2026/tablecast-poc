@@ -1,6 +1,5 @@
 import { business, createDatabase } from "@tablecast/api/db";
 import { migrateImageAssets } from "@tablecast/api/media-migration";
-import { bindings } from "cf/config";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { getPlatformProxy } from "wrangler";
@@ -8,6 +7,7 @@ import { z } from "zod";
 import type { deploymentOptions, deploymentSecrets } from "../tablecast-deploy-config.ts";
 import type { readSeedTemplate } from "../tablecast-seed-template.ts";
 import { apiCloudflareConfig, type apiSdkConfiguration } from "../../apps/api/cloudflare.config.ts";
+import { webCloudflareConfig } from "../../apps/web/cloudflare.config.ts";
 import { cloudflare, currentRevision, waitForRelease } from "../tablecast-deploy-api.ts";
 import { tablecastAccountId, tablecastRepository } from "../tablecast-deploy-config.ts";
 import { seedPreviewDatabase } from "../tablecast-seed-data.ts";
@@ -131,15 +131,8 @@ export async function prepareStorage({
           );
           await deployTemporaryWorker(
             {
-              name: target.web,
+              ...webCloudflareConfig(options.web).worker,
               entrypoint: maintenance,
-              compatibilityDate: "2026-09-03",
-              workersDev: true,
-              previewUrls: false,
-              env: {
-                TABLECAST_ENV: bindings.text(target.environment),
-                TABLECAST_PR_NUMBER: bindings.text(target.pr ?? ""),
-              },
             },
             "maintenance",
           );
