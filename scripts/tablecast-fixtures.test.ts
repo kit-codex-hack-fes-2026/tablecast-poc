@@ -4,6 +4,7 @@ import { dietaryKeys, japaneseAllergenSchema } from "@tablecast/api/schema";
 import { searchStoreSkills } from "@tablecast/api/store-knowledge";
 import { describe, expect, it } from "vitest";
 import { demoStores } from "./tablecast-fixtures.ts";
+import { withDemoFoodChanges } from "./tablecast-fixtures/food.ts";
 
 describe("デモの構成データ", () => {
   it("同じプロファイルから和食・バーガー・韓国料理店の4言語の102商品と個別写真を作る", () => {
@@ -69,6 +70,8 @@ describe("デモの構成データ", () => {
         true,
       );
       for (const product of products) {
+        for (const option of product.modifiers.flatMap((group) => group.options))
+          expect(option.foodChanges, `${product.id}: ${option.id}`).toBeDefined();
         const profiles = [
           product.foodInfo.base,
           ...product.foodInfo.components.map((item) => item.profile),
@@ -95,6 +98,14 @@ describe("デモの構成データ", () => {
       }
     },
   );
+  it("未分類の選択肢を暗黙に確認済みへ変換しない", () => {
+    const product = structuredClone(demoStores("demo")[0]?.configuration.products[0]);
+    const option = product?.modifiers[0]?.options[0];
+    if (!product || !option) throw new Error("選択肢のあるseed商品がありません。");
+    option.id = "tablecast-unreviewed-option";
+    option.foodChanges = undefined;
+    expect(() => withDemoFoodChanges(product)).toThrow("食事情報が未分類");
+  });
   it("魚・大麦・交換・追加・除去の食事対応と厨房の共用条件が選択後にも一致する", () => {
     const stores = demoStores("demo");
     const food = (productId: string, options: string[] = []) => {

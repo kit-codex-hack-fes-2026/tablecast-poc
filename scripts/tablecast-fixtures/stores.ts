@@ -57,7 +57,7 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
         text.en.speechName = `${store.english} ${en}, ${kindEn}`;
         text.ja.aliases = [reading, `${kindJa} ${index + 1}`];
         text.en.aliases = [en, `${kindEn} sake ${index + 1}`];
-        return {
+        return withDemoFoodChanges({
           id: `${store.id}-sake-${id}`,
           categoryId: "sake",
           text,
@@ -68,7 +68,7 @@ export function demoStores(profile: "demo" | "history" | "smoke") {
           imageKind: "illustration",
           modifiers: modifiers(kind === "sparkling" ? ["serving"] : ["temperature", "serving"]),
           foodInfo: recipeFoodInformation([], seedDietary.alcohol, "sake"),
-        };
+        });
       },
     );
     const otherProducts: Product[] = [...foods, ...drinks].map((item) => {
