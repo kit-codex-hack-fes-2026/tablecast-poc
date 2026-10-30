@@ -1826,6 +1826,7 @@
   "onboarding_steps": "Setup checklist",
   "onboarding_next": "Continue with the next check",
   "onboarding_human_checks": "Connection, device and publication checks",
+  "kiosk_welcome_calling": "Say excuse me or raise a hand to call us.",
   "landing_title": "A menu you can talk to",
   "landing_description": "Make choosing a meal a pleasure, whatever the language.\nVoice ordering, restaurant management and membership, connected.",
   "head_landing": "Restaurant service and operations",

@@ -15,6 +15,9 @@ import { peer, voiceFixture, VoicePeer } from "./test-support/voice-transport-fi
 import { VoiceConnection } from "./voice-connection";
 
 vi.mock("../../lib/api-fetch", () => ({ apiFetch: vi.fn<typeof apiFetch>() }));
+vi.mock("@ricky0123/vad-web", () => ({
+  MicVAD: { new: async () => ({ start: async () => {}, destroy: async () => {} }) },
+}));
 afterEach(async () => {
   await cleanup();
   vi.restoreAllMocks();
@@ -50,6 +53,9 @@ function Panel({ voice, events }: { events: TableEvent[]; voice: VoiceConnection
         English
       </button>
       <KioskVoicePanel
+        onWakeLanguage={async (next) => {
+          setLocale(next);
+        }}
         voice={voice}
         lines={[]}
         events={events}
@@ -68,9 +74,18 @@ it("開始案内・候補選択・参考情報・言語切替・終了を同じ�
   const fixture = voiceFixture();
   vi.stubGlobal("navigator", originalNavigator);
   vi.stubGlobal("MediaStream", OriginalStream);
+  // 会話の接続試験では端末内推論の外部境界だけを固定し、モデルを取得しない。
+  vi.stubGlobal(
+    "Worker",
+    class extends EventTarget {
+      postMessage() {}
+      terminate() {}
+    },
+  );
   const audio = new AudioContext();
   const source = audio.createMediaStreamDestination().stream;
-  vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(source);
+  // 実ブラウザーと同じく、待受と会話は呼出しごとに別のtrackを所有する。
+  vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(async () => source.clone());
   const original = vi.mocked(apiFetch).getMockImplementation();
   vi.mocked(apiFetch).mockImplementation(async (input, options) => {
     const path = input instanceof Request ? input.url : String(input);
@@ -109,7 +124,7 @@ it("開始案内・候補選択・参考情報・言語切替・終了を同じ�
   );
   const screen = await render(surface());
   try {
-    await screen.getByRole("button", { name: ja.kiosk_voice_resume, exact: true }).click();
+    await screen.getByRole("button", { name: ja.kiosk_welcome_start, exact: true }).click();
     await expect
       .element(screen.getByRole("button", { name: ja.kiosk_voice_stop, exact: true }))
       .toBeVisible();
@@ -173,7 +188,8 @@ it("開始案内・候補選択・参考情報・言語切替・終了を同じ�
     });
     await screen.getByRole("button", { name: "English", exact: true }).click();
     expect(VoicePeer.instances).toHaveLength(1);
-    expect(source.getAudioTracks()[0]?.readyState).toBe("live");
+    const inputTrack = voice.getSnapshot().inputTrack;
+    expect(inputTrack?.readyState).toBe("live");
     expect(voice.getSnapshot().progress).toBeUndefined();
     caption("user", "No more help, thanks.", 1000);
     peer().channel.receive({
@@ -200,7 +216,7 @@ it("開始案内・候補選択・参考情報・言語切替・終了を同じ�
     await expect
       .element(screen.getByRole("button", { name: en.kiosk_voice_resume, exact: true }))
       .toBeVisible();
-    expect(source.getAudioTracks()[0]?.readyState).toBe("ended");
+    expect(inputTrack?.readyState).toBe("ended");
     expect(fixture.requests.filter(({ path }) => path.endsWith("/start"))).toHaveLength(1);
   } finally {
     await screen.unmount();

@@ -2,6 +2,7 @@ import {
   displayCurrencyActionSchema,
   type DisplayCurrencyContext,
   type Locale,
+  type VoiceActivation,
   voiceToolNameSchema,
 } from "@tablecast/api/schema";
 import { z } from "zod";
@@ -55,6 +56,9 @@ export class VoiceConnection {
   private readyTimer?: ReturnType<typeof setTimeout>;
   private proactiveTimer?: ReturnType<typeof setTimeout>;
   private proactive = false;
+  private idleTimer?: ReturnType<typeof setTimeout>;
+  private automatic = false;
+  private resumeStandby = false;
   private endingTimer?: ReturnType<typeof setTimeout>;
   private endingQuietTimer?: ReturnType<typeof setTimeout>;
   private ending = false;
@@ -100,8 +104,13 @@ export class VoiceConnection {
     locale: Locale,
     speechSpeed = 1,
     purpose: "assistance" | "conversation" = "conversation",
+    options: { activation?: VoiceActivation; microphone?: MediaStream } = {},
   ) {
-    if (this.desired || this.stopping) return;
+    if (this.desired || this.stopping) {
+      options.microphone?.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    this.automatic = Boolean(options.activation && options.activation !== "manual");
     this.desired = true;
     this.ready = false;
     this.locale = locale;
@@ -122,16 +131,22 @@ export class VoiceConnection {
     this.activeDelegation = undefined;
     this.transcriptEvents.clear();
     const attempt = ++this.attempt;
-    this.emit({ status: "connecting", messages: [] });
+    this.emit({ status: "connecting", messages: [], returnToStandby: false });
     try {
-      const transport = await this.openTransport(attempt);
+      const transport = await this.openTransport(attempt, options.microphone);
       if (!transport) return;
       const { peer, sdp } = transport;
       const controller = new AbortController();
       this.startingRequest = controller;
       const created = await parseResponse(
         this.client.voice.start.$post(
-          { json: { sdp, ...(purpose === "assistance" ? { purpose } : {}) } },
+          {
+            json: {
+              sdp,
+              ...(purpose === "assistance" ? { purpose } : {}),
+              ...(options.activation ? { activation: options.activation } : {}),
+            },
+          },
           { init: { signal: controller.signal } },
         ),
       );
@@ -224,11 +239,21 @@ export class VoiceConnection {
   stop({
     existingSession = false,
     serverStopped = false,
-  }: { existingSession?: boolean; serverStopped?: boolean } = {}): Promise<void> {
-    if (this.stopping) return this.stopping;
+    returnToStandby = false,
+  }: {
+    existingSession?: boolean;
+    returnToStandby?: boolean;
+    serverStopped?: boolean;
+  } = {}): Promise<void> {
+    if (this.stopping) {
+      if (!returnToStandby) this.resumeStandby = false;
+      return this.stopping;
+    }
     if (!existingSession && !this.desired && !this.peer && !this.microphone && !this.sessionId)
       return Promise.resolve();
     this.desired = false;
+    this.resumeStandby = returnToStandby;
+    clearTimeout(this.idleTimer);
     this.ready = false;
     this.ending = false;
     this.clearGuidance();
@@ -292,7 +317,7 @@ export class VoiceConnection {
         this.emit(
           results.some((result) => result.status === "rejected")
             ? { status: "error", error: "connection" }
-            : { status: "paused" },
+            : { status: "paused", returnToStandby: this.resumeStandby },
         );
         this.onSync();
       })
@@ -473,6 +498,7 @@ export class VoiceConnection {
     this.transcriptEvents.add(event.event_id);
     const role = event.type === "session.input_transcript.delta" ? "user" : "assistant";
     if (event.start_ms < this.localeTranscriptFloor[role]) return;
+    this.scheduleIdle(attempt);
     this.clearGuidance();
     if (role === "user") {
       this.hasUserInput = true;
@@ -947,6 +973,7 @@ export class VoiceConnection {
   }
   private scheduleProactive(attempt: number) {
     clearTimeout(this.proactiveTimer);
+    if (this.automatic) return;
     if (!this.proactive || !this.ready || !this.current(attempt) || this.ending) return;
     this.proactiveTimer = setTimeout(() => {
       if (
@@ -1155,11 +1182,22 @@ export class VoiceConnection {
   }
   private audioActivity(attempt: number, output: boolean) {
     if (!this.current(attempt)) return;
+    this.scheduleIdle(attempt);
     this.scheduleProactive(attempt);
     if (this.ending && output) {
       clearTimeout(this.endingQuietTimer);
       this.endingQuietTimer = setTimeout(() => void this.stop(), 1000);
     }
+  }
+  private scheduleIdle(attempt: number) {
+    clearTimeout(this.idleTimer);
+    if (!this.automatic || !this.ready || !this.current(attempt) || this.ending) return;
+    this.idleTimer = setTimeout(() => {
+      if (!this.current(attempt)) return;
+      if (this.delegation || this.responses.size || this.view.status === "thinking")
+        this.scheduleIdle(attempt);
+      else void this.stop({ returnToStandby: true });
+    }, 60_000);
   }
   private requestEnd(attempt: number) {
     if (!this.current(attempt) || this.ending) return;
@@ -1226,7 +1264,9 @@ export class VoiceConnection {
       peer?.close();
     }
   }
-  private async openTransport(attempt: number) {
+  private async openTransport(attempt: number, suppliedMicrophone?: MediaStream) {
+    // 所有権を開始時に引き受け、peer生成や権限処理の失敗でもstopで解放する。
+    this.microphone = suppliedMicrophone;
     const peer = new RTCPeerConnection();
     this.peer = peer;
     const audio = new Audio();
@@ -1276,6 +1316,7 @@ export class VoiceConnection {
           );
         }
         this.scheduleProactive(attempt);
+        this.scheduleIdle(attempt);
       } else if (event.type === "session.closed" || event.type === "error") {
         void this.fail(attempt);
       } else {
@@ -1319,7 +1360,8 @@ export class VoiceConnection {
     });
     channel.addEventListener("close", () => void this.fail(attempt));
     channel.addEventListener("error", () => void this.fail(attempt));
-    const microphone = await this.captureMicrophone(this.microphoneView.selectedId);
+    const microphone =
+      suppliedMicrophone ?? (await this.captureMicrophone(this.microphoneView.selectedId));
     if (!this.current(attempt)) {
       microphone.getTracks().forEach((track) => track.stop());
       peer.close();

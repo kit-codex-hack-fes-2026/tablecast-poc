@@ -423,3 +423,23 @@ bun run db:seed -- --rebuild-configuration
 ### 店舗資料エディタの依存
 
 店舗資料のグラフィカル編集はWeb内のTiptap 3.32.1（React、StarterKit、Markdown、画像、表、チェックリスト）を使う。Markdown拡張はbetaであり、対応外の書式を原文のまま扱う場合は原文タブを使う。YAML frontmatterは本文と分け、タブ切替だけでは原文を書き換えない。APIのSkill検査はyaml 2.9.1とmarked 17.0.6、ZIPはfflate 0.8.3を使い、Worker内で実行する。追加のPython、ZIPコマンド、別サーバーやDB migrationは不要。依存の正本はrootのbun.lockであり、通常の`bun install --frozen-lockfile`と`bun run codegen`で準備する。
+
+## 声・動作の呼び出し待受を試す
+
+Issue #279の待受は実機受入前の試験機能。M1以降・iPadOS 26以降のiPadでHTTPSの客向け画面を開くと自動で準備を開始する。内側カメラとマイクのブラウザー権限を許可する。ブラウザーのWebGPU・Worker・OffscreenCanvasが必要で、非対応なら手動の音声開始を使う。既存の音声ボタンで待受を停止できる。画面の非表示・権限取消・手動停止の後は自動再開せず、既存の会話開始操作で音声を再開する。再読込は初期画面として待受を開始する。音声処理がブラウザーによって保留された場合は、画面への最初の操作で再開する。カメラの表示・読取機能を有効にすると待受のcaptureを終了する。
+
+追加のAPIキー、サーバーの推論サービス、学習データは不要。Bunの既存installで下記ライブラリを導入する。初回の準備時にモデルを取得するため、jsDelivr、Googleの公開モデル配布、Hugging Faceのモデル配布先への通信と、ブラウザーcacheの空き容量が必要。取得が拒否・中断された場合は待受エラーになり、再接続を繰り返さない。モデル・WASMの通信は取得専用で、カメラ・音声を外部へアップロードしない。
+
+| 用途         | 固定する実装・配布版                                                                            | ライセンス                |
+| ------------ | ----------------------------------------------------------------------------------------------- | ------------------------- |
+| 顔・姿勢・手 | @mediapipe/tasks-vision 1.2.0、Google公開taskのfloat16/1（poseはlite）                          | Apache-2.0                |
+| 音声区間     | @ricky0123/vad-web 0.0.31、Silero v5、onnxruntime-web 1.31.1のWASM                              | wrapperはISC、SileroはMIT |
+| 推論         | @huggingface/transformers 4.3.2のブラウザーWebGPU経路                                           | Apache-2.0                |
+| 呼出語       | onnx-community/whisper-tiny、revision ff4177021cc41f7db950912b73ea4fdf7d01d8e7、q8              | 元WhisperはMIT            |
+| 相対深度     | onnx-community/depth-anything-v2-small、revision 4472b7362082ad9968fee890ca0f1e5aca36b93d、fp32 | Apache-2.0                |
+
+呼出句はWebのstandby-model.tsで言語別に管理する。すみません／すいません、Excuse me、服务员／服務員／不好意思、저기요／실례합니다、Excusez-moi、Disculpe／Perdone、Entschuldigung、Mi scusi、Com licença、لو سمحت、सुनिएを初期登録する。追加句は通常の会話と衝突しない短い定型句に限定し、辞書のunitと実音声をそれぞれ検証する。検出した言語への接客変更と、画面の翻訳fallbackを区別する。
+
+閾値は調整前の初期値であり、自卓の所属や注視を確実に判定できることを意味しない。検出精度と60秒後の再開を実機で確認してから本運用への採用を判断する。利用中の生メディアを学習用に集めず、端末・OS・SHA・試行数・成功／誤起動・遅延・発熱だけを記録する。仕様と受入の詳細は[音声接続](voice/integration.md#端末内の呼び出し待受試験)を参照する。
+
+待受の推論moduleはTanStack StartのcreateClientOnlyFnでブラウザーに限定し、SSRのWorkerへ含めない。VADのWASMは上表の版固定CDNから取得するため、bundlerが残す未使用の同梱fallbackはpublic/.assetsignoreでStatic Assetsの配布から除く。25 MiBを超えるバイナリをWorkerへ添付しない。NNの追加や版変更時はブラウザーでCDN取得と実推論、SSR bundleへの混入がないことを確認する。

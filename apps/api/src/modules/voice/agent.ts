@@ -35,6 +35,7 @@ import { showServiceGuidance } from "../tables/use-cases/assistance";
 import {
   callStaff,
   changeLocale,
+  requestBill,
   setUiSection,
   showProducts,
 } from "../tables/use-cases/presentation";
@@ -43,6 +44,7 @@ import { setSpeechSpeed } from "./service";
 import { castTool } from "./tool";
 import { voiceToolDescriptions } from "./tool-descriptions";
 import { voiceCatalogProduct, voiceTableState } from "./tool-state";
+import { requireBillConfirmation } from "./use-cases/bill";
 import { readStoreKnowledge, searchStoreKnowledge } from "./use-cases/knowledge";
 import { showReference } from "./use-cases/references";
 
@@ -58,6 +60,17 @@ export function createCastTools(
   const rates = displayContext?.rates;
   const selectedCurrency = displayContext?.currency ?? null;
   return {
+    prepareBill: castTool({
+      id: "prepareBill",
+      description: voiceToolDescriptions.prepareBill,
+      inputSchema: z.object({}).strict(),
+      execute: async () => {
+        guard();
+        ensure(trigger !== "proactive", "VOICE_TOOL_FORBIDDEN", 403);
+        await getSession(services, actor);
+        return { confirmationTurnId: actor.turnId, requiresApproval: true };
+      },
+    }),
     searchStoreKnowledge: castTool({
       id: "searchStoreKnowledge",
       description: voiceToolDescriptions.searchStoreKnowledge,
@@ -448,6 +461,19 @@ export function createCastTools(
                 callId: state.staffCall?.id,
                 status: state.staffCall?.status,
               };
+            },
+          }),
+          requestBill: castTool({
+            id: "requestBill",
+            description: voiceToolDescriptions.requestBill,
+            inputSchema: z
+              .object({ approved: z.literal(true), confirmationTurnId: z.string().min(1).max(200) })
+              .strict(),
+            execute: async ({ confirmationTurnId }) => {
+              guard();
+              await requireBillConfirmation(services, actor, confirmationTurnId);
+              const state = await requestBill(services, actor, "core");
+              return { billRequested: state.billRequested };
             },
           }),
         }

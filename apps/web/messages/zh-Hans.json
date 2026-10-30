@@ -422,5 +422,6 @@
   "kiosk_order_failed_items": "未能发送{count}份商品的订单",
   "kiosk_review_failed": "未能确认购物篮中的商品",
   "kiosk_staff_request_failed": "未能发送服务员呼叫",
-  "kiosk_bill_request_failed": "未能发送结账请求"
+  "kiosk_bill_request_failed": "未能发送结账请求",
+  "kiosk_welcome_calling": "说声不好意思，或举手呼叫我们。"
 }

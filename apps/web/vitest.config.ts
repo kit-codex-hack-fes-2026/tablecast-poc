@@ -23,6 +23,8 @@ const browser = (performance = false) =>
     optimizeDeps: {
       exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
       include: [
+        "@ricky0123/vad-web",
+        "@huggingface/transformers",
         "@base-ui/react/context-menu",
         "@base-ui/react/progress",
         "@base-ui/react/popover",

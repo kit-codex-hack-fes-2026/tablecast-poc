@@ -25,6 +25,8 @@ export const voiceToolNameSchema = z.enum([
   "prepareConfirmation",
   "submitOrder",
   "callStaff",
+  "prepareBill",
+  "requestBill",
   "setUiSection",
   "showMenuSearch",
   "setLanguage",
@@ -105,10 +107,14 @@ const conversationItemSchema = z
   })
   .strict();
 
+const voiceActivationSchema = z.enum(["manual", "wake_word", "hand_raise", "gaze", "bill_check"]);
+export type VoiceActivation = z.infer<typeof voiceActivationSchema>;
+
 export const voiceStartSchema = z
   .object({
     sdp: z.string().min(1).max(64000),
     purpose: z.enum(["conversation", "assistance"]).default("conversation"),
+    activation: voiceActivationSchema.default("manual"),
   })
   .strict();
 

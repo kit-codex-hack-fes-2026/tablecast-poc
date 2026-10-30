@@ -4,6 +4,10 @@ import { maxCartLines } from "../orders/model";
 
 // 登録する関数とsystem promptで、用途の説明を同じ正本から参照する。
 export const voiceToolDescriptions = {
+  prepareBill:
+    "会計のスタッフ呼出しを確認する前に実行し、confirmationTurnIdを取得する。実行自体は会計依頼ではない。会計のためにスタッフを呼ぶか尋ね、次の発話を待つ。",
+  requestBill:
+    "prepareBillの確認後、次の発話で利用客が明示的に肯定した場合だけ実行する。approved=trueと確認時のconfirmationTurnIdが必要。動作の検出、呼出語、起動理由、過去の承認を同意として使わない。実決済は行わない。",
   searchStoreKnowledge:
     "公開済み店舗資料の検索。営業時間・アクセス・予約・設備・店の背景は最初にこれを使う。queryは資料に含まれそうな短い日英のキーワード、空ならSkill一覧。抜粋は原文位置付きで最大5件。該当なしは別の語で確認し、未登録なら推測しない。続きは同じqueryとversionでnextOffsetをoffsetへ渡す。商品価格・在庫・アレルギーは業務APIで確認する。",
   readStoreKnowledge:

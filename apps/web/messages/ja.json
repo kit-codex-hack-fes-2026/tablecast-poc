@@ -1826,6 +1826,7 @@
   "onboarding_steps": "設定チェックリスト",
   "onboarding_next": "次の確認に進む",
   "onboarding_human_checks": "接続・端末・公開の確認事項",
+  "kiosk_welcome_calling": "すみませんと声をかけるか、手を挙げて呼び出せます。",
   "landing_title": "話せるメニューを\nテーブルに。",
   "landing_description": "言葉や操作の壁を越えて、料理選びをもっと楽しく。\n多言語の音声接客から注文、店舗管理、会員サービスまで。",
   "head_landing": "飲食店の接客と店舗運営",

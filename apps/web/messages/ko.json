@@ -422,5 +422,6 @@
   "kiosk_order_failed_items": "상품 {count}개의 주문을 전송하지 못했습니다",
   "kiosk_review_failed": "장바구니의 상품을 확인하지 못했습니다",
   "kiosk_staff_request_failed": "직원 호출을 전송하지 못했습니다",
-  "kiosk_bill_request_failed": "계산 요청을 전송하지 못했습니다"
+  "kiosk_bill_request_failed": "계산 요청을 전송하지 못했습니다",
+  "kiosk_welcome_calling": "저기요라고 말하거나 손을 들어 불러 주세요."
 }

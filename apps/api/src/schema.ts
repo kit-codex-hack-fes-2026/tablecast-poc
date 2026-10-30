@@ -174,7 +174,7 @@ export {
   voiceReferenceEventSchema,
   voiceToolNameSchema,
 } from "./modules/voice/model";
-export type { VoiceReference } from "./modules/voice/model";
+export type { VoiceActivation, VoiceReference } from "./modules/voice/model";
 export {
   apiErrorSchema,
   localeSchema,

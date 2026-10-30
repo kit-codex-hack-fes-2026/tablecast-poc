@@ -12,6 +12,9 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
     include: [
+      "@ricky0123/vad-web",
+      "@huggingface/transformers",
+      "@mediapipe/tasks-vision",
       "@base-ui/react/popover",
       "@base-ui/react/slider",
       "@better-auth/infra/client",
