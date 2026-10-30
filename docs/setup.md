@@ -282,7 +282,7 @@ bun run test:e2e
 
 `test:browser`は実行前にParaglideの`locale-modules`を公式CLIで生成し、翻訳のmodule数を減らす。通常のcodegenと公開buildは`message-modules`を使い、`build:storybook`も自身でこの形式へ戻してからbuildする。同じ`src/paraglide`を共有するため、Browser試験・codegen・dev/watch・buildを同じcheckoutで重ねない。テストだけを直接`vitest`で起動する場合は、先に`bun run --cwd apps/web i18n:compile --output-structure locale-modules`で準備する。
 
-Component Testの全件CIはVitestの2shardを別runnerで実行し、従来名の必須チェックで両方の成功を確認する。関連fileだけのPR差分実行はshard 1だけで行う。準備から集約まで3分以下を目標にし、成功時の画像収集と複数engineによる業務フローの重複を除く。失敗画像とa11y・WebKit固有の代表保証は維持する。対象と削除した重複の代替は[Component Testの実行範囲](testing.md#ciのジョブとキャッシュ)を参照する。
+Component Testの全件CIはVitestの3shardを別runnerで実行し、従来名の必須チェックで全shardの成功を確認する。関連fileだけのPR差分実行はshard 1だけで行う。準備から集約まで3分以下を目標にし、成功時の画像収集と複数engineによる業務フローの重複を除く。Component jobだけ`.github/actions/tablecast-setup`の`bun-cache: "false"`で約900MBのcache復元を省き、`bun install --frozen-lockfile --ignore-scripts`で直接取得する。依存版は変えず、他jobの取得cacheは継続する。失敗画像とa11y・WebKit固有の代表保証は維持する。対象と削除した重複の代替は[Component Testの実行範囲](testing.md#ciのジョブとキャッシュ)を参照する。
 
 ローカルの`check`と各`test`コマンドは通常どおり全件を実行する。PRのCIはGitHub Compare APIで検証した差分から対象を選び、通常のWeb変更にはVitest標準の`related --run`を使う。共有入口や不明な差分、選択結果が0件のソース変更は全件へ戻す。選択範囲と実行しないjobの扱いは[CIの実行対象](testing.md#ciのジョブとキャッシュ)を参照する。
 

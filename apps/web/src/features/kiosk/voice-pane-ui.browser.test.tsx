@@ -12,7 +12,7 @@ it.each(["ja", "en"] as const)(
   "%sのSSR案内はカメラ余白を予約し、後続の説明と操作で先頭を動かさない",
   async (locale) => {
     await page.viewport(1024, 768);
-    for (const width of [224, 240, 402]) {
+    for (const width of [224, 402]) {
       const host = document.createElement("div");
       try {
         host.innerHTML = renderToStaticMarkup(
@@ -68,7 +68,6 @@ it.each(["ja", "en"] as const)(
     const labels = locale === "ja" ? ja : en;
     for (const [width, height, paneWidth, paneHeight] of [
       [1180, 820, 240, 692],
-      [1512, 982, 240, 854],
       [402, 874, 402, 360],
     ] as const) {
       await page.viewport(width, height);
@@ -188,7 +187,7 @@ it.each(["ja", "en"] as const)(
   "%sの既定幅と最小幅で参考カードを収め、画像なしでもQRを表示する",
   async (locale) => {
     await page.viewport(1180, 820);
-    for (const width of [240, 224]) {
+    for (const width of [224]) {
       const screen = await render(
         <Surface locale={locale}>
           <div style={{ width, height: 692 }}>

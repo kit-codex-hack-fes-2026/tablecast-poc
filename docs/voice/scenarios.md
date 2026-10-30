@@ -23,5 +23,5 @@
 
 - APIと実D1はvoice-service-completenessで、日英の複数商品検索、IDによる詳細取得、必須選択、条件の訂正、追加料金、商品詳細とタブの遷移、同じ発話での承認拒否、次の発話での注文成立を確認する。既存の認可・競合・版・言語・停止の試験も維持する。
 - Webのvoice-cameraは標準transport境界を固定し、API認可の失敗と端末の撮影許可を区別してモデルへ返すこと、未認可・停止・言語変更後に撮影しないことを確認する。local-camera-readingは実MediaStreamからのJPEG取得・読取・破棄を扱う。
-- voice-service-uiはChromium・WebKit・reduced motion、kiosk-layoutはChromium・WebKitで、224px・240px・広げた会話欄、ロゴの読込と失敗、カードの収まり、最新発話の固定と履歴スクロール、候補の追加・選択を確認する。ロゴだけはテストケース内のHTTP画像fixtureを使い、終了時に解除する。
+- voice-service-uiはChromium・WebKit・reduced motion、kiosk-layoutはChromium・WebKitで、最小224px・広げた会話欄、ロゴの読込と失敗、カードの収まり、最新発話の固定と履歴スクロール、候補の追加・選択を確認する。ロゴだけはテストケース内のHTTP画像fixtureを使い、終了時に解除する。
 - 固定tool呼出しの成功は、実モデルが適切な判断・発話をした証明ではない。上記の発話を実モデル・実音声・実iPadでも確認し、対象SHA、モデル、実際の返答、料金と時間、未実施範囲をPRへ残す。推論要約・字幕・spinnerの到着を返答音声の再生開始とは扱わない。

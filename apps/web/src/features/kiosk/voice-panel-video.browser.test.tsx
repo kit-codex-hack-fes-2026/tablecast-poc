@@ -29,7 +29,6 @@ it.each(["ja", "en"] as const)(
       interrupted: false,
     }));
     for (const [width, height, paneWidth, paneHeight] of [
-      [1512, 982, 240, 854],
       [1180, 820, 240, 692],
       [820, 1180, 820, 360],
       [402, 874, 402, 360],

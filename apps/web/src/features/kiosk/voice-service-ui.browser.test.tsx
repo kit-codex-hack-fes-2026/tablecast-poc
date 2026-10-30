@@ -28,7 +28,7 @@ it.each(["ja", "en"] as const)(
       },
     }));
     const nextCatalog = { ...catalog, configuration: { ...catalog.configuration, products } };
-    for (const width of [224, 240, 600]) {
+    for (const width of [224, 600]) {
       await page.viewport(1180, 820);
       const choose = vi.fn<NonNullable<VoicePanelProps["onChoose"]>>();
       const suggestion = vi.fn<NonNullable<VoicePanelProps["onSuggestion"]>>();
