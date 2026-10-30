@@ -52,6 +52,8 @@ validate_draft → get_draft_diffで検証・差分を確認し、店舗・変�
 
 公開は別段階である。明示の公開申請依頼があればrequest_publicationのreviewUrlを案内し、人が管理画面で承認する。get_configurationで公開結果を確認するまでは公開済みと言わない。
 
+ポイント・クーポンを改善案へ含める場合は、読取りtoolで現在の方針・条件を確認し、必要ならpreview_coupon_audienceで対象を調べる。採用後の保存・発券は下書きではなく即時操作なので、単なる提案や下書き依頼で実行しない。実行を依頼された場合はtablecastの特典手順、または接続先の公開ドキュメントの会員と特典を参照する。
+
 ## 使い方を確認する
 
 接続・権限・設定の説明が必要なら、接続先originの`/llms.txt`から必要なヘルプ章だけ取得する。人向けの公開入口は`/help`、日英のページ単位Markdownは索引から辿れる。plugin同梱の`tablecast-help` skillでも同じ本文を参照できる。

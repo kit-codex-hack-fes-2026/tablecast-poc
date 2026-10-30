@@ -1,6 +1,6 @@
 {
   "name": "tablecast",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "店舗の初期設定、資料Skill・画像・ZIP、メニュー・接客・テーマの設定、営業分析と卓上ゲーム制作を支援します。",
   "author": {
     "name": "TableCast"

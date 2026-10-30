@@ -13,6 +13,12 @@ Open products, categories, plans and service settings under Menu & service. Prov
 
 You can ask an agent to prepare a bilingual draft from menu photographs, leaving unreadable prices pending. Start with [MCP connections](./mcp.md).
 
+## Review setup across the store
+
+Open Set up your store from the store home screen to reach menu, language, service, materials, design and reward settings. Ask an agent to check the current store and setup status, then use supplied materials to fill gaps in the same draft. It uses `get_store_onboarding` and `get_configuration`, and checks draft progress with the existing draft ID.
+
+Configured does not mean fact-checked. Leave unverified prices and food information unresolved; optional games and plans need not be added. Before configuring points or coupons, review the [operations that apply when saved](./membership.md). A person completes the connection, device registration and publication approval.
+
 ## Prepare the tabletop iPad
 
 Open [Device pairing](/pair) on the iPad and generate a pairing code. Staff scan the QR code or enter the code on the store’s device page, check the store and table, then approve the connection. The guest screen opens on the iPad after approval. Allow microphone access on the iPad. Check the menu, required choices, basket and order confirmation. See [Troubleshooting](./troubleshooting.md) if voice is unavailable.

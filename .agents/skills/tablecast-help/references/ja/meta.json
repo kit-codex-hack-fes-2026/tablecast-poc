@@ -1,4 +1,17 @@
 {
   "title": "TableCast ドキュメント",
-  "pages": ["index", "getting-started", "mcp", "configuration", "analytics", "troubleshooting"]
+  "pages": [
+    "index",
+    "getting-started",
+    "mcp",
+    "configuration",
+    "menu-information",
+    "store-skills",
+    "theme",
+    "service",
+    "membership",
+    "games",
+    "analytics",
+    "troubleshooting"
+  ]
 }

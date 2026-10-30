@@ -1,6 +1,6 @@
 ---
 name: tablecast
-description: TableCastの店舗を初期設定するとき、店舗資料のSkill・画像・ZIPを取り込むとき、メニュー・接客を資料から設定するとき、価格・売切・画像・翻訳を変更するとき、採用した提案を下書きに反映するとき、卓上ゲームを制作・登録・検証するときに使う。
+description: TableCastの店舗資料・メニュー・接客・翻訳・食事情報を設定し、採用案を下書きへ反映する。店舗の初期設定、ポイント・クーポンの管理、卓上ゲームの制作・登録・検証にも使う。説明や提案だけでは設定を変更しない。
 ---
 
 # TableCastを設定する
@@ -20,6 +20,10 @@ description: TableCastの店舗を初期設定するとき、店舗資料のSkil
 日英のルール・参加人数・開始・順番交代・結果発表・終了を揃える。3Dライブラリとアセットはパッケージへ同梱し、実行中の外部CDNへ依存しない。飲む演出はスキップとソフトドリンク参加に対応する。注文API、認証情報、マイクや未提供のAI APIをゲームへ組み込まない。
 
 validate_gameの結果を確認し、返されたreviewUrlで試遊する。自動検証をゲームの動作確認と同一視しない。修正が必要なら新しい版を登録して再検証する。公開は管理画面で人が対象版を試遊・承認して行う。登録・検証・公開・実際のプレイのどこまで確認できたかを分けて報告する。
+
+## ポイント・クーポンを扱う
+
+特典の設定・対象確認・手動発行・取消は[特典の手順](references/rewards.md)を読む。get_point_policy・list_coupon_rules・preview_coupon_audienceは読取り、set_point_policy・save_coupon_ruleは保存時に適用される。下書きだけの依頼では適用せず提案を返す。issue_coupon・revoke_couponは実際の発行・取消を依頼された場合だけ使う。会員カードとアプリアイコンの見た目はtablecast-themeの設定下書きで扱う。
 
 ## 接続と依頼の範囲
 
@@ -41,7 +45,7 @@ validate_gameの結果を確認し、返されたreviewUrlで試遊する。自�
 
 get_configurationの現行値、またはこの会話で編集中の下書きを基点とする。既知のdraftIdがあればget_draft_diffで最新内容を取得し、別の空の下書きを作って作業を失わない。新しく始める場合はcreate_draftを呼ぶ。
 
-変更箇所を組み込んだ全configurationと最新のexpectedVersionをupdate_draftへ渡す。update_draftは部分patchではない。update_draft → validate_draft → get_draft_diffで保存・検証・差分を確認し、修正可能なエラーはその場で直す。架空のdraftId・画像キー・成功結果を作らない。
+変更箇所を組み込んだ全configurationと最新のexpectedVersionをupdate_draftへ渡す。update_draftは部分patchではない。update_draft・店舗資料の個別編集・validate_draftの返却版を次のexpectedVersionへ引き継ぐ。update_draft → validate_draft → get_draft_diffで保存・検証・差分を確認し、修正可能なエラーはその場で直す。架空のdraftId・画像キー・成功結果を作らない。
 
 競合したらget_draft_diffと必要な公開設定を読み直す。自分の変更箇所が競合していなければ最新版へ再適用する。同じ価格等に別の変更があれば選択を確認する。公開版が進み古い下書きを公開できない場合は新しい公開版から下書きを作り、依頼された差分だけ移す。古い下書きを勝手に破棄しない。
 
@@ -56,6 +60,12 @@ get_configurationの現行値、またはこの会話で編集中の下書きを
 - 採用済みの提案は対象と具体文を会話から引き継ぎ、現在設定と照合する。推奨価格を確認済みの事実として扱わない。
 
 接客指示が文書形式なら構造を保持し、update_draftへinstructionFormatVersion: 1を添える。本文だけの変更で書式を落とさず、実際の入力schemaに従う。
+
+## 食事情報を設定する
+
+get_configurationのfoodClassificationとschemaを読み、確認済みの資料をfoodInfo.base・components・defaultComponentIdsと選択肢のfoodChanges.add/removeへ対応付ける。アレルゲンIDは取得した29品目の分類を使い、分類外のIDを作らない。ヴィーガン・ベジタリアン・ハラール・グルテンフリーの判定理由、ハラール認証、共用設備はそれぞれの項目へ保存する。
+
+具材の除去で他の具材や基本情報の成分まで消さない。未確認を安全確認済みにせず、選択後の情報と公開前の検証を確認する。説明は[多言語メニューと食事情報](../tablecast-help/references/ja/menu-information.md)を参照する。注文snapshotの履歴を現在の食事情報で書き換えない。
 
 ## 商品画像
 
@@ -82,7 +92,7 @@ upload_image応答のimageKey・imageKind・imageSourceを対象商品へ設定�
 
 ## 使い方を確認する
 
-接続・権限・設定の説明が必要なら、接続先originの`/llms.txt`から必要なヘルプ章だけ取得する。人向けの公開入口は`/help`、日英のページ単位Markdownは索引から辿れる。plugin同梱の`tablecast-help` skillでも同じ本文を参照できる。
+接続・権限・設定の説明が必要なら、接続先originの`/llms.txt`から必要なヘルプ章だけ取得する。人向けの公開入口は`/help`、日英のページ単位Markdownは索引から辿れる。plugin同梱の`tablecast-help` skillでも同じ本文を参照できる。SKILL.md単体で導入し相対参照を読めない場合は、この索引から該当章を取得する。未配備のtoolを文書だけから利用可能と判断しない。
 
 ## 商品名と追加言語を設定する
 
