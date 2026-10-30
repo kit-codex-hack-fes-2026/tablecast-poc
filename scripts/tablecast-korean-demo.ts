@@ -747,8 +747,8 @@ export function koreanDemoStore(profile: "demo" | "history" | "smoke") {
         ja: `${item.ingredients[0]}。${spice[0]}${safety[0]}${note.ja}`,
         en: `${item.ingredients[1]}. ${spice[1]} ${safety[1]} ${note.en}`,
       };
-      return koreanFoodInformation(
-        withDemoFoodChanges({
+      return withDemoFoodChanges(
+        koreanFoodInformation({
           id: `${koreanDemoStoreId}-${item.key}`,
           categoryId: item.category,
           text: text(item.ja, item.en, description.ja, description.en),

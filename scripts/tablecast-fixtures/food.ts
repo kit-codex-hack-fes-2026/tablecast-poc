@@ -85,10 +85,74 @@ export function recipeFoodInformation(
 const egg = () => recipeFoodProfile(["egg"], eggMilk);
 const cheese = () => recipeFoodProfile(["milk"], eggMilk);
 
+// 確認済みの成分変更なし。新しい選択肢は暗黙に確認済みへ含めない。
+const unchangedOptions = [
+  "temperature-chilled",
+  "temperature-room",
+  "temperature-warm",
+  "temperature-hot",
+  "serving-taster",
+  "serving-glass",
+  "serving-tokkuri",
+  "serving-carafe",
+  "seasoning-plain",
+  "spice-none",
+  "ice-iced",
+  "ice-less",
+  "ice-none",
+  "ice-hot",
+  "ice-standard",
+  "ssamjang-none",
+  "dip-none",
+  "rice-none",
+  "chicken-sauce-plain",
+  "vegetables-spinach",
+  "vegetables-sprouts",
+  "vegetables-mushrooms",
+  "noodles-regular",
+  "noodles-large",
+  "glasses-two",
+  "glasses-three",
+  "glasses-four",
+  "tea-temperature-hot",
+  "tea-temperature-cold",
+  "sweetness-regular",
+  "sweetness-lighter",
+  "beer-serving-small",
+  "beer-serving-pint",
+];
+
+function unchangedFoodChanges(optionId: string) {
+  if (!unchangedOptions.some((suffix) => optionId.endsWith(`-${suffix}`)))
+    throw new Error(`食事情報が未分類のseed選択肢です: ${optionId}`);
+  return { add: [], remove: [] };
+}
+
 export function withDemoFoodChanges(input: Product): Product {
   const product = structuredClone(input);
   // 調味料は酒類・動物性出汁を使わないレシピ。麺はスープ粉末を含まない。
   const additions: [string, FoodProfile][] = [
+    ...[
+      "garnish-ginger",
+      "garnish-wasabi",
+      "garnish-shiso",
+      "garnish-lemon",
+      "topping-scallion",
+      "topping-radish",
+      "topping-nori",
+      "seasoning-salt",
+      "spice-light",
+      "spice-medium",
+      "spice-hot",
+      "spice-mild",
+      "spice-standard",
+      "wraps-lettuce",
+      "wraps-mixed",
+      "wraps-extra",
+      "rice-small",
+      "rice-regular",
+      "hotpot-extras-rice-cakes",
+    ].map((suffix): [string, FoodProfile] => [suffix, recipeFoodProfile([], plant)]),
     ["topping-egg", egg()],
     ["hotpot-extras-cheese", cheese()],
     ["seasoning-tare", recipeFoodProfile(["wheat", "soya"], seedDietary.plantGluten)],
@@ -123,10 +187,15 @@ export function withDemoFoodChanges(input: Product): Product {
           name: { ja: option.text.ja.displayName, en: resolveText(option.text, "en").displayName },
           profile: entry[1],
         });
-      if (id || defaultId)
+      if (id)
         option.foodChanges = {
-          add: id ? [id] : [],
+          add: [id],
           remove: defaultId && id !== defaultId ? [defaultId] : [],
+        };
+      else if (!option.foodChanges)
+        option.foodChanges = {
+          ...unchangedFoodChanges(option.id),
+          remove: defaultId ? [defaultId] : [],
         };
     }
   }
@@ -265,6 +334,7 @@ export function westwardFoodInformation(product: Product): Product {
   for (const option of result.modifiers.flatMap((group) => group.options)) {
     const entry = Object.entries(changes).find(([suffix]) => option.id.endsWith(`-${suffix}`));
     if (entry) option.foodChanges = entry[1];
+    else option.foodChanges ??= unchangedFoodChanges(option.id);
   }
   // 未使用の具材まで全商品へ複製せず、標準構成と実在する選択肢の参照に絞る。
   const used = new Set([
