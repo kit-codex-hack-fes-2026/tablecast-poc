@@ -34,7 +34,13 @@ describe("配備用D1 REST接続", () => {
     const request = vi
       .fn<(path: string, method?: string, body?: unknown) => Promise<unknown>>()
       .mockResolvedValue([
-        result(["repository", "environment", "seeded"], [["tablecast", "tablecast-staging", 1]]),
+        {
+          success: true,
+          results: result(
+            ["repository", "environment", "seeded"],
+            [["tablecast", "tablecast-staging", 1]],
+          ).results,
+        },
       ]);
     const db = deploymentDatabase("tablecast-test", request);
     expect(await db.select().from(business.deploymentOwner).get()).toEqual({

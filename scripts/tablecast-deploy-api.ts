@@ -12,7 +12,7 @@ const responseSchema = z.object({ success: z.boolean(), result: z.unknown() });
 const databaseResponseSchema = z.array(
   z.object({
     success: z.literal(true),
-    meta: z.unknown(),
+    meta: z.unknown().optional(),
     results: z.object({
       columns: z.array(z.string()),
       rows: z.array(z.array(z.union([z.string(), z.number(), z.null()]))),
