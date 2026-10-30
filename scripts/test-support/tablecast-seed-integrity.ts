@@ -13,10 +13,10 @@ export async function seedIntegrity(env: TablecastEnv, credentials: DemoCredenti
   const counts = await seedDemoDatabase(platform.env, credentials);
   // Then: 規模だけでなく組織、プラン、支払、時系列の整合性を持つ。
   expect(counts).toMatchObject({
-    stores: 3,
-    tables: 36,
-    historicalSessions: 600,
-    orders: 2415,
+    stores: 4,
+    tables: 46,
+    historicalSessions: 800,
+    orders: 3219,
   });
   expect(counts.events).toBeGreaterThanOrEqual(20_000);
   const catalogs = {
@@ -25,7 +25,7 @@ export async function seedIntegrity(env: TablecastEnv, credentials: DemoCredenti
   const products = catalogs.results.flatMap(
     (row) => configurationSchema.parse(JSON.parse(row.config_json)).products,
   );
-  expect(products).toHaveLength(102);
+  expect(products).toHaveLength(110);
   for (const product of products.filter((item) => item.imageKey))
     expect(product.imageKey).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.webp$/);
   for (const product of products) {
@@ -40,7 +40,7 @@ export async function seedIntegrity(env: TablecastEnv, credentials: DemoCredenti
   ).toEqual({});
   expect(products.some((product) => product.foodInfo.components.length > 0)).toBe(true);
   expect(await db.get(sql`SELECT COUNT(DISTINCT organization_id) AS count FROM stores`)).toEqual({
-    count: 3,
+    count: 4,
   });
   expect(
     await db.get(
@@ -56,7 +56,7 @@ export async function seedIntegrity(env: TablecastEnv, credentials: DemoCredenti
     await db.get(
       sql`SELECT COUNT(*) AS count FROM restaurant_tables t WHERE NOT EXISTS(SELECT 1 FROM table_sessions s WHERE s.table_id=t.id AND s.status='open')`,
     ),
-  ).toEqual({ count: 6 });
+  ).toEqual({ count: 7 });
   expect({
     results: await db.all(
       sql`SELECT s.id FROM table_sessions s WHERE status='closed' AND (SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.table_session_id=s.id)!=(SELECT COALESCE(SUM(amount),0) FROM payments p WHERE p.table_session_id=s.id)`,
@@ -110,7 +110,7 @@ export async function assertSeedIcons(env: TablecastEnv) {
       sql`SELECT image AS url FROM user UNION ALL SELECT logo AS url FROM organization`,
     ),
   };
-  expect(seededIcons.results.length).toBe(12);
+  expect(seededIcons.results.length).toBe(15);
   for (const { url } of seededIcons.results) {
     expect(url).toMatch(/^\/api\/avatars\/[a-f0-9-]+$/);
     const image = await platform.env.TABLECAST_MEDIA.get(

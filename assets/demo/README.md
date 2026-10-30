@@ -119,3 +119,7 @@ Use case: product-mockup
 ## 2業態デモの追加画像
 
 初回生成では`westward-burger.png`と`westward-ipa.png`の2点をCodex内蔵imagegenで追加した。2店舗の内装・制服資料と共に[全プロンプトと出所](../../docs/demo/assets/README.md)へ記録している。その時点で画像がなかった商品も含め、現在はWestward Burgers Kyotoの全12商品に個別のWebP写真を用意している。
+
+## 剛麺研究所
+
+`gomen-*.webp` と `identities/gomen-*.webp` は架空のラーメン店用。生成方法・参考資料・実店舗との区別は [制作記録](../../docs/demo/gomen.md) を参照する。背景とチラシも通常の画像と同じseed経路からR2・Storybookへ投入する。

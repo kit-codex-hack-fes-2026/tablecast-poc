@@ -65,6 +65,8 @@ function createTablecastSeedPreview() {
       [
         configuration.branding?.logo?.imageKey,
         configuration.branding?.banner?.imageKey,
+        ...Object.values(configuration.appearance?.assets ?? {}).map((asset) => asset.imageKey),
+        ...(configuration.banners ?? []).map((banner) => banner.image.imageKey),
         ...configuration.products.flatMap((product) => [
           product.imageKey,
           ...product.modifiers.flatMap((group) => group.options.map((option) => option.imageKey)),

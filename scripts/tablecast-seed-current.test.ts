@@ -83,7 +83,7 @@ it("再投入で別IDの営業中卓と閉じた初期卓と未会計を保ち�
     try {
       const db = createDatabase(platform.env.TABLECAST_DB);
       const initial = await seedDemoDatabase(platform.env, credentials);
-      expect(initial).toMatchObject({ stores: 3, tables: 36, historicalSessions: 0, orders: 15 });
+      expect(initial).toMatchObject({ stores: 4, tables: 46, historicalSessions: 0, orders: 19 });
       const liveId = "tablecast-current-manual-open";
       const historyId = "tablecast-current-manual-closed";
       const originalLiveId = "tablecast-komorebi-table-01-session";

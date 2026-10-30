@@ -5,12 +5,12 @@ import { describe, expect, it } from "vitest";
 import { demoStores } from "./tablecast-fixtures.ts";
 
 describe("デモの構成データ", () => {
-  it("同じプロファイルから和食・バーガー・韓国料理店の4言語の102商品と個別写真を作る", () => {
+  it("同じプロファイルから和食・バーガー・韓国料理・ラーメン店の4言語の110商品と画像を作る", () => {
     const stores = demoStores("demo");
     expect(stores).toEqual(demoStores("demo"));
-    expect(new Set(stores.map((store) => store.id)).size).toBe(3);
-    expect(stores.reduce((sum, store) => sum + store.configuration.products.length, 0)).toBe(102);
-    expect(stores.reduce((sum, store) => sum + store.tableCount, 0)).toBe(36);
+    expect(new Set(stores.map((store) => store.id)).size).toBe(4);
+    expect(stores.reduce((sum, store) => sum + store.configuration.products.length, 0)).toBe(110);
+    expect(stores.reduce((sum, store) => sum + store.tableCount, 0)).toBe(46);
     const burgerProducts = stores
       .filter((store) => store.id === "tablecast-koharu")
       .flatMap((store) => store.configuration.products);
@@ -18,8 +18,18 @@ describe("デモの構成データ", () => {
     expect(burgerProducts.filter((product) => product.categoryId === "burgers")).toHaveLength(3);
     expect(burgerProducts.filter((product) => product.categoryId === "craft-beer")).toHaveLength(3);
     const allProducts = stores.flatMap((store) => store.configuration.products);
-    expect(allProducts.every((product) => product.imageKey?.endsWith(".webp"))).toBe(true);
-    expect(new Set(allProducts.map((product) => product.imageKey)).size).toBe(102);
+    expect(
+      allProducts
+        .filter((product) => product.imageKey)
+        .every((product) => product.imageKey?.endsWith(".webp")),
+    ).toBe(true);
+    expect(allProducts.filter((product) => !product.imageKey).map((product) => product.id)).toEqual(
+      ["tablecast-gomen-pork-takeaway"],
+    );
+    expect(
+      new Set(allProducts.filter((product) => product.imageKey).map((product) => product.imageKey))
+        .size,
+    ).toBe(104);
     expect(stores.map((store) => store.id)).not.toContain("tablecast-akari");
     const koreanProducts =
       stores.find((store) => store.id === "tablecast-hanul")?.configuration.products ?? [];
@@ -77,6 +87,37 @@ describe("デモの構成データ", () => {
       true,
     );
   });
+  it("ラーメンの無料コールと有料追加を保持し、未選択・売切を注文可能にしない", () => {
+    const store = demoStores("demo").find((item) => item.id === "tablecast-gomen");
+    if (!store) throw new Error("ラーメン店がありません。");
+    const line = {
+      id: "ramen",
+      productId: "tablecast-gomen-ramen-300",
+      quantity: 1,
+      selections: [
+        { optionId: "tablecast-gomen-garlic-extra", quantity: 1 },
+        { optionId: "tablecast-gomen-vegetables-double", quantity: 1 },
+        { optionId: "tablecast-gomen-fat-none", quantity: 1 },
+        { optionId: "tablecast-gomen-seasoning-regular", quantity: 1 },
+        { optionId: "tablecast-gomen-extras-pork", quantity: 1 },
+        { optionId: "tablecast-gomen-extras-egg", quantity: 1 },
+      ],
+    };
+    expect(priceCart(store.configuration, [line], 1)).toMatchObject({
+      complete: true,
+      total: 1200,
+    });
+    expect(priceCart(store.configuration, [{ ...line, selections: [] }], 2).complete).toBe(false);
+    expect(() =>
+      priceCart(store.configuration, [{ ...line, productId: "tablecast-gomen-soupless-400" }], 3),
+    ).toThrow("SOLD_OUT");
+    expect(store.configuration.banners?.[0]?.hotspots[0]?.productId).toBe(line.productId);
+    expect(store.configuration.appearance?.assets?.paper?.imageSource?.generated).toBe(true);
+    expect(store.configuration.cast.instructions.ja).toContain("カラメは辛さではなく");
+    expect(
+      searchStoreSkills(store.configuration.cast.skills ?? [], "営業時間", 0).matches.length,
+    ).toBeGreaterThan(0);
+  });
   it("韓国店の台本で器三人分を一本分の酒とし、チヂミの訂正後は4740円になる", () => {
     const config = demoStores("demo").find(
       (store) => store.id === "tablecast-hanul",
@@ -114,14 +155,14 @@ describe("デモの構成データ", () => {
     const groups = new Map(
       products.flatMap((product) => product.modifiers.map((group) => [group.id, group] as const)),
     );
-    expect(groups.size).toBe(30);
+    expect(groups.size).toBe(35);
     const options = [...groups.values()].flatMap((group) => group.options);
-    expect(options).toHaveLength(92);
+    expect(options).toHaveLength(109);
     const pictured = options.filter((option) => option.imageKey);
     expect(pictured).toHaveLength(63);
     expect(new Set(pictured.map((option) => option.imageKey)).size).toBe(62);
     expect(pictured.every((option) => option.imageKey?.endsWith(".webp"))).toBe(true);
-    expect(options.filter((option) => option.imageKey === null)).toHaveLength(29);
+    expect(options.filter((option) => option.imageKey === null)).toHaveLength(46);
     expect(options.every((option) => option.imageKind === "illustration")).toBe(true);
     expect(new Set([...groups.values()].map((group) => group.kind))).toEqual(
       new Set(["single", "multiple", "quantity"]),
@@ -151,9 +192,9 @@ describe("デモの構成データ", () => {
         .every((product) => product.id.endsWith("-oolong") || product.id.endsWith("-green-tea")),
     ).toBe(true);
   });
-  it("smokeでも商品と対象外optionの参照を保ち12商品に絞る", () => {
+  it("smokeでも商品と対象外optionの参照を保ち15商品に絞る", () => {
     const stores = demoStores("smoke");
-    expect(stores.reduce((sum, store) => sum + store.configuration.products.length, 0)).toBe(12);
+    expect(stores.reduce((sum, store) => sum + store.configuration.products.length, 0)).toBe(15);
     for (const store of stores) expect(configurationErrors(store.configuration)).toEqual([]);
   });
 });
