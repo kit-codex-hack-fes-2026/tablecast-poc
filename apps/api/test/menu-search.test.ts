@@ -5,6 +5,7 @@ import { expect, inject, it } from "vitest";
 import { z } from "zod";
 import app from "../src/app";
 import * as business from "../src/db/business-schema";
+import { getCatalog } from "../src/modules/catalog/queries";
 import { getCoreState } from "../src/modules/tables/core-queries";
 import { setUiSection } from "../src/modules/tables/use-cases/presentation";
 import { invokeVoiceTool } from "../src/modules/voice/realtime";
@@ -125,6 +126,7 @@ it("GUI・検索照会・検索画面ツールが同じ8件の順序・価格・
 it("カタログ更新では検索語を保って先頭ページの新しい価格と版へ切り替える", async () => {
   await setupProducts();
   await tool("showMenuSearch", { query: "検索カテゴリ", offset: 8 });
+  const catalog = await getCatalog(services(), device.storeId);
   const store = await services()
     .db.select()
     .from(business.stores)
@@ -135,6 +137,11 @@ it("カタログ更新では検索語を保って先頭ページの新しい価�
     .db.update(business.stores)
     .set({ config_version: 5 })
     .where(eq(business.stores.id, device.storeId));
+  await expect(
+    setUiSection(services(), device, { section: "menu", search: { query: "検索商品0" } }, "core", {
+      catalog,
+    }),
+  ).rejects.toThrow("TABLE_CONFLICT");
   const state = await getCoreState(services(), device);
   expect(state.configVersion).toBe(5);
   expect(state.menuSearch).toMatchObject({
