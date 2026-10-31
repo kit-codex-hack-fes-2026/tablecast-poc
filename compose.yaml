@@ -1,7 +1,7 @@
 name: ${COMPOSE_PROJECT_NAME:?Run bun run dev:prepare first}
 services:
   tablecast-mailpit:
-    image: axllent/mailpit:v1.31.6
+    image: axllent/mailpit:v1.32.0
     ports:
       - "127.0.0.1::8025"
       - "127.0.0.1::1025"
