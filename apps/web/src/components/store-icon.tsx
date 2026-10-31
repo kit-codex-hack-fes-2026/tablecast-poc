@@ -1,14 +1,21 @@
 import { Avatar } from "@base-ui/react/avatar";
 import { cn } from "tailwind-variants";
 
+/**
+ * 店舗一覧の小さい識別画像。
+ * nameが必須、logoは任意のURL、classNameは配置に使う。
+ * 画像なしは頭文字。
+ * 隣に店舗名を必ず置き、単独の文字省略で店を識別させない。
+ * 横長のブランドロゴにはStoreLogoを使う。
+ */
 export function StoreIcon({
   name,
   logo,
   className,
 }: {
-  name: string;
-  logo?: string | null;
   className?: string;
+  logo?: null | string;
+  name: string;
 }) {
   return (
     <Avatar.Root

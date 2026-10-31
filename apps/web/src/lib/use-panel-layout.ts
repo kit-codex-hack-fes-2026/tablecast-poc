@@ -1,5 +1,5 @@
-import { useMemo } from "react";
 import { createIsomorphicFn } from "@tanstack/react-start";
+import { useMemo } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 import { usePanelCookies } from "./panel-layout";
 
@@ -45,6 +45,10 @@ export const readPanelCookies = createIsomorphicFn()
   .client(() =>
     document.cookie
       .split(";")
-      .filter((cookie) => cookie.trim().startsWith("tablecast-layout-"))
+      .filter(
+        (cookie) =>
+          cookie.trim().startsWith("tablecast-layout-") ||
+          cookie.trim().startsWith("tablecast-navigation="),
+      )
       .join(";"),
   );

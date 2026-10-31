@@ -1,22 +1,24 @@
-import { and, desc, eq, isNotNull, lt, notInArray, sql, sum } from "drizzle-orm";
+import { and, desc, eq, isNotNull, lt, ne, notInArray, sql, sum } from "drizzle-orm";
+import type { ApiServices } from "../../platform/context";
+import type { Actor } from "../auth/model";
 import {
   orders,
   payments,
   restaurantTables,
   tableEvents,
   tableSessions,
-} from "../../db/business-schema";
-import type { ApiServices } from "../../platform/context";
+} from "../../db/table-schema";
 import { ensure } from "../../platform/errors";
-import type { Actor } from "../auth/model";
 import {
-  tablePlanSchema,
   type HistoryPage,
   type HistoryQuery,
   type SessionEventsPage,
   type SessionEventsQuery,
+  tablePlanSchema,
 } from "./model";
-import { billValue, eventValue, getSession } from "./queries";
+import { getSession } from "./queries";
+import { billValue, eventValue } from "./values";
+
 export async function getHistory(
   services: ApiServices,
   actor: Actor,
@@ -103,9 +105,9 @@ export async function getHistory(
       opened_at: page.opened_at,
       closed_at: page.closed_at,
       plan_json: page.plan_json,
-      ordered_total: sql<number | null>`(${orderedTotal})`.mapWith(Number),
-      adjustment_total: sql<number | null>`(${adjustmentTotal})`.mapWith(Number),
-      paid_total: sql<number | null>`(${paidTotal})`.mapWith(Number),
+      ordered_total: sql<null | number>`(${orderedTotal})`.mapWith(Number),
+      adjustment_total: sql<null | number>`(${adjustmentTotal})`.mapWith(Number),
+      paid_total: sql<null | number>`(${paidTotal})`.mapWith(Number),
     })
     .from(page)
     .orderBy(desc(page.closed_at), desc(page.id));
@@ -153,6 +155,7 @@ export async function getSessionEvents(
     .where(
       and(
         eq(tableEvents.table_session_id, row.id),
+        ne(tableEvents.kind, "voice.suggestions"),
         eq(tableEvents.store_id, actor.storeId),
         query.before === undefined ? undefined : lt(tableEvents.cursor, query.before),
       ),

@@ -1,55 +1,78 @@
 import type { Locale } from "@tablecast/api/schema";
-import { Button } from "../components/ui/button";
 import { useI18n } from "../i18n/locale";
+import { LanguageLabel } from "./language-label";
+import { Button } from "./ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "./ui/select";
 
+const languages = ["ja", "en"] as const;
+
+/**
+ * 日英と現在言語を直接選び、追加の対応言語はメニューから選ぶ。
+ * onChange(locale)で選択を通知し、disabledで更新中の二重操作を防ぐ。
+ * 現在言語はLocaleProviderから読みaria-pressedで示す。
+ * 翻訳データと永続化は呼出し元が所有する。
+ */
 export function LanguageSwitch({
   onChange,
   disabled = false,
+  availableLanguages = ["ja", "en"],
 }: {
-  onChange: (locale: Locale) => void;
+  availableLanguages?: readonly Locale[];
   disabled?: boolean;
+  onChange: (locale: Locale) => void;
 }) {
   const { locale, t } = useI18n();
+  const tabLanguages = new Set<Locale>([...languages, locale]);
+  const otherLanguages = availableLanguages.filter((language) => !tabLanguages.has(language));
   return (
     <fieldset
       data-ui="language-switch"
-      className="flex p-1 bg-muted border border-border rounded-lg shrink-0"
+      className="flex shrink-0 rounded-lg border border-border bg-muted p-1"
       aria-label={t("common_language")}
     >
-      <Button
-        className="min-h-11 py-2 px-2.5 rounded-md text-sm font-semibold inline-flex items-center gap-2 [&[aria-pressed='true']]:bg-card [&[aria-pressed='true']]:shadow-sm max-xl:px-2 max-lg:flex-1 max-sm:text-sm max-sm:px-1.5"
-        variant="ghost"
-        type="button"
-        lang="ja"
-        aria-pressed={locale === "ja"}
-        disabled={disabled}
-        onClick={() => onChange("ja")}
-      >
-        <img
-          className="w-5 h-3.5 object-cover rounded-sm border border-border"
-          src="/flags/jp.svg"
-          alt=""
-          aria-hidden="true"
-        />
-        {t("common_language_native_ja")}
-      </Button>
-      <Button
-        className="min-h-11 py-2 px-2.5 rounded-md text-sm font-semibold inline-flex items-center gap-2 [&[aria-pressed='true']]:bg-card [&[aria-pressed='true']]:shadow-sm max-xl:px-2 max-lg:flex-1 max-sm:text-sm max-sm:px-1.5"
-        variant="ghost"
-        type="button"
-        lang="en"
-        aria-pressed={locale === "en"}
-        disabled={disabled}
-        onClick={() => onChange("en")}
-      >
-        <img
-          className="w-5 h-3.5 object-cover rounded-sm border border-border"
-          src="/flags/gb.svg"
-          alt=""
-          aria-hidden="true"
-        />
-        {t("common_language_native_en")}
-      </Button>
+      {[...tabLanguages].map((language) => (
+        <Button
+          key={language}
+          className="whitespace-nowrap font-medium aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-sm max-xl:px-2 max-sm:px-1.5"
+          size="sm"
+          variant="ghost"
+          type="button"
+          lang={language}
+          aria-pressed={locale === language}
+          disabled={disabled}
+          onClick={() => onChange(language)}
+        >
+          <LanguageLabel locale={language} />
+        </Button>
+      ))}
+      {otherLanguages.length > 0 && (
+        <Select
+          value={locale}
+          disabled={disabled}
+          onValueChange={(value) => {
+            const language = otherLanguages.find((item) => item === value);
+            if (language) onChange(language);
+          }}
+        >
+          <SelectTrigger
+            aria-label={t("common_language")}
+            className="w-auto border-0 bg-transparent shadow-none"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              {otherLanguages.map((language) => (
+                <LanguageLabel key={language} locale={language} compact />
+              ))}
+            </span>
+          </SelectTrigger>
+          <SelectContent>
+            {otherLanguages.map((language) => (
+              <SelectItem key={language} value={language}>
+                <LanguageLabel locale={language} />
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
     </fieldset>
   );
 }

@@ -1,9 +1,11 @@
-import { observeOperation } from "../../platform/telemetry";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import type { Database } from "../../db/client";
+import type { ApiServices } from "../../platform/context";
 import * as business from "../../db/business-schema";
-import type { ApiServices, Database } from "../../platform/context";
 import { ensure } from "../../platform/errors";
-import { configurationSchema, type Catalog } from "../configuration/model";
+import { observeOperation } from "../../platform/telemetry";
+import { readConfiguration } from "../configuration/food-compatibility";
+import { type Catalog } from "../configuration/model";
 export async function getCatalog(
   services: ApiServices,
   storeId: string,
@@ -12,6 +14,17 @@ export async function getCatalog(
   return observeOperation(
     "tablecast.catalog.read",
     async () => {
+      const pricing = services.tableAccess.pricing;
+      if (!demoId && pricing?.store.id === storeId)
+        return catalogValue({ store: pricing.store, demo: null });
+      const demo = services.tableAccess.demo;
+      if (demoId && demo?.id === demoId && demo.storeId === storeId)
+        return {
+          storeId,
+          storeName: demo.configuration.storeName,
+          version: demo.configuration.config_version,
+          configuration: readConfiguration(JSON.parse(demo.configuration.config_json)),
+        };
       return catalogValue(await catalogQuery(services.db, storeId, demoId).get(), demoId);
     },
     { env: services.env, input: { storeId } },
@@ -70,7 +83,7 @@ export function catalogValue(
     storeId: store.id,
     storeName: store.name,
     version: demo?.config_version ?? store.config_version,
-    configuration: configurationSchema.parse(JSON.parse(demo?.config_json ?? store.config_json)),
+    configuration: readConfiguration(JSON.parse(demo?.config_json ?? store.config_json)),
   };
 }
 

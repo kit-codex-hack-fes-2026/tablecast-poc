@@ -1,7 +1,6 @@
-FROM oven/bun:1.3.13 AS build
+FROM oven/bun:1.4.3 AS build
 WORKDIR /app
 COPY package.json bun.lock ./
-COPY patches/*.patch patches/
 COPY apps/emulate/package.json apps/emulate/package.json
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
@@ -10,7 +9,7 @@ RUN bun install --frozen-lockfile --ignore-scripts
 COPY apps/emulate/src apps/emulate/src
 RUN bun build apps/emulate/src/index.ts --target=bun --outfile=apps/emulate/dist/index.js
 
-FROM oven/bun:1.3.13-slim
+FROM oven/bun:1.4.3-slim
 WORKDIR /app
 COPY --from=build --chown=bun:bun /app/apps/emulate/dist ./apps/emulate/dist
 COPY --from=build --chown=bun:bun /app/apps/emulate/node_modules/emulate/dist/fonts ./apps/emulate/dist/fonts

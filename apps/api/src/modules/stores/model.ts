@@ -12,26 +12,19 @@ export const createStoreSchema = z
   .strict();
 export type CreateStore = z.infer<typeof createStoreSchema>;
 
-import type { TableEvent, TableState } from "../tables/model";
 import { tableEventSchema, tableStateSchema } from "../tables/model";
-export type StoreSummary = { id: string; name: string; role: string; organizationId?: string };
+export type StoreSummary = z.infer<typeof storeSummarySchema>;
 
-export type AdminState = {
-  store: StoreSummary;
-  tables: TableState[];
-  vacantTables: { id: string; name: string }[];
-  events: TableEvent[];
-  cursor: number;
-};
+export type AdminState = z.infer<typeof adminStateSchema>;
 
-export const storeSummarySchema: z.ZodType<StoreSummary> = z.object({
+const storeSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
   role: z.string(),
   organizationId: z.string().optional(),
 });
 
-export const adminStateSchema: z.ZodType<AdminState> = z.object({
+export const adminStateSchema = z.object({
   store: storeSummarySchema,
   tables: z.array(tableStateSchema),
   vacantTables: z.array(z.object({ id: z.string(), name: z.string() })),

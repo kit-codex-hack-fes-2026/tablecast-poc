@@ -2,7 +2,7 @@
 
 [仕様索引](README.md) · [開発環境の仕組み](development.md) · [テスト戦略](testing.md)
 
-macOSではHomebrewと、起動済みのOrbStackまたはDocker Desktopを使う。ホスト開発でもMailpit・GrafanaにはDockerが必要である。外部APIキーなしでGUI注文・ログイン・メールを開発できる。Composeは2.24.4以降を使い、`docker compose version` で確認する（Dev Containerの[ポート置換](https://docs.docker.com/reference/compose-file/merge/#replace-value)に必要）。
+macOSではHomebrewと、起動済みのOrbStackまたはDocker Desktopを使う。ホスト開発でもMailpitと共有LGTM・LangfuseにはDockerが必要である。初回は`bun run setup`の後に`bun run tablecast:observability:up`を実行し、共有観測基盤を準備する。外部APIキーなしでGUI注文・ログイン・メールを開発できる。Composeは2.24.4以降を使い、`docker compose version` で確認する（Dev Containerの[ポート置換](https://docs.docker.com/reference/compose-file/merge/#replace-value)に必要）。
 
 > [!TIP]
 > `package.json` に実行するCLI、`turbo.json` に順序と常駐タスクを記載する。WebはTurborepo、コンテナ資源はComposeで管理する。独自のdaemonや起動ラッパーは使わない。
@@ -17,11 +17,11 @@ Gitがなければ `brew install git`、GitHub CLIを使う場合は `brew insta
 git clone https://github.com/kit-codex-hack-fes-2026/tablecast-poc.git
 cd tablecast-poc
 git fetch origin
-git worktree add -b codex/my-change ../tablecast-my-change origin/staging
+git worktree add -b codex/123-my-change ../tablecast-my-change origin/staging
 cd ../tablecast-my-change
 ```
 
-`my-change` は作業内容に置き換える。既存branchは `git worktree add ../tablecast-my-change codex/my-change` で開く。以降は作業先のworktreeルートで実行する。
+`123` は着手するIssue番号、`my-change` は作業内容に置き換える。既存branchは `git worktree add ../tablecast-my-change codex/123-my-change` で開く。以降は作業先のworktreeルートで実行する。
 
 > [!IMPORTANT]
 > `node_modules`、`.local` はworktree間でコピーしない。Git標準のworktree作成では環境ファイルもコピーされない。Codexの `.worktreeinclude` は `.env.local` のみを対象にする。
@@ -41,6 +41,7 @@ bun run dev:container
 Docker CLIだけでも同じ構成を使える。
 
 ```sh
+sh scripts/tablecast-observability.sh up
 sh .devcontainer/tablecast-init.sh
 docker compose -f .devcontainer/compose.yaml up -d --build
 docker compose -f .devcontainer/compose.yaml exec tablecast bun run setup
@@ -53,11 +54,10 @@ docker compose -f .devcontainer/compose.yaml exec tablecast bun run dev:containe
 
 ```sh
 docker compose -f .devcontainer/compose.yaml port tablecast 8025
-docker compose -f .devcontainer/compose.yaml port tablecast-lgtm 3000
 docker compose -f .devcontainer/compose.yaml port tablecast 6006
 ```
 
-上からMailpit・Grafana・Storybookの公開ポートを確認できる。Storybookはコンテナ内で別途 `bun run storybook --host 0.0.0.0` を実行する。[OrbStackのHTTPS設定](devcontainer.md)も参照できる。
+上からMailpit・Storybookの公開ポートを確認できる。共有Grafanaは既定で`http://127.0.0.1:3300`、Langfuseは`http://127.0.0.1:3301`。Storybookはコンテナ内で別途 `bun run storybook --host 0.0.0.0` を実行する。[OrbStackのHTTPS設定](devcontainer.md)も参照できる。
 
 > [!NOTE]
 > Docker socketは渡さない。Dockerを直接使うE2Eは2BのホストかCIで実行する。コンテナ内のブラウザー試験には `bunx --no-install playwright install --with-deps chromium webkit` が必要。実iPadはlocalhostへ接続できないため、[実機試験](development.md#実機公開環境)を参照する。
@@ -86,29 +86,73 @@ bun --version
 node --version
 docker info
 bun run setup
+# 初回だけ共有proxyを起動する。必要に応じて管理者権限の認証が求められる。
+bunx --no-install portless proxy start --no-tls --port 80
 bun run dev
 ```
 
-[mise.toml](../mise.toml)がNode 24.7.0、Bun 1.3.13を指定する。`setup` は固定lockでJS依存とhooksを導入し、Paraglideを生成する。追加worktreeでも `mise trust`、`mise install`、`bun run setup` を実行する。
+[mise.toml](../mise.toml)がNode 24.22.0、Bun 1.4.3を指定する。`setup` は固定lockでJS依存とhooksを導入し、Paraglideを生成する。追加worktreeでも `mise trust`、`mise install`、`bun run setup` を実行する。
 
-`dev` は `turbo run dev --filter=@tablecast/web` を実行する。`dependsOn` で設定・migration・seed・Compose起動を先に済ませ、`with` でOAuthとproxyも起動する。WebとAPI WorkerはViteのmultiworkerを使い、APIを二重起動しない。
+Webのアプリ操作ショートカットは`@tanstack/react-hotkeys`を使う。依存はWebのpackageとrootのlockで固定し、追加のブラウザー拡張やOS設定は不要。フォームの保存可否と同じ制約で動作し、コンポーネント固有の矢印キー操作は既存部品へ任せる。
 
-起動ログの `http://<worktree>.<repo>.localhost:<port>` を開く。ポート・DB・Cookieホスト名はworktreeごとに分離する。起動中はターミナルを開いたままにする。
+メニュー検索はAPI依存のFuse.js 7.5.0を共通利用する。既存checkoutはlockfile更新後に `bun run setup` を実行する。外部検索サービス・モデル・追加envは不要で、検索の単体検証は `bun run --cwd apps/api test --project unit test/catalog-search.test.ts` で実行する。
+
+CIのNodeは`>=24.22.0 <25`を指定し、`setup-node`がrunnerのtoolcacheから適合する24系を選ぶ。収録版があればNodeの取得・展開・コピーを省き、なければ取得する。ローカルとDev Containerの24.22.0固定、Bunと依存lockは維持する。CIのminor・patch版はrunner image更新に追従するため、CI固有の問題を再現するときは`setup-node`ログの実行版とrunner imageを照合する。[setup-nodeの版選択](https://github.com/actions/setup-node/blob/49933ea5288caeca8642d1e84afbd3f7d6820020/README.md#supported-version-syntax)
+
+CIのBun取得cacheは各jobが復元し、静的検査jobだけが固定依存の導入後に保存する。全jobでfrozen installを実行し、取得cacheを試験成功の代わりに使わない。Turboを使うjobはcodegen前にcacheを復元する。APIではWeb生成物を使わず、Componentは直前に専用形式を生成するため、この2jobでは共通setupのcodegenだけを省く。実行範囲と費用の測定は[CIのジョブとキャッシュ](testing.md#ciのジョブとキャッシュ)を参照する。
+
+ブラウザーのOS依存導入は公式Playwright CLIを使う。GitHub-hostedの使い捨てVMだけ、導入中のdpkgの展開ファイル同期を省き、終了時に専用設定を除去する。self-hostedやローカルの設定には適用しない。境界と計測は[CIのジョブとキャッシュ](testing.md#ciのジョブとキャッシュ)に従う。
+
+PR初回投入用の固定JSONは`bunx --no-install turbo run seed:template`で生成し、`.local/tablecast-seed-template/seed.json`へ保存する。Turboはseedのscript・API schema・migration・共通名簿・デモ画像・依存設定を入力としてcacheを管理する。生成物には架空店舗・商品構成・スタッフ名簿だけを入れ、実DB・所有情報・認証account・パスワード・時刻・tokenを保存しない。buildで検証して`apps/web/.cloudflare/output/tablecast-seed.json`へコピーし、同じrunの既存Workers artifactへ同梱する。公開assetsやproduction成果物には含めず、seed専用の転送step・job・依存導入も増やさない。配備時も同梱JSONの`sourceHash`と`payloadHash`を検証する。手動検証は`bun --no-env-file run seed:template --verify`を使う。壊れたcacheはTurboのコマンドに`--force`を付けて一度再生成し、検証し直す。適用対象と再開時の境界は[初期データと再実行](deployment.md#初期データと再実行)を参照する。
+
+`dev` はPortlessから `turbo run dev --filter=@tablecast/web` を実行する。Webの名前衝突を準備前に拒否し、`dependsOn` で設定・migration・seed・Compose起動を先に済ませ、`with` でOAuthも起動する。空きポートとrouteの登録はPortlessへ任せる。ローカルmigrationは `CI=1` で確認入力を省き、Turboから実行できる。WebとAPI WorkerはViteのmultiworkerを使い、APIを二重起動しない。
+
+`dev:prepare` は認証secretを維持して通常のenvとSDK用API設定を生成する。rootのPortlessから渡された実Webポートを `.local/.env` に保存し、起動中の初期化・resetを拒否する。Cloudflare設定はenvから直接読み、ローカル用の `TABLECAST_CONFIG` JSONや `runtime.json` は作らない。Mailpit・OTLPはPortless aliasへ接続する。seedの引数はNode標準の `parseArgs` で読む。
+
+起動ログの `http://web.<worktree名>.tablecast-poc.localhost` を開く。branch末尾を正規化して先頭47文字へ切り取り、branchがない場合は短いcommit SHAを使う。Issue番号やホスト名の入力は不要。ポート・DB・Cookieホスト名はworktreeごとに分離する。起動中はターミナルを開いたままにする。
+
+Portlessの共有stateを利用し、個別worktreeから `portless proxy stop` や `portless clean` を実行しない。80番が使用中の場合は `bunx --no-install portless doctor` と待受プロセスを確認する。初回のproxy起動はTurboの外で行い、非対話のdevタスクから管理者認証を要求しない。名前を変更する場合は自worktreeのWeb・Composeを停止し、`demo:reset`で設定と開発データを作り直す。
+
+### 種類別行数のローカル確認
+
+PRの[種類別行数レポート](static-analysis.md#prの種類別行数レポート)とrootのcloc統合テストには、Perlとcloc 2.10が必要になる。Dev Containerには同じ公式配布物をSHA-256固定で含めるため、既存コンテナはイメージを再buildする。通常のアプリ起動にはclocを使わない。
+
+ホストに2.10がない場合は、PerlとPATH上の配置先を用意して公式配布物を導入する。以下は`~/.local/bin`をPATHへ追加済みの環境で実行する。
+
+```sh
+mkdir -p "$HOME/.local/bin"
+curl --fail --location https://github.com/AlDanial/cloc/releases/download/v2.10/cloc-2.10.pl --output "$HOME/.local/bin/cloc"
+printf 'bf59272455172108072a0a106379f7509fd4349bdcfd85203bac038ccd286d83  %s\n' "$HOME/.local/bin/cloc" | shasum -a 256 --check
+chmod +x "$HOME/.local/bin/cloc"
+cloc --version
+bun run tablecast:cloc --base "$(git rev-parse origin/staging)" --head "$(git rev-parse HEAD)"
+bunx --no-install vitest run --project scripts-runtime scripts/tablecast-cloc.test.ts
+```
+
+比較引数には40桁のcommit SHAを渡す。比較元は指定baseとheadのmerge-baseへ解決する。Markdownは標準出力へ表示し、`--output /tmp/tablecast-cloc.md`で保存できる。別の配置先を使う場合は`TABLECAST_CLOC_PATH`へcloc実行ファイルのパスを指定する。版違い・Git/clocの失敗はエラーにし、0行で補わない。
+
+CIの計測jobは固定Bunとclocだけを導入し、アプリ依存install・codegenを行わない。rootのruntimeテストjobも同じcloc導入actionを使う。Cloudflare資格・有料モデル・DB資源は不要。
 
 ## 2C. agent開発環境
 
 Codex Desktopでは作業するworktreeをprojectとして開き、CLIではそのルートから `codex` を起動する。以下は開発者が必要な接続だけを選ぶ手順である。`bun run setup` はアプリ依存・生成物・Git hooksを準備し、agent pluginの導入や外部サービスへのログインは行わない。
 
-| 構成                     | 役割と正本                                                                                                                                                       |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AGENTS.md`・repo skills | 作業契約と用途別の手順。cloneした [.agents/skills](../.agents/skills) を使う。外部skillの取得元は [skills-lock.json](../skills-lock.json) に記録する             |
-| Agent plugins            | Cloudflare等が配布するskills・MCPのまとまり。CodexのPlugins画面または `codex plugin` で必要なものを導入する                                                      |
-| MCP                      | 外部サービスやローカルツールへの接続。plugin同梱設定、または利用者の `.codex/config.toml` で管理する                                                             |
-| Git hooks                | [lefthook.yml](../lefthook.yml) のcommit時検査。`bun run setup` が導入し、修復は `bun run hooks:install`。検証の分担は [静的解析](static-analysis.md) を参照する |
+| 構成                     | 役割と正本                                                                                                                                                                          |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md`・repo skills | 作業契約と用途別の手順。cloneした [.agents/skills](../.agents/skills) を使う。外部skillの取得元は [skills-lock.json](../skills-lock.json) に記録する                                |
+| Agent plugins            | Cloudflare等が配布するskills・MCPのまとまり。CodexのPlugins画面または `codex plugin` で必要なものを導入する                                                                         |
+| MCP                      | 外部サービスやローカルツールへの接続。plugin同梱設定、または利用者の `.codex/config.toml` で管理する                                                                                |
+| Git hooks                | [lefthook.yml](../lefthook.yml) のcommit時format/lint・fallow検査。`bun run setup` が導入し、修復は `bun run hooks:install`。検証の分担は [静的解析](static-analysis.md) を参照する |
+
+Langfuse公式skillとGrafana公式の`loki`・`tempo`・`promql`・`dashboarding`・`assistant-mcp`もrepo skillsとして共有する。Langfuseのlocal／日本CloudのMCP設定と秘密値を含まないheader helperは[観測手順](observability.md#langfuseとcodexの改善ループ)に従う。
 
 repo skillsは個人のglobal skillsへコピーしない。同じ外部skillをpluginとglobal配置の両方から導入済みなら、取得元と適用対象を確認して一方を選ぶ。各タスクでは `AGENTS.md` の入口から必要なskill本文と参照先を読む。skillsの所有・更新は [静的解析](static-analysis.md#skillsと追加pluginの所有) に従う。
 
-動画制作のHyperFrames Core・Animation・Creativeもrepo skillsとして共有する。描画依存の0.8.33と同じ公開元コミットへ固定しており、通常はcloneだけで参照できる。[動画制作スキルの取得元・復元コマンド](../apps/presentation/TOOLS.md#制作スキルの固定と復元)に従い、最新版への一括更新は行わない。
+外部skillsの更新はリポジトリルートで `bunx skills update --project -y` を実行する。今回確認したCLIは1.7.4。`skills-lock.json`の取得元・固定refと差分を確認し、本文・同梱ファイル・lockfileを同じ差分へ含める。上流本文は整形・翻訳せず、TableCast固有の契約はAGENTS.mdとdocsへ置く。新たな外部skillを導入したらOxfmtとGit hookの除外も合わせる。
+
+GitHubへの画像・動画添付は[添付手順](../.agents/skills/github-issue-pr-ops/references/attachments.md)に従い、標準GitHub CLIの`--attach`を使う。認証済みの`gh 2.99.0`以上と対象リポジトリへの書き込み権限が必要で、実行時に対象コマンドの`--help`で対応を確認する。`github-image-upload`や独自アップロード処理は不要である。添付後の表示・再生確認は引き続きブラウザーで行う。
+
+動画制作のHyperFrames Core・Animation・Creativeもrepo skillsとして共有する。導入時のHyperFrames 0.8.33の公開元コミットへ固定しており、通常はcloneだけで参照できる。[動画制作スキルの取得元・復元コマンド](../apps/presentation/TOOLS.md#制作スキルの固定と復元)に従い、描画ライブラリの更新とは分けて管理する。
 
 ### MCP設定の配置と確認
 
@@ -119,14 +163,17 @@ MCPはCodexが動くホストから接続する。Dev Container内でCLIを動�
 | 接続            | 導入・認証と確認                                                                                                                                                                   |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Cloudflare      | 公式Cloudflare pluginを導入し、同梱MCPのOAuthで対象アカウントと必要な権限を選ぶ。API仕様検索や許可した設定の読取で確認する                                                         |
-| Grafana local   | LGTM起動後に設定例の `tablecast-grafana-local` を追加する。ホストはDocker、Dev Container内は同梱binaryを使う                                                                       |
+| Grafana local   | 共有観測基盤の起動後に設定例の `tablecast-grafana-local` を追加する。ホストはDocker、Dev Container内は同梱binaryを使う                                                             |
 | Grafana Cloud   | `tablecast-grafana-cloud` を追加する。Viewer service account tokenを `.local/tablecast-grafana-read-token` に保存し、権限を `600` にする。送信用tokenは流用しない                  |
 | Storybook       | `bun run storybook` を起動し、[開発環境のMCP手順](development.md#storybook-mcp)に従って実際のportを登録する。`docs-list`・`docs-show`で確認する                                    |
+| fallow          | `bun run setup`後に`tablecast-fallow`を追加し、設定例の`cwd`をCodexが動くホストのworktree絶対パスへ置き換える。`project_info`で対象workspaceと入口を確認する。OAuthは不要          |
 | TableCast local | [ローカルMCP手順](codex-plugin.md#ローカル接続)でworktreeのURLを`tablecast-local`へ登録し、OAuth後に`get_configuration`とローカルfixtureを照合する。plugin生成は配布検証時だけ行う |
 
-Cloudflare pluginはskillsと `https://mcp.cloudflare.com/mcp` のStreamable HTTP接続を同梱する。同じserverを手動で二重登録しない。pluginが利用できずMCPだけを登録する場合は設定例のコメントを参照し、`codex mcp login tablecast-cloudflare` で認可する。Wranglerのログインとは別である。CLIでpluginを導入する場合は `codex plugin list` で現在のMarketplace識別子を確認してから `codex plugin add <plugin>@<marketplace>` を使う。[Cloudflare公式手順](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)を参照する。
+Cloudflare pluginはskillsと `https://mcp.cloudflare.com/mcp` のStreamable HTTP接続を同梱する。同じserverを手動で二重登録しない。pluginが利用できずMCPだけを登録する場合は設定例のコメントを参照し、`codex mcp login tablecast-cloudflare` で認可する。cfのCLI認証とは別である。CLIでpluginを導入する場合は `codex plugin list` で現在のMarketplace識別子を確認してから `codex plugin add <plugin>@<marketplace>` を使う。[Cloudflare公式手順](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)を参照する。
 
-Grafanaは公式 `grafana/mcp-grafana:1.3.0` をstdio・`--disable-write`で起動し、Cloud資格は `GRAFANA_SERVICE_ACCOUNT_TOKEN_FILE` から読む。設定例はホスト開発ならホスト上、Dev Container開発ならコンテナ内のCodexから使う。接続先解決とtokenの渡し方は既存の `scripts/tablecast-grafana-mcp.ts` が担う。初回のtool一覧・Loki読取と接続の詳細は [観測手順](observability.md#ローカル起動とmcp)へ進む。Cloud用資格がない場合はlocalだけを設定する。
+Grafanaは公式 `grafana/mcp-grafana:2.0.2` をstdio・`--disable-write`で起動し、Cloud資格は `GRAFANA_SERVICE_ACCOUNT_TOKEN_FILE` から読む。設定例はホスト開発ならホスト上、Dev Container開発ならコンテナ内のCodexから使う。接続先解決とtokenの渡し方は既存の `scripts/tablecast-grafana-mcp.ts` が担う。初回のtool一覧・Loki読取と接続の詳細は [観測手順](observability.md#ローカル起動とmcp)へ進む。Cloud用資格がない場合はlocalだけを設定する。
+
+fallow MCPは`bun --no-env-file x --no-install --package fallow fallow-mcp`で、worktreeへ導入した固定版をstdio起動する。ネットワークから別版を自動取得せず、`.env.local`の秘密値を解析へ読み込まない。CLI・CIと同じ`.fallowrc.json`を使い、アプリ・Docker・有料モデルを起動せずに解析する。登録後はtools/listと`project_info`を実際に呼び、対象rootを照合する。全体解析の`bun run fallow`と差分検査の`bun run fallow:audit`、commit前の判定は[静的解析](static-analysis.md#fallow)を参照する。
 
 ### Codex CloudのPRレビュー
 
@@ -140,7 +187,7 @@ PRを作成する各開発者は[Codex Cloudの公式セットアップ](https:/
 @codex review
 ```
 
-Codexの受付反応とレビュー結果を確認する。指摘への対応と再レビューは[PR運用のレビュー対応](../.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#レビュー対応)に従う。
+Codexの受付反応とレビュー結果を確認する。指摘への対応と再レビューは[PR運用のレビュー対応](../.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#レビュー対応)に従う。TableCastではCodex CloudのP0・P1もマージ前に必ず対応し、push・rebase後に追加レビューが必要ならPRへ`@codex review`を投稿する。
 
 ## 3. 最初の画面確認
 
@@ -148,7 +195,7 @@ Codexの受付反応とレビュー結果を確認する。指摘への対応と
 2. `/admin/live` へログインする。開発用の資格情報は、その環境の `.local/demo.json` にある。
    `emulate@0.11.1`は未改変の配布物を使い、選択画面の写真表示・表示順は拡張しない。E2Eでは[指定ポートの設定](testing.md)を使用する。ランダムスタッフ生成を廃止し、Fakerへの依存を削除した。
    プロフィールは[生成WebP](demo/identities.md)を共通名簿から読み込む。`apps/emulate/Dockerfile`は実行ファイルを`apps/emulate/dist/index.js`へ配置し、`assets/demo/identities/*.webp`と同じ相対位置を維持する。フォントは実行ファイル隣の`fonts`へ同梱する。`.dockerignore`でも12点のWebPをビルドコンテキストに含める。
-   新規seedのGoogle選択画面では、店舗・氏名・役割から8人のデモメンバーを選べる。各組織は3所属で、共通ownerが2店舗を担当する。名簿と動画シナリオは[デモ資料](demo/README.md)を参照する。新規local/PR seedのownerメールは共通名簿に揃え、既存DBの既知の旧デモメールだけを通常の再seedで人名@店舗名.comへ移行し、DB投入成功後に`.local/demo.json`も更新する。パスワード・手動のメール・所属は保持する。古い構成から今回のデモへ切り替える場合は、必要なデータを保全して対象worktreeを停止し、既存の`demo:reset`手順を使う。明示リセットはownerのメールも共通名簿へ戻し、パスワードを保持する。
+   新規seedのGoogle選択画面では、店舗・氏名・役割から8人のデモメンバーを選べる。各組織は3所属で、共通ownerが2店舗を担当する。名簿と動画シナリオは[デモ資料](demo/README.md)を参照する。新規local/PR seedのownerメールは共通名簿に揃え、既存DBの既知の旧デモメールだけを通常の再seedで人名@店舗名.comへ移行し、DB投入成功後に`.local/demo.json`も更新する。パスキー・手動のメール・所属は保持する。古い構成から今回のデモへ切り替える場合は、必要なデータを保全して対象worktreeを停止し、既存の`demo:reset`手順を使う。明示リセットはownerのメールも共通名簿へ戻す。
 3. 客向け画面の端末コードを卓へ割り当てる。
 4. 日英表示、商品追加、確認、注文を試す。メールはMailpitで確認する。
 
@@ -164,26 +211,29 @@ cp -n .env.example .env.local
 chmod 600 .env.local
 ```
 
-JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/environment-variables)を使う。環境変数が優先され、ファイルは `.env` → `.env.development` → `.env.local` → `.env.development.local` の順に上書きされる。開発入口は `NODE_ENV=development` を指定する。CLIラッパーや暗号化envの復号は使わない。
+JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/environment-variables)を使う。環境変数が優先され、ファイルは `.env` → `.env.development` → `.env.local` → `.env.development.local` の順に上書きされる。開発入口は `NODE_ENV=development` を指定する。暗号化envの復号は使わない。
+
+料金設定のJSONは一重引用符で囲んで入力する。生成するdotenvも引用符をエスケープせず、Bun・Node・Wranglerで同じ値を読む。Bunは引用符内でも変数を展開するため、生成対象の設定値に`$`は使用できない。
 
 > [!NOTE]
-> 通常の開発・setup・seedはBunの標準env読み込みを使う。`--no-env-file` はCI・配備や外部資格を必要としない独立した試験の入口で、自動読み込みを止めるために使う。既に親プロセスから継承した環境変数を消す指定ではなく、Vite・Wranglerなど別ツールの読み込みも制御しない。ローカルから配備する場合の入口は [配備手順](deployment.md) に従う。商品画像の一覧照合・不足分の限定並列投入と件数ログ、DB準備とイメージ送信の並行処理、区間時間の確認は [CDの処理](deployment.md#actionsの処理) を参照する。
+> 通常の開発・setup・seedはBunの標準env読み込みを使う。`--no-env-file` はCI・配備や外部資格を必要としない独立した試験の入口で、自動読み込みを止めるために使う。既に親プロセスから継承した環境変数を消す指定ではなく、Vite・cfなど別ツールの読み込みも制御しない。ローカルから配備する場合の入口は [配備手順](deployment.md) に従う。商品画像の一覧照合・不足分の限定並列投入と件数ログ、DB準備とイメージ送信の並行処理、区間時間の確認は [CDの処理](deployment.md#actionsの処理) を参照する。
 
 `.env.local` に `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を設定して `bun run dev` を起動する。別の音声プロセスは不要である。APIが公式SDKでGPT-LiveのResponses delegationを設定し、ブラウザーはSDP answerを使ってGPT-Liveと直接WebRTC接続する。
 
-OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `api.responses.write` が必要である。`TABLECAST_MODEL` は業務委任モデルで、雛形は `gpt-5.6-luna`。音声モデルは `gpt-live-1` に固定する。モデルが利用できない場合の自動切替は行わない。
+OpenAI projectにはGPT-Live 1の利用権限に加え、Responses delegationの `api.responses.write` が必要である。`TABLECAST_MODEL` は業務委任モデルで、雛形は `gpt-6.1-terra`。音声モデルは `gpt-live-1` に固定し、委譲先はFast mode（`service_tier: "priority"`）と `reasoning.effort: "low"` を使う。既存の `.env.local` に旧モデルを指定している場合は `TABLECAST_MODEL=gpt-6.1-terra` へ更新し、音声を停止・再開して新しいsessionへ反映する。モデルが利用できない場合の自動切替は行わない。
 
 業務応答はSSEで本文差分と完了・失敗を分ける。Webの解析には `eventsource-parser` 3.1.1を使い、`bun run setup` で導入する。途中の切断を正常完了として扱わず、失敗時は音声を停止してGUIを維持する。
 
-| ファイル                      | 用途                                                  |
-| ----------------------------- | ----------------------------------------------------- |
-| `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない         |
-| `.local/.env`                 | Bun/Composeが読む生成済みポート・パス                 |
-| `.local/.dev.vars`            | Wrangler用の生成済み設定・鍵                          |
-| `apps/api/.dev.vars.example`  | Wranglerのbinding型生成用。起動設定としてコピーしない |
-| `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物                   |
+| ファイル                      | 用途                                                |
+| ----------------------------- | --------------------------------------------------- |
+| `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない       |
+| `.local/.dev.vars.web`        | Web専用の生成設定。OpenAI・Stripeの秘密値を含めない |
+| `.local/.env`                 | Bun/Composeが読む名前・origin・パス・実Webポート    |
+| `.local/.dev.vars`            | cf/ViteとSDKが読む生成済み設定・鍵                  |
+| `apps/api/.dev.vars.example`  | SDK互換の型参照。起動設定としてコピーしない         |
+| `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物                 |
 
-旧 `OPENAI_API_KEY` の別名、LiveKitの鍵、`TABLECAST_VOICE_API_TOKEN`、Mastra Observabilityの設定は不要になった。開発用の外部キーは `TABLECAST_MODEL_API_KEY` だけにまとめる。標準音声Marin・Cedarは管理画面から日英それぞれ選び、旧Voice IDは起動時にMarinへ対応付ける。Inworld TTSのキーは任意の有料試験で入力音声を作るときだけ使用し、製品の設定には入れない。
+旧 `OPENAI_API_KEY` の別名、LiveKitの鍵、`TABLECAST_VOICE_API_TOKEN`、Mastra Observabilityの設定は不要になった。共有キーの開発は `TABLECAST_MODEL_API_KEY` を使う。組織キー発行とStripe Sandboxは [課金・請求](billing.md#開発と導入) のAPI専用設定を使う。標準音声Marin・Cedarは管理画面から日英それぞれ選び、旧Voice IDは起動時にMarinへ対応付ける。Inworld TTSのキーは任意の有料試験で入力音声を作るときだけ使用し、製品の設定には入れない。
 
 旧 `.env.secrets.local` は雛形に残る項目を `.env.local` へ移して削除する。ローカルGoogle認証は模擬サービスなので旧Google資格は不要。本番資格は [配備手順](deployment.md)で管理する。envの変更後は各ターミナルをCtrl+Cで止めて再起動する。
 
@@ -192,26 +242,31 @@ OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `
 
 ## 5. 日常の操作
 
-| コマンド                                | 用途                                                      |
-| --------------------------------------- | --------------------------------------------------------- |
-| `bun run dev` / `bun run dev:container` | Turboで初期化・常駐タスクを起動する                       |
-| `bun run dev:prepare`                   | 設定・migration・seedのみを実行する                       |
-| `bun run services:status`               | ホスト開発のComposeサービスを確認する                     |
-| `bun run services:down`                 | ホスト開発のcontainer・networkを片付ける。volumeは保持    |
-| `bun run storybook`                     | Storybook公式CLI。DB・runtime初期化は不要                 |
-| `bun run check`                         | format・lint・typecheck・無課金テスト                     |
-| `bun run build`                         | 配備用Workersのbuild                                      |
-| `bun run dev:parity`                    | 通常開発を停止してから、local buildとVite previewを実行   |
-| `bun run demo:play`                     | 背景卓を一段階進める                                      |
-| `bun run demo:reset --profile demo`     | 停止済みworktreeのデモをリセットする。稼働中は拒否        |
-| `bun run demo:audio --verify`           | 保存済みデモ音声の台本・声・SHAと音声形式を無料で検査する |
+| コマンド                                    | 用途                                                          |
+| ------------------------------------------- | ------------------------------------------------------------- |
+| `bun run dev` / `bun run dev:container`     | Turboで初期化・常駐タスクを起動する                           |
+| `bun run dev:prepare`                       | 設定・migration・seedのみを実行する                           |
+| `bun run services:status`                   | ホスト開発のComposeサービスを確認する                         |
+| `bun run services:down`                     | ホスト開発のalias・container・networkを片付ける。volumeは保持 |
+| `bun run storybook`                         | Storybook公式CLI。DB・runtime初期化は不要                     |
+| `bun run check`                             | format・lint・typecheck・無課金テスト                         |
+| `bun run build`                             | 配備用Workersのbuild                                          |
+| `bunx --no-install turbo run seed:template` | PR初回投入用の固定JSONを生成・cacheする                       |
+| `bun run dev:parity`                        | 通常開発を停止してから、local buildとVite previewを実行       |
+| `bun run demo:play`                         | 背景卓を一段階進める                                          |
+| `bun run demo:reset --profile demo`         | 停止済みworktreeのデモをリセットする。稼働中は拒否            |
+| `bun run demo:audio --verify`               | 保存済みデモ音声の台本・声・SHAと音声形式を無料で検査する     |
 
 デモ音声の作成にはホストの`ffmpeg`・`ffprobe`とInworldキーを使う。`bun run demo:audio`は生成予定の表示だけで、`bun --env-file=.env.local run demo:audio --generate`を明示した場合に有料TTSを呼ぶ。同じ台本・声・音声SHAの素材は再利用し、通常CIでは合成しない。台本、US/UK/India/Chinaを含む声の指定と実有料E2Eの判定方法は[合成音声素材](demo/audio.md)を参照する。
+
+StorybookとVitest Browserは設定読込時にBunでdemo seedと同じ公開設定・商品・画像を準備し、`apps/web/.local/tablecast-storybook-public`へ生成する。通常のStoryはseedの3店舗を共用するため、DB・R2の起動や手動画像コピーは不要。画像なし・失敗専用のfixtureは通常のPR画像へ使わない。
 
 Storybookは標準の6006番を使う。他worktreeが使用中なら `bun run storybook --port 6007` と指定する。コンテナ内では公開済みの6006番を使う。
 Storybookは公式の`@storybook/tanstack-react`でStart・Routerを扱い、WorkersやDBを起動せずに利用する。環境分岐とテストの責務は [テスト戦略](testing.md) を参照する。
 
-Composeの正本はルートの [compose.yaml](../compose.yaml) で、ホストのLGTM・Mailpitを定義する。[.devcontainer/compose.yaml](../.devcontainer/compose.yaml) はLGTMだけを `extends` し、開発コンテナとホスト公開ポートを定義する。ホストの `services:*` は `.local/.env`、Dev Containerは `.devcontainer/.env` の `COMPOSE_PROJECT_NAME` を使う。既存のproject名・volume名は変更しない。
+PRの公開カタログは通常のpushでは生成しない。PR通知の表内でStorybook・React Emailのビルド・デプロイをチェックして最新headを要求する。write/admin権限を持つ利用者だけが起動できる。workflowの統合前は、Actionsの`CI`からRun workflowを開き、通常PRの作業branchと`catalog_pr`・`catalog`を指定する。main/stagingからのカタログ専用起動は拒否する。対象SHAの照合・再配備・削除は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
+
+worktree用Composeの正本はルートの [compose.yaml](../compose.yaml) で、ホストのMailpitを定義する。[.devcontainer/compose.yaml](../.devcontainer/compose.yaml) は開発コンテナとホスト公開ポートを定義し、共有観測networkへ接続する。LGTM/Langfuseは`infra/observability/compose.yaml`を正本に、[観測手順](observability.md#ローカル起動とmcp)でホストに一組を用意する。ホストの `services:*` は `.local/.env`、Dev Containerは `.devcontainer/.env` の `COMPOSE_PROJECT_NAME` を使う。Dev Containerのproject名・volume名は変更しない。
 
 GrafanaのTempo設定とダッシュボードは `infra/grafana/`、Codex設定例は [.codex/config.toml.example](../.codex/config.toml.example) に置く。接続とダッシュボードの使い方は [観測手順](observability.md) を参照する。
 
@@ -223,9 +278,19 @@ bun run test:browser
 bun run test:e2e
 ```
 
-E2Eはケースごとに専用環境を作り、通常のdevは不要。入口とWorkerのTCPポートは実起動時にOSが割り当てる。LinuxのMailpitはhost networkの動的TCPポートを同梱netstatで取得し、macOSはDockerの動的ポート公開を使う。`bun install --frozen-lockfile`でOAuth emulatorの管理パッチも適用される。E2E専用の`TABLECAST_OAUTH_READY_FILE`はfixtureが設定し、手動設定は不要。global setupが`TABLECAST_BUILD_DIRECTORY`で実行ごとのbuild出力を指定する。この変数を省略した通常buildは`apps/web/dist`を使う。同じworktree内ではcodegenやdeploy metadataを共有する別buildと重ねない。失敗したケースの診断ログと画像は`apps/web/test-results/`へ残り、fixtureが専用プロセス群・container・storageを片付ける。テストの選び方と隔離の範囲は [テスト戦略](testing.md#e2eの隔離)を正本とする。
+翻訳の出力先・言語解決順・`tablecast_locale` Cookie名は`apps/web/project.inlang/paraglide.config.ts`を正本として公式CLIとViteで共用する。CLI再生成でCookie名を既定値へ戻さず、SSRの再読込・redirectでも選択言語を維持する。
+
+`test:browser`は実行前にParaglideの`locale-modules`を公式CLIで生成し、翻訳のmodule数を減らす。通常のcodegenと公開buildは`message-modules`を使い、`build:storybook`も自身でこの形式へ戻してからbuildする。同じ`src/paraglide`を共有するため、Browser試験・codegen・dev/watch・buildを同じcheckoutで重ねない。テストだけを直接`vitest`で起動する場合は、先に`bun run --cwd apps/web i18n:compile --output-structure locale-modules`で準備する。
+
+Component Testの全件CIはVitestの4shardを別runnerで実行し、既存の必須`TableCast CI`と配備jobがmatrix全体の成功を直接確認する。component専用の集約runnerは起動しない。関連fileだけのPR差分実行はshard 1だけで行う。準備から集約まで3分以下を目標にし、成功時の画像収集と複数engineによる業務フローの重複を除く。Component jobだけ`.github/actions/tablecast-setup`の`bun-cache: "false"`で約900MBのcache復元を省き、`bun install --frozen-lockfile --ignore-scripts`で直接取得する。依存版は変えず、他jobの取得cacheは継続する。失敗画像とa11y・WebKit固有の代表保証は維持する。対象と削除した重複の代替は[Component Testの実行範囲](testing.md#ciのジョブとキャッシュ)を参照する。
+
+ローカルの`check`と各`test`コマンドは通常どおり全件を実行する。PRのCIはGitHub Compare APIで検証した差分から対象を選び、通常のWeb変更にはVitest標準の`related --run`を使う。共有入口や不明な差分、選択結果が0件のソース変更は全件へ戻す。選択範囲と実行しないjobの扱いは[CIの実行対象](testing.md#ciのジョブとキャッシュ)を参照する。
+
+E2Eはworkerごとに専用環境を作り、ケース間でWebを停止してD1・R2・DOの状態をtemplateから復元する。通常のdevは不要。入口とWorkerのTCPポートは実起動時にOSが割り当てる。LinuxのMailpitはDocker imageから抽出したバイナリをworker単位で起動し、macOSはworker単位のDockerコンテナと動的ポート公開を使う。`bun install --frozen-lockfile`でOAuth emulatorの管理パッチも適用される。E2E専用の`TABLECAST_OAUTH_READY_FILE`はfixtureが設定し、手動設定は不要。global setupが`TABLECAST_BUILD_DIRECTORY`で実行ごとのbuild出力を指定する。この変数を省略した通常buildは`apps/web/dist`を使う。同じworktree内ではcodegenやdeploy metadataを共有する別buildと重ねない。失敗したケースの診断ログと画像は`apps/web/test-results/`へ残り、fixtureが専用プロセス群・container・storageを片付ける。テストの選び方と隔離の範囲は [テスト戦略](testing.md#e2eの隔離)を正本とする。
 
 ## 6. 終了・再開・復旧
+
+共有観測基盤は初回に`bun run tablecast:observability:up`で準備する。ホストにBunがない場合は`sh scripts/tablecast-observability.sh up`を使う。通常のworktree終了では共有LGTM/Langfuseを停止しない。停止・更新は共有基盤の専用コマンドで明示的に行う。
 
 WebはTurboを実行したターミナルでCtrl+Cを押す。ホストのDockerサービスは別管理なので、終了時に `bun run services:down` を実行する。コンテナ環境全体はホストで次を実行する。
 
@@ -255,8 +320,112 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 
 ### メールプレビュー依存
 
-メールカタログはAPIで既に利用しているReact Emailのrender/componentsで静的HTMLを生成する。追加workspace・依存・patch・サービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
+メールカタログはAPIの開発依存`react-email`・`@react-email/ui` 6.11.3の公式`email build`を使う。`@opennextjs/cloudflare` 1.20.13でCloudflareへ変換する。固定サンプルを`apps/api/scripts/tablecast-email-preview.ts`へ集約し、CLI入力はGit管理外の`.local/tablecast-email`、公式アプリと配信成果物は`.react-email`へ生成する。rootで`bun install --frozen-lockfile`を実行する。公式CLIは生成アプリの依存をnpmで導入するため、build時にもネットワーク接続が必要である。追加workspace・patch・R2・DB・送信サービスの契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
+
+製品の実送信はWorkersと同じCloudflareアカウントのEmail Serviceを使う。GitHubのrepository variable `TABLECAST_EMAIL_FROM`に確認済みドメインのFromアドレスを設定する。buildとdeployの両方へ渡し、未設定・不正な本番配備は資源の変更前に拒否する。ローカルのMailpit設定とは別であり、`workers.dev`のホスト名を送信元にしない。今回のPRではドメイン有効化・From設定・実送信確認を後続作業とする。
 
 ## stagingと本番release
 
-開発の標準branchはstaging。本番はmainへのrelease PRで更新する。常設環境・ActionsのPR作成許可・手動リセットは[配備手順](deployment.md#stagingとreleaseの運用)を参照する。ローカル終了処理で常設stagingを停止しない。
+開発の標準branchはstaging。stagingのWeb・模擬ログイン・MCPはCloudflare Access資格なしで公開し、PR previewはAccess保護を維持する。本番はmainへのrelease PRで更新する。常設環境・ActionsのPR作成許可・手動リセットは[配備手順](deployment.md#stagingとreleaseの運用)を参照する。ローカル終了処理で常設stagingを停止しない。
+
+既存stagingのseed更新は[明示workflow](deployment.md#staging-seedの商品情報と営業データを更新する)を使う。接続先は`cloudflare.config.ts`から取得し、既存Actions secretでD1 RESTへ接続する。遠隔binding tunnelや手動のDashboard vars設定は不要。
+
+### 接客エディターの依存
+
+Webの接客方針はMarkdownソースと既存Streamdownのプレビューを使う。Tiptap依存は不要。既存の構造化本文は読取互換を保ち、編集した言語だけをMarkdownに変換する。rootの `bun.lock` と `bun install --frozen-lockfile` で導入する。追加の環境変数・外部サービス・ライセンスキーは不要。[接客エディター設計](prompt-editor-design.md)を参照する。
+
+### UIの色トークン
+
+Webは `@radix-ui/colors@3.0.0` のCSSを読み、既存Tailwindのsemantic aliasへ割り当てる。通常の `bun install --frozen-lockfile` に含まれ、別サーバーや設定は不要。色・質感・余白と操作状態の正本はWeb内Storybookのデザインシステムと `src/styles.css` に置く。
+
+### 店舗テーマの開発依存
+
+追加CSSの検証にはAPI workspaceの`css-tree`を使う。通常の`bun install --frozen-lockfile`で導入する。ネイティブ実行や別サーバーは不要で、WorkersとWebが同じ入力契約を使う。製品pluginのテーマskill変更後は`bun --no-env-file scripts/tablecast-plugin.ts --skills-only`で配布コピーを同期する。接続先やOAuth設定は変更しない。
+
+### グラフとショートカットの依存
+
+Webは`@tanstack/charts@1.1.0`のReact adapterと`@tanstack/react-hotkeys@0.15.0`を使う。通常の`bun install --frozen-lockfile`で導入し、追加env・外部サービス・ライセンスキーは不要。ChartsのSVG・scale・tooltipは公開entrypointから必要なものだけ読み込む。新しいルートと翻訳は既存のVite plugin・`bun run codegen`で生成する。
+
+## 型検査の実行版
+
+`bun install --frozen-lockfile`で、型検査用の`@tablecast/typescript-native`をTypeScript 7.0.2のnpm aliasとして導入する。`bun run typecheck`と各workspaceの同scriptは、root相対の公開CLI `node_modules/@tablecast/typescript-native/bin/tsc`を`node`で明示実行する。追加の手動導入や環境変数は不要。
+
+TanStack・Storybook等が利用するJavaScript APIには既存の`typescript@6.0.3`を残す。CLIのbin名が重なるため、裸の`tsc`や`bunx tsc`の版から実行版を判断せず、各manifestのscriptを使う。lintの対象分担と互換性の理由は[静的解析](static-analysis.md)を参照する。
+
+## Cloudflare CLIと設定の移行
+
+`cf@1.0.0-beta.18`を固定する。API・Webの開発はcfが対応する公式Vite plugin `2.0.0-beta.v.1`、Workers試験はVitest `5.0.5`とVitest plugin `1.4.4`、SDKはWrangler `4.151.1`を使う。APIのmodule cache互換設定は[テスト戦略](testing.md#vitest-5とworkersのmodule-cache)を参照する。Node.jsは24.22.0以上が必要である。遠隔proxyのローカルpatchは撤去済みで、SDKのMiniflareを使う。Vite plugin v2はTypeScript設定とBuild Outputを標準で読み込み、通常開発ではAPIをauxiliary Workerとして、previewではbuild済みAPI・Webを一緒に起動する。
+
+API・WebのWorkerとbindingは各workspaceの`cloudflare.config.ts`へ直接定義する。環境・資源名・採用済みID・Access設定は既存の`scripts/tablecast-deploy-config.ts`に置く。公開配備の入力は`TABLECAST_CONFIG`で両workspaceへ渡し、ローカルは通常のenvから直接読む。cf設定からSDK接続用の`.local/api.wrangler.json`だけを一方向に生成する。Web用・build用の中間JSONは作らず、生成物を手編集しない。`bun run dev:config`はworkspaceの`.dev.vars`を自worktreeの`.local/.dev.vars`へ接続する。既存の手編集ファイルや別worktreeへのリンクがある場合は上書きせず停止する。必要な値を自worktreeの入力へ移してから再開する。
+
+旧hash名からの切替やbranch名の変更時は、自worktreeのdevをCtrl+Cで停止し、旧設定のまま`bun run services:down`を実行する。その後`bun run demo:reset`でこのworktreeのD1・R2・DOを削除・再seedする。認証secretとデモ資格情報は保持する。旧資源名・旧D1形式の自動移行は行わず、通常起動で名前の変更を検知したらresetを案内して停止する。保存先は常に`.local/state`とし、名前別ディレクトリや移行履歴を作らない。
+
+beta.14のlocal D1 CLIは処理・dispose後もregistry監視が残って終了しないため、`cf:local`はcfの公開`main()`完了後にstdout/stderrをflushして終了する互換入口である。migration・試験だけが使い、遠隔操作は通常のcf CLIを使う。上流で終了処理が修正されたらこの入口を削除する。
+
+## 依存更新に伴う認証DBの移行
+
+Better Auth 1.7.3以降は`account.issuer`を書き込まない。`0025_tablecast_auth_account_compat.sql`は既存のissuer・資格情報を保持してNOT NULL制約と旧複合unique indexを外す。新しいAPIを配備する前に既存のmigration経路で適用する。migrationの冒頭で一時的なunique indexを作成し、`provider_id, account_id`が重複すれば既存行・制約を変更する前に停止する。正常時は検査用indexを削除して移行する。異なるissuerで同じ識別子を使う行がある場合は、ユーザーを統合せずproviderの対応を整理してから再実行する。[公式移行ガイド](https://www.better-auth.com/docs/guides/1-7-upgrade-guide#account-identity-keeps-the-provider-key)
+
+`emulate@0.12.2`の標準待受はloopbackである。ローカルOAuthは`127.0.0.1`、preview/stagingのContainer内だけは`0.0.0.0`を明示してService Bindingから到達できるようにする。bind失敗の検査も同じIPv4 loopbackへ既存serverを置き、別address familyの同じport番号と区別する。
+
+React DoctorとOxlintの更新は通常のfrozen installへ含む。追加の実行手順やReact Compiler導入は不要で、診断モードと対象は[静的解析](static-analysis.md#webの追加ルール)を参照する。
+
+組織課金を開発する場合は [課金・請求の導入手順](billing.md#開発と導入) を参照する。`bun run dev:config` はAPI用の `.local/.dev.vars` とWeb用の `.local/.dev.vars.web` を分け、従来のWeb symlinkが同じworktreeのAPI設定を指す場合だけ生成先を更新する。
+
+Viteの開発起動ではAPIを補助Workerとして同時実行するため、`envDir`を自worktreeの`.local`に揃える。Cloudflare Viteプラグインは同じローカル設定を全Workerで参照し、各Workerが宣言したbindingだけを渡す。APIの認証・決済のsecretをWebのbindingへ追加しない。build・previewはこの開発用envDir切替の対象外とし、配備用のsecret管理を維持する。
+
+`0027_tablecast_configuration_history.sql`は公開版の作成元下書き、下書きの復元元公開版を保存するnullable列と履歴読取用indexを追加する。既存の設定・注文・履歴は書き換えず、過去の由来はNULLのまま保持する。APIの更新前に既存のmigration経路で適用する。追加列はNULLを許容し、旧版で作られた行に由来を推測して補完しない。
+
+### Storybook Docsの依存
+
+部品の用途・props・使用例はWeb内の公式 `@storybook/addon-docs@10.6.2` によるDocs/Autodocsで確認する。通常の `bun install --frozen-lockfile` と `bun run storybook` で利用できる。MCP登録は [開発環境](development.md#storybook-mcp) に従い、起動したworktreeの実URLを既存のGit管理外 `.codex/config.toml` へ統合する。ユーザー共通設定、API、DB、秘密情報の追加は不要。
+
+Docs内のMarkdown表は公式の `remark-gfm@4.0.1` で描画する。propsの抽出は既存依存のreact-docgen-typescriptを使う。用途・使い分けの説明は部品のJSDocを正本にし、AutodocsとMCPの両方へ渡す。MCPの自動生成例はpackage名のimportを示すことがあるため、Web内部では対応する隣接Storyの相対importを使う。`@tablecast/web` は部品を配布する公開packageではない。
+
+## 静的品質ゲートの固定版
+
+rootにfallow 3.34.1とeslint-plugin-perfectionist 5.12.1を固定する。`bun install --frozen-lockfile`とcodegen後、`bun run check`でformat・型付きlint・型検査・fallow全体gate・既存テストを実行する。実装300行は責務を見直す目安とし、テスト500行、import/export/type整列とWebの配列添字検査を適用する。動画基盤は今回の厳格化の対象に含めず、従来の検査を維持する。`exactOptionalPropertyTypes`は有効にしない。詳細と手動修正の順序は[静的解析](static-analysis.md)を参照する。
+
+commit前はLefthookがcodegenを一度実行してlintとHEAD比較auditを行う。部分stageと作業ツリーの差分を自動stageしない。CIでは差分比較ではなく既存コード全体を検査する。Codex MCPは上記設定のworktree絶対cwdとローカル固定版を使用する。
+
+### Drizzle RCの固定と更新
+
+root・APIの`drizzle-orm`とAPIの`drizzle-kit`は`1.0.0-rc.5`へ固定する。Zod連携は同版の`drizzle-orm/zod`を使い、別の`drizzle-zod`は追加しない。通常の導入はrootの`bun install --frozen-lockfile`で行う。
+
+認証のrelationsはRelations v2とBetter Authの`@better-auth/drizzle-adapter/relations-v2`を組み合わせる。DB生成はAPIの既存factoryへ集約し、joinを有効にした認証の実D1試験も更新時に実行する。配備CLIのSQLite proxyも同じ版のexecutors形式を使う。RC更新時は型検査に加え、`run`・`all`・`get`と配列・objectの返却を検証する。
+
+既存のD1 SQL migrationと適用履歴は維持する。通常の`db:migrate`・配備手順を使い、ORM更新だけを理由に`drizzle-kit up`・`push`で既存DBやmigrationを変換しない。[公式のRC移行](https://orm.drizzle.team/docs/relations-v1-v2)、[RC.5の変更点](https://github.com/drizzle-team/drizzle-orm/releases/tag/v1.0.0-rc.5)を更新時の確認先とする。
+
+## パスワードレス認証への移行
+
+0028 migrationはパスワードハッシュを消去し、認証の制限記録とパスキー登録状態を追加する。続けて0029を適用し、旧0028の最後のパスキー保護を解除する。デモseedはパスワードを作成しない。Google emulatorかMailpitのマジックリンクでログイン後、パスキー登録は任意で案内する。One Tapの実Google設定と公開前のメール送信確認は[認証仕様](authentication.md#パスワードレス認証と任意のパスキー)に従う。
+
+### 公開ヘルプの依存
+
+Web内のFumadocsは`fumadocs-core`・`fumadocs-ui` 16.17.8と`fumadocs-mdx` 15.4.10、型定義`@types/mdx` 2.0.13を使う。検索はZBSearch 4.0.1と公式の`@zbsearch/tokenizers` 4.0.1で日英の索引を分け、日本語は`Intl.Segmenter`を使うtokenizer、英語はstemmingを有効にする。外部辞書の取得は不要で、索引・検索語・ハイライトは同じ正規化を使い、複数の検索語はすべて含む候補を返す。通常の`bun install --frozen-lockfile`で導入でき、追加のenv・サービス・workspaceは不要。Vite pluginが`.agents/skills/tablecast-help/references`のMarkdownをビルド時に処理する。`bun run dev`で`/help`、`/llms.txt`、`/help/content/ja/mcp.md`を認証せず確認できる。原稿の追加・リンク規約は[Codexプラグイン](codex-plugin.md#公開ヘルプ)を参照する。
+
+CIの全検査はActionsの`CI`で作業branchを選択し、`catalog_pr`を空欄にして起動する。作業branchのWorkers buildはstaging設定を使い、公開環境へ配備しない。カートの100ms計測は通常の`bun run test:browser`に含まれる`browser-performance`で、他のBrowser・Storybook検査の終了後に実行する。詳細は[テスト戦略](testing.md#ciで観測した初期描画と性能の競合)と[配備](deployment.md)を参照する。
+
+### 客向けメニュー検索の移行
+
+`0031_tablecast_menu_search.sql`は`table_sessions.menu_search_json`をnullableで追加する。新APIの配備前に既存のmigration経路で適用する。既存セッションのNULLは通常メニューとして扱う。検索語・offset・検索時のカタログ版だけを保存し、結果IDと件数は現在の同じカタログから計算する。旧APIへの復帰時も追加列は残してよく、注文・カート・既存設定の変換は不要。
+
+## 画像の生成依存
+
+画像取込・既存画像の索引移行は既存`TABLECAST_IMAGES` bindingを使い、`@unpic/pixels` 1.3.0と`blurhash` 2.0.5で6×4のBlurHashを生成する。WebのSSR表示は`@unpic/placeholder` 0.1.2を使う。新しいsecret・外部画像サービスは不要で、依存の正本はrootの`bun.lock`である。seed用の生成configにもImages bindingを含める。D1 migrationと再実行可能な索引化の順序は[画像の移行](deployment.md#画像の表示情報の移行)に従う。
+
+## 多言語seedの店舗設定を再作成する
+
+最新seedは3店舗・102商品を`ja`・`en`・`zh-Hans`・`ko`で用意する。通常の`db:seed`は既存の編集内容を保持する。旧設定との自動変換は行わず、開発用の既存店舗設定を置き換える場合は自worktreeのdev serverを止めて次を実行する。
+
+```sh
+bun run db:seed -- --rebuild-configuration
+```
+
+このオプションはdevelopmentだけで利用する。対象seed店舗の公開設定を新しい版へ更新し、下書き・設定release履歴・デモの固定設定を再作成する。既存の注文・決済・注文スナップショット・会員は保持する。確認待ちの注文確認と音声状態は無効化する。全DBを消す`demo:reset`とは別の操作であり、本番・stagingの全体リセット手順へ置き換えない。実行後は各言語の商品名・説明と店舗名を確認する。
+
+公開stagingのseed商品情報・分析履歴・会員特典の追加更新は、ローカルの設定再作成を使わず[staging seedの明示更新](deployment.md#staging-seedの商品情報と営業データを更新する)に従う。認証や端末を維持して投入できる。
+
+### 店舗資料エディタの依存
+
+店舗資料のグラフィカル編集はWeb内のTiptap 3.32.1（React、StarterKit、Markdown、画像、表、チェックリスト）を使う。Markdown拡張はbetaであり、対応外の書式を原文のまま扱う場合は原文タブを使う。YAML frontmatterは本文と分け、タブ切替だけでは原文を書き換えない。APIのSkill検査はyaml 2.9.1とmarked 17.0.6、ZIPはfflate 0.8.3を使い、Worker内で実行する。追加のPython、ZIPコマンド、別サーバーやDB migrationは不要。依存の正本はrootのbun.lockであり、通常の`bun install --frozen-lockfile`と`bun run codegen`で準備する。

@@ -13,26 +13,54 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as ConsentRouteImport } from './routes/consent'
 import { Route as DeviceRouteImport } from './routes/device'
+import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MemberRouteImport } from './routes/member'
 import { Route as OrganisationsRouteImport } from './routes/organisations'
+import { Route as PairRouteImport } from './routes/pair'
+import { Route as PasskeySetupRouteImport } from './routes/passkey-setup'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AccountMcpSessionsRouteImport } from './routes/account_.mcp-sessions'
 import { Route as AdminLiveRouteImport } from './routes/admin.live'
+import { Route as BillingOrganizationIdRouteImport } from './routes/billing.$organizationId'
+import { Route as HelpIndexRouteImport } from './routes/help.index'
+import { Route as HelpSearchRouteImport } from './routes/help.search'
 import { Route as InvitationsInvitationIdRouteImport } from './routes/invitations.$invitationId'
+import { Route as MemberIndexRouteImport } from './routes/member.index'
+import { Route as MemberStoreIdRouteImport } from './routes/member.$storeId'
+import { Route as MemberJoinRouteImport } from './routes/member.join'
 import { Route as StoresNewRouteImport } from './routes/stores.new'
 import { Route as AccountIntegrationsManualRouteImport } from './routes/account_.integrations.manual'
 import { Route as AccountIntegrationsPluginsRouteImport } from './routes/account_.integrations.plugins'
+import { Route as AdminGoPageRouteImport } from './routes/admin.go.$page'
 import { Route as AdminStoresStoreIdRouteImport } from './routes/admin.stores.$storeId'
+import { Route as HelpLangSplatRouteImport } from './routes/help.$lang.$'
+import { Route as HelpContentSplatRouteImport } from './routes/help.content.$'
+import { Route as MemberStoreIdIndexRouteImport } from './routes/member.$storeId.index'
+import { Route as MemberStoreIdConsumptionRouteImport } from './routes/member.$storeId.consumption'
+import { Route as MemberStoreIdCouponsRouteImport } from './routes/member.$storeId.coupons'
+import { Route as MemberStoreIdMemoriesRouteImport } from './routes/member.$storeId.memories'
+import { Route as MemberStoreIdPointsRouteImport } from './routes/member.$storeId.points'
+import { Route as AdminStoresStoreIdIndexRouteImport } from './routes/admin.stores.$storeId.index'
+import { Route as AdminStoresStoreIdCouponsRouteImport } from './routes/admin.stores.$storeId.coupons'
+import { Route as AdminStoresStoreIdDesignRouteImport } from './routes/admin.stores.$storeId.design'
 import { Route as AdminStoresStoreIdFloorRouteImport } from './routes/admin.stores.$storeId.floor'
+import { Route as AdminStoresStoreIdGamesRouteImport } from './routes/admin.stores.$storeId.games'
 import { Route as AdminStoresStoreIdMembersRouteImport } from './routes/admin.stores.$storeId.members'
+import { Route as AdminStoresStoreIdOnboardingRouteImport } from './routes/admin.stores.$storeId.onboarding'
+import { Route as AdminStoresStoreIdPointsRouteImport } from './routes/admin.stores.$storeId.points'
 import { Route as AdminStoresStoreIdProfileRouteImport } from './routes/admin.stores.$storeId.profile'
+import { Route as AdminStoresStoreIdStatisticsRouteImport } from './routes/admin.stores.$storeId.statistics'
 import { Route as AdminStoresStoreIdDemoRouteImport } from './routes/admin.stores.$storeId_.demo'
+import { Route as MemberStoreIdVisitsSessionIdRouteImport } from './routes/member.$storeId.visits.$sessionId'
 import { Route as AdminStoresStoreIdDevicesIndexRouteImport } from './routes/admin.stores.$storeId.devices.index'
 import { Route as AdminStoresStoreIdDevicesNewRouteImport } from './routes/admin.stores.$storeId.devices.new'
 import { Route as AdminStoresStoreIdInvitationsIndexRouteImport } from './routes/admin.stores.$storeId.invitations.index'
 import { Route as AdminStoresStoreIdInvitationsNewRouteImport } from './routes/admin.stores.$storeId.invitations.new'
 import { Route as AdminStoresStoreIdMenuSectionRouteImport } from './routes/admin.stores.$storeId.menu.$section'
+import { Route as AdminStoresStoreIdMenuHistoryRouteImport } from './routes/admin.stores.$storeId.menu.history'
 import { Route as AdminStoresStoreIdVisitsIndexRouteImport } from './routes/admin.stores.$storeId.visits.index'
 import { Route as AdminStoresStoreIdVisitsSessionIdRouteImport } from './routes/admin.stores.$storeId.visits.$sessionId'
 import { Route as AdminStoresStoreIdDemoDemoIdRouteImport } from './routes/admin.stores.$storeId_.demo_.$demoId'
@@ -63,14 +91,39 @@ const DeviceRoute = DeviceRouteImport.update({
   path: '/device',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LlmsFullDottxtRoute = LlmsFullDottxtRouteImport.update({
+  id: '/llms-full.txt',
+  path: '/llms-full.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MemberRoute = MemberRouteImport.update({
+  id: '/member',
+  path: '/member',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrganisationsRoute = OrganisationsRouteImport.update({
   id: '/organisations',
   path: '/organisations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PairRoute = PairRouteImport.update({
+  id: '/pair',
+  path: '/pair',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PasskeySetupRoute = PasskeySetupRouteImport.update({
+  id: '/passkey-setup',
+  path: '/passkey-setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -93,10 +146,40 @@ const AdminLiveRoute = AdminLiveRouteImport.update({
   path: '/admin/live',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillingOrganizationIdRoute = BillingOrganizationIdRouteImport.update({
+  id: '/billing/$organizationId',
+  path: '/billing/$organizationId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpIndexRoute = HelpIndexRouteImport.update({
+  id: '/help/',
+  path: '/help/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpSearchRoute = HelpSearchRouteImport.update({
+  id: '/help/search',
+  path: '/help/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InvitationsInvitationIdRoute = InvitationsInvitationIdRouteImport.update({
   id: '/invitations/$invitationId',
   path: '/invitations/$invitationId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MemberIndexRoute = MemberIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MemberRoute,
+} as any)
+const MemberStoreIdRoute = MemberStoreIdRouteImport.update({
+  id: '/$storeId',
+  path: '/$storeId',
+  getParentRoute: () => MemberRoute,
+} as any)
+const MemberJoinRoute = MemberJoinRouteImport.update({
+  id: '/join',
+  path: '/join',
+  getParentRoute: () => MemberRoute,
 } as any)
 const StoresNewRoute = StoresNewRouteImport.update({
   id: '/stores/new',
@@ -115,14 +198,77 @@ const AccountIntegrationsPluginsRoute =
     path: '/account/integrations/plugins',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminGoPageRoute = AdminGoPageRouteImport.update({
+  id: '/admin/go/$page',
+  path: '/admin/go/$page',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminStoresStoreIdRoute = AdminStoresStoreIdRouteImport.update({
   id: '/admin/stores/$storeId',
   path: '/admin/stores/$storeId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HelpLangSplatRoute = HelpLangSplatRouteImport.update({
+  id: '/help/$lang/$',
+  path: '/help/$lang/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpContentSplatRoute = HelpContentSplatRouteImport.update({
+  id: '/help/content/$',
+  path: '/help/content/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MemberStoreIdIndexRoute = MemberStoreIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MemberStoreIdRoute,
+} as any)
+const MemberStoreIdConsumptionRoute =
+  MemberStoreIdConsumptionRouteImport.update({
+    id: '/consumption',
+    path: '/consumption',
+    getParentRoute: () => MemberStoreIdRoute,
+  } as any)
+const MemberStoreIdCouponsRoute = MemberStoreIdCouponsRouteImport.update({
+  id: '/coupons',
+  path: '/coupons',
+  getParentRoute: () => MemberStoreIdRoute,
+} as any)
+const MemberStoreIdMemoriesRoute = MemberStoreIdMemoriesRouteImport.update({
+  id: '/memories',
+  path: '/memories',
+  getParentRoute: () => MemberStoreIdRoute,
+} as any)
+const MemberStoreIdPointsRoute = MemberStoreIdPointsRouteImport.update({
+  id: '/points',
+  path: '/points',
+  getParentRoute: () => MemberStoreIdRoute,
+} as any)
+const AdminStoresStoreIdIndexRoute = AdminStoresStoreIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminStoresStoreIdRoute,
+} as any)
+const AdminStoresStoreIdCouponsRoute =
+  AdminStoresStoreIdCouponsRouteImport.update({
+    id: '/coupons',
+    path: '/coupons',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdDesignRoute =
+  AdminStoresStoreIdDesignRouteImport.update({
+    id: '/design',
+    path: '/design',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
 const AdminStoresStoreIdFloorRoute = AdminStoresStoreIdFloorRouteImport.update({
   id: '/floor',
   path: '/floor',
+  getParentRoute: () => AdminStoresStoreIdRoute,
+} as any)
+const AdminStoresStoreIdGamesRoute = AdminStoresStoreIdGamesRouteImport.update({
+  id: '/games',
+  path: '/games',
   getParentRoute: () => AdminStoresStoreIdRoute,
 } as any)
 const AdminStoresStoreIdMembersRoute =
@@ -131,10 +277,28 @@ const AdminStoresStoreIdMembersRoute =
     path: '/members',
     getParentRoute: () => AdminStoresStoreIdRoute,
   } as any)
+const AdminStoresStoreIdOnboardingRoute =
+  AdminStoresStoreIdOnboardingRouteImport.update({
+    id: '/onboarding',
+    path: '/onboarding',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdPointsRoute =
+  AdminStoresStoreIdPointsRouteImport.update({
+    id: '/points',
+    path: '/points',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
 const AdminStoresStoreIdProfileRoute =
   AdminStoresStoreIdProfileRouteImport.update({
     id: '/profile',
     path: '/profile',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdStatisticsRoute =
+  AdminStoresStoreIdStatisticsRouteImport.update({
+    id: '/statistics',
+    path: '/statistics',
     getParentRoute: () => AdminStoresStoreIdRoute,
   } as any)
 const AdminStoresStoreIdDemoRoute = AdminStoresStoreIdDemoRouteImport.update({
@@ -142,6 +306,12 @@ const AdminStoresStoreIdDemoRoute = AdminStoresStoreIdDemoRouteImport.update({
   path: '/admin/stores/$storeId/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MemberStoreIdVisitsSessionIdRoute =
+  MemberStoreIdVisitsSessionIdRouteImport.update({
+    id: '/visits/$sessionId',
+    path: '/visits/$sessionId',
+    getParentRoute: () => MemberStoreIdRoute,
+  } as any)
 const AdminStoresStoreIdDevicesIndexRoute =
   AdminStoresStoreIdDevicesIndexRouteImport.update({
     id: '/devices/',
@@ -170,6 +340,12 @@ const AdminStoresStoreIdMenuSectionRoute =
   AdminStoresStoreIdMenuSectionRouteImport.update({
     id: '/menu/$section',
     path: '/menu/$section',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdMenuHistoryRoute =
+  AdminStoresStoreIdMenuHistoryRouteImport.update({
+    id: '/menu/history',
+    path: '/menu/history',
     getParentRoute: () => AdminStoresStoreIdRoute,
   } as any)
 const AdminStoresStoreIdVisitsIndexRoute =
@@ -232,24 +408,52 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/consent': typeof ConsentRoute
   '/device': typeof DeviceRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
+  '/member': typeof MemberRouteWithChildren
   '/organisations': typeof OrganisationsRoute
+  '/pair': typeof PairRoute
+  '/passkey-setup': typeof PasskeySetupRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/account/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
+  '/billing/$organizationId': typeof BillingOrganizationIdRoute
+  '/help/search': typeof HelpSearchRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
+  '/member/$storeId': typeof MemberStoreIdRouteWithChildren
+  '/member/join': typeof MemberJoinRoute
   '/stores/new': typeof StoresNewRoute
+  '/help/': typeof HelpIndexRoute
+  '/member/': typeof MemberIndexRoute
   '/account/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
+  '/admin/go/$page': typeof AdminGoPageRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
+  '/help/$lang/$': typeof HelpLangSplatRoute
+  '/help/content/$': typeof HelpContentSplatRoute
+  '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
+  '/member/$storeId/coupons': typeof MemberStoreIdCouponsRoute
+  '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
+  '/member/$storeId/points': typeof MemberStoreIdPointsRoute
+  '/member/$storeId/': typeof MemberStoreIdIndexRoute
+  '/admin/stores/$storeId/coupons': typeof AdminStoresStoreIdCouponsRoute
+  '/admin/stores/$storeId/design': typeof AdminStoresStoreIdDesignRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
+  '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/onboarding': typeof AdminStoresStoreIdOnboardingRoute
+  '/admin/stores/$storeId/points': typeof AdminStoresStoreIdPointsRoute
   '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
+  '/admin/stores/$storeId/statistics': typeof AdminStoresStoreIdStatisticsRoute
   '/admin/stores/$storeId/demo': typeof AdminStoresStoreIdDemoRoute
+  '/member/$storeId/visits/$sessionId': typeof MemberStoreIdVisitsSessionIdRoute
+  '/admin/stores/$storeId/': typeof AdminStoresStoreIdIndexRoute
   '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
   '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
   '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
+  '/admin/stores/$storeId/menu/history': typeof AdminStoresStoreIdMenuHistoryRoute
   '/admin/stores/$storeId/visits/$sessionId': typeof AdminStoresStoreIdVisitsSessionIdRoute
   '/admin/stores/$storeId/demo/$demoId': typeof AdminStoresStoreIdDemoDemoIdRoute
   '/admin/stores/$storeId/devices/': typeof AdminStoresStoreIdDevicesIndexRoute
@@ -267,24 +471,49 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRoute
   '/consent': typeof ConsentRoute
   '/device': typeof DeviceRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/organisations': typeof OrganisationsRoute
+  '/pair': typeof PairRoute
+  '/passkey-setup': typeof PasskeySetupRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/account/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
+  '/billing/$organizationId': typeof BillingOrganizationIdRoute
+  '/help/search': typeof HelpSearchRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
+  '/member/join': typeof MemberJoinRoute
   '/stores/new': typeof StoresNewRoute
+  '/help': typeof HelpIndexRoute
+  '/member': typeof MemberIndexRoute
   '/account/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
-  '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
+  '/admin/go/$page': typeof AdminGoPageRoute
+  '/help/$lang/$': typeof HelpLangSplatRoute
+  '/help/content/$': typeof HelpContentSplatRoute
+  '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
+  '/member/$storeId/coupons': typeof MemberStoreIdCouponsRoute
+  '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
+  '/member/$storeId/points': typeof MemberStoreIdPointsRoute
+  '/member/$storeId': typeof MemberStoreIdIndexRoute
+  '/admin/stores/$storeId/coupons': typeof AdminStoresStoreIdCouponsRoute
+  '/admin/stores/$storeId/design': typeof AdminStoresStoreIdDesignRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
+  '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/onboarding': typeof AdminStoresStoreIdOnboardingRoute
+  '/admin/stores/$storeId/points': typeof AdminStoresStoreIdPointsRoute
   '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
+  '/admin/stores/$storeId/statistics': typeof AdminStoresStoreIdStatisticsRoute
   '/admin/stores/$storeId/demo': typeof AdminStoresStoreIdDemoRoute
+  '/member/$storeId/visits/$sessionId': typeof MemberStoreIdVisitsSessionIdRoute
+  '/admin/stores/$storeId': typeof AdminStoresStoreIdIndexRoute
   '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
   '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
   '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
+  '/admin/stores/$storeId/menu/history': typeof AdminStoresStoreIdMenuHistoryRoute
   '/admin/stores/$storeId/visits/$sessionId': typeof AdminStoresStoreIdVisitsSessionIdRoute
   '/admin/stores/$storeId/demo/$demoId': typeof AdminStoresStoreIdDemoDemoIdRoute
   '/admin/stores/$storeId/devices': typeof AdminStoresStoreIdDevicesIndexRoute
@@ -303,24 +532,52 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/consent': typeof ConsentRoute
   '/device': typeof DeviceRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
+  '/member': typeof MemberRouteWithChildren
   '/organisations': typeof OrganisationsRoute
+  '/pair': typeof PairRoute
+  '/passkey-setup': typeof PasskeySetupRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/account_/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
+  '/billing/$organizationId': typeof BillingOrganizationIdRoute
+  '/help/search': typeof HelpSearchRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
+  '/member/$storeId': typeof MemberStoreIdRouteWithChildren
+  '/member/join': typeof MemberJoinRoute
   '/stores/new': typeof StoresNewRoute
+  '/help/': typeof HelpIndexRoute
+  '/member/': typeof MemberIndexRoute
   '/account_/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account_/integrations/plugins': typeof AccountIntegrationsPluginsRoute
+  '/admin/go/$page': typeof AdminGoPageRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
+  '/help/$lang/$': typeof HelpLangSplatRoute
+  '/help/content/$': typeof HelpContentSplatRoute
+  '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
+  '/member/$storeId/coupons': typeof MemberStoreIdCouponsRoute
+  '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
+  '/member/$storeId/points': typeof MemberStoreIdPointsRoute
+  '/member/$storeId/': typeof MemberStoreIdIndexRoute
+  '/admin/stores/$storeId/coupons': typeof AdminStoresStoreIdCouponsRoute
+  '/admin/stores/$storeId/design': typeof AdminStoresStoreIdDesignRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
+  '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/onboarding': typeof AdminStoresStoreIdOnboardingRoute
+  '/admin/stores/$storeId/points': typeof AdminStoresStoreIdPointsRoute
   '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
+  '/admin/stores/$storeId/statistics': typeof AdminStoresStoreIdStatisticsRoute
   '/admin/stores/$storeId_/demo': typeof AdminStoresStoreIdDemoRoute
+  '/member/$storeId/visits/$sessionId': typeof MemberStoreIdVisitsSessionIdRoute
+  '/admin/stores/$storeId/': typeof AdminStoresStoreIdIndexRoute
   '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
   '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
   '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
+  '/admin/stores/$storeId/menu/history': typeof AdminStoresStoreIdMenuHistoryRoute
   '/admin/stores/$storeId/visits/$sessionId': typeof AdminStoresStoreIdVisitsSessionIdRoute
   '/admin/stores/$storeId_/demo_/$demoId': typeof AdminStoresStoreIdDemoDemoIdRoute
   '/admin/stores/$storeId/devices/': typeof AdminStoresStoreIdDevicesIndexRoute
@@ -340,24 +597,52 @@ export interface FileRouteTypes {
     | '/account'
     | '/consent'
     | '/device'
+    | '/llms-full.txt'
+    | '/llms.txt'
     | '/login'
+    | '/member'
     | '/organisations'
+    | '/pair'
+    | '/passkey-setup'
     | '/register'
     | '/reset-password'
     | '/account/mcp-sessions'
     | '/admin/live'
+    | '/billing/$organizationId'
+    | '/help/search'
     | '/invitations/$invitationId'
+    | '/member/$storeId'
+    | '/member/join'
     | '/stores/new'
+    | '/help/'
+    | '/member/'
     | '/account/integrations/manual'
     | '/account/integrations/plugins'
+    | '/admin/go/$page'
     | '/admin/stores/$storeId'
+    | '/help/$lang/$'
+    | '/help/content/$'
+    | '/member/$storeId/consumption'
+    | '/member/$storeId/coupons'
+    | '/member/$storeId/memories'
+    | '/member/$storeId/points'
+    | '/member/$storeId/'
+    | '/admin/stores/$storeId/coupons'
+    | '/admin/stores/$storeId/design'
     | '/admin/stores/$storeId/floor'
+    | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/onboarding'
+    | '/admin/stores/$storeId/points'
     | '/admin/stores/$storeId/profile'
+    | '/admin/stores/$storeId/statistics'
     | '/admin/stores/$storeId/demo'
+    | '/member/$storeId/visits/$sessionId'
+    | '/admin/stores/$storeId/'
     | '/admin/stores/$storeId/devices/new'
     | '/admin/stores/$storeId/invitations/new'
     | '/admin/stores/$storeId/menu/$section'
+    | '/admin/stores/$storeId/menu/history'
     | '/admin/stores/$storeId/visits/$sessionId'
     | '/admin/stores/$storeId/demo/$demoId'
     | '/admin/stores/$storeId/devices/'
@@ -375,24 +660,49 @@ export interface FileRouteTypes {
     | '/account'
     | '/consent'
     | '/device'
+    | '/llms-full.txt'
+    | '/llms.txt'
     | '/login'
     | '/organisations'
+    | '/pair'
+    | '/passkey-setup'
     | '/register'
     | '/reset-password'
     | '/account/mcp-sessions'
     | '/admin/live'
+    | '/billing/$organizationId'
+    | '/help/search'
     | '/invitations/$invitationId'
+    | '/member/join'
     | '/stores/new'
+    | '/help'
+    | '/member'
     | '/account/integrations/manual'
     | '/account/integrations/plugins'
-    | '/admin/stores/$storeId'
+    | '/admin/go/$page'
+    | '/help/$lang/$'
+    | '/help/content/$'
+    | '/member/$storeId/consumption'
+    | '/member/$storeId/coupons'
+    | '/member/$storeId/memories'
+    | '/member/$storeId/points'
+    | '/member/$storeId'
+    | '/admin/stores/$storeId/coupons'
+    | '/admin/stores/$storeId/design'
     | '/admin/stores/$storeId/floor'
+    | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/onboarding'
+    | '/admin/stores/$storeId/points'
     | '/admin/stores/$storeId/profile'
+    | '/admin/stores/$storeId/statistics'
     | '/admin/stores/$storeId/demo'
+    | '/member/$storeId/visits/$sessionId'
+    | '/admin/stores/$storeId'
     | '/admin/stores/$storeId/devices/new'
     | '/admin/stores/$storeId/invitations/new'
     | '/admin/stores/$storeId/menu/$section'
+    | '/admin/stores/$storeId/menu/history'
     | '/admin/stores/$storeId/visits/$sessionId'
     | '/admin/stores/$storeId/demo/$demoId'
     | '/admin/stores/$storeId/devices'
@@ -410,24 +720,52 @@ export interface FileRouteTypes {
     | '/account'
     | '/consent'
     | '/device'
+    | '/llms-full.txt'
+    | '/llms.txt'
     | '/login'
+    | '/member'
     | '/organisations'
+    | '/pair'
+    | '/passkey-setup'
     | '/register'
     | '/reset-password'
     | '/account_/mcp-sessions'
     | '/admin/live'
+    | '/billing/$organizationId'
+    | '/help/search'
     | '/invitations/$invitationId'
+    | '/member/$storeId'
+    | '/member/join'
     | '/stores/new'
+    | '/help/'
+    | '/member/'
     | '/account_/integrations/manual'
     | '/account_/integrations/plugins'
+    | '/admin/go/$page'
     | '/admin/stores/$storeId'
+    | '/help/$lang/$'
+    | '/help/content/$'
+    | '/member/$storeId/consumption'
+    | '/member/$storeId/coupons'
+    | '/member/$storeId/memories'
+    | '/member/$storeId/points'
+    | '/member/$storeId/'
+    | '/admin/stores/$storeId/coupons'
+    | '/admin/stores/$storeId/design'
     | '/admin/stores/$storeId/floor'
+    | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/onboarding'
+    | '/admin/stores/$storeId/points'
     | '/admin/stores/$storeId/profile'
+    | '/admin/stores/$storeId/statistics'
     | '/admin/stores/$storeId_/demo'
+    | '/member/$storeId/visits/$sessionId'
+    | '/admin/stores/$storeId/'
     | '/admin/stores/$storeId/devices/new'
     | '/admin/stores/$storeId/invitations/new'
     | '/admin/stores/$storeId/menu/$section'
+    | '/admin/stores/$storeId/menu/history'
     | '/admin/stores/$storeId/visits/$sessionId'
     | '/admin/stores/$storeId_/demo_/$demoId'
     | '/admin/stores/$storeId/devices/'
@@ -446,17 +784,28 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   ConsentRoute: typeof ConsentRoute
   DeviceRoute: typeof DeviceRoute
+  LlmsFullDottxtRoute: typeof LlmsFullDottxtRoute
+  LlmsDottxtRoute: typeof LlmsDottxtRoute
   LoginRoute: typeof LoginRoute
+  MemberRoute: typeof MemberRouteWithChildren
   OrganisationsRoute: typeof OrganisationsRoute
+  PairRoute: typeof PairRoute
+  PasskeySetupRoute: typeof PasskeySetupRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   AccountMcpSessionsRoute: typeof AccountMcpSessionsRoute
   AdminLiveRoute: typeof AdminLiveRoute
+  BillingOrganizationIdRoute: typeof BillingOrganizationIdRoute
+  HelpSearchRoute: typeof HelpSearchRoute
   InvitationsInvitationIdRoute: typeof InvitationsInvitationIdRoute
   StoresNewRoute: typeof StoresNewRoute
+  HelpIndexRoute: typeof HelpIndexRoute
   AccountIntegrationsManualRoute: typeof AccountIntegrationsManualRoute
   AccountIntegrationsPluginsRoute: typeof AccountIntegrationsPluginsRoute
+  AdminGoPageRoute: typeof AdminGoPageRoute
   AdminStoresStoreIdRoute: typeof AdminStoresStoreIdRouteWithChildren
+  HelpLangSplatRoute: typeof HelpLangSplatRoute
+  HelpContentSplatRoute: typeof HelpContentSplatRoute
   AdminStoresStoreIdDemoRoute: typeof AdminStoresStoreIdDemoRoute
   AdminStoresStoreIdDemoDemoIdRoute: typeof AdminStoresStoreIdDemoDemoIdRoute
 }
@@ -491,6 +840,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeviceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/llms-full.txt': {
+      id: '/llms-full.txt'
+      path: '/llms-full.txt'
+      fullPath: '/llms-full.txt'
+      preLoaderRoute: typeof LlmsFullDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -498,11 +861,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/member': {
+      id: '/member'
+      path: '/member'
+      fullPath: '/member'
+      preLoaderRoute: typeof MemberRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/organisations': {
       id: '/organisations'
       path: '/organisations'
       fullPath: '/organisations'
       preLoaderRoute: typeof OrganisationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pair': {
+      id: '/pair'
+      path: '/pair'
+      fullPath: '/pair'
+      preLoaderRoute: typeof PairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/passkey-setup': {
+      id: '/passkey-setup'
+      path: '/passkey-setup'
+      fullPath: '/passkey-setup'
+      preLoaderRoute: typeof PasskeySetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -533,12 +917,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLiveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing/$organizationId': {
+      id: '/billing/$organizationId'
+      path: '/billing/$organizationId'
+      fullPath: '/billing/$organizationId'
+      preLoaderRoute: typeof BillingOrganizationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help/': {
+      id: '/help/'
+      path: '/help'
+      fullPath: '/help/'
+      preLoaderRoute: typeof HelpIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help/search': {
+      id: '/help/search'
+      path: '/help/search'
+      fullPath: '/help/search'
+      preLoaderRoute: typeof HelpSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/invitations/$invitationId': {
       id: '/invitations/$invitationId'
       path: '/invitations/$invitationId'
       fullPath: '/invitations/$invitationId'
       preLoaderRoute: typeof InvitationsInvitationIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/member/': {
+      id: '/member/'
+      path: '/'
+      fullPath: '/member/'
+      preLoaderRoute: typeof MemberIndexRouteImport
+      parentRoute: typeof MemberRoute
+    }
+    '/member/$storeId': {
+      id: '/member/$storeId'
+      path: '/$storeId'
+      fullPath: '/member/$storeId'
+      preLoaderRoute: typeof MemberStoreIdRouteImport
+      parentRoute: typeof MemberRoute
+    }
+    '/member/join': {
+      id: '/member/join'
+      path: '/join'
+      fullPath: '/member/join'
+      preLoaderRoute: typeof MemberJoinRouteImport
+      parentRoute: typeof MemberRoute
     }
     '/stores/new': {
       id: '/stores/new'
@@ -561,6 +987,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountIntegrationsPluginsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/go/$page': {
+      id: '/admin/go/$page'
+      path: '/admin/go/$page'
+      fullPath: '/admin/go/$page'
+      preLoaderRoute: typeof AdminGoPageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/stores/$storeId': {
       id: '/admin/stores/$storeId'
       path: '/admin/stores/$storeId'
@@ -568,11 +1001,88 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStoresStoreIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/help/$lang/$': {
+      id: '/help/$lang/$'
+      path: '/help/$lang/$'
+      fullPath: '/help/$lang/$'
+      preLoaderRoute: typeof HelpLangSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help/content/$': {
+      id: '/help/content/$'
+      path: '/help/content/$'
+      fullPath: '/help/content/$'
+      preLoaderRoute: typeof HelpContentSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/member/$storeId/': {
+      id: '/member/$storeId/'
+      path: '/'
+      fullPath: '/member/$storeId/'
+      preLoaderRoute: typeof MemberStoreIdIndexRouteImport
+      parentRoute: typeof MemberStoreIdRoute
+    }
+    '/member/$storeId/consumption': {
+      id: '/member/$storeId/consumption'
+      path: '/consumption'
+      fullPath: '/member/$storeId/consumption'
+      preLoaderRoute: typeof MemberStoreIdConsumptionRouteImport
+      parentRoute: typeof MemberStoreIdRoute
+    }
+    '/member/$storeId/coupons': {
+      id: '/member/$storeId/coupons'
+      path: '/coupons'
+      fullPath: '/member/$storeId/coupons'
+      preLoaderRoute: typeof MemberStoreIdCouponsRouteImport
+      parentRoute: typeof MemberStoreIdRoute
+    }
+    '/member/$storeId/memories': {
+      id: '/member/$storeId/memories'
+      path: '/memories'
+      fullPath: '/member/$storeId/memories'
+      preLoaderRoute: typeof MemberStoreIdMemoriesRouteImport
+      parentRoute: typeof MemberStoreIdRoute
+    }
+    '/member/$storeId/points': {
+      id: '/member/$storeId/points'
+      path: '/points'
+      fullPath: '/member/$storeId/points'
+      preLoaderRoute: typeof MemberStoreIdPointsRouteImport
+      parentRoute: typeof MemberStoreIdRoute
+    }
+    '/admin/stores/$storeId/': {
+      id: '/admin/stores/$storeId/'
+      path: '/'
+      fullPath: '/admin/stores/$storeId/'
+      preLoaderRoute: typeof AdminStoresStoreIdIndexRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/coupons': {
+      id: '/admin/stores/$storeId/coupons'
+      path: '/coupons'
+      fullPath: '/admin/stores/$storeId/coupons'
+      preLoaderRoute: typeof AdminStoresStoreIdCouponsRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/design': {
+      id: '/admin/stores/$storeId/design'
+      path: '/design'
+      fullPath: '/admin/stores/$storeId/design'
+      preLoaderRoute: typeof AdminStoresStoreIdDesignRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
     '/admin/stores/$storeId/floor': {
       id: '/admin/stores/$storeId/floor'
       path: '/floor'
       fullPath: '/admin/stores/$storeId/floor'
       preLoaderRoute: typeof AdminStoresStoreIdFloorRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/games': {
+      id: '/admin/stores/$storeId/games'
+      path: '/games'
+      fullPath: '/admin/stores/$storeId/games'
+      preLoaderRoute: typeof AdminStoresStoreIdGamesRouteImport
       parentRoute: typeof AdminStoresStoreIdRoute
     }
     '/admin/stores/$storeId/members': {
@@ -582,11 +1092,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStoresStoreIdMembersRouteImport
       parentRoute: typeof AdminStoresStoreIdRoute
     }
+    '/admin/stores/$storeId/onboarding': {
+      id: '/admin/stores/$storeId/onboarding'
+      path: '/onboarding'
+      fullPath: '/admin/stores/$storeId/onboarding'
+      preLoaderRoute: typeof AdminStoresStoreIdOnboardingRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/points': {
+      id: '/admin/stores/$storeId/points'
+      path: '/points'
+      fullPath: '/admin/stores/$storeId/points'
+      preLoaderRoute: typeof AdminStoresStoreIdPointsRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
     '/admin/stores/$storeId/profile': {
       id: '/admin/stores/$storeId/profile'
       path: '/profile'
       fullPath: '/admin/stores/$storeId/profile'
       preLoaderRoute: typeof AdminStoresStoreIdProfileRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/statistics': {
+      id: '/admin/stores/$storeId/statistics'
+      path: '/statistics'
+      fullPath: '/admin/stores/$storeId/statistics'
+      preLoaderRoute: typeof AdminStoresStoreIdStatisticsRouteImport
       parentRoute: typeof AdminStoresStoreIdRoute
     }
     '/admin/stores/$storeId_/demo': {
@@ -595,6 +1126,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/stores/$storeId/demo'
       preLoaderRoute: typeof AdminStoresStoreIdDemoRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/member/$storeId/visits/$sessionId': {
+      id: '/member/$storeId/visits/$sessionId'
+      path: '/visits/$sessionId'
+      fullPath: '/member/$storeId/visits/$sessionId'
+      preLoaderRoute: typeof MemberStoreIdVisitsSessionIdRouteImport
+      parentRoute: typeof MemberStoreIdRoute
     }
     '/admin/stores/$storeId/devices/': {
       id: '/admin/stores/$storeId/devices/'
@@ -629,6 +1167,13 @@ declare module '@tanstack/react-router' {
       path: '/menu/$section'
       fullPath: '/admin/stores/$storeId/menu/$section'
       preLoaderRoute: typeof AdminStoresStoreIdMenuSectionRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/menu/history': {
+      id: '/admin/stores/$storeId/menu/history'
+      path: '/menu/history'
+      fullPath: '/admin/stores/$storeId/menu/history'
+      preLoaderRoute: typeof AdminStoresStoreIdMenuHistoryRouteImport
       parentRoute: typeof AdminStoresStoreIdRoute
     }
     '/admin/stores/$storeId/visits/': {
@@ -697,13 +1242,58 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface MemberStoreIdRouteChildren {
+  MemberStoreIdConsumptionRoute: typeof MemberStoreIdConsumptionRoute
+  MemberStoreIdCouponsRoute: typeof MemberStoreIdCouponsRoute
+  MemberStoreIdMemoriesRoute: typeof MemberStoreIdMemoriesRoute
+  MemberStoreIdPointsRoute: typeof MemberStoreIdPointsRoute
+  MemberStoreIdIndexRoute: typeof MemberStoreIdIndexRoute
+  MemberStoreIdVisitsSessionIdRoute: typeof MemberStoreIdVisitsSessionIdRoute
+}
+
+const MemberStoreIdRouteChildren: MemberStoreIdRouteChildren = {
+  MemberStoreIdConsumptionRoute: MemberStoreIdConsumptionRoute,
+  MemberStoreIdCouponsRoute: MemberStoreIdCouponsRoute,
+  MemberStoreIdMemoriesRoute: MemberStoreIdMemoriesRoute,
+  MemberStoreIdPointsRoute: MemberStoreIdPointsRoute,
+  MemberStoreIdIndexRoute: MemberStoreIdIndexRoute,
+  MemberStoreIdVisitsSessionIdRoute: MemberStoreIdVisitsSessionIdRoute,
+}
+
+const MemberStoreIdRouteWithChildren = MemberStoreIdRoute._addFileChildren(
+  MemberStoreIdRouteChildren,
+)
+
+interface MemberRouteChildren {
+  MemberStoreIdRoute: typeof MemberStoreIdRouteWithChildren
+  MemberJoinRoute: typeof MemberJoinRoute
+  MemberIndexRoute: typeof MemberIndexRoute
+}
+
+const MemberRouteChildren: MemberRouteChildren = {
+  MemberStoreIdRoute: MemberStoreIdRouteWithChildren,
+  MemberJoinRoute: MemberJoinRoute,
+  MemberIndexRoute: MemberIndexRoute,
+}
+
+const MemberRouteWithChildren =
+  MemberRoute._addFileChildren(MemberRouteChildren)
+
 interface AdminStoresStoreIdRouteChildren {
+  AdminStoresStoreIdCouponsRoute: typeof AdminStoresStoreIdCouponsRoute
+  AdminStoresStoreIdDesignRoute: typeof AdminStoresStoreIdDesignRoute
   AdminStoresStoreIdFloorRoute: typeof AdminStoresStoreIdFloorRoute
+  AdminStoresStoreIdGamesRoute: typeof AdminStoresStoreIdGamesRoute
   AdminStoresStoreIdMembersRoute: typeof AdminStoresStoreIdMembersRoute
+  AdminStoresStoreIdOnboardingRoute: typeof AdminStoresStoreIdOnboardingRoute
+  AdminStoresStoreIdPointsRoute: typeof AdminStoresStoreIdPointsRoute
   AdminStoresStoreIdProfileRoute: typeof AdminStoresStoreIdProfileRoute
+  AdminStoresStoreIdStatisticsRoute: typeof AdminStoresStoreIdStatisticsRoute
+  AdminStoresStoreIdIndexRoute: typeof AdminStoresStoreIdIndexRoute
   AdminStoresStoreIdDevicesNewRoute: typeof AdminStoresStoreIdDevicesNewRoute
   AdminStoresStoreIdInvitationsNewRoute: typeof AdminStoresStoreIdInvitationsNewRoute
   AdminStoresStoreIdMenuSectionRoute: typeof AdminStoresStoreIdMenuSectionRoute
+  AdminStoresStoreIdMenuHistoryRoute: typeof AdminStoresStoreIdMenuHistoryRoute
   AdminStoresStoreIdVisitsSessionIdRoute: typeof AdminStoresStoreIdVisitsSessionIdRoute
   AdminStoresStoreIdDevicesIndexRoute: typeof AdminStoresStoreIdDevicesIndexRoute
   AdminStoresStoreIdInvitationsIndexRoute: typeof AdminStoresStoreIdInvitationsIndexRoute
@@ -717,12 +1307,20 @@ interface AdminStoresStoreIdRouteChildren {
 }
 
 const AdminStoresStoreIdRouteChildren: AdminStoresStoreIdRouteChildren = {
+  AdminStoresStoreIdCouponsRoute: AdminStoresStoreIdCouponsRoute,
+  AdminStoresStoreIdDesignRoute: AdminStoresStoreIdDesignRoute,
   AdminStoresStoreIdFloorRoute: AdminStoresStoreIdFloorRoute,
+  AdminStoresStoreIdGamesRoute: AdminStoresStoreIdGamesRoute,
   AdminStoresStoreIdMembersRoute: AdminStoresStoreIdMembersRoute,
+  AdminStoresStoreIdOnboardingRoute: AdminStoresStoreIdOnboardingRoute,
+  AdminStoresStoreIdPointsRoute: AdminStoresStoreIdPointsRoute,
   AdminStoresStoreIdProfileRoute: AdminStoresStoreIdProfileRoute,
+  AdminStoresStoreIdStatisticsRoute: AdminStoresStoreIdStatisticsRoute,
+  AdminStoresStoreIdIndexRoute: AdminStoresStoreIdIndexRoute,
   AdminStoresStoreIdDevicesNewRoute: AdminStoresStoreIdDevicesNewRoute,
   AdminStoresStoreIdInvitationsNewRoute: AdminStoresStoreIdInvitationsNewRoute,
   AdminStoresStoreIdMenuSectionRoute: AdminStoresStoreIdMenuSectionRoute,
+  AdminStoresStoreIdMenuHistoryRoute: AdminStoresStoreIdMenuHistoryRoute,
   AdminStoresStoreIdVisitsSessionIdRoute:
     AdminStoresStoreIdVisitsSessionIdRoute,
   AdminStoresStoreIdDevicesIndexRoute: AdminStoresStoreIdDevicesIndexRoute,
@@ -751,17 +1349,28 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   ConsentRoute: ConsentRoute,
   DeviceRoute: DeviceRoute,
+  LlmsFullDottxtRoute: LlmsFullDottxtRoute,
+  LlmsDottxtRoute: LlmsDottxtRoute,
   LoginRoute: LoginRoute,
+  MemberRoute: MemberRouteWithChildren,
   OrganisationsRoute: OrganisationsRoute,
+  PairRoute: PairRoute,
+  PasskeySetupRoute: PasskeySetupRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   AccountMcpSessionsRoute: AccountMcpSessionsRoute,
   AdminLiveRoute: AdminLiveRoute,
+  BillingOrganizationIdRoute: BillingOrganizationIdRoute,
+  HelpSearchRoute: HelpSearchRoute,
   InvitationsInvitationIdRoute: InvitationsInvitationIdRoute,
   StoresNewRoute: StoresNewRoute,
+  HelpIndexRoute: HelpIndexRoute,
   AccountIntegrationsManualRoute: AccountIntegrationsManualRoute,
   AccountIntegrationsPluginsRoute: AccountIntegrationsPluginsRoute,
+  AdminGoPageRoute: AdminGoPageRoute,
   AdminStoresStoreIdRoute: AdminStoresStoreIdRouteWithChildren,
+  HelpLangSplatRoute: HelpLangSplatRoute,
+  HelpContentSplatRoute: HelpContentSplatRoute,
   AdminStoresStoreIdDemoRoute: AdminStoresStoreIdDemoRoute,
   AdminStoresStoreIdDemoDemoIdRoute: AdminStoresStoreIdDemoDemoIdRoute,
 }

@@ -1,23 +1,55 @@
 import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
-import { createMiddleware } from "hono/factory";
 import type { ApiEnv } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "./model";
-import { findDeviceSession, findStoreMembership } from "./queries";
-import { hashDeviceToken } from "./service";
-export async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
+import { ensure } from "../../platform/errors";
+import { apiFactory } from "../../platform/http";
+import { measured } from "../../platform/telemetry";
+import { findDeviceImageSession, findDeviceSession, findStoreMembership } from "./queries";
+import { hashDeviceToken } from "./token";
+async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
   const token = getCookie(c, "tablecast.device");
   ensure(token, "DEVICE_REQUIRED", 401);
-  const row = await findDeviceSession(c.get("services"), await hashDeviceToken(token));
+  const tokenHash = await hashDeviceToken(token);
+  if (c.req.method === "GET" && c.req.path.startsWith("/api/table/images/")) {
+    const row = await findDeviceImageSession(c.var.services, tokenHash);
+    ensure(row, "DEVICE_NOT_ASSIGNED", 401);
+    return {
+      kind: "device",
+      storeId: row.storeId,
+      tableSessionId: row.sessionId,
+      deviceId: row.deviceId,
+    };
+  }
+  // 価格・商品選択・対応言語を判定する経路で店舗設定を認可と同時に取得する。
+  const includeCatalog =
+    (c.req.method === "PUT" && c.req.path === "/api/table/cart") ||
+    (c.req.method === "POST" && c.req.path === "/api/table/confirm") ||
+    (c.req.method === "PATCH" && ["/api/table/ui", "/api/table/locale"].includes(c.req.path));
+  const row = await findDeviceSession(c.get("services"), tokenHash, includeCatalog);
   ensure(row, "DEVICE_NOT_ASSIGNED", 401);
-  return { kind: "device", storeId: row.store_id, tableSessionId: row.id };
+  c.get("services").tableAccess.session = row.session;
+  if (row.catalog && row.session.kind === "table")
+    c.get("services").tableAccess.pricing = {
+      sessionId: row.session.id,
+      store: row.catalog,
+      planUsage: row.planUsage ?? null,
+    };
+  return {
+    kind: "device",
+    storeId: row.session.store_id,
+    tableSessionId: row.session.id,
+    deviceId: row.deviceId,
+  };
 }
 
-export async function staffIdentity(c: Context<ApiEnv>) {
-  let pending = c.get("session");
+export async function staffIdentity<E extends ApiEnv>(c: Context<E>) {
+  let pending: ApiEnv["Variables"]["session"] = c.get("session");
   if (!pending) {
-    pending = c.get("services").auth.api.getSession({ headers: c.req.raw.headers });
+    const services: ApiEnv["Variables"]["services"] = c.get("services");
+    pending = services
+      .getIdentity()
+      .then((identity) => identity.api.getSession({ headers: c.req.raw.headers }));
     c.set("session", pending);
   }
   const session = await pending;
@@ -37,13 +69,28 @@ export async function staffActor(
   return { kind: "staff", storeId, userId: session.user.id, role: membership.role };
 }
 
-export const requireStore = createMiddleware<ApiEnv>(async (c, next) => {
+const actorGuard = (resolve: (c: Context<ApiEnv>) => Actor | Promise<Actor>) =>
+  apiFactory.createMiddleware(async (c, next) => {
+    c.set(
+      "actor",
+      await measured("tablecast.authentication.authorise", () => Promise.resolve(resolve(c))),
+    );
+    await next();
+  });
+
+export const requireIdentity = apiFactory.createMiddleware(async (c, next) => {
+  c.set("staffSession", await staffIdentity(c));
+  await next();
+});
+
+export const tableScope = actorGuard((c) => ({
+  ...c.get("actor"),
+  tableSessionId: c.req.param("id"),
+}));
+
+export const requireStore = actorGuard(async (c) => {
   const storeId = c.req.param("storeId");
   ensure(storeId, "STORE_REQUIRED", 400);
-  c.set("actor", await staffActor(c, storeId));
-  await next();
+  return staffActor(c, storeId);
 });
-export const requireDevice = createMiddleware<ApiEnv>(async (c, next) => {
-  c.set("actor", await deviceActor(c));
-  await next();
-});
+export const requireDevice = actorGuard(deviceActor);

@@ -1,10 +1,10 @@
-import { demoStores } from "./tablecast-fixtures";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { getPlatformProxy } from "wrangler";
 import { expect, it, vi } from "vitest";
-import { demoImageKey, imageKey, seedMenuImages } from "./tablecast-seed-media";
+import { getPlatformProxy } from "wrangler";
+import { demoStores } from "./tablecast-fixtures.ts";
+import { demoImageKey, imageKey, seedMenuImages } from "./tablecast-seed-media.ts";
 it("画像内容が同じならキーを再利用し、差し替えた内容だけ別キーになる", () => {
   // Given: 同じ内容と変更した内容の画像。
   const original = new TextEncoder().encode("tablecast-image");
@@ -16,7 +16,7 @@ it("画像内容が同じならキーを再利用し、差し替えた内容だ�
   expect(imageKey(original, "webp")).not.toBe(imageKey(original));
 });
 
-it("実R2で初回投入・再配備・欠損復旧・複数ページを照合し、既存画像を再送しない", async () => {
+it("実R2で遅い画像を待たず4枠を使い、再配備・欠損復旧・複数ページで既存画像を再送しない", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tablecast-media-test-"));
   const configPath = join(directory, "wrangler.json");
   await writeFile(
@@ -24,6 +24,7 @@ it("実R2で初回投入・再配備・欠損復旧・複数ページを照合�
     JSON.stringify({
       name: "tablecast-media-test",
       compatibility_date: "2026-09-03",
+      images: { binding: "TABLECAST_IMAGES" },
       r2_buckets: [{ binding: "TABLECAST_MEDIA", bucket_name: "tablecast-media-test" }],
     }),
   );
@@ -33,6 +34,12 @@ it("実R2で初回投入・再配備・欠損復旧・複数ページを照合�
   });
   const real = platform.env.TABLECAST_MEDIA;
   let limit = 1000;
+  const releaseFirst = Promise.withResolvers<void>();
+  const releaseOthers = Promise.withResolvers<void>();
+  let firstPending = true;
+  let holdFirst = true;
+  let active = 0;
+  let maximum = 0;
   const bucket = {
     list: vi.fn<R2Bucket["list"]>((options) => real.list({ ...options, limit })),
     head: vi.fn<R2Bucket["head"]>((key) => real.head(key)),
@@ -41,14 +48,54 @@ it("実R2で初回投入・再配備・欠損復旧・複数ページを照合�
         key: string,
         bytes: Uint8Array,
         options: R2PutOptions & { onlyIf: R2Conditional },
-      ) => Promise<R2Object | null>
-    >((key, bytes, options) => real.put(key, bytes, options)),
+      ) => Promise<null | R2Object>
+    >(async (key, bytes, options) => {
+      const first = holdFirst;
+      holdFirst = false;
+      active++;
+      maximum = Math.max(maximum, active);
+      try {
+        if (first) await releaseFirst.promise;
+        else await releaseOthers.promise;
+        return await real.put(key, bytes, options);
+      } finally {
+        active--;
+        if (first) firstPending = false;
+      }
+    }),
   };
   const configurations = demoStores("demo").map((store) => store.configuration);
   try {
-    const first = await seedMenuImages(bucket, false, configurations);
+    const initial = seedMenuImages(bucket, false, configurations);
+    try {
+      // ファイル読込速度によらず4枠すべての実書込みが到達してから空き枠を解放する。
+      await vi.waitFor(() => expect(active).toBe(4));
+      releaseOthers.resolve();
+      // 最初の一枚が遅くても、完了した枠が次の画像の実R2書込みへ進む。
+      await vi.waitFor(() => expect(bucket.put.mock.calls.length).toBeGreaterThan(4));
+      expect(firstPending).toBe(true);
+      expect(maximum).toBe(4);
+    } finally {
+      releaseOthers.resolve();
+      releaseFirst.resolve();
+      await initial;
+    }
+    const first = await initial;
     expect(first.uploaded).toBeGreaterThan(100);
     expect(first.confirmed).toBe(0);
+    for (const configuration of configurations) {
+      for (const logo of [configuration.branding?.logo, configuration.branding?.banner]) {
+        if (!logo) throw new Error("seedの店舗ロゴが必要です。");
+        const image = await real.get(logo.imageKey);
+        expect(image?.httpMetadata?.contentType).toBe("image/webp");
+        expect(image?.customMetadata?.storeId).toMatch(/^tablecast-/);
+        expect(JSON.parse(image?.customMetadata?.metadata ?? "null")).toEqual({
+          imageKind: logo.imageKind,
+          imageSource: logo.imageSource,
+        });
+        expect((await image?.arrayBuffer())?.byteLength).toBeGreaterThan(0);
+      }
+    }
     expect(await real.head(demoImageKey("prawn-tempura.png"))).toBeNull();
     expect(first.uploadedBytes).toBeGreaterThan(0);
     expect(bucket.list).toHaveBeenCalledTimes(1);

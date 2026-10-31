@@ -1,14 +1,15 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, test } from "vitest";
+import { tablecastRepository } from "./tablecast-deploy-config.ts";
 import {
   changeSummary,
+  type ReleaseChange,
   releaseChanges,
   renderRelease,
-  validReleaseSource,
+  supplementMergedPulls,
   validReleaseHead,
-  type ReleaseChange,
-} from "./tablecast-release";
-import { tablecastRepository } from "./tablecast-deploy-config";
+  validReleaseSource,
+} from "./tablecast-release.ts";
 const base = "a".repeat(40),
   head = "b".repeat(40),
   previousHead = "c".repeat(40);
@@ -56,6 +57,88 @@ describe("release本文", () => {
     expect(result.pulls).toEqual([]);
     expect(result.unmatched.map((change) => change.sha)).toEqual([head]);
   });
+  test.each([
+    { owner: 273, numbers: [273, 276] },
+    { owner: 252, numbers: [252, 253, 254, 255, 256] },
+  ])(
+    "共有mergeのStack $numbersを補完し、元commitの所有を保つ",
+    ({ owner: ownerNumber, numbers }) => {
+      const owner = pull(ownerNumber);
+      const source = [
+        { sha: previousHead, message: "元commit", pulls: [owner] },
+        { sha: head, message: "Stackを統合", pulls: [owner] },
+      ];
+      const supplemented = supplementMergedPulls(
+        source,
+        numbers.map((number) => ({
+          ...pull(number),
+          base: { ref: "codex/stack-base", sha: base },
+        })),
+      );
+      const result = releaseChanges(supplemented);
+      expect(result.pulls.map((pr) => pr.number)).toEqual(numbers);
+      expect(result.unmatched).toEqual([]);
+      expect(supplemented[0]?.pulls).toEqual([owner]);
+      expect(source[1]?.pulls).toEqual([owner]);
+    },
+  );
+  test("補完候補の未マージ・別repo・release・差分外を除外する", () => {
+    const supplemented = supplementMergedPulls(changes, [
+      { ...pull(2), merged_at: null },
+      { ...pull(3), head: { ...pull(3).head, repo: { full_name: "other/repository" } } },
+      { ...pull(4), head: { ...pull(4).head, ref: "staging" } },
+      pull(5, previousHead),
+      pull(6),
+    ]);
+    const result = releaseChanges(supplemented);
+    expect(result.pulls.map((pr) => pr.number)).toEqual([1, 6]);
+    expect(result.unmatched).toEqual([]);
+    expect(
+      releaseChanges([
+        ...supplemented,
+        { sha: "d".repeat(40), message: `This reverts commit ${head}.`, pulls: [] },
+      ]).revertedPulls,
+    ).toEqual([1, 6]);
+  });
+  test("補完した共有mergeの全段をrevertで取り消し、再revertで復帰する", () => {
+    const closed = [pull(273), pull(276)];
+    const source = [
+      { sha: previousHead, message: "元commit", pulls: [pull(273)] },
+      { sha: head, message: "Stackを統合", pulls: [pull(273)] },
+      { sha: "d".repeat(40), message: `This reverts commit ${head}.`, pulls: [] },
+    ];
+    const reverted = releaseChanges(supplementMergedPulls(source, closed));
+    expect(reverted.pulls).toEqual([]);
+    expect(reverted.revertedPulls).toEqual([273, 276]);
+    expect(
+      releaseChanges(
+        supplementMergedPulls(
+          [
+            ...source,
+            { sha: "e".repeat(40), message: `This reverts commit ${"d".repeat(40)}.`, pulls: [] },
+          ],
+          closed,
+        ),
+      ).pulls.map((pr) => pr.number),
+    ).toEqual([273, 276]);
+  });
+  test("補完したStackで本文の確認を更新し、元PRの要約とIssueを反映する", () => {
+    const first = renderRelease(input, "", template);
+    const marker = /`(<!-- tablecast-release:reviewed:[a-f0-9]+ -->)`/.exec(first)?.[1];
+    const reviewed = `${first}\n${marker}\n`;
+    const nextInput = {
+      ...input,
+      changes: supplementMergedPulls(changes, [
+        { ...pull(276), body: "## 変更内容\n\n配備を高速化する。\n\n## 関連Issue\nCloses #275" },
+      ]),
+    };
+    const next = renderRelease(nextInput, reviewed, template);
+    expect(next).toContain("[#276]");
+    expect(next).toContain("配備を高速化する。");
+    expect(next).toContain("参照 #275");
+    expect(next).toContain("本文の更新確認待ち");
+    expect(renderRelease(nextInput, next, template)).toBe(next);
+  });
   test("取り消されたPRを新機能として列挙せず、revertのrevertでは復帰する", () => {
     const reverted = [
       ...changes,
@@ -72,6 +155,8 @@ describe("release本文", () => {
   test("関連PRを更新しても概要・手動確認を保持し、同じ入力では本文が変わらない", () => {
     const first = renderRelease(input, "", template)
       .replace("未記入。", "接続設定を保持できるようにした。")
+      .replace("未記入。", "主な変更を手動で整理した。")
+      .replace("未確認。", "既存データを保持して更新する。")
       .replace("未実施。", "Codexから確認した。");
     const next = renderRelease(
       {
@@ -85,6 +170,8 @@ describe("release本文", () => {
       template,
     );
     expect(next).toContain("接続設定を保持できるようにした。");
+    expect(next).toContain("主な変更を手動で整理した。");
+    expect(next).toContain("既存データを保持して更新する。");
     expect(next).toContain("Codexから確認した。");
     expect(next).toContain("[#2]");
     expect(next).not.toContain("Closes #189");

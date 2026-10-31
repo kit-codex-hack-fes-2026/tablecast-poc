@@ -1,14 +1,17 @@
-import { context, trace, SpanStatusCode } from "@opentelemetry/api";
+import type { ErrorHandler, MiddlewareHandler } from "hono";
+import { context, SpanStatusCode, trace } from "@opentelemetry/api";
 import { isAPIError } from "better-auth/api";
-import type { ErrorHandler } from "hono";
-import { createMiddleware } from "hono/factory";
+import { bodyLimit } from "hono/body-limit";
+import { createFactory, createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import { routePath } from "hono/route";
 import { STATUS_CODES } from "node:http";
-import { DomainError, ensure } from "./errors";
-import { diagnosticSecrets, errorAttributes } from "./diagnostics";
-import { requestLog, telemetryChannel } from "./telemetry";
 import type { ApiEnv } from "./context";
+import { diagnosticSecrets, errorAttributes } from "./diagnostics";
+import { DomainError, ensure } from "./errors";
+import { requestLog, telemetryChannel, telemetryTimings } from "./telemetry";
+
+export const apiFactory = createFactory<ApiEnv>();
 
 export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
   const started = performance.now();
@@ -23,8 +26,30 @@ export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
     : c.req.path === "/mcp" || c.req.path.startsWith("/mcp/")
       ? "mcp"
       : "http";
-  await context.with(context.active().setValue(telemetryChannel, channel), next);
+  const timings = new Map<string, { description?: string; duration: number }>();
+  await context.with(
+    context.active().setValue(telemetryChannel, channel).setValue(telemetryTimings, timings),
+    next,
+  );
   const status = c.res.status;
+  const duration = Math.round((performance.now() - started) * 100) / 100;
+  const placement = c.req.header("cf-placement");
+  const validPlacement = placement && /^(local|remote)-[A-Z]{3}$/.test(placement);
+  // 値やSQLは公開せず、認可済み要求のspan所要時間をHTTPと照合する。
+  c.header(
+    "Server-Timing",
+    [
+      `api;dur=${duration}${validPlacement ? `;desc=${JSON.stringify(placement)}` : ""}`,
+      ...(c.get("actor") && status < 400
+        ? [...timings]
+            .slice(0, 32)
+            .map(
+              ([name, value]) =>
+                `${name};dur=${value.duration.toFixed(2)}${value.description ? `;desc=${JSON.stringify(value.description)}` : ""}`,
+            )
+        : []),
+    ].join(", "),
+  );
   const secrets = diagnosticSecrets(c.env);
   for (const name of ["authorization", "cookie"]) {
     const value = c.req.header(name);
@@ -39,7 +64,6 @@ export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
           "exception.message": STATUS_CODES[status] ?? "HTTP error response",
         }
       : {};
-  const placement = c.req.header("cf-placement");
   const attributes = {
     ...(placement && /^(local|remote)-[A-Z]{3}$/.test(placement)
       ? { "cloudflare.placement": placement }
@@ -50,7 +74,7 @@ export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
     "tablecast.request.id": requestId,
     "tablecast.channel": channel,
     "tablecast.outcome": status >= 500 ? "error" : status >= 400 ? "rejected" : "success",
-    "tablecast.duration_ms": Math.round((performance.now() - started) * 100) / 100,
+    "tablecast.duration_ms": duration,
     ...diagnostic,
     ...(c.error instanceof DomainError ? { "tablecast.error.code": c.error.code } : {}),
     ...(c.get("errorPhase") ? { "tablecast.error.phase": c.get("errorPhase") } : {}),
@@ -123,3 +147,21 @@ export const handleRpcError: ErrorHandler<ApiEnv> = (error, c) => {
   );
   return c.newResponse(result.body, result);
 };
+
+export const requestBodyLimit = createMiddleware<ApiEnv>(async (c, next) => {
+  const limit: MiddlewareHandler<ApiEnv> = bodyLimit({
+    maxSize:
+      c.req.path === "/mcp" ||
+      /^\/api\/admin\/stores\/[^/]+\/(images|knowledge\/import|drafts\/[^/]+\/knowledge\/import)$/.test(
+        c.req.path,
+      )
+        ? 8 * 1024 * 1024
+        : 2 * 1024 * 1024,
+    onError: () =>
+      c.json(
+        { error: { code: "BODY_TOO_LARGE", message: "BODY_TOO_LARGE" }, traceId: c.get("traceId") },
+        413,
+      ),
+  });
+  return limit(c, next);
+});

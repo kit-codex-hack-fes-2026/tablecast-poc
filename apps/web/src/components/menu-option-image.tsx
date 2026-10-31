@@ -1,18 +1,22 @@
 import type { Modifier } from "@tablecast/api/schema";
 import { ImageOff } from "lucide-react";
 import { useState } from "react";
-import { useI18n } from "../i18n/locale";
+import { IllustrationNotice } from "./illustration-notice";
 import { ProductImage } from "./product-image";
 
 export function MenuOptionImage({
   imageKey,
   imageKind,
-}: Pick<Modifier["options"][number], "imageKey" | "imageKind">) {
-  const { t } = useI18n();
-  const [failedKey, setFailedKey] = useState<string | null>(null);
+  compact = false,
+  showIllustration = true,
+}: Pick<Modifier["options"][number], "imageKey" | "imageKind"> & {
+  compact?: boolean;
+  showIllustration?: boolean;
+}) {
+  const [failedKey, setFailedKey] = useState<null | string>(null);
   if (!imageKey) return null;
   return (
-    <span className="flex w-24 shrink-0 flex-col gap-1">
+    <span className={`relative flex shrink-0 ${compact ? "w-8" : "w-24"}`}>
       <span
         ref={(frame) => {
           const image = frame?.querySelector("img");
@@ -20,7 +24,7 @@ export function MenuOptionImage({
             setFailedKey(imageKey);
         }}
         aria-hidden="true"
-        className="flex size-24 items-center justify-center overflow-hidden rounded-lg bg-muted"
+        className={`flex items-center justify-center overflow-hidden rounded-lg bg-muted ${compact ? "size-8" : "size-24"}`}
       >
         {failedKey === imageKey ? (
           <ImageOff className="size-6 text-muted-foreground" />
@@ -28,18 +32,16 @@ export function MenuOptionImage({
           <ProductImage
             src={`/media/${imageKey}`}
             alt=""
-            width={96}
-            height={96}
-            sizes="96px"
+            width={compact ? 32 : 96}
+            height={compact ? 32 : 96}
+            sizes={compact ? "32px" : "96px"}
             className="size-full object-contain"
             onError={() => setFailedKey(imageKey)}
           />
         )}
       </span>
-      {failedKey !== imageKey && imageKind === "illustration" && (
-        <span className="text-center text-xs text-balance text-muted-foreground">
-          {t("kiosk_illustration")}
-        </span>
+      {showIllustration && failedKey !== imageKey && imageKind === "illustration" && (
+        <IllustrationNotice compact={compact} />
       )}
     </span>
   );

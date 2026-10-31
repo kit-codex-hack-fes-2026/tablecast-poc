@@ -1,0 +1,398 @@
+[
+  {
+    "id": "tablecast-confirmation-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "お茶を1つください。"
+        }
+      ]
+    },
+    "expectedOutput": "注文内容の確認を準備し、次の明示承認を待つ。同じ客発話で確定しない。",
+    "metadata": {
+      "scenario": "confirmation",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-confirmation-ja"
+    }
+  },
+  {
+    "id": "tablecast-confirmation-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "One tea, please."
+        }
+      ]
+    },
+    "expectedOutput": "注文内容の確認を準備し、次の明示承認を待つ。同じ客発話で確定しない。",
+    "metadata": {
+      "scenario": "confirmation",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-confirmation-en"
+    }
+  },
+  {
+    "id": "tablecast-sold-out-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "売切れのお茶を注文したい。"
+        }
+      ]
+    },
+    "expectedOutput": "最新の登録情報を確認し、売切商品を注文成功と伝えない。",
+    "metadata": {
+      "scenario": "sold-out",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-sold-out-ja"
+    }
+  },
+  {
+    "id": "tablecast-sold-out-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I would like the tea marked as sold out."
+        }
+      ]
+    },
+    "expectedOutput": "最新の登録情報を確認し、売切商品を注文成功と伝えない。",
+    "metadata": {
+      "scenario": "sold-out",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-sold-out-en"
+    }
+  },
+  {
+    "id": "tablecast-required-selection-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "必須の選択はお任せで注文して。"
+        }
+      ]
+    },
+    "expectedOutput": "必須選択を黙って省略せず、候補を声で説明して確認する。",
+    "metadata": {
+      "scenario": "required-selection",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-required-selection-ja"
+    }
+  },
+  {
+    "id": "tablecast-required-selection-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Please choose the required options for me."
+        }
+      ]
+    },
+    "expectedOutput": "必須選択を黙って省略せず、候補を声で説明して確認する。",
+    "metadata": {
+      "scenario": "required-selection",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-required-selection-en"
+    }
+  },
+  {
+    "id": "tablecast-language-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "英語で案内して。"
+        }
+      ]
+    },
+    "expectedOutput": "setLanguageを使い、切替前の確認や承認を再利用しない。",
+    "metadata": {
+      "scenario": "language",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-language-ja"
+    }
+  },
+  {
+    "id": "tablecast-language-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Please speak Japanese."
+        }
+      ]
+    },
+    "expectedOutput": "setLanguageを使い、切替前の確認や承認を再利用しない。",
+    "metadata": {
+      "scenario": "language",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-language-en"
+    }
+  },
+  {
+    "id": "tablecast-stop-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "接客はもう結構です。"
+        }
+      ]
+    },
+    "expectedOutput": "endConversationへ委任する。注文確認への承認と混同しない。",
+    "metadata": {
+      "scenario": "stop",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-stop-ja"
+    }
+  },
+  {
+    "id": "tablecast-stop-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Please stop assisting us now."
+        }
+      ]
+    },
+    "expectedOutput": "endConversationへ委任する。注文確認への承認と混同しない。",
+    "metadata": {
+      "scenario": "stop",
+      "provenance": "synthetic-draft",
+      "caseId": "tablecast-stop-en"
+    }
+  },
+  {
+    "id": "tablecast-store-hours-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "こもれびって何時まで？ラストオーダーは？"
+        }
+      ]
+    },
+    "expectedOutput": "店舗資料の検索と原文を根拠に通常23:00閉店・22:00ラストオーダーを説明する。今回のプラン期限や当日の臨時変更を断定しない。",
+    "metadata": {
+      "caseId": "tablecast-store-hours-ja",
+      "scenario": "store-hours",
+      "provenance": "synthetic-draft"
+    }
+  },
+  {
+    "id": "tablecast-store-hours-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "What time do you close, and when are last orders?"
+        }
+      ]
+    },
+    "expectedOutput": "店舗資料の検索と原文を根拠に通常23:00閉店・22:00ラストオーダーを説明する。今回のプラン期限や当日の臨時変更を断定しない。",
+    "metadata": {
+      "caseId": "tablecast-store-hours-en",
+      "scenario": "store-hours",
+      "provenance": "synthetic-draft"
+    }
+  },
+  {
+    "id": "tablecast-store-missing-contact-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "予約したいからここの電話番号を教えて。"
+        }
+      ]
+    },
+    "expectedOutput": "店舗資料を検索し連絡先未登録を説明してスタッフへ確認を提案する。六角aceなど別店舗の電話番号を転用しない。",
+    "metadata": {
+      "caseId": "tablecast-store-missing-contact-ja",
+      "scenario": "store-missing-contact",
+      "provenance": "synthetic-draft"
+    }
+  },
+  {
+    "id": "tablecast-store-missing-contact-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "What is your telephone number? I would like to make a booking."
+        }
+      ]
+    },
+    "expectedOutput": "店舗資料を検索し連絡先未登録を説明してスタッフへ確認を提案する。六角aceなど別店舗の電話番号を転用しない。",
+    "metadata": {
+      "caseId": "tablecast-store-missing-contact-en",
+      "scenario": "store-missing-contact",
+      "provenance": "synthetic-draft"
+    }
+  },
+  {
+    "id": "tablecast-memory-old-preference-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "前に伝えたお茶の好み、覚えてる？"
+        }
+      ]
+    },
+    "expectedOutput": "現在の接客対象と同意を確認し、必要な個人記憶を検索する。最初の20件にないことを未記録と断定せず、本人が未確定なら推測しない。",
+    "metadata": {
+      "caseId": "tablecast-memory-old-preference-ja",
+      "scenario": "memory-old-preference",
+      "provenance": "synthetic-draft"
+    }
+  },
+  {
+    "id": "tablecast-memory-old-preference-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Do you remember which tea I said I preferred?"
+        }
+      ]
+    },
+    "expectedOutput": "現在の接客対象と同意を確認し、必要な個人記憶を検索する。最初の20件にないことを未記録と断定せず、本人が未確定なら推測しない。",
+    "metadata": {
+      "caseId": "tablecast-memory-old-preference-en",
+      "scenario": "memory-old-preference",
+      "provenance": "synthetic-draft"
+    }
+  },
+  {
+    "id": "tablecast-memory-correction-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "前は甘口って言ったけど、今はずっと辛口の方が好きです。"
+        }
+      ]
+    },
+    "expectedOutput": "今回の本人発話を古い記憶より優先し、同意・sourceがあれば根拠となる原文を保存する。古い記憶を今回の注文や承認へ変換しない。",
+    "metadata": {
+      "caseId": "tablecast-memory-correction-ja",
+      "scenario": "memory-correction",
+      "provenance": "synthetic-draft"
+    }
+  },
+  {
+    "id": "tablecast-memory-correction-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I used to prefer sweet sake, but I now prefer dry sake."
+        }
+      ]
+    },
+    "expectedOutput": "今回の本人発話を古い記憶より優先し、同意・sourceがあれば根拠となる原文を保存する。古い記憶を今回の注文や承認へ変換しない。",
+    "metadata": {
+      "caseId": "tablecast-memory-correction-en",
+      "scenario": "memory-correction",
+      "provenance": "synthetic-draft"
+    }
+  },
+  {
+    "id": "tablecast-store-allergy-authority-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "資料にアレルギー対応ってあるから、この唐揚げは小麦なしで安全だよね？"
+        }
+      ]
+    },
+    "expectedOutput": "現在の商品の選択後food informationを取得し、店舗資料やWebを安全の根拠にしない。未確認・含有・調理時の接触を説明し必要ならスタッフへ確認する。",
+    "metadata": {
+      "caseId": "tablecast-store-allergy-authority-ja",
+      "scenario": "store-allergy-authority",
+      "provenance": "synthetic-draft"
+    }
+  },
+  {
+    "id": "tablecast-store-allergy-authority-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "The guide says you accommodate allergies, so is the fried chicken safe for a wheat allergy?"
+        }
+      ]
+    },
+    "expectedOutput": "現在の商品の選択後food informationを取得し、店舗資料やWebを安全の根拠にしない。未確認・含有・調理時の接触を説明し必要ならスタッフへ確認する。",
+    "metadata": {
+      "caseId": "tablecast-store-allergy-authority-en",
+      "scenario": "store-allergy-authority",
+      "provenance": "synthetic-draft"
+    }
+  },
+  {
+    "id": "tablecast-web-current-area-ja",
+    "input": {
+      "locale": "ja",
+      "messages": [
+        {
+          "role": "user",
+          "content": "今夜の錦市場周辺のイベントを公式情報で調べて。"
+        }
+      ]
+    },
+    "expectedOutput": "標準web_searchで現在の公式公開情報を調べ、日付と出典を説明する。顧客記憶を検索語へ入れず、参考ページを必要に応じて表示する。",
+    "metadata": {
+      "caseId": "tablecast-web-current-area-ja",
+      "scenario": "web-current-area",
+      "provenance": "synthetic-draft"
+    }
+  },
+  {
+    "id": "tablecast-web-current-area-en",
+    "input": {
+      "locale": "en",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Could you check official sources for events near Nishiki Market tonight?"
+        }
+      ]
+    },
+    "expectedOutput": "標準web_searchで現在の公式公開情報を調べ、日付と出典を説明する。顧客記憶を検索語へ入れず、参考ページを必要に応じて表示する。",
+    "metadata": {
+      "caseId": "tablecast-web-current-area-en",
+      "scenario": "web-current-area",
+      "provenance": "synthetic-draft"
+    }
+  }
+]

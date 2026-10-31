@@ -25,14 +25,16 @@ For Mastra platform or remote servers, pass `--url`. For the sake of brevity in 
 npx mastra api --url $MASTRA_URL agent list
 ```
 
-Verify the server once with a cheap check before resource calls:
+For Factory operations, activate the `mastra-factory` skill first. Use the user's actual Factory instance URL (not the platform API/dashboard URL). Explicit `--url` works from an empty directory. Recognized hosted Factory domains use saved `mastra auth login` credentials; check `mastra auth whoami` and offer login if needed. Custom/self-hosted deployments may use different authentication. Factory discovery uses bundled leaf contracts and root-level `/web/*` routes, not the runtime schema probe below.
+
+For an unauthenticated local runtime server, verify the server once with a cheap check before resource calls:
 
 ```bash
 MASTRA_URL="${MASTRA_URL:-http://localhost:4111}"
 curl -fsS "$MASTRA_URL/api/system/api-schema" >/dev/null
 ```
 
-If `$MASTRA_URL` is not reachable, the user may be using a Mastra platform deployment or remote URL. Ask for the correct server URL and set `--url` accordingly. If authentication is required, ask the user for the necessary token or credentials and set them in the environment for subsequent commands.
+If `$MASTRA_URL` is not reachable, ask for the correct deployment URL and set `--url` accordingly. For authenticated targets, use a supported read-only CLI call instead of treating an unauthenticated schema-probe failure as unreachability. Let the CLI use saved login on recognized platform hosts; for custom servers, have the user configure the deployment's approved authentication mechanism outside chat. Never request secret values in chat or inspect saved credential files.
 
 For authenticated servers, pass repeatable headers:
 
@@ -48,7 +50,7 @@ Runtime commands (`agent`, `workflow`, `tool`, `mcp`, `thread`, `memory`, `datas
 2. `http://localhost:4111` for a local `mastra dev` server.
 3. `.mastra-project.json` for a Mastra platform project.
 
-Observability commands (`trace`, `log`, `score`, `metric`) target `https://observability.mastra.ai` by default instead of a project deployment URL. The CLI resolves credentials in this order:
+Observability commands (`trace`, `log`, `score`, `metric`) target `https://observability.mastra.ai` by default instead of a project deployment URL. EU projects use `https://observability.eu.mastra.ai`: the CLI picks it automatically from `mastra@1.34.2`. On older versions, EU requests time out with `REQUEST_TIMEOUT`; pass `--url https://observability.eu.mastra.ai`. The CLI resolves credentials in this order:
 
 1. Explicit `Authorization` and `X-Mastra-Project-Id` headers passed with `--header`.
 2. `MASTRA_PLATFORM_ACCESS_TOKEN` and `MASTRA_PROJECT_ID` from the environment.
@@ -134,7 +136,21 @@ Use the narrowest discovery command that can answer the question. Example for tr
 npx mastra api trace --help
 npx mastra api trace list --help
 npx mastra api trace list --schema
+npx mastra api trace query --help
+npx mastra api trace query --schema
+npx mastra api trace aggregate --help
+npx mastra api trace aggregate --schema
+npx mastra api span query --help
+npx mastra api span query --schema
+npx mastra api span aggregate --help
+npx mastra api span aggregate --schema
 ```
+
+Use `trace query` instead of `trace list` when selection requires recursive predicates, metadata filters, or conditions over related spans, scores, or feedback. First use `trace query --help` to confirm that the installed CLI exposes the command. The inline JSON query is required, and its cursor-bearing response stays nested under `data`. Read [`trace-query.md`](trace-query.md) for availability checks, the division between CLI schema discovery and canonical documentation, query construction, and pagination.
+
+Use `trace aggregate` when the answer is a count or measure (error rate, latency percentiles, tokens, cost) grouped by up to two dimensions or time buckets rather than a list of traces. It takes the same `timeRange` and `where` as `trace query`. See [`trace-query.md`](trace-query.md#aggregate-traces).
+
+Use `span query` to list individual spans (including nested agent runs and tool calls) with flat span-field predicates, and `span aggregate` to compute the same measures grouped by span fields. See [`trace-query.md`](trace-query.md#query-spans) and [`trace-query.md`](trace-query.md#aggregate-spans).
 
 Use top-level help only when the resource is unknown:
 
@@ -199,3 +215,6 @@ curl -fsS "$MASTRA_URL/api/system/api-schema" \
 - Working memory update requires the agent's memory to have working memory enabled.
 - Empty lists may simply mean the server has no matching stored data yet.
 - `trace list` and `trace get` return lightweight payloads by default (no span input, output, attributes, or metadata). Pass `--verbose` to fetch full span records, or use `trace span <traceId> <spanId>` to fetch one specific span in full.
+- `trace query` requires inline JSON, queries completed traces, and preserves its opaque cursor at `data.page.next`. Pass that value unchanged as `page.after` with the same query shape.
+- `trace aggregate` requires inline JSON and isn't paginated; when `truncated` is `true`, narrow the selection.
+- `span query` requires inline JSON and pages like `trace query`: pass `data.page.next` unchanged as `page.after`. `span aggregate` isn't paginated, like `trace aggregate`.

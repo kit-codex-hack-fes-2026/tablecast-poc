@@ -35,6 +35,7 @@ metrics_generator:
         - service_name
         - operation
         - status_code
+        - tablecast.worktree.id
   storage:
     path: /data/tempo/generator/wal
     remote_write:

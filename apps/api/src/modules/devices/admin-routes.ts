@@ -1,9 +1,9 @@
-import { Hono } from "hono";
 import { z } from "zod";
-import type { ApiEnv } from "../../platform/context";
+import { apiFactory } from "../../platform/http";
 import { validate } from "../../platform/validation";
 import { approveDevice, listDevices, revokeDevice } from "./service";
-export const devicesAdminRoutes = new Hono<ApiEnv>()
+export const devicesAdminRoutes = apiFactory
+  .createApp()
   .post(
     "/devices/approve",
     validate(z.object({ userCode: z.string().min(1).max(191), tableId: z.string() }).strict()),

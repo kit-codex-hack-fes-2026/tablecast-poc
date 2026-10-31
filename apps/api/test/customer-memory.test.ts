@@ -1,0 +1,446 @@
+import { env } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
+import { afterEach, assert, expect, it, vi } from "vitest";
+import { z } from "zod";
+import { customerMemories, customerMemorySources } from "../src/db/customer-schema";
+import { user } from "../src/db/identity-schema";
+import { tableEvents, tableSessions } from "../src/db/table-schema";
+import {
+  customerRecommendationContext,
+  customerServiceTarget,
+  customerSuggestions,
+  listCustomerConsumption,
+  listCustomerMemories,
+  searchCustomerMemories,
+} from "../src/modules/customer-memory/queries";
+import { recordCustomerConsumption } from "../src/modules/customer-memory/use-cases/consumption";
+import {
+  deleteCustomerMemory,
+  writeCustomerMemory,
+} from "../src/modules/customer-memory/use-cases/memories";
+import {
+  recordCustomerMemorySource,
+  saveAutomaticCustomerMemory,
+} from "../src/modules/customer-memory/use-cases/sources";
+import { selectCustomerTarget } from "../src/modules/customer-memory/use-cases/target";
+import { createCustomerVisitCode, joinCustomerVisit } from "../src/modules/customer-visits/service";
+import { enrolCustomer, updateCustomerPreferences } from "../src/modules/customers/service";
+import { updateCart } from "../src/modules/orders/use-cases/cart";
+import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
+import { getTableState } from "../src/modules/tables/queries";
+import { recordConversationItems } from "../src/modules/voice/conversation";
+import { invokeVoiceTool } from "../src/modules/voice/realtime";
+import { finishVoiceTurn } from "../src/modules/voice/turns";
+import { createApiServices } from "../src/platform/context";
+import { fixtureDb } from "./database-fixture";
+import { device, setupFixture } from "./fixture";
+import { runVoiceTurn } from "./voice-fixture";
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+async function setup() {
+  const { staff } = await setupFixture();
+  const services = createApiServices(env);
+  const customer = { kind: "customer", userId: staff.userId, storeId: device.storeId } as const;
+  await enrolCustomer(services, customer);
+  const tablet = { ...device, deviceId: "tablecast-device" };
+  const code = await createCustomerVisitCode(services, tablet);
+  await joinCustomerVisit(services, customer.userId, code.code);
+  return { services, customer, tablet, code };
+}
+async function activate() {
+  await fixtureDb
+    .update(tableSessions)
+    .set({
+      voice_state: "active",
+      voice_session_id: "tablecast-memory-voice",
+      active_turn_id: "tablecast-memory-turn",
+    })
+    .where(eq(tableSessions.id, device.tableSessionId));
+  return {
+    ...device,
+    kind: "voice",
+    voiceSessionId: "tablecast-memory-voice",
+    turnId: "tablecast-memory-turn",
+  } as const;
+}
+it("記憶の本人CRUDは店舗と会員を分離し、編集競合を拒否する", async () => {
+  const { services, customer } = await setup();
+  const id = crypto.randomUUID();
+  await writeCustomerMemory(services, customer, { id, revision: 0, content: "甘さ控えめが好き" });
+  await writeCustomerMemory(services, customer, { id, revision: 1, content: "甘くないものが好き" });
+  await expect(
+    writeCustomerMemory(services, customer, { id, revision: 1, content: "古い編集" }),
+  ).rejects.toMatchObject({ code: "CUSTOMER_MEMORY_STALE" });
+  expect((await listCustomerMemories(services, customer, { limit: 20 })).memories[0]?.content).toBe(
+    "甘くないものが好き",
+  );
+  await expect(
+    listCustomerMemories(services, { ...customer, userId: "other" }, { limit: 20 }),
+  ).rejects.toMatchObject({ code: "CUSTOMER_MEMBERSHIP_REQUIRED" });
+  await deleteCustomerMemory(services, customer, id, 2);
+  expect((await listCustomerMemories(services, customer, { limit: 20 })).memories).toHaveLength(0);
+});
+it("自動記憶は現在の本人発話だけを採用し、再送で本人の編集を上書きしない", async () => {
+  const { services, customer } = await setup();
+  const actor = await activate();
+  await recordCustomerMemorySource(services, actor, "私は甘さ控えめが好きです");
+  const source = await fixtureDb.select().from(customerMemorySources).get();
+  assert(source);
+  const input = {
+    sourceId: source.id,
+    quote: "私は甘さ控えめが好きです",
+    clearFirstPersonPreference: true,
+  } as const;
+  expect(await saveAutomaticCustomerMemory(services, actor, input)).toEqual({ saved: true });
+  expect(await saveAutomaticCustomerMemory(services, actor, input)).toEqual({ saved: false });
+  const memory = await fixtureDb.select().from(customerMemories).get();
+  assert(memory);
+  await writeCustomerMemory(services, customer, {
+    id: memory.id,
+    revision: 1,
+    content: "本人による訂正",
+  });
+  await expect(saveAutomaticCustomerMemory(services, actor, input)).rejects.toMatchObject({
+    code: "VOICE_SESSION_STALE",
+  });
+  expect((await listCustomerMemories(services, customer, { limit: 20 })).memories[0]?.content).toBe(
+    "本人による訂正",
+  );
+});
+it("保存依頼なしの本人発話を通常委任の登録toolで保存し、次の委任の接客へ引き継ぐ", async () => {
+  const { services, customer } = await setup();
+  const actor = await activate();
+  const turnId = "tablecast-automatic-preference";
+  const quote = "私はいつも甘さ控えめが好きです";
+  const first = await runVoiceTurn({
+    voiceSessionId: actor.voiceSessionId,
+    turnId,
+    locale: "ja",
+    messages: [{ role: "user", content: quote }],
+  });
+  await first.finish();
+  const context = await invokeVoiceTool(
+    services,
+    {
+      voiceSessionId: actor.voiceSessionId,
+      turnId,
+      toolName: "getCustomerContext",
+      toolCallId: "tablecast-preference-context",
+      arguments: {},
+    },
+    new AbortController().signal,
+  );
+  const { source } = z
+    .object({ source: z.object({ id: z.string(), content: z.string() }) })
+    .parse(context.result);
+  expect(source.content).toBe(quote);
+  const saved = await invokeVoiceTool(
+    services,
+    {
+      voiceSessionId: actor.voiceSessionId,
+      turnId,
+      toolName: "saveCustomerMemory",
+      toolCallId: "tablecast-preference-save",
+      arguments: { sourceId: source.id, quote, clearFirstPersonPreference: true },
+    },
+    new AbortController().signal,
+  );
+  expect(saved.result).toEqual({ saved: true });
+  await finishVoiceTurn(services, actor.voiceSessionId, turnId, "completed");
+  expect((await listCustomerMemories(services, customer, { limit: 20 })).memories).toEqual([
+    expect.objectContaining({ content: quote, sourceKind: "voice" }),
+  ]);
+  const nextId = "tablecast-automatic-next";
+  const next = await runVoiceTurn({
+    voiceSessionId: actor.voiceSessionId,
+    turnId: nextId,
+    locale: "ja",
+    messages: [{ role: "user", content: "おすすめはありますか" }],
+  });
+  await next.finish();
+  const recalled = await invokeVoiceTool(
+    services,
+    {
+      voiceSessionId: actor.voiceSessionId,
+      turnId: nextId,
+      toolName: "getCustomerContext",
+      toolCallId: "tablecast-preference-recall",
+      arguments: {},
+    },
+    new AbortController().signal,
+  );
+  expect(recalled.result).toMatchObject({ memories: [{ content: quote }] });
+  await finishVoiceTurn(services, actor.voiceSessionId, nextId, "completed");
+  expect(await fixtureDb.select().from(customerMemorySources)).toEqual([
+    expect.objectContaining({ id: source.id }),
+  ]);
+});
+it("複数人では共通接客に戻り、明示選択・同意撤回で音声と遅着保存を失効させる", async () => {
+  const { services, customer, tablet, code } = await setup();
+  const oldActor = await activate();
+  await recordCustomerMemorySource(services, oldActor, "私はジンが好きです");
+  await fixtureDb.insert(user).values({
+    id: "tablecast-memory-other",
+    name: "同行者",
+    email: "memory-other@example.test",
+    updatedAt: new Date(),
+  });
+  await enrolCustomer(services, { ...customer, userId: "tablecast-memory-other" });
+  await joinCustomerVisit(services, "tablecast-memory-other", code.code);
+  let target = await customerServiceTarget(services, tablet);
+  expect(target.target).toBeUndefined();
+  expect(target.session.voice_session_id).toBeNull();
+  expect(await customerRecommendationContext(services, tablet)).toMatchObject({
+    needsTarget: true,
+    customer: null,
+  });
+  assert(target.context);
+  const selected = target.participants.find((p) => p.membership.userId === customer.userId);
+  assert(selected);
+  await selectCustomerTarget(services, tablet, {
+    token: target.context.token,
+    participantId: selected.participant.id,
+  });
+  target = await customerServiceTarget(services, tablet);
+  expect(target.target?.membership.userId).toBe(customer.userId);
+  expect(await customerRecommendationContext(services, tablet)).toMatchObject({
+    needsTarget: false,
+    customer: { displayName: "店員" },
+  });
+  const actor = await activate();
+  await recordCustomerMemorySource(services, actor, "私は辛口が好きです");
+  const source = (await fixtureDb.select().from(customerMemorySources)).find((row) =>
+    row.content.includes("辛口"),
+  );
+  assert(source);
+  await updateCustomerPreferences(services, customer, {
+    revision: 1,
+    shareCompanions: true,
+    useMemories: false,
+    saveMemories: false,
+  });
+  await expect(
+    saveAutomaticCustomerMemory(services, actor, {
+      sourceId: source.id,
+      quote: source.content,
+      clearFirstPersonPreference: true,
+    }),
+  ).rejects.toMatchObject({ code: "VOICE_SESSION_STALE" });
+  expect(await customerRecommendationContext(services, tablet)).toMatchObject({
+    mode: "shared",
+    memories: [],
+    consumption: [],
+    customer: null,
+  });
+  expect(await fixtureDb.select().from(customerMemories)).toHaveLength(0);
+});
+it("会員参加後の個人字幕を卓全体の状態や通知へ保存しない", async () => {
+  const { services, tablet } = await setup();
+  const actor = await activate();
+  await recordConversationItems(services, tablet, {
+    voiceSessionId: actor.voiceSessionId,
+    items: [{ itemId: "personal", role: "user", text: "私の好み", interrupted: false }],
+  });
+  expect(
+    (await fixtureDb.select().from(tableEvents)).some((event) =>
+      event.data_json.includes("私の好み"),
+    ),
+  ).toBe(false);
+});
+
+it("個人の飲食編集は注文・会計原本を変更せず、未体験の候補に反映する", async () => {
+  const { services, customer, tablet } = await setup();
+  const state = await getTableState(services, tablet);
+  const cart = await updateCart(services, tablet, {
+    expectedVersion: state.cart.version,
+    lines: [{ id: "memory-tea", productId: "tea", quantity: 2, selections: [] }],
+  });
+  const snapshot = await prepareConfirmation(services, tablet, {
+    expectedVersion: cart.cart.version,
+    channel: "gui",
+  });
+  const order = await submitOrder(services, tablet, {
+    snapshotId: snapshot.id,
+    idempotencyKey: "tablecast-memory-order",
+    approved: true,
+  });
+  const original = await getTableState(services, tablet);
+  await recordCustomerConsumption(services, customer, {
+    orderId: order.id,
+    lineId: "memory-tea",
+    quantity: 1,
+    shared: true,
+    revision: 0,
+  });
+  expect(
+    (await customerSuggestions(services, tablet, { kind: "untried", offset: 0 })).products.some(
+      (p) => p.id === "tea",
+    ),
+  ).toBe(false);
+  expect(
+    (await customerSuggestions(services, tablet, { kind: "usual", offset: 0 })).products.some(
+      (p) => p.id === "tea",
+    ),
+  ).toBe(true);
+  await recordCustomerConsumption(services, customer, {
+    orderId: order.id,
+    lineId: "memory-tea",
+    quantity: 0,
+    shared: true,
+    revision: 1,
+  });
+  expect(
+    (await customerSuggestions(services, tablet, { kind: "untried", offset: 0 })).products.some(
+      (p) => p.id === "tea",
+    ),
+  ).toBe(true);
+  const after = await getTableState(services, tablet);
+  expect(after.orders).toEqual(original.orders);
+  expect(after.bill).toEqual(original.bill);
+  expect(
+    (await listCustomerConsumption(services, customer, { limit: 20 })).records[0]?.quantity,
+  ).toBe(0);
+});
+
+it.each(["context", "usual", "untried", "memory-search"] as const)(
+  "%sの対象取得後に同意を撤回したら最終読取りを拒否する",
+  async (kind) => {
+    const { services, customer } = await setup();
+    await writeCustomerMemory(services, customer, {
+      id: crypto.randomUUID(),
+      revision: 0,
+      content: "辛口が好き",
+    });
+    const actor = await activate();
+    const captured = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const batch = env.TABLECAST_DB.batch.bind(env.TABLECAST_DB);
+    vi.spyOn(env.TABLECAST_DB, "batch").mockImplementationOnce(
+      async <T>(statements: D1PreparedStatement[]) => {
+        const result = await batch<T>(statements);
+        captured.resolve();
+        await release.promise;
+        return result;
+      },
+    );
+    const reading =
+      kind === "context"
+        ? customerRecommendationContext(services, actor)
+        : kind === "memory-search"
+          ? searchCustomerMemories(services, actor, { query: "辛口" })
+          : customerSuggestions(services, actor, { kind, offset: 0 });
+    const rejected = reading.then(
+      () => null,
+      (error: unknown) => error,
+    );
+    try {
+      await captured.promise;
+      await updateCustomerPreferences(services, customer, {
+        revision: 1,
+        shareCompanions: true,
+        useMemories: false,
+        saveMemories: false,
+      });
+    } finally {
+      release.resolve();
+    }
+    await expect(rejected).resolves.toMatchObject({ code: "CUSTOMER_CONTEXT_STALE" });
+  },
+);
+
+it("文脈解除のDB完了後に別の解除が入っても元の音声を一度停止する", async () => {
+  const { services, customer } = await setup();
+  await activate();
+  const stopping = {
+    ...services,
+    env: { ...services.env, TABLECAST_MODEL_API_KEY: "tablecast-test-key" },
+  };
+  const fetcher = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+    async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(null, { status: 404 }),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  const captured = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const batch = env.TABLECAST_DB.batch.bind(env.TABLECAST_DB);
+  vi.spyOn(env.TABLECAST_DB, "batch").mockImplementationOnce(
+    async <T>(statements: D1PreparedStatement[]) => {
+      const result = await batch<T>(statements);
+      captured.resolve();
+      await release.promise;
+      return result;
+    },
+  );
+  const first = writeCustomerMemory(stopping, customer, {
+    id: crypto.randomUUID(),
+    revision: 0,
+    content: "最初の変更",
+  });
+  try {
+    await captured.promise;
+    await writeCustomerMemory(stopping, customer, {
+      id: crypto.randomUUID(),
+      revision: 0,
+      content: "同時の変更",
+    });
+  } finally {
+    release.resolve();
+  }
+  await first;
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher.mock.calls[0]?.[0]).toBe(
+    "https://api.openai.com/v1/live/sessions/tablecast-memory-voice/attach",
+  );
+});
+
+it("記憶検索は古い本人の記憶と編集後の原文を取得し、削除・同意撤回・店舗境界を守る", async () => {
+  const { services, customer, tablet } = await setup();
+  const specialId = crypto.randomUUID();
+  await writeCustomerMemory(services, customer, {
+    id: specialId,
+    revision: 0,
+    content: "私は日本酒よりお茶が好きです",
+  });
+  for (let index = 0; index < 24; index++)
+    await writeCustomerMemory(services, customer, {
+      id: crypto.randomUUID(),
+      revision: 0,
+      content: `私の好みの記録 ${index}`,
+    });
+  const first = await searchCustomerMemories(services, tablet, {});
+  expect(first.memories).toHaveLength(8);
+  assert(first.nextCursor);
+  const second = await searchCustomerMemories(services, tablet, { cursor: first.nextCursor });
+  expect(second.memories).toHaveLength(8);
+  expect(
+    second.memories.some((memory) => first.memories.some((previous) => previous.id === memory.id)),
+  ).toBe(false);
+  expect(await searchCustomerMemories(services, tablet, { query: "お茶" })).toMatchObject({
+    memories: [{ content: "私は日本酒よりお茶が好きです", sourceKind: "manual" }],
+    nextCursor: null,
+  });
+  expect((await searchCustomerMemories(services, tablet, { query: "%" })).memories).toEqual([]);
+  await writeCustomerMemory(services, customer, {
+    id: specialId,
+    revision: 1,
+    content: "お茶の中ではほうじ茶が好きです",
+  });
+  expect((await searchCustomerMemories(services, tablet, { query: "ほうじ茶" })).memories).toEqual([
+    expect.objectContaining({ id: specialId, edited: true }),
+  ]);
+  await deleteCustomerMemory(services, customer, specialId, 2);
+  expect((await searchCustomerMemories(services, tablet, { query: "ほうじ茶" })).memories).toEqual(
+    [],
+  );
+  await expect(
+    searchCustomerMemories(services, { ...tablet, storeId: "tablecast-other-store" }, {}),
+  ).rejects.toMatchObject({ code: "TABLE_NOT_FOUND" });
+  await updateCustomerPreferences(services, customer, {
+    revision: 1,
+    shareCompanions: true,
+    useMemories: false,
+    saveMemories: false,
+  });
+  expect((await searchCustomerMemories(services, tablet, {})).memories).toEqual([]);
+});

@@ -1,11 +1,11 @@
-import { and, eq, sql } from "drizzle-orm";
-import * as business from "../../db/business-schema";
+import { and, eq, exists, sql } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
-import { getSession, validateSession } from "../tables/queries";
 import type { VoiceTrigger } from "./model";
-export function proactiveCondition(now: number) {
+import * as business from "../../db/business-schema";
+import { ensure } from "../../platform/errors";
+import { getSession, validateSession } from "../tables/queries";
+function proactiveCondition(now: number) {
   return sql`AND json_array_length(cart_json)=0 AND staff_called=0 AND coalesce((SELECT json_extract(config_json,'$.cast.proactive') FROM demo_sessions WHERE session_id=table_sessions.id),(SELECT json_extract(config_json,'$.cast.proactive') FROM stores WHERE id=table_sessions.store_id))=1 AND NOT EXISTS(SELECT 1 FROM confirmations WHERE table_session_id=table_sessions.id AND status IN ('pending','read') AND expires_at>${now})`;
 }
 
@@ -26,7 +26,7 @@ export async function currentVoiceTurn(
   if (trigger === "proactive")
     ensure(
       (
-        await db.get<{ id: string | number } | undefined>(
+        await db.get<{ id: number | string }>(
           sql`SELECT id FROM table_sessions WHERE id=${session.id} AND active_turn_id=${actor.turnId ?? null} ${proactiveCondition(Date.now())}`,
         )
       )?.id,
@@ -41,7 +41,22 @@ export async function voiceContext(services: ApiServices, voiceSessionId: string
   const result = await db
     .select({
       session: business.tableSessions,
+      personal: exists(
+        db
+          .select({ id: business.customerContexts.sessionId })
+          .from(business.customerContexts)
+          .where(
+            and(
+              eq(business.customerContexts.sessionId, business.tableSessions.id),
+              eq(business.customerContexts.storeId, business.tableSessions.store_id),
+            ),
+          ),
+      ).mapWith(Boolean),
       createdBy: business.demoSessions.created_by,
+      opening:
+        sql<number>`EXISTS(SELECT 1 FROM table_events WHERE table_session_id=${business.tableSessions.id} AND kind='voice.opening' AND json_extract(data_json,'$.turnId')=${turnId ?? null})`.mapWith(
+          Boolean,
+        ),
       proactive: sql<number>`EXISTS(SELECT 1 FROM table_events WHERE table_session_id=${business.tableSessions.id} AND kind='voice.proactive' AND json_extract(data_json,'$.turnId')=${turnId ?? null})`,
     })
     .from(business.tableSessions)
@@ -73,13 +88,11 @@ export async function voiceContext(services: ApiServices, voiceSessionId: string
     ...(turnId ? { turnId } : {}),
   };
   await validateSession(services, actor, row);
-  return { actor, session: row, proactive: Boolean(result.proactive) };
-}
-
-export async function voiceActor(
-  services: ApiServices,
-  voiceSessionId: string,
-  turnId?: string,
-): Promise<Actor> {
-  return (await voiceContext(services, voiceSessionId, turnId)).actor;
+  return {
+    actor,
+    session: row,
+    personal: result.personal,
+    proactive: Boolean(result.proactive),
+    opening: result.opening,
+  };
 }

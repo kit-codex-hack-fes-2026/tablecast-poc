@@ -1,5 +1,5 @@
-import { resolve } from "node:path";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { resolve } from "node:path";
 import { createServer } from "vite";
 import { expect, it } from "vitest";
 

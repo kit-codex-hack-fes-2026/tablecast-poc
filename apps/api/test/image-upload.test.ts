@@ -1,14 +1,17 @@
 import { env, exports } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
+import { mediaAssets, stores } from "../src/db/business-schema";
 import {
   createDraft,
   updateDraft,
   validateDraft,
-  publishDraft,
-} from "../src/modules/configuration/service";
-import { saveMenuImage, uploadImage } from "../src/modules/media/service";
+} from "../src/modules/configuration/use-cases/drafts";
+import { publishDraft } from "../src/modules/configuration/use-cases/publish";
 import { maxImageBytes } from "../src/modules/media/model";
+import { saveMenuImage, uploadImage } from "../src/modules/media/service";
 import { createApiServices } from "../src/platform/context";
+import { byteStream } from "../src/platform/streams";
 import { uploadedImageSchema } from "../src/schema";
 import { setupFixture } from "./fixture";
 
@@ -102,6 +105,15 @@ it("MCPと管理APIの画像取り込みが同じキーと出所へ収束する"
   const { staff, cookie } = await setupFixture();
   const services = createApiServices(env);
   const first = await uploadImage(services, staff, input);
+  const indexed = await services.db.select().from(mediaAssets);
+  expect(indexed).toHaveLength(1);
+  expect(indexed[0]).toMatchObject({
+    store_id: staff.storeId,
+    image_key: first.imageKey,
+    width: 1,
+    height: 1,
+  });
+  expect(indexed[0]?.blurhash).toHaveLength(52);
   const asset = await env.TABLECAST_MEDIA.get(first.imageKey);
   expect(asset?.httpMetadata?.contentType).toBe("image/webp");
   expect(asset?.customMetadata).toEqual({
@@ -129,12 +141,14 @@ it("MCPと管理APIの画像取り込みが同じキーと出所へ収束する"
 
 it.each(["image/jpeg", "image/webp"] as const)("%sをデコードしWebPへ統一する", async (type) => {
   const { staff } = await setupFixture();
-  const output = await env.TABLECAST_IMAGES.input(png().stream()).output({ format: type });
+  const output = await env.TABLECAST_IMAGES.input(byteStream(png().stream())).output({
+    format: type,
+  });
   const image = new File([await output.response().arrayBuffer()], "tablecast-input", { type });
   const saved = await saveMenuImage(createApiServices(env), staff, image, metadata);
   const asset = await env.TABLECAST_MEDIA.get(saved.imageKey);
   if (!asset) throw new Error("保存画像がありません");
-  const info = await env.TABLECAST_IMAGES.info(asset.body);
+  const info = await env.TABLECAST_IMAGES.info(byteStream(asset.body));
   expect(info).toMatchObject({ width: 1, height: 1 });
 });
 
@@ -157,7 +171,7 @@ it("2MiBを超える画像も管理APIの本文上限内で取り込める", asy
 
 it("1600万画素を超える画像を変換・保存前に拒否する", async () => {
   const { staff } = await setupFixture();
-  const large = await env.TABLECAST_IMAGES.input(png().stream())
+  const large = await env.TABLECAST_IMAGES.input(byteStream(png().stream()))
     .transform({ width: 4001, height: 4000, fit: "squeeze" })
     .output({ format: "image/png" });
   const image = new File([await large.response().arrayBuffer()], "tablecast-large.png", {
@@ -207,6 +221,17 @@ it.each(["商品", "選択肢"])(
     const services = createApiServices(env);
     const saved = await uploadImage(services, staff, input);
     const other = { ...staff, storeId: "tablecast-other-store" };
+    const originalStore = await services.db
+      .select()
+      .from(stores)
+      .where(eq(stores.id, staff.storeId))
+      .get();
+    if (!originalStore) throw new Error("店舗fixtureがありません");
+    await services.db.insert(stores).values({
+      ...originalStore,
+      id: other.storeId,
+      organization_id: "tablecast-fixture-other-org",
+    });
     const foreign = await uploadImage(services, other, input);
     expect(foreign.imageKey).not.toBe(saved.imageKey);
     let draft = await createDraft(services, staff);

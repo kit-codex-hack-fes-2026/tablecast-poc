@@ -1,25 +1,50 @@
-import { createApi, createContext, main as serwist } from "@serwist/vite";
+import { resolveAndParseConfig } from "@cloudflare/config";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
+import { createApi, createContext, main as serwist } from "@serwist/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
-import process from "node:process";
+import { fumadocsMdx } from "fumadocs-mdx/vite";
 import { resolve } from "node:path";
+import process from "node:process";
 import { defineConfig } from "vite";
 import { z } from "zod";
+import { modeOptions } from "../../scripts/tablecast-deploy-config.ts";
+import { apiCloudflareConfig } from "../api/cloudflare.config.ts";
+import paraglideConfig from "./project.inlang/paraglide.config";
 
-export default defineConfig(() => {
-  const tablecastEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
+export default defineConfig(async ({ command, mode, isPreview }) => {
+  const tablecastEnv = z
+    .object({
+      env: z.preprocess(
+        (value) => (typeof value === "object" && value !== null ? { ...value } : value),
+        z.record(z.string(), z.string().optional()),
+      ),
+    })
+    .parse(process).env;
+  const api =
+    command === "serve" && !isPreview
+      ? await resolveAndParseConfig(apiCloudflareConfig(modeOptions("api", mode)), {
+          mode,
+          isPreview: false,
+        })
+      : undefined;
+  if (api && !api.success) throw api.error;
+  const apiWorker = api?.success ? api.data.worker : undefined;
   const buildDirectory = resolve(
     import.meta.dirname,
     tablecastEnv.TABLECAST_BUILD_DIRECTORY ?? "dist",
   );
+  const assetsDirectory = resolve(
+    import.meta.dirname,
+    ".cloudflare/output/v0/workers/default/assets",
+  );
   const serviceWorkerContext = createContext(
     {
       swSrc: "src/sw.ts",
-      swDest: resolve(buildDirectory, "client/sw.js"),
-      globDirectory: resolve(buildDirectory, "client"),
+      swDest: resolve(assetsDirectory, "sw.js"),
+      globDirectory: assetsDirectory,
       globPatterns: [
         "assets/**/*.{js,css,woff2}",
         "flags/*.svg",
@@ -35,20 +60,26 @@ export default defineConfig(() => {
   );
   const serviceWorkerApi = createApi(serviceWorkerContext);
   return {
+    // 補助API Workerも同じenvDirを読む。各Workerへ渡る値は宣言済みbindingに限定される。
+    ...(apiWorker ? { envDir: resolve(import.meta.dirname, "../../.local") } : {}),
     build: { minify: true, outDir: buildDirectory },
     cacheDir: tablecastEnv.TABLECAST_VITE_CACHE_DIR,
     resolve: { dedupe: ["react", "react-dom"] },
     plugins: [
+      fumadocsMdx({ index: false }),
       tailwindcss(),
       cloudflare({
-        configPath: tablecastEnv.TABLECAST_WEB_CONFIG,
+        types: { includeRuntime: false },
         viteEnvironment: { name: "ssr" },
-        auxiliaryWorkers: [
-          {
-            configPath: tablecastEnv.TABLECAST_API_CONFIG ?? "../api/wrangler.jsonc",
-            viteEnvironment: { name: "tablecast_api" },
-          },
-        ],
+        auxiliaryWorkers: apiWorker
+          ? [
+              {
+                config: apiWorker,
+                devOnly: true,
+                viteEnvironment: { name: "tablecast_api" },
+              },
+            ]
+          : [],
         ...(tablecastEnv.TABLECAST_STATE_PATH
           ? { persistState: { path: tablecastEnv.TABLECAST_STATE_PATH } }
           : {}),
@@ -58,9 +89,7 @@ export default defineConfig(() => {
       }),
       paraglideVitePlugin({
         project: "./project.inlang",
-        outdir: "./src/paraglide",
-        strategy: ["cookie", "baseLocale"],
-        cookieName: "tablecast_locale",
+        ...paraglideConfig,
       }),
       tanstackStart(),
       react(),

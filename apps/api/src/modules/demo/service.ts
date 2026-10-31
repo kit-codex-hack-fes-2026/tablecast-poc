@@ -1,22 +1,22 @@
 import { and, eq, sql } from "drizzle-orm";
-import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
+import type { DemoUpdate } from "./model";
+import * as business from "../../db/business-schema";
+import { ensure } from "../../platform/errors";
 import { requireManager } from "../auth/policy";
-import { getCatalog } from "../catalog/queries";
 import { configurationErrors } from "../catalog/pricing";
-import { configurationSchema } from "../configuration/model";
-import { getDraft } from "../configuration/service";
+import { getCatalog } from "../catalog/queries";
+import { readConfiguration } from "../configuration/food-compatibility";
+import { getDraft } from "../configuration/queries";
+import { tablePlanSchema } from "../tables/model";
 import {
   eventStatement,
   interruptVoiceTurns,
   invalidationStatement,
   notifyStore,
 } from "../tables/mutations";
-import { tablePlanSchema } from "../tables/model";
 import { stopVoiceRoom } from "../voice/runtime";
-import type { DemoUpdate } from "./model";
 import { getDemo, getDemoRecord } from "./queries";
 
 export async function createDemo(services: ApiServices, actor: Actor) {
@@ -50,7 +50,7 @@ export async function updateDemo(services: ApiServices, actor: Actor, input: Dem
   ensure(input.expectedVersion === demo.config_version, "DEMO_CONFLICT");
   const sourceId = input.sourceDraftId === undefined ? demo.source_draft_id : input.sourceDraftId;
   const reload = input.reload || input.sourceDraftId !== undefined;
-  let configuration = configurationSchema.parse(JSON.parse(demo.config_json));
+  let configuration = readConfiguration(JSON.parse(demo.config_json));
   let sourceVersion = demo.source_version;
   if (reload) {
     if (sourceId) {
@@ -136,8 +136,10 @@ export async function resetDemo(services: ApiServices, actor: Actor, expectedVer
         voice_version: sql`voice_version+1`,
         active_turn_id: null,
         staff_called: 0,
+        staff_call_json: null,
         ui_section: "menu",
         selected_product_id: null,
+        menu_search_json: null,
         opened_at: Date.now(),
         mutation_id: mutation,
         plan_json: plan ? JSON.stringify({ ...plan, startedAt: Date.now() }) : null,
@@ -146,6 +148,8 @@ export async function resetDemo(services: ApiServices, actor: Actor, expectedVer
         sql`id=${session.id} AND kind='demo' AND cart_version=${session.cart_version} AND voice_version=${session.voice_version} AND EXISTS(SELECT 1 FROM demo_sessions WHERE session_id=${session.id} AND config_version=${expectedVersion})`,
       ),
     ...[
+      business.staffCalls,
+      business.gameRuns,
       business.payments,
       business.orders,
       business.confirmations,

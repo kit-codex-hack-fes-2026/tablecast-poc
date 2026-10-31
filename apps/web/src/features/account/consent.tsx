@@ -1,28 +1,34 @@
-import { Brand } from "../../components/brand";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
-import { ShieldCheck } from "lucide-react";
+import { ArrowRight, Check, ShieldCheck, Store, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import type { Store as StoreData } from "../store/store-query";
+import { Brand } from "../../components/brand";
 import { DataTable } from "../../components/data-table";
+import { type DataTableColumn } from "../../components/data-table-model";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
+import { RoleBadge } from "../../components/role-badge";
+import { StoreIcon } from "../../components/store-icon";
 import { Button } from "../../components/ui/button";
 import { buttonVariants } from "../../components/ui/button-variants";
 import { useI18n } from "../../i18n/locale";
-import { sessionOptions } from "../../lib/session-query";
-import { RoleBadge } from "../../components/role-badge";
-import type { loadStores } from "../store/store-query";
-import { storesOptions } from "../store/store-query";
-
 import { apiError } from "../../lib/api-error";
 import { authClient, authResult } from "../../lib/auth-client";
+import { sessionOptions } from "../../lib/session-query";
+import { withoutCollectionSearch } from "../shell/collection-model";
+import { useCollectionSearch } from "../shell/collection-search";
+import { storesOptions } from "../store/store-query";
 
 export function Consent() {
   const searchStr = useLocation({ select: (location) => location.searchStr });
   const { t, setLocale } = useI18n();
   const search = new URLSearchParams(searchStr);
-  const oauthQuery = searchStr.slice(1);
+  const oauthQuery = withoutCollectionSearch(searchStr, "consentStores");
+  const collection = useCollectionSearch({
+    prefix: "consentStores",
+    sortIds: ["name", "role"],
+  });
   const session = useQuery(sessionOptions);
   const postLogin = !session.data?.session.activeOrganizationId;
   const [organization, setOrganization] = useState("");
@@ -30,21 +36,21 @@ export function Consent() {
   const organizations = stores.data?.stores ?? [];
   const selected =
     organization || session.data?.session.activeOrganizationId || organizations[0]?.organizationId;
+  const selectedStore = organizations.find((store) => store.organizationId === selected);
   const columns = useMemo(
     () => consentStoreColumns(t, selected, setOrganization, postLogin),
     [t, selected, postLogin],
   );
+  // SDKの成功処理がdocumentを転送するため、破棄される画面のQuery cacheは再取得しない。
+  // oxlint-disable-next-line react-doctor/query-mutation-missing-invalidation
   const consent = useMutation({
     mutationFn: async (accept: boolean) => {
       if (postLogin && accept) {
-        authResult(await authClient.organization.setActive({ organizationId: selected }));
-        return authResult(
-          await authClient.oauth2.continue({ postLogin: true, oauth_query: oauthQuery }),
-        );
+        // Cookie更新後のOAuth再開と転送は、採用SDKのprovider/redirect pluginが行う。
+        return authResult(await authClient.organization.setActive({ organizationId: selected }));
       }
       return authResult(await authClient.oauth2.consent({ accept, oauth_query: oauthQuery }));
     },
-    onSuccess: (result) => window.location.assign(result.url),
   });
   if (apiError(stores.error)?.status === 401)
     return (
@@ -90,6 +96,10 @@ export function Consent() {
         </dl>
         <div className="mt-6 w-full text-left">
           <DataTable
+            defaultSort={{ id: "name", desc: false }}
+            {...collection}
+            searchLabel={t("stores_search")}
+            searchPlaceholder={t("stores_search")}
             data={
               postLogin
                 ? organizations
@@ -101,12 +111,26 @@ export function Consent() {
           />
         </div>
         <ErrorNotice error={stores.error || consent.error} onRetry={() => void stores.refetch()} />
-        <div className="mt-8 flex w-full justify-end gap-3">
+        {selectedStore && (
+          <div
+            role="group"
+            aria-label={t("common_selected")}
+            className="mt-6 flex w-full items-center gap-3 rounded-xl bg-surface-subtle p-4 text-left"
+          >
+            <StoreIcon name={selectedStore.name} logo={selectedStore.logo} />
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">{t("common_selected")}</p>
+              <p className="font-semibold wrap-anywhere">{selectedStore.name}</p>
+            </div>
+          </div>
+        )}
+        <div className="mt-4 flex w-full justify-end gap-3">
           <Button
             variant="outline"
             onClick={() => consent.mutate(false)}
             disabled={consent.isPending}
           >
+            <X />
             {t("oauth_deny")}
           </Button>
           <Button
@@ -114,6 +138,7 @@ export function Consent() {
             onClick={() => consent.mutate(true)}
             disabled={consent.isPending || stores.isPending || session.isPending || !selected}
           >
+            <ArrowRight />
             {t(postLogin ? "oauth_continue" : "oauth_allow")}
           </Button>
         </div>
@@ -122,17 +147,22 @@ export function Consent() {
   );
 }
 
-type ConsentStore = Awaited<ReturnType<typeof loadStores>>["stores"][number];
+type ConsentStore = StoreData;
 function consentStoreColumns(
   t: ReturnType<typeof useI18n>["t"],
   selected: string | undefined,
   select: (id: string) => void,
   selectable: boolean,
-): ColumnDef<ConsentStore>[] {
+): DataTableColumn<ConsentStore>[] {
   return [
-    { accessorKey: "name", header: t("admin_store") },
+    {
+      accessorKey: "name",
+      header: t("admin_store"),
+      meta: { icon: Store, sortLabel: t("org_name") },
+    },
     {
       accessorKey: "role",
+      meta: { icon: ShieldCheck },
       header: t("org_role"),
       cell: ({ row }) => <RoleBadge role={row.original.role} />,
     },
@@ -147,6 +177,7 @@ function consentStoreColumns(
           onClick={() => select(row.original.organizationId)}
           aria-pressed={selected === row.original.organizationId}
         >
+          {selected === row.original.organizationId ? <Check /> : <ArrowRight />}
           {t(selected === row.original.organizationId ? "common_selected" : "common_select")}
         </Button>
       ),

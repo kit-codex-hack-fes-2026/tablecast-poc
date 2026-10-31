@@ -1,21 +1,21 @@
-import { and, eq, exists, ne, notExists, sql } from "drizzle-orm";
 import type { z } from "zod";
-import * as business from "../../db/business-schema";
+import { and, eq, exists, ne, notExists, sql } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
-import { notifyStore, voiceTurnEvent } from "../tables/mutations";
-import { getSession } from "../tables/queries";
 import type { VoiceDiagnostics } from "./diagnostics";
-import { logVoiceTurn } from "./diagnostics";
 import type { voiceTurnSchema } from "./model";
-import { proactiveReservationCondition, voiceActor } from "./queries";
+import * as business from "../../db/business-schema";
+import { ensure } from "../../platform/errors";
+import { recordCustomerMemorySource } from "../customer-memory/use-cases/sources";
+import { notifyStore, voiceTurnEvent } from "../tables/mutations";
+import { logVoiceTurn } from "./diagnostics";
+import { proactiveReservationCondition, voiceContext } from "./queries";
 
 export async function finishVoiceTurn(
   services: ApiServices,
   voiceSessionId: string,
   turnId: string,
-  status: "completed" | "interrupted" | "failed",
-  failureCode: "VOICE_MODEL_FAILED" | "VOICE_INTERNAL_ERROR" = "VOICE_INTERNAL_ERROR",
+  status: "completed" | "failed" | "interrupted",
+  failureCode: "VOICE_INTERNAL_ERROR" | "VOICE_MODEL_FAILED" = "VOICE_INTERNAL_ERROR",
 ) {
   const db = services.db;
   const now = Date.now();
@@ -72,6 +72,20 @@ export async function finishVoiceTurn(
           sql`${status}<>'completed'`,
         ),
       ),
+    db
+      .delete(business.customerMemorySources)
+      .where(
+        and(
+          eq(business.customerMemorySources.voiceSessionId, voiceSessionId),
+          eq(business.customerMemorySources.turnId, turnId),
+          notExists(
+            db
+              .select({ id: business.customerMemories.id })
+              .from(business.customerMemories)
+              .where(eq(business.customerMemories.sourceId, business.customerMemorySources.id)),
+          ),
+        ),
+      ),
     voiceTurnEvent(
       services,
       and(
@@ -81,7 +95,7 @@ export async function finishVoiceTurn(
       ),
     ),
   ]);
-  if (result[1]?.meta.changes === 1 || result[4]?.meta.changes === 1) {
+  if (result[1]?.meta.changes === 1 || result[5]?.meta.changes === 1) {
     const source = await db
       .select({
         storeId: business.voiceTurns.store_id,
@@ -107,14 +121,13 @@ export async function startVoiceTurn(
   waitUntil: (promise: Promise<unknown>) => void,
 ) {
   const db = services.db;
-  const actor = await voiceActor(services, input.voiceSessionId);
+  const { actor, session } = await voiceContext(services, input.voiceSessionId);
   Object.assign(diagnostics, {
     storeId: actor.storeId,
     tableSessionId: actor.tableSessionId,
     voiceSessionId: actor.voiceSessionId,
     turnId: input.turnId,
   });
-  const session = await getSession(services, actor);
   ensure(input.locale === session.locale, "VOICE_LOCALE_STALE", 409);
   const proactive = input.trigger === "proactive";
   requestSignal.throwIfAborted();
@@ -127,7 +140,7 @@ export async function startVoiceTurn(
     eq(business.tableSessions.locale, input.locale),
   );
   const eligibility = proactive
-    ? sql`1=1 ${proactiveReservationCondition(startedAt, startedAt - 180_000)}`
+    ? sql`1=1 ${proactiveReservationCondition(startedAt, startedAt - 30_000)}`
     : undefined;
   if (
     proactive &&
@@ -140,12 +153,8 @@ export async function startVoiceTurn(
     logVoiceTurn(diagnostics, "skipped");
     return { kind: "skipped" } as const;
   }
-  ensure(
-    services.env.TABLECAST_MODEL_API_KEY && services.env.TABLECAST_MODEL,
-    "VOICE_NOT_CONFIGURED",
-    503,
-  );
-  const conversationEvent = { turnId: input.turnId, trigger: "proactive", locale: input.locale };
+  ensure(services.env.TABLECAST_MODEL, "VOICE_NOT_CONFIGURED", 503);
+  const conversationEvent = { turnId: input.turnId, trigger: input.trigger, locale: input.locale };
   const result = await db.batch([
     db
       .update(business.tableSessions)
@@ -172,9 +181,9 @@ export async function startVoiceTurn(
           locale: business.tableSessions.locale,
           status: sql<"started">`'started'`.as("status"),
           started_at: sql<number>`${startedAt}`.as("started_at"),
-          ended_at: sql<number | null>`NULL`.as("ended_at"),
-          agent_session_id: sql<string | null>`NULL`.as("agent_session_id"),
-          agent_finished_at: sql<number | null>`NULL`.as("agent_finished_at"),
+          ended_at: sql<null | number>`NULL`.as("ended_at"),
+          agent_session_id: sql<null | string>`NULL`.as("agent_session_id"),
+          agent_finished_at: sql<null | number>`NULL`.as("agent_finished_at"),
         })
         .from(business.tableSessions)
         .where(
@@ -187,7 +196,9 @@ export async function startVoiceTurn(
           cursor: sql<number>`NULL`.as("cursor"),
           store_id: business.tableSessions.store_id,
           table_session_id: business.tableSessions.id,
-          kind: sql<string>`'voice.proactive'`.as("kind"),
+          kind: sql<string>`${input.trigger === "opening" ? "voice.opening" : "voice.proactive"}`.as(
+            "kind",
+          ),
           data_json: sql<string>`${JSON.stringify(conversationEvent)}`.as("data_json"),
           created_at: sql<number>`${startedAt}`.as("created_at"),
         })
@@ -196,7 +207,7 @@ export async function startVoiceTurn(
           and(
             active,
             eq(business.tableSessions.active_turn_id, input.turnId),
-            sql`changes()=1 AND ${proactive}`,
+            sql`changes()=1 AND ${input.trigger !== "user"}`,
           ),
         ),
     ),
@@ -238,6 +249,11 @@ export async function startVoiceTurn(
     return { kind: "skipped" } as const;
   }
   ensure(result[0]?.meta.changes === 1, "VOICE_SESSION_STALE", 409);
+  if (input.trigger === "user") {
+    const last = input.messages.findLast((message) => message.role === "user");
+    if (last)
+      await recordCustomerMemorySource(services, { ...actor, turnId: input.turnId }, last.content);
+  }
   logVoiceTurn(diagnostics, "accepted");
   waitUntil(notifyStore(services, actor.storeId, actor.tableSessionId));
   return { kind: "accepted", turnId: input.turnId } as const;

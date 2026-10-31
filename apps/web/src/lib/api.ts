@@ -1,21 +1,25 @@
 import {
   createTablecastClient,
   createTableSessionClient,
+  DetailedError,
   parseResponse,
 } from "@tablecast/api/client";
 import { apiFetch } from "./api-fetch";
-export { parseResponse };
+export { DetailedError, parseResponse };
+export type { InferResponseType } from "@tablecast/api/client";
 const origin = typeof window === "undefined" ? "" : window.location.origin;
-const options = { fetch: apiFetch };
+const options = { fetch: apiFetch, headers: { "X-Tablecast-Instructions": "1" } };
 export const rpc = createTablecastClient(origin || "/", options);
 export type TableClient = ReturnType<typeof createTableSessionClient>;
-export type TableEndpoint = { key: string; client: TableClient };
+export type TableEndpoint = { client: TableClient; imageBasePath?: string; key: string };
 export const tableEndpoint: TableEndpoint = {
   key: "table",
+  imageBasePath: "/api/table",
   client: createTableSessionClient(`${origin}/api/table`, options),
 };
 export const demoTableEndpoint = (storeId: string, demoId: string): TableEndpoint => ({
   key: demoId,
+  imageBasePath: `/api/admin/stores/${encodeURIComponent(storeId)}/demo/${encodeURIComponent(demoId)}/table`,
   client: createTableSessionClient(
     `${origin}/api/admin/stores/${encodeURIComponent(storeId)}/demo/${encodeURIComponent(demoId)}/table`,
     options,

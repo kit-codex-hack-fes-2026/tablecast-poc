@@ -1,0 +1,376 @@
+import { env, exports } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
+import { expect, it } from "vitest";
+import * as businessTables from "../src/db/business-schema";
+import { getCatalog } from "../src/modules/catalog/queries";
+import { getDraft } from "../src/modules/configuration/queries";
+import {
+  createDraft,
+  updateDraft,
+  validateDraft,
+} from "../src/modules/configuration/use-cases/drafts";
+import { publishDraft } from "../src/modules/configuration/use-cases/publish";
+import { createApiServices } from "../src/platform/context";
+import {
+  configDraftSchema,
+  configurationIssueSchema,
+  configurationSchema,
+  draftChoicesPageSchema,
+  instructionLimit,
+} from "../src/schema";
+import { insertFixture } from "./database-fixture";
+import { deviceToken, configuration as fixtureConfiguration, setupFixture, text } from "./fixture";
+
+const withSystem = (ja: unknown) => ({
+  ...fixtureConfiguration,
+  cast: { ...fixtureConfiguration.cast, systemInstructions: { ja, en: null } },
+});
+
+it("旧接客設定を変更せず受け付け、標準上書きは言語別の本文かnullに限定する", () => {
+  expect(configurationSchema.parse(fixtureConfiguration).cast).toEqual(fixtureConfiguration.cast);
+  expect(configurationSchema.parse(withSystem(null)).cast.systemInstructions).toEqual({
+    ja: null,
+    en: null,
+  });
+  for (const value of ["", "   ", "a".repeat(instructionLimit + 1), { text: "override" }])
+    expect(configurationSchema.safeParse(withSystem(value)).success).toBe(false);
+});
+
+it("再開候補は小さな概要だけを返し、同じ更新時刻の31件目以降も重複なく取得できる", async () => {
+  const { staff, cookie } = await setupFixture();
+  const configuration = structuredClone(fixtureConfiguration);
+  configuration.cast.proactive = !configuration.cast.proactive;
+  const now = Date.now();
+  await env.TABLECAST_DB.batch([
+    ...Array.from({ length: 32 }, (_, index) =>
+      insertFixture(businessTables.configDrafts, {
+        id: `tablecast-choice-${String(index).padStart(2, "0")}`,
+        store_id: staff.storeId,
+        base_version: 1,
+        version: index,
+        status: index === 0 ? "ready" : "draft",
+        config_json: JSON.stringify(configuration),
+        created_by: staff.userId,
+        created_at: now,
+        updated_at: now,
+      }),
+    ),
+    insertFixture(
+      businessTables.configDrafts,
+      ["published", "discarded"].map((status) => ({
+        id: `tablecast-choice-${status}`,
+        store_id: staff.storeId,
+        base_version: 1,
+        status: status === "published" ? "published" : "discarded",
+        config_json: JSON.stringify(configuration),
+        created_by: staff.userId,
+        created_at: now,
+        updated_at: now + 1,
+      })),
+    ),
+  ]);
+  const endpoint = `http://localhost:3000/api/admin/stores/${staff.storeId}/drafts/choices`;
+  const first = await exports.default.fetch(new Request(endpoint, { headers: { Cookie: cookie } }));
+  expect(first.status).toBe(200);
+  const raw = await first.json();
+  const page = draftChoicesPageSchema.parse(raw);
+  expect(page.drafts).toHaveLength(30);
+  expect(page.publishedVersion).toBe(1);
+  expect(page.drafts[0]).toMatchObject({
+    id: "tablecast-choice-31",
+    changeCount: 1,
+    sections: ["cast"],
+  });
+  expect(JSON.stringify(raw)).not.toContain("configuration");
+  expect(JSON.stringify(raw)).not.toContain('before"');
+  expect(JSON.stringify(raw).length).toBeLessThan(8000);
+  expect(page.nextCursor).not.toBeNull();
+  if (!page.nextCursor) throw new Error("続きの下書きが必要です");
+  const nextQuery = new URLSearchParams({
+    beforeUpdatedAt: String(page.nextCursor.beforeUpdatedAt),
+    beforeId: page.nextCursor.beforeId,
+  });
+  const second = await exports.default.fetch(
+    new Request(`${endpoint}?${nextQuery.toString()}`, { headers: { Cookie: cookie } }),
+  );
+  expect(second.status).toBe(200);
+  const last = draftChoicesPageSchema.parse(await second.json());
+  expect(last.drafts.map((draft) => draft.id)).toEqual([
+    "tablecast-choice-01",
+    "tablecast-choice-00",
+  ]);
+  expect(last.drafts[1]?.status).toBe("ready");
+  expect(last.nextCursor).toBeNull();
+  expect(new Set([...page.drafts, ...last.drafts].map((draft) => draft.id)).size).toBe(32);
+});
+
+it("下書き再開候補は未認証・他店舗アクセスと片方だけのカーソルを拒否する", async () => {
+  const { cookie } = await setupFixture();
+  for (const { path, headers, status } of [
+    { path: "tablecast-store/drafts/choices", headers: {}, status: 401 },
+    { path: "tablecast-other-store/drafts/choices", headers: { Cookie: cookie }, status: 403 },
+    {
+      path: "tablecast-store/drafts/choices?beforeId=tablecast-draft",
+      headers: { Cookie: cookie },
+      status: 400,
+    },
+  ]) {
+    const response = await exports.default.fetch(
+      new Request(`http://localhost:3000/api/admin/stores/${path}`, { headers }),
+    );
+    expect(response.status).toBe(status);
+  }
+});
+
+it.each([
+  { name: "追加", remove: false },
+  { name: "削除", remove: true },
+])(
+  "商品・グループ・選択肢の$nameでは内包する価格と安全情報を重要な差分として返す",
+  async ({ remove }) => {
+    const { staff, cookie } = await setupFixture();
+    const original = (await getCatalog(createApiServices(env), staff.storeId)).configuration;
+    const extended = structuredClone(original);
+    const tea = extended.products[0];
+    const coffee = extended.products[1];
+    const group = coffee?.modifiers[0];
+    const option = group?.options[0];
+    if (!tea || !coffee || !group || !option) throw new Error("設定fixtureがありません");
+    extended.products.push({ ...tea, id: "new-tea" });
+    coffee.modifiers.push({
+      ...group,
+      id: "new-group",
+      options: [{ ...option, id: "new-option" }],
+    });
+    group.options.push({ ...option, id: "soy" });
+    extended.categories.push({ id: "seasonal", text: text("季節限定", "Seasonal") });
+    const before = remove ? extended : original;
+    const after = remove ? original : extended;
+    await env.TABLECAST_DB.prepare("UPDATE stores SET config_json=? WHERE id=?")
+      .bind(JSON.stringify(before), staff.storeId)
+      .run();
+    const draft = await createDraft(createApiServices(env), staff);
+    await updateDraft(createApiServices(env), staff, draft.id, {
+      expectedVersion: draft.version,
+      configuration: after,
+    });
+
+    const response = await exports.default.fetch(
+      new Request(`http://localhost:3000/api/admin/stores/${staff.storeId}/drafts/${draft.id}`, {
+        headers: { Cookie: cookie },
+      }),
+    );
+    expect(response.status).toBe(200);
+    const { changes } = configDraftSchema.parse(await response.json());
+    expect(changes.map(({ path, sensitive }) => ({ path, sensitive }))).toEqual([
+      { path: "categories.1", sensitive: false },
+      { path: "products.1.modifiers.0.options.2", sensitive: true },
+      { path: "products.1.modifiers.1", sensitive: true },
+      { path: "products.2", sensitive: true },
+    ]);
+    for (const change of changes) {
+      expect(remove ? change.after : change.before).toBeNull();
+      expect(remove ? change.before : change.after).toEqual(expect.any(Object));
+    }
+    const productChange = changes.find(({ path }) => path === "products.2");
+    expect(remove ? productChange?.before : productChange?.after).toEqual(extended.products[2]);
+  },
+);
+
+it.each([
+  { name: "参照不整合が残る", invalid: true },
+  { name: "現在の規則では整合する", invalid: false },
+])("旧形式の$name下書きを構造化して読み、版・未検証状態を変更しない", async ({ invalid }) => {
+  const { staff, cookie } = await setupFixture();
+  const created = await createDraft(createApiServices(env), staff);
+  const configuration = structuredClone(created.configuration);
+  if (invalid) {
+    const product = configuration.products[0];
+    if (!product) throw new Error("商品fixtureがありません");
+    product.categoryId = "missing-category";
+  }
+  const draft = await updateDraft(createApiServices(env), staff, created.id, {
+    expectedVersion: created.version,
+    configuration,
+  });
+  const legacyErrors = JSON.stringify(["旧版の検証エラー: 固定文言の解析には依存しない"]);
+  await env.TABLECAST_DB.prepare("UPDATE config_drafts SET errors_json=? WHERE id=?")
+    .bind(legacyErrors, draft.id)
+    .run();
+
+  const response = await exports.default.fetch(
+    new Request(`http://localhost:3000/api/admin/stores/${staff.storeId}/drafts/${draft.id}`, {
+      headers: { Cookie: cookie },
+    }),
+  );
+  expect(response.status).toBe(200);
+  const read = configDraftSchema.parse(await response.json());
+  expect(read.errors).toEqual(
+    invalid
+      ? [
+          {
+            code: "CATEGORY_NOT_FOUND",
+            path: ["products", 0, "categoryId"],
+            params: { categoryId: "missing-category" },
+          },
+        ]
+      : [],
+  );
+  expect(read.status).toBe("draft");
+  expect(read.version).toBe(draft.version);
+  expect(
+    await env.TABLECAST_DB.prepare(
+      "SELECT status,version,errors_json FROM config_drafts WHERE id=?",
+    )
+      .bind(draft.id)
+      .first(),
+  ).toEqual({ status: "draft", version: draft.version, errors_json: legacyErrors });
+  await expect(
+    publishDraft(createApiServices(env), staff, draft.id, {
+      expectedVersion: draft.version,
+      baseVersion: draft.baseVersion,
+      idempotencyKey: "tablecast-legacy-draft-publication",
+      approved: true,
+    }),
+  ).rejects.toMatchObject({ code: invalid ? "DRAFT_INVALID" : "DRAFT_CONFLICT" });
+  expect((await getCatalog(createApiServices(env), staff.storeId)).version).toBe(draft.baseVersion);
+
+  const validated = await validateDraft(createApiServices(env), staff, draft.id, draft.version);
+  expect(validated.errors).toEqual(read.errors);
+  expect(validated.status).toBe(invalid ? "draft" : "ready");
+  const persisted = await env.TABLECAST_DB.prepare(
+    "SELECT errors_json FROM config_drafts WHERE id=?",
+  )
+    .bind(draft.id)
+    .first<string>("errors_json");
+  if (persisted === null) throw new Error("保存した下書きがありません");
+  expect(configurationIssueSchema.array().parse(JSON.parse(persisted))).toEqual(validated.errors);
+});
+
+it("画像フィールドがない旧公開設定を読み、下書きで選択肢画像を保存しても公開版を変えない", async () => {
+  const { staff, cookie } = await setupFixture();
+  const services = createApiServices(env);
+  const legacy = {
+    ...fixtureConfiguration,
+    products: fixtureConfiguration.products.map((product) => ({
+      ...product,
+      modifiers: product.modifiers.map((group) => ({
+        ...group,
+        options: group.options.map((option) =>
+          Object.fromEntries(
+            Object.entries(option).filter(([key]) => !["imageKey", "imageKind"].includes(key)),
+          ),
+        ),
+      })),
+    })),
+  };
+  await services.db
+    .update(businessTables.stores)
+    .set({ config_json: JSON.stringify(legacy) })
+    .where(eq(businessTables.stores.id, staff.storeId));
+  const draft = await createDraft(services, staff);
+  const option = draft.configuration.products[1]?.modifiers[0]?.options[0];
+  if (!option) throw new Error("選択肢fixtureがありません");
+  expect(option).toMatchObject({ imageKey: null, imageKind: "illustration" });
+  option.imageKey = "tablecast/images/tablecast-milk.webp";
+  option.imageKind = "photograph";
+
+  const response = await exports.default.fetch(
+    new Request(`http://localhost:3000/api/admin/stores/${staff.storeId}/drafts/${draft.id}`, {
+      method: "PUT",
+      headers: {
+        Cookie: cookie,
+        Origin: "http://localhost:3000",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expectedVersion: draft.version, configuration: draft.configuration }),
+    }),
+  );
+  expect(response.status).toBe(200);
+  const saved = await getDraft(services, staff, draft.id);
+  expect(saved.configuration.products[1]?.modifiers[0]?.options[0]).toEqual(option);
+  const published = await getCatalog(services, staff.storeId);
+  expect(published.configuration.products[1]?.modifiers[0]?.options[0]?.imageKey).toBeNull();
+  expect(saved.version).toBe(draft.version + 1);
+});
+
+it("接客文書の保存・公開・互換表示を保ち、旧clientによる書式の上書きを拒否する", async () => {
+  const { staff, cookie } = await setupFixture();
+  const services = createApiServices(env);
+  const draft = await createDraft(services, staff);
+  const configuration = structuredClone(draft.configuration);
+  configuration.cast.instructions.ja = {
+    format: "tiptap-json",
+    version: 1,
+    document: {
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "接客方針" }] },
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "丁寧に", marks: [{ type: "bold" }] }],
+        },
+      ],
+    },
+  };
+  const endpoint = `http://localhost:3000/api/admin/stores/${staff.storeId}/drafts/${draft.id}`;
+  const response = await exports.default.fetch(
+    new Request(endpoint, {
+      method: "PUT",
+      headers: {
+        Cookie: cookie,
+        Origin: "http://localhost:3000",
+        "Content-Type": "application/json",
+        "X-Tablecast-Instructions": "1",
+      },
+      body: JSON.stringify({
+        expectedVersion: draft.version,
+        instructionFormatVersion: 1,
+        configuration,
+      }),
+    }),
+  );
+  expect(response.status).toBe(200);
+  const saved = configDraftSchema.parse(await response.json());
+  expect(saved.configuration.cast.instructions.ja).toEqual(configuration.cast.instructions.ja);
+  expect(
+    saved.changes.filter((change) => change.path.startsWith("cast.instructions")),
+  ).toHaveLength(1);
+  const legacy = configDraftSchema.parse(
+    await (
+      await exports.default.fetch(new Request(endpoint, { headers: { Cookie: cookie } }))
+    ).json(),
+  );
+  expect(legacy.configuration.cast.instructions.ja).toBe("## 接客方針\n\n**丁寧に**");
+  const rejected = await exports.default.fetch(
+    new Request(endpoint, {
+      method: "PUT",
+      headers: {
+        Cookie: cookie,
+        Origin: "http://localhost:3000",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expectedVersion: saved.version, configuration: legacy.configuration }),
+    }),
+  );
+  expect(rejected.status).toBe(409);
+  expect((await getDraft(services, staff, saved.id)).version).toBe(saved.version);
+  const ready = await validateDraft(services, staff, saved.id, saved.version);
+  await publishDraft(services, staff, saved.id, {
+    expectedVersion: ready.version,
+    baseVersion: ready.baseVersion,
+    idempotencyKey: "tablecast-rich-instructions",
+    approved: true,
+  });
+  expect((await getCatalog(services, staff.storeId)).configuration.cast.instructions.ja).toEqual(
+    configuration.cast.instructions.ja,
+  );
+  const publicResponse = await exports.default.fetch(
+    new Request("http://localhost:3000/api/table/catalog", {
+      headers: { Cookie: `tablecast.device=${deviceToken}` },
+    }),
+  );
+  expect(await publicResponse.json()).toMatchObject({
+    configuration: { cast: { instructions: { ja: "## 接客方針\n\n**丁寧に**" } } },
+  });
+});

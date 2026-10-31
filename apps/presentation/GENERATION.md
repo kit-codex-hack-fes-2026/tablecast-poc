@@ -43,8 +43,8 @@ flowchart TD
 | Playwright / Chrome | 実UIの操作、DOMイベント、表示対象・時刻の計測。端末viewportの再現は実機検証と区別する                                           |
 | OpenScreen 1.11     | 実ウィンドウの録画、実録のズーム・編集・MP4 export。標準version 2 projectとportable形式を使う                                   |
 | FFmpeg / FFprobe    | crop・等比scale・pad、実測カーソルの前処理、音声同期・音量、静止画抽出、全編復号・メディア情報確認                              |
-| HyperFrames 0.8.33  | 場面、実録・図・字幕・音声の合成と最終書き出し                                                                                  |
-| GSAP 3.14.2         | 指定時刻へseekできる強調・移動・遷移。時間はHyperFramesの生成タイムラインに従う                                                 |
+| HyperFrames 0.8.169 | 場面、実録・図・字幕・音声の合成と最終書き出し                                                                                  |
+| GSAP 3.15.0         | 指定時刻へseekできる強調・移動・遷移。時間はHyperFramesの生成タイムラインに従う                                                 |
 | HTML / CSS / SVG    | 配置・文字・端末枠・編集可能な技術図。スタイルは `styles.css`、技術図の内容は `projects/tablecast-main-rerecord.json`           |
 | Inworld TTS         | ナレーションの必要分だけ生成。現設定はAsuka / inworld-tts-2 / ja-JP / STABLE / LINEAR16 48kHz                                   |
 | フリーBGM・SE       | Carefree（Kevin MacLeod、CC BY 4.0）、Kenney Interface Sounds（CC0）。採用素材・加工・出典は [音源記録](assets/audio/README.md) |

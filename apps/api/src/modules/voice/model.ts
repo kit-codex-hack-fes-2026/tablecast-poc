@@ -1,49 +1,54 @@
 import { z } from "zod";
 import { id, localeSchema } from "../../platform/model";
+import { displayCurrencyContextSchema } from "../currency/model";
 export const showProductsSchema = z.object({ productIds: z.array(id).min(1).max(4) }).strict();
 export const speechSpeedSchema = z.number().min(0.5).max(1.5).multipleOf(0.1);
 
 export const speechSpeedInputSchema = z.object({ speed: speechSpeedSchema }).strict();
 
 export const voiceToolNameSchema = z.enum([
+  "showReference",
+  "captureCamera",
+  "getCameraState",
+  "endConversation",
   "getCatalog",
+  "getProductFoodInformation",
+  "getServiceGuidance",
+  "getCustomerContext",
+  "searchCustomerMemories",
+  "searchStoreKnowledge",
+  "readStoreKnowledge",
+  "getCustomerSuggestions",
+  "saveCustomerMemory",
   "getTableState",
   "updateCart",
   "prepareConfirmation",
   "submitOrder",
   "callStaff",
   "setUiSection",
+  "showMenuSearch",
   "setLanguage",
   "setSpeechSpeed",
+  "setDisplayCurrency",
   "showProducts",
 ]);
 
-export const voiceToolEventSchema = z
-  .object({
-    turnId: id,
-    toolCallId: id,
-    toolName: voiceToolNameSchema,
-    state: z.enum(["requested", "running", "completed", "error"]),
-    query: z.string().max(100).optional(),
-    errorCode: z
-      .string()
-      .regex(/^[A-Z][A-Z0-9_]{0,79}$/)
-      .optional(),
-  })
-  .refine((event) => event.query === undefined || event.toolName === "getCatalog");
-
-export const voiceProductsEventSchema = showProductsSchema.extend({ turnId: id });
-
-export const voiceFailedEventSchema = z.object({
+export const voiceToolEventSchema = z.object({
   turnId: id,
-  code: z.enum(["VOICE_MODEL_FAILED", "VOICE_INTERNAL_ERROR"]),
+  toolCallId: id,
+  toolName: voiceToolNameSchema,
+  state: z.enum(["requested", "running", "completed", "error"]),
+  errorCode: z
+    .string()
+    .regex(/^[A-Z][A-Z0-9_]{0,79}$/)
+    .optional(),
 });
 
 export const voiceListQuerySchema = z
   .object({ locale: localeSchema, pageToken: z.string().max(2048).optional() })
   .strict();
 
-export const voiceSummarySchema = z.object({
+const voiceSummarySchema = z.object({
   voiceId: id,
   displayName: z.string().min(1).max(150),
   langCode: z.string().min(2).max(35),
@@ -54,13 +59,11 @@ export const voicePageSchema = z.object({
   nextPageToken: z.string().max(2048).nullable(),
 });
 
-export type VoiceSummary = z.infer<typeof voiceSummarySchema>;
-
 export type VoicePage = z.infer<typeof voicePageSchema>;
 
 export type VoiceListQuery = z.infer<typeof voiceListQuerySchema>;
 
-export const voiceTriggerSchema = z.enum(["user", "proactive"]);
+const voiceTriggerSchema = z.enum(["user", "proactive", "opening"]);
 
 export type VoiceTrigger = z.infer<typeof voiceTriggerSchema>;
 
@@ -81,8 +84,6 @@ export const voiceTurnSchema = z
   })
   .strict();
 
-export { id } from "../../platform/model";
-
 export const toolSchema = z
   .object({
     voiceSessionId: id,
@@ -90,19 +91,61 @@ export const toolSchema = z
     toolName: voiceToolNameSchema,
     toolCallId: id,
     arguments: z.record(z.string(), z.unknown()),
+    displayCurrency: displayCurrencyContextSchema.optional(),
   })
   .strict();
 
 const conversationItemSchema = z
   .object({
     itemId: id,
+    locale: localeSchema.optional(),
     role: z.enum(["user", "assistant"]),
     text: z.string().min(1).max(10000),
     interrupted: z.boolean().default(false),
   })
   .strict();
 
-export const voiceStartSchema = z.object({ sdp: z.string().min(1).max(64000) }).strict();
+export const voiceStartSchema = z
+  .object({
+    sdp: z.string().min(1).max(64000),
+    purpose: z.enum(["conversation", "assistance"]).default("conversation"),
+  })
+  .strict();
+
+export const voiceObservationSchema = z
+  .object({
+    eventId: id,
+    kind: z.enum(["transcript", "delegation", "response", "instructions"]),
+    startedAt: z.number().int().nonnegative(),
+    endedAt: z.number().int().nonnegative(),
+    turnId: id.optional(),
+    delegationId: id.optional(),
+    responseId: id.optional(),
+    toolCallIds: z.array(id).max(50).optional(),
+    model: z.string().max(100).optional(),
+    usage: z
+      .object({
+        input_tokens: z.number().int().nonnegative(),
+        output_tokens: z.number().int().nonnegative(),
+        input_tokens_details: z
+          .object({ cached_tokens: z.number().int().nonnegative() })
+          .optional(),
+      })
+      .optional(),
+    content: z.string().max(16000).optional(),
+    contentTruncated: z.boolean().optional(),
+    droppedEvents: z.number().int().nonnegative().optional(),
+    role: z.enum(["user", "assistant"]).optional(),
+    status: z.enum(["completed", "failed", "incomplete", "interrupted"]).optional(),
+  })
+  .strict();
+
+export const voiceObservationsSchema = z
+  .object({
+    voiceSessionId: id,
+    events: z.array(voiceObservationSchema).min(1).max(20),
+  })
+  .strict();
 
 export const voiceDelegationSchema = z
   .object({
@@ -120,3 +163,31 @@ export const voiceConversationSchema = z
     items: z.array(conversationItemSchema).min(1).max(20),
   })
   .strict();
+
+export const voiceSuggestionsSchema = z
+  .object({
+    voiceSessionId: id,
+    locale: localeSchema,
+    itemId: id,
+    text: z.string().min(1).max(10000),
+  })
+  .strict();
+export const voiceSuggestionsResultSchema = z
+  .object({
+    suggestions: z.array(z.string().trim().min(1).max(500)).max(3),
+  })
+  .strict();
+
+export const voiceReferenceSchema = z
+  .object({
+    url: z.url().max(2048),
+    title: z.string().min(1).max(200),
+    description: z.string().max(300).optional(),
+    imageUrl: z.url().max(2048).optional(),
+    faviconUrl: z.url().max(2048).optional(),
+  })
+  .strict();
+export const voiceReferenceEventSchema = z
+  .object({ turnId: id, reference: voiceReferenceSchema })
+  .strict();
+export type VoiceReference = z.infer<typeof voiceReferenceSchema>;

@@ -1,14 +1,18 @@
 import { trace } from "@opentelemetry/api";
-import { observeOperation } from "../../platform/telemetry";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, notExists, sql } from "drizzle-orm";
 import { z } from "zod";
-import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
+import * as business from "../../db/business-schema";
 import { DomainError, ensure } from "../../platform/errors";
+import { localeSchema } from "../../platform/model";
+import { observeOperation } from "../../platform/telemetry";
+import { llmSessionId } from "../../platform/telemetry-llm";
+import { displayCurrencyActionSchema } from "../currency/model";
 import { createCastTools } from "./agent";
 import { type toolSchema, voiceToolEventSchema } from "./model";
 import { currentVoiceTurn, voiceContext } from "./queries";
-import { recordVoiceEvent, voiceToolQuery } from "./service";
+import { recordVoiceEvent } from "./service";
+import { finishVoiceTurn } from "./turns";
 export async function conversationHistory(
   services: ApiServices,
   actor: { storeId: string; tableSessionId?: string },
@@ -23,12 +27,23 @@ export async function conversationHistory(
         eq(business.tableEvents.store_id, actor.storeId),
         eq(business.tableEvents.table_session_id, actor.tableSessionId ?? ""),
         inArray(business.tableEvents.kind, ["voice.user", "voice.assistant"]),
+        notExists(
+          services.db
+            .select({ id: business.customerContexts.sessionId })
+            .from(business.customerContexts)
+            .where(
+              and(
+                eq(business.customerContexts.sessionId, actor.tableSessionId ?? ""),
+                eq(business.customerContexts.storeId, actor.storeId),
+              ),
+            ),
+        ),
         sql`length(trim(json_extract(${business.tableEvents.data_json},'$.text')))>0`,
       ),
     )
     .orderBy(desc(business.tableEvents.cursor))
     .limit(40);
-  const history: { role: "user" | "assistant"; content: string; interrupted: boolean }[] = [];
+  const history: { content: string; interrupted: boolean; role: "assistant" | "user" }[] = [];
   let characters = 0;
   for (const row of rows) {
     const data = z
@@ -59,16 +74,34 @@ export async function invokeVoiceTool(
         "tablecast.voice.session.id": input.voiceSessionId,
         "tablecast.voice.turn.id": input.turnId,
       });
-      const { actor, session, proactive } = await voiceContext(
+      const { actor, session, proactive, opening, personal } = await voiceContext(
         services,
         input.voiceSessionId,
         input.turnId,
       );
-      const trigger = proactive ? "proactive" : "user";
+      if (!personal && services.env.TABLECAST_ENV !== "production") {
+        trace.getActiveSpan()?.setAttributes({
+          "tablecast.observation.type": "tool",
+          "tablecast.session.id": llmSessionId(services.env, session.id),
+          ...(services.env.TABLECAST_OTEL_CAPTURE_CONTENT === "true"
+            ? { "tablecast.input": JSON.stringify(input.arguments) }
+            : {}),
+        });
+      }
+      const trigger = opening ? "opening" : proactive ? "proactive" : "user";
       if (trigger === "proactive") await currentVoiceTurn(services, actor, session.locale, trigger);
-      const tools = createCastTools(services, actor, signal, trigger, session);
+      const tools = createCastTools(
+        personal
+          ? { ...services, env: { ...services.env, TABLECAST_OTEL_CAPTURE_CONTENT: "false" } }
+          : services,
+        actor,
+        signal,
+        trigger,
+        session,
+        input.displayCurrency,
+      );
       const tool = tools[input.toolName];
-      const record = async (state: "running" | "completed" | "error", errorCode?: string) =>
+      const record = async (state: "completed" | "error" | "running", errorCode?: string) =>
         recordVoiceEvent(
           services,
           actor,
@@ -78,7 +111,6 @@ export async function invokeVoiceTool(
               toolName: input.toolName,
               toolCallId: input.toolCallId,
               state,
-              query: voiceToolQuery(input.toolName, input.arguments),
               ...(errorCode ? { errorCode } : {}),
             },
           },
@@ -90,6 +122,12 @@ export async function invokeVoiceTool(
       try {
         ensure(tool?.execute, "VOICE_TOOL_FORBIDDEN", 403);
         const result = await tool.invoke(input.arguments);
+        if (
+          !personal &&
+          services.env.TABLECAST_OTEL_CAPTURE_CONTENT === "true" &&
+          services.env.TABLECAST_ENV !== "production"
+        )
+          trace.getActiveSpan()?.setAttribute("tablecast.output", JSON.stringify(result));
         trace
           .getActiveSpan()
           ?.setAttribute(
@@ -97,7 +135,27 @@ export async function invokeVoiceTool(
             new TextEncoder().encode(JSON.stringify(result)).byteLength,
           );
         await record("completed");
-        return { result };
+        if (input.toolName === "endConversation")
+          await finishVoiceTurn(services, input.voiceSessionId, input.turnId, "interrupted");
+        return {
+          ...(input.toolName === "endConversation" ? { conversationAction: "end" as const } : {}),
+          ...(input.toolName === "setLanguage"
+            ? {
+                conversationAction: "language" as const,
+                locale: localeSchema.parse(input.arguments.locale),
+              }
+            : {}),
+          result,
+          ...(input.toolName === "captureCamera" ? { cameraAction: "capture" as const } : {}),
+          ...(input.toolName === "setDisplayCurrency"
+            ? {
+                displayCurrencyAction: displayCurrencyActionSchema.parse({
+                  currency: input.arguments.currency,
+                  revision: input.displayCurrency?.revision,
+                }),
+              }
+            : {}),
+        };
       } catch (error) {
         const code = voiceToolEventSchema.shape.errorCode.safeParse(
           error instanceof DomainError ? error.code : "VOICE_TOOL_FAILED",
@@ -106,6 +164,9 @@ export async function invokeVoiceTool(
         throw error;
       }
     },
-    { env: services.env, input: { toolName: input.toolName } },
+    {
+      env: { ...services.env, TABLECAST_OTEL_CAPTURE_CONTENT: "false" },
+      input: { toolName: input.toolName },
+    },
   );
 }

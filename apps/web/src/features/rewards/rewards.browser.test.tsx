@@ -1,0 +1,346 @@
+import type { ReactNode } from "react";
+import { couponDefinitionSchema } from "@tablecast/api/schema";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
+import { afterEach, expect, it, vi } from "vitest";
+import { cleanup, render } from "vitest-browser-react";
+import { page } from "vitest/browser";
+import ja from "../../../messages/ja.json";
+import { MotionProvider } from "../../components/motion-provider";
+import { LocaleProvider } from "../../i18n/locale";
+import "../../styles.css";
+import { CouponRuleForm } from "./coupon-rule-form";
+import { CouponVisit } from "./coupon-visit";
+import { PointVisit } from "./point-visit";
+
+let client: QueryClient;
+afterEach(async () => {
+  await cleanup();
+  client.clear();
+  vi.unstubAllGlobals();
+});
+async function show(view: ReactNode) {
+  client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const root = createRootRoute({ component: () => <main>{view}</main> });
+  const router = createRouter({
+    routeTree: root,
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  await render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initialLocale="ja" persist={false}>
+        <MotionProvider>
+          <RouterProvider router={router} />
+        </MotionProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+const api = "/api/admin/stores/tablecast-store";
+
+it("券面をアップロードして出所と二言語の交換ルールをフォームから保存する", async () => {
+  const rules: unknown[] = [];
+  const uploads: FormData[] = [];
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const path = new URL(request.url).pathname;
+    if (path === `${api}/images`) {
+      uploads.push(await request.formData());
+      return Response.json({
+        imageKey: "tablecast/coupon.webp",
+        imageKind: "illustration",
+        imageSource: { generated: false, description: "店舗が利用を許可した券面" },
+        url: "/media/tablecast/coupon.webp",
+      });
+    }
+    if (path === `${api}/coupons/rules`) {
+      const value = await request.json();
+      rules.push(value);
+      const saved = couponDefinitionSchema.pick({ id: true, expectedVersion: true }).parse(value);
+      return Response.json({ id: saved.id, version: saved.expectedVersion + 1 });
+    }
+    throw new Error(`未定義の要求: ${path}`);
+  });
+  const saved = vi.fn<() => void>();
+  await show(<CouponRuleForm storeId="tablecast-store" onSaved={saved} />);
+  await page.getByRole("textbox", { name: ja.coupon_title_ja }).fill("会員の100円割引");
+  await page
+    .getByRole("textbox", { name: ja.coupon_description_ja })
+    .fill("会計から100円引きます。");
+  await page.getByRole("tab", { name: "English", exact: true }).click();
+  await page.getByRole("textbox", { name: ja.coupon_title_en }).fill("Member discount");
+  await page
+    .getByRole("textbox", { name: ja.coupon_description_en })
+    .fill("JPY 100 off your bill.");
+  await page.getByRole("combobox", { name: ja.coupon_trigger }).selectOptions("exchange");
+  await page.getByRole("spinbutton", { name: ja.coupon_threshold }).fill("3");
+  await page
+    .getByLabelText(ja.editor_image_choose)
+    .upload(
+      new File(
+        [
+          Uint8Array.fromBase64(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+          ),
+        ],
+        "tablecast-coupon.png",
+        { type: "image/png" },
+      ),
+    );
+  await page
+    .getByRole("textbox", { name: ja.editor_image_source, exact: true })
+    .fill("店舗が利用を許可した券面");
+  await page.getByRole("button", { name: ja.editor_image_upload }).click();
+  await expect
+    .element(page.getByRole("button", { name: ja.account_save, exact: true }))
+    .toBeEnabled();
+  await page.getByRole("button", { name: ja.account_save, exact: true }).click();
+  await expect.poll(() => saved.mock.calls.length).toBe(1);
+  expect(uploads).toHaveLength(1);
+  expect(uploads[0]?.get("metadata")).toContain("店舗が利用を許可した券面");
+  expect(rules).toMatchObject([
+    {
+      expectedVersion: 0,
+      active: true,
+      rules: {
+        title: { ja: "会員の100円割引", en: "Member discount" },
+        description: { ja: "会計から100円引きます。", en: "JPY 100 off your bill." },
+        imageKey: "tablecast/coupon.webp",
+        imageSource: { generated: false, description: "店舗が利用を許可した券面" },
+        trigger: "exchange",
+        threshold: 3,
+      },
+    },
+  ]);
+});
+
+it("参加者を選んでポイント付与を確定し、返された結果へ再取得する", async () => {
+  let confirmed = false;
+  const writes: unknown[] = [];
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (new URL(request.url).pathname !== `${api}/tables/tablecast-visit/points`)
+      throw new Error(`未定義の要求: ${request.url}`);
+    if (request.method === "POST") {
+      writes.push(await request.json());
+      confirmed = true;
+      return Response.json({ saved: true });
+    }
+    return Response.json({
+      expectedVersion: 4,
+      confirmedAt: confirmed ? 1 : null,
+      participants: [
+        {
+          id: "person-1",
+          membershipId: "member-1",
+          name: "本人",
+          email: "customer@example.test",
+          image: null,
+          active: true,
+        },
+        {
+          id: "person-2",
+          membershipId: "member-2",
+          name: "同行者",
+          email: "companion@example.test",
+          image: null,
+          active: true,
+        },
+      ],
+      allocations: confirmed ? [{ membershipId: "member-1", amount: 100, points: 4 }] : [],
+    });
+  });
+  await show(<PointVisit storeId="tablecast-store" sessionId="tablecast-visit" />);
+  await page.getByRole("checkbox", { name: "本人 customer@example.test", exact: true }).click();
+  await page.getByRole("button", { name: ja.customer_points_award, exact: true }).click();
+  await expect.element(page.getByText(ja.customer_points_confirmed, { exact: true })).toBeVisible();
+  await expect
+    .element(
+      page.getByRole("paragraph").filter({ hasText: "本人customer@example.test · ¥100 · 4 pt" }),
+    )
+    .toBeVisible();
+  expect(writes).toMatchObject([{ expectedVersion: 4, participantIds: ["person-1"] }]);
+});
+
+it("申請された券を会計に適用し、理由付き取消で割引とフォームを更新する", async () => {
+  let applied = false;
+  let version = 4;
+  const writes: { path: string; value: unknown }[] = [];
+  const path = `${api}/tables/tablecast-visit/coupons`;
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const url = new URL(request.url).pathname;
+    if (url === path)
+      return Response.json({
+        expectedVersion: version,
+        requested: applied
+          ? []
+          : [
+              {
+                id: "coupon",
+                name: "本人",
+                rules: {
+                  title: { ja: "会員割引", en: "Member discount" },
+                  discountKind: "fixed",
+                  discountValue: 100,
+                  minimumYen: 0,
+                },
+              },
+            ],
+        uses: applied ? [{ id: "use", discount: 100 }] : [],
+      });
+    writes.push({ path: url, value: await request.json() });
+    if (url === `${path}/apply`) applied = true;
+    else if (url === `${path}/cancel`) applied = false;
+    else throw new Error(`未定義の要求: ${url}`);
+    version++;
+    return Response.json({ saved: true });
+  });
+  await show(<CouponVisit storeId="tablecast-store" sessionId="tablecast-visit" />);
+  await page.getByRole("button", { name: ja.coupon_apply, exact: true }).click();
+  await expect.element(page.getByText("−¥100", { exact: true })).toBeVisible();
+  await page
+    .getByRole("textbox", { name: ja.coupon_reason, exact: true })
+    .fill("会計訂正のため取消");
+  await page.getByRole("button", { name: ja.coupon_cancel, exact: true }).click();
+  await expect.element(page.getByText("−¥100", { exact: true })).not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("button", { name: ja.coupon_apply, exact: true }))
+    .toBeEnabled();
+  expect(writes).toMatchObject([
+    {
+      path: `${path}/apply`,
+      value: { couponId: "coupon", expectedVersion: 4 },
+    },
+    {
+      path: `${path}/cancel`,
+      value: {
+        useId: "use",
+        reason: "会計訂正のため取消",
+        expectedVersion: 5,
+      },
+    },
+  ]);
+});
+
+it("複合条件と券面を編集して対象を確認し、プレビュー失敗と条件変更で入力を保持する", async () => {
+  const audienceRequests: unknown[] = [];
+  const couponWrites: unknown[] = [];
+  let failAudience = false;
+  const coupon = couponDefinitionSchema.parse({
+    id: crypto.randomUUID(),
+    expectedVersion: 1,
+    active: true,
+    rules: {
+      title: { ja: "会員割引", en: "Member discount" },
+      description: { ja: "100円引き", en: "JPY 100 off" },
+      imageKey: `tablecast/uploads/${"a".repeat(64)}.webp`,
+      imageKind: "illustration",
+      imageSource: { generated: false, description: "店舗が利用を許可した券面" },
+      startsAt: Date.now() - 10000,
+      endsAt: Date.now() + 86400000,
+      minimumYen: 0,
+      discountKind: "fixed",
+      discountValue: 100,
+      maximumYen: 1000,
+      trigger: "manual",
+      threshold: 1,
+    },
+  });
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const path = new URL(request.url).pathname;
+    if (path === `${api}/coupons/audience`) {
+      audienceRequests.push(await request.json());
+      return failAudience
+        ? Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 })
+        : Response.json({
+            totalMembers: 6,
+            eligible: 2,
+            alreadyIssued: 1,
+            notMatching: 3,
+            evaluatedAt: Date.now(),
+            issuance: "manual",
+          });
+    }
+    if (path === `${api}/coupons/rules`) {
+      couponWrites.push(await request.json());
+      return Response.json({ id: coupon.id, version: 2 });
+    }
+    throw new Error(`未定義の要求: ${path}`);
+  });
+  const saved = vi.fn<() => void>();
+  await show(<CouponRuleForm storeId="tablecast-store" initial={coupon} onSaved={saved} />);
+  const all = page.getByRole("region", { name: ja.coupon_conditions_all });
+  const any = page.getByRole("region", { name: ja.coupon_conditions_any });
+  await all.getByRole("button", { name: ja.coupon_condition_add }).click();
+  await all.getByRole("spinbutton", { name: ja.coupon_condition_value }).fill("2");
+  await all.getByRole("button", { name: ja.coupon_condition_add }).click();
+  await all.getByRole("spinbutton", { name: ja.coupon_condition_value }).nth(1).fill("2");
+  await all.getByRole("button", { name: ja.common_remove, exact: true }).nth(0).click();
+  await expect
+    .element(all.getByRole("spinbutton", { name: ja.coupon_condition_value }))
+    .toHaveValue(2);
+  await any.getByRole("button", { name: ja.coupon_condition_add }).click();
+  await any.getByRole("combobox", { name: ja.coupon_condition_field }).selectOptions("spend");
+  await any.getByRole("spinbutton", { name: ja.coupon_condition_value }).fill("1000");
+  await page.getByRole("combobox", { name: ja.coupon_layout }).selectOptions("portrait");
+  await page.getByRole("combobox", { name: ja.coupon_image_fit }).selectOptions("contain");
+  const preview = page.getByRole("button", { name: ja.coupon_audience, exact: true });
+  const audience = page.getByRole("region", { name: ja.coupon_audience, exact: true });
+  failAudience = true;
+  await preview.click();
+  await expect.element(page.getByRole("alert")).toBeVisible();
+  await expect
+    .element(all.getByRole("spinbutton", { name: ja.coupon_condition_value }))
+    .toHaveValue(2);
+  failAudience = false;
+  await preview.click();
+  await expect
+    .element(audience.getByText(`${ja.coupon_audience_eligible}: 2 / 6`, { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(
+      audience.getByText(`${ja.coupon_audience_issued}: 1 · ${ja.coupon_audience_unmatched}: 3`, {
+        exact: true,
+      }),
+    )
+    .toBeVisible();
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
+  await all.getByRole("spinbutton", { name: ja.coupon_condition_value }).fill("3");
+  await expect.element(audience.getByRole("status")).not.toBeInTheDocument();
+  await preview.click();
+  await expect.element(audience.getByRole("status")).toBeVisible();
+  expect(audienceRequests).toMatchObject([
+    {
+      ruleId: coupon.id,
+      rules: {
+        conditions: {
+          all: [{ field: "visits", operator: "gte", value: 2 }],
+          any: [{ field: "spend", operator: "gte", value: 1000 }],
+        },
+        presentation: { layout: "portrait", imageFit: "contain" },
+      },
+    },
+    { rules: { conditions: { all: [{ value: 2 }] } } },
+    { rules: { conditions: { all: [{ value: 3 }] } } },
+  ]);
+  await page.getByRole("button", { name: ja.account_save, exact: true }).click();
+  await expect.poll(() => saved.mock.calls.length).toBe(1);
+  expect(couponWrites).toMatchObject([
+    {
+      expectedVersion: 1,
+      rules: {
+        conditions: { all: [{ value: 3 }], any: [{ value: 1000 }] },
+        presentation: { layout: "portrait", imageFit: "contain" },
+      },
+    },
+  ]);
+});

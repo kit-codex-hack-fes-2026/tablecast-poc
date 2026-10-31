@@ -1,37 +1,31 @@
-import { expect, type BrowserContext } from "@playwright/test";
-import { writeFile } from "node:fs/promises";
+import { type BrowserContext, expect } from "@playwright/test";
 import { adminStateSchema, catalogSchema } from "@tablecast/api/schema";
+import { writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { z } from "zod";
+import ja from "../messages/ja.json" with { type: "json" };
+import { approveGuestDevice, signInFromLogin, signInStaff } from "./support/session";
 import { test } from "./support/test";
-import { credentials } from "./support/runtime";
 
 // 再試行を検証するHTTP境界をSWに迂回させない。
 test.use({ trace: "off", serviceWorkers: "block" });
 declare global {
   interface Window {
     tablecastLayoutShift: number;
+    tablecastLayoutShiftEntries: string[];
   }
 }
 
 test("代表管理ページのSSRデータをhydrationで再取得せず表示と操作へ使う", async ({
   page,
   baseURL,
-  runtime,
-}, testInfo) => {
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
-  const samples = [];
+}) => {
+  await signInStaff(page.request, baseURL);
   const requests: string[] = [];
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;
     if (
-      /^\/api\/(?:admin\/(?:initial|stores(?:\/[^/]+(?:\/catalog)?)?)|auth\/(?:get-session|list-sessions|list-accounts|passkey\/list-user-passkeys))$/.test(
+      /^\/api\/(?:admin\/(?:initial|stores(?:\/[^/]+(?:\/(?:catalog|statistics|devices))?)?)|auth\/(?:get-session|list-sessions|list-accounts|passkey\/list-user-passkeys))$/.test(
         path,
       )
     )
@@ -39,34 +33,24 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
   });
   for (const [path, heading] of [
     ["/account", "アカウント"],
-    ["/admin/live", "フロアの様子"],
+    ["/admin/live", "ホーム"],
+    ["/admin/stores/tablecast-komorebi/statistics", "統計"],
     ["/admin/stores/tablecast-komorebi/menu/products", "商品"],
-  ]) {
-    // Cookie・DB・ブラウザーcacheを保ち、Worker再起動直後と同じURLの反復を分ける。
-    await runtime.restartWeb();
-    for (let sample = 0; sample < 4; sample++) {
-      requests.length = 0;
-      await page.goto(path);
-      await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
-      // 実際にメニューを開いてhydration後の操作可能状態を確認する。
-      await page.getByRole("button", { name: "ナビゲーション", exact: true }).click();
-      const timing = await page.evaluate(() => {
-        const navigation = performance.getEntriesByType("navigation")[0];
-        if (!(navigation instanceof PerformanceNavigationTiming)) throw new Error("計測値なし");
-        return {
-          ttfbMs: navigation.responseStart - navigation.startTime,
-          documentMs: navigation.responseEnd - navigation.startTime,
-          interactiveMs: performance.now(),
-          redirectMs: navigation.redirectEnd - navigation.redirectStart,
-          firstContentfulPaintMs:
-            performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? null,
-        };
-      });
-      expect(requests).toEqual([]);
-      samples.push({ path, sample, worker: sample === 0 ? "cold" : "warm", ...timing });
-    }
+  ] as const) {
+    requests.length = 0;
+    await page.goto(path);
+    await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+    await expect(page).toHaveTitle(new RegExp(`${heading}.*TableCast$`));
+    await expect(page.locator("head title")).toHaveCount(1);
+    await expect(page.locator('head meta[name="description"]')).toHaveAttribute("content", /\S/);
+    // ポインターが移動後のロゴへ重なって先読みするのを避け、hydration後の操作をキーボードで確認する。
+    const navigation = page.getByRole("button", { name: "ナビゲーション", exact: true });
+    await expect(navigation).toBeEnabled();
+    const wasExpanded = await navigation.getAttribute("aria-expanded");
+    await navigation.press("Enter");
+    await expect(navigation).toHaveAttribute("aria-expanded", String(wasExpanded !== "true"));
+    expect(requests).toEqual([]);
   }
-  await writeFile(testInfo.outputPath("ssr-performance.json"), JSON.stringify(samples, null, 2));
 });
 
 test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿名リクエストへ漏らさない", async ({
@@ -76,14 +60,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   baseURL,
 }, testInfo) => {
   // Given: スタッフと卓端末のCookieを実APIで発行する。
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
+  await signInStaff(page.request, baseURL);
   const floor = adminStateSchema.parse(
     await (await page.request.get("/api/admin/stores/tablecast-komorebi")).json(),
   );
@@ -98,7 +75,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   ).toBe(true);
   const contexts: BrowserContext[] = [];
   try {
-    const guest = await browser.newContext({ baseURL });
+    const guest = await browser.newContext({ baseURL, serviceWorkers: "block" });
     contexts.push(guest);
     const staffSsr = await browser.newContext({
       baseURL,
@@ -114,21 +91,11 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
     await staffSsr.addCookies([layoutCookie]);
     const anonymous = await browser.newContext({ baseURL, javaScriptEnabled: false });
     contexts.push(anonymous);
-    const codes = z
-      .object({ user_code: z.string(), device_code: z.string() })
-      .parse(await (await guest.request.post("/api/devices/request")).json());
-    expect(
-      (
-        await page.request.post("/api/admin/stores/tablecast-komorebi/devices/approve", {
-          data: { userCode: codes.user_code, tableId: table.id },
-        })
-      ).ok(),
-    ).toBe(true);
-    expect(
-      (
-        await guest.request.post("/api/devices/poll", { data: { device_code: codes.device_code } })
-      ).ok(),
-    ).toBe(true);
+    await approveGuestDevice(guest.request, page.request, {
+      origin: baseURL,
+      storeId: "tablecast-komorebi",
+      tableId: table.id,
+    });
     const catalog = catalogSchema.parse(
       await (await guest.request.get("/api/table/catalog")).json(),
     );
@@ -151,6 +118,14 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       await expect(
         staffPage.getByRole("heading", { name: "フロアの様子", exact: true }),
       ).toBeVisible();
+      await expect(staffPage).toHaveTitle(`フロアの様子 · ${floor.store.name} · TableCast`);
+      await expect(guestPage).toHaveTitle(`${ja.head_guest} · ${catalog.storeName} · TableCast`);
+      await expect(anonPage).toHaveTitle(`${ja.auth_sign_in} · TableCast`);
+      await expect(staffPage.locator("head title")).toHaveCount(1);
+      await expect(guestPage.locator('head meta[name="description"]')).toHaveAttribute(
+        "content",
+        `${catalog.storeName} · ${ja.head_guest_description}`,
+      );
       await expect(
         staffPage.getByRole("button", { name: new RegExp(`^${table.name}\\b`) }),
       ).toBeVisible();
@@ -163,20 +138,23 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
         (item) => item.available && item.imageKey,
       );
       if (!product) throw new Error("画像付き商品fixtureが必要です");
-      await expect(
-        guestPage.getByText(product.text.ja.displayName, { exact: true }).first(),
-      ).toBeVisible();
-      await expect(guestPage.locator('img[src*="/media/"]').first()).toHaveAttribute(
-        "srcset",
-        /width=\d+/,
+      const card = guestPage
+        .getByRole("button")
+        .filter({ has: guestPage.getByText(product.text.ja.displayName, { exact: true }) })
+        .filter({ has: guestPage.locator("img") });
+      await expect(card).toHaveCount(1);
+      const productImage = card.locator("img");
+      await expect(productImage).toHaveAttribute(
+        "src",
+        new RegExp(`/api/table/images/${product.imageKey?.replace(".", "\\.")}`),
       );
-      await guestPage.screenshot({ path: testInfo.outputPath("kiosk-ssr.png"), fullPage: true });
-      await staffPage.screenshot({ path: testInfo.outputPath("floor-ssr.png"), fullPage: true });
+      await expect(productImage).toHaveAttribute("srcset", /width=\d+/);
       const interactive = await guest.newPage();
       const errors: string[] = [];
       interactive.on("pageerror", (error) => errors.push(error.message));
       await interactive.addInitScript(() => {
         window.tablecastLayoutShift = 0;
+        window.tablecastLayoutShiftEntries = [];
         if (PerformanceObserver.supportedEntryTypes.includes("layout-shift"))
           new PerformanceObserver((list) => {
             for (const entry of list.getEntries())
@@ -185,34 +163,192 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
                 typeof entry.value === "number" &&
                 "hadRecentInput" in entry &&
                 !entry.hadRecentInput
-              )
+              ) {
                 window.tablecastLayoutShift += entry.value;
+                const sources =
+                  "sources" in entry && Array.isArray(entry.sources)
+                    ? entry.sources.map((source: unknown) => {
+                        if (!source || typeof source !== "object") return null;
+                        return {
+                          node:
+                            "node" in source && source.node instanceof Element
+                              ? source.node.outerHTML.slice(0, 240)
+                              : null,
+                          previousRect: "previousRect" in source ? source.previousRect : null,
+                          currentRect: "currentRect" in source ? source.currentRect : null,
+                        };
+                      })
+                    : [];
+                window.tablecastLayoutShiftEntries.push(
+                  JSON.stringify({ time: entry.startTime, value: entry.value, sources }),
+                );
+              }
           }).observe({ type: "layout-shift", buffered: true });
       });
-      await interactive.goto("/");
+      const hydrate = Promise.withResolvers<void>();
+      const continueHtml = Promise.withResolvers<void>();
+      let streamed: ReturnType<typeof createServer> | undefined;
+      try {
+        if (browserName === "chromium") {
+          const html = await (await guest.request.get("/")).text();
+          const welcomeStart = html.indexOf('data-ui="voice-welcome"');
+          const split = html.indexOf('<div class="space-y-2">', welcomeStart);
+          expect(welcomeStart).toBeGreaterThan(0);
+          expect(split).toBeGreaterThan(welcomeStart);
+          // CLS対応engineではイラストを先に描画し、説明と操作を次のchunkで届ける。
+          streamed = createServer((_request, stream) => {
+            stream.writeHead(200, {
+              "content-type": "text/html; charset=utf-8",
+              "cache-control": "private, no-store",
+            });
+            stream.write(html.slice(0, split));
+            void continueHtml.promise.then(() => stream.end(html.slice(split)));
+          });
+          await new Promise<void>((resolve) => streamed?.listen(0, "127.0.0.1", resolve));
+          const address = streamed.address();
+          if (!address || typeof address === "string") throw new Error("分割SSRの待受が必要です。");
+          await interactive.route(new URL("/", baseURL).href, (route) =>
+            route.continue({ url: `http://127.0.0.1:${address.port}/` }),
+          );
+        }
+        await interactive.route("**/assets/*.js", async (route) => {
+          await hydrate.promise;
+          await route.continue();
+        });
+        await interactive.goto("/", { waitUntil: "commit" });
+        await expect(interactive.locator('[data-ui="voice-welcome"]')).toBeVisible();
+        if (streamed)
+          await interactive.screenshot({
+            path: testInfo.outputPath(`kiosk-stream-partial-${browserName}.png`),
+          });
+        continueHtml.resolve();
+        await expect(
+          interactive.getByRole("button", { name: ja.kiosk_welcome_start, exact: true }),
+        ).toBeVisible();
+        await expect(interactive.getByRole("log").locator(":scope > div")).toHaveCSS(
+          "overflow-y",
+          "auto",
+        );
+        await writeFile(
+          testInfo.outputPath("tablecast-before-hydration.json"),
+          JSON.stringify(
+            await interactive.evaluate(() => ({
+              shifts: window.tablecastLayoutShiftEntries,
+              layout: [
+                ...document.querySelectorAll(
+                  '[data-ui="voice-welcome"], [data-ui="conversation-history"], [role="log"], [data-ui="camera-window"]',
+                ),
+              ].map((element) => {
+                const rect = element.getBoundingClientRect();
+                return {
+                  name: element.getAttribute("data-ui") ?? element.getAttribute("role"),
+                  rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+                  html: element.outerHTML.slice(0, 300),
+                };
+              }),
+            })),
+            null,
+            2,
+          ),
+        );
+        if (browserName === "chromium")
+          await interactive.screenshot({
+            path: testInfo.outputPath(`kiosk-before-hydration-${browserName}.png`),
+          });
+      } finally {
+        continueHtml.resolve();
+        hydrate.resolve();
+        await interactive.unrouteAll({ behavior: "wait" });
+        if (streamed) {
+          const closed = new Promise<void>((resolve, reject) =>
+            streamed?.close((error) => (error ? reject(error) : resolve())),
+          );
+          streamed.closeAllConnections();
+          await closed;
+        }
+      }
       await expect(
-        interactive.getByRole("button", { name: "音声を再開", exact: true }),
+        interactive.getByRole("button", { name: ja.kiosk_voice_resume, exact: true }),
       ).toBeEnabled();
-      await expect(interactive.locator('[data-voice-state="idle"]')).toBeVisible();
+      await expect(
+        interactive
+          .getByRole("region", { name: ja.kiosk_conversation, exact: true })
+          .getByRole("button", { name: ja.kiosk_voice_resume, exact: true }),
+      ).toBeVisible();
+      await expect(
+        interactive.getByRole("button", { name: ja.kiosk_voice_stop, exact: true }),
+      ).toHaveCount(0);
+      await interactive.evaluate(async () => {
+        await document.fonts.ready;
+        const viewport = document.getElementById("tablecast-order")?.getBoundingClientRect();
+        if (!viewport) throw new Error("SSRした注文ペインが必要です。");
+        await Promise.all(
+          [...document.querySelectorAll<HTMLImageElement>("#tablecast-order img")]
+            .filter((image) => {
+              const bounds = image.getBoundingClientRect();
+              return bounds.bottom > viewport.top && bounds.top < viewport.bottom;
+            })
+            .map((image) => image.decode()),
+        );
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
+      });
       const metrics = await interactive.evaluate(() => ({
         layoutShift: PerformanceObserver.supportedEntryTypes.includes("layout-shift")
           ? window.tablecastLayoutShift
           : null,
         resources: performance.getEntriesByType("resource").map((entry) => entry.name),
+        layoutShiftEntries: window.tablecastLayoutShiftEntries,
+        fonts: document.fonts.status,
+        layout: [
+          ...document.querySelectorAll(
+            '[data-ui="voice-welcome"], [data-ui="conversation-history"], [data-ui="camera-window"]',
+          ),
+        ].map((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            name: element.getAttribute("data-ui"),
+            rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+          };
+        }),
       }));
+      await interactive.screenshot({
+        path: testInfo.outputPath(`kiosk-after-hydration-${browserName}.png`),
+      });
+      // 予算超過時にも実際に動いた要素と時刻を残す。
+      await writeFile(
+        testInfo.outputPath(`kiosk-performance-${browserName}.json`),
+        JSON.stringify(metrics, null, 2),
+      );
       expect(metrics.resources.filter((url) => /audio-waveform|livekit-client/.test(url))).toEqual(
         [],
       );
       if (metrics.layoutShift !== null) expect(metrics.layoutShift).toBeLessThan(0.01);
       expect(errors).toEqual([]);
-      await writeFile(
-        testInfo.outputPath(`kiosk-performance-${browserName}.json`),
-        JSON.stringify(metrics, null, 2),
-      );
-      await interactive.screenshot({
-        path: testInfo.outputPath("kiosk-hydrated.png"),
-        fullPage: true,
-      });
+      if (browserName === "chromium") {
+        // 性能計測のviewportを保ち、別の画面証拠は測定完了後に撮影する。
+        for (const [width, height] of [
+          [1180, 820],
+          [820, 1180],
+          [402, 874],
+          [1512, 982],
+        ] as const) {
+          await interactive.setViewportSize({ width, height });
+          await expect(
+            interactive.getByRole("button", { name: ja.kiosk_welcome_start, exact: true }),
+          ).toBeVisible();
+          await interactive.evaluate(
+            () =>
+              new Promise<void>((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+              ),
+          );
+          await interactive.screenshot({
+            path: testInfo.outputPath(`kiosk-initial-${width}x${height}.png`),
+          });
+        }
+      }
     } finally {
       await guestSsr.close();
     }
@@ -221,15 +357,65 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   }
 });
 
-test("遷移中・取得失敗・再試行後の0件を区別する", async ({ page, baseURL }, testInfo) => {
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
+test("メールリンクからホームをSSRし、フォーカス復帰でもセッションを更新する", async ({
+  page,
+  baseURL,
+}) => {
+  await page.goto("/login");
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(new URL(request.url()).pathname));
+  await signInFromLogin(page, baseURL);
+  await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/?$/);
+  await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
+  expect(requests.filter((path) => path === "/api/admin/initial")).toHaveLength(0);
+  expect(requests.filter((path) => /^\/api\/admin\/stores(?:\/[^/]+)?$/.test(path))).toEqual([]);
+
+  const main = page.locator("#tablecast-admin-main");
+  await page.getByRole("heading", { name: "ChatGPTとつなぐ" }).scrollIntoViewIfNeeded();
+  await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBeGreaterThan(100);
+  const previousScroll = await main.evaluate((element) => element.scrollTop);
+  await page.getByRole("link", { name: "統計", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "統計", exact: true })).toBeVisible();
+  await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBe(0);
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeAttached();
+  await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBe(previousScroll);
+
+  await page.goto("/account");
+  await expect(page.getByLabel("名前", { exact: true })).toBeEnabled();
+
+  await page.clock.install();
+  await page.clock.fastForward(31_000);
+  requests.length = 0;
+  const focused = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/account/auth-state",
+  );
+  await page.evaluate(() => window.dispatchEvent(new Event("visibilitychange")));
+  expect((await focused).ok()).toBe(true);
+  expect(requests.filter((path) => path === "/api/account/auth-state")).toHaveLength(1);
+  expect(requests.filter((path) => path === "/api/admin/initial")).toEqual([]);
+  expect(requests.filter((path) => path === "/api/admin/stores").length).toBeLessThanOrEqual(1);
+});
+
+test("店側PWAの新規ドキュメント起動は転送先のホームをSSRする", async ({ request, baseURL }) => {
+  await signInStaff(request, baseURL);
+  const manifest = z
+    .object({ start_url: z.string() })
+    .parse(await (await request.get("/tablecast-staff.webmanifest")).json());
+  const launch = await request.get(manifest.start_url, { maxRedirects: 0 });
+  expect(launch.status()).toBe(307);
+  const destination = z.string().parse(launch.headers()["location"]);
+  expect(destination).toMatch(/^\/admin\/stores\/[^/]+\/?$/);
+  const home = await request.get(destination);
+  expect(home.ok()).toBe(true);
+  expect(await home.text()).toContain("ホーム");
+  expect(home.headers()["cache-control"]).toBe("private, no-store");
+});
+
+test("実Routerの遷移と既定エラー画面を接続し、再試行で復帰する", async ({ page, baseURL }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await signInStaff(page.request, baseURL);
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/admin/stores/tablecast-komorebi/floor");
@@ -247,85 +433,59 @@ test("遷移中・取得失敗・再試行後の0件を区別する", async ({ p
     });
   });
   try {
+    const management = page.getByRole("button", { name: "店舗管理", exact: true });
+    if ((await management.getAttribute("aria-expanded")) === "false") await management.click();
+    await expect(management).toHaveAttribute("aria-expanded", "true");
     await page.getByRole("link", { name: "端末", exact: true }).click();
     await requested.promise;
     await expect(page.locator('[aria-busy="true"]')).toBeVisible();
+    expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(
+      true,
+    );
+    expect(
+      await page.evaluate(
+        () =>
+          document
+            .getAnimations()
+            .filter(
+              (animation) =>
+                animation.playState === "running" &&
+                Number(animation.effect?.getComputedTiming().duration) > 1,
+            ).length,
+      ),
+    ).toBe(0);
     await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
-    await page.screenshot({ path: testInfo.outputPath("pending.png"), fullPage: true });
   } finally {
     gate.resolve();
   }
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
   await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
-  await page.screenshot({ path: testInfo.outputPath("error.png"), fullPage: true });
   await page.unroute("**/api/admin/stores/tablecast-komorebi/devices");
-  await page.getByRole("button", { name: "再試行", exact: true }).click();
+  await page.getByRole("button", { name: "もう一度試す", exact: true }).click();
   await expect(page.getByRole("heading", { name: "端末", exact: true })).toBeVisible();
   await expect(page.getByText("0 件", { exact: true })).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("empty.png"), fullPage: true });
+  // 来店履歴の見出しはfeature外のfile routeが所有するため、そのpending接続だけ実物で残す。
+  const historyGate = Promise.withResolvers<void>();
+  const historyRequested = Promise.withResolvers<void>();
+  await page.route("**/api/admin/stores/tablecast-komorebi/history?*", async (route) => {
+    historyRequested.resolve();
+    await historyGate.promise;
+    await route.continue();
+  });
+  const historyHeading = page.getByRole("heading", { name: "来店履歴", exact: true });
+  let beforeHistory;
+  try {
+    await page.getByRole("link", { name: "来店履歴", exact: true }).click();
+    await historyRequested.promise;
+    await expect(page.locator('[aria-busy="true"]')).toBeVisible();
+    await expect(historyHeading).toBeVisible();
+    await expect(page.getByRole("table")).toBeVisible();
+    beforeHistory = await historyHeading.boundingBox();
+  } finally {
+    historyGate.resolve();
+  }
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  await expect.poll(() => historyHeading.boundingBox()).toEqual(beforeHistory);
   expect(pageErrors).toEqual([]);
-});
-
-test("戻り先なしのログインはフロアを一括取得し、アカウント更新はセッションだけを再取得する", async ({
-  page,
-}) => {
-  await page.goto("/login");
-  await page.getByLabel("メールアドレス", { exact: true }).fill(credentials.email);
-  await page.getByLabel("パスワード", { exact: true }).fill(credentials.password);
-  const requests: string[] = [];
-  page.on("request", (request) => requests.push(new URL(request.url()).pathname));
-  await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/floor$/);
-  await expect(page.getByRole("heading", { name: "フロアの様子", exact: true })).toBeVisible();
-  expect(requests.filter((path) => path === "/api/admin/initial")).toHaveLength(1);
-  expect(requests.filter((path) => /^\/api\/admin\/stores(?:\/[^/]+)?$/.test(path))).toEqual([]);
-
-  await page.goto("/account");
-  await page.getByLabel("名前", { exact: true }).fill("初期取得テスト");
-  requests.length = 0;
-  const refreshed = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === "/api/auth/get-session",
-  );
-  await page.getByRole("button", { name: "保存", exact: true }).click();
-  expect((await refreshed).ok()).toBe(true);
-  await expect(page.getByText("更新しました", { exact: true })).toBeVisible();
-  expect(requests.filter((path) => path === "/api/auth/get-session")).toHaveLength(1);
-  expect(
-    requests.filter((path) => path === "/api/admin/initial" || path === "/api/admin/stores"),
-  ).toEqual([]);
-
-  await page.clock.install();
-  await page.clock.fastForward(31_000);
-  requests.length = 0;
-  const focused = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === "/api/auth/get-session",
-  );
-  await page.evaluate(() => window.dispatchEvent(new Event("visibilitychange")));
-  expect((await focused).ok()).toBe(true);
-  expect(requests.filter((path) => path === "/api/auth/get-session")).toHaveLength(1);
-  expect(requests.filter((path) => path === "/api/admin/initial")).toEqual([]);
-  expect(requests.filter((path) => path === "/api/admin/stores").length).toBeLessThanOrEqual(1);
-});
-
-test("店側PWAの新規ドキュメント起動は転送先のフロアをSSRする", async ({ page, baseURL }) => {
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
-  const manifest = z
-    .object({ start_url: z.string() })
-    .parse(await (await page.request.get("/tablecast-staff.webmanifest")).json());
-  const launch = await page.request.get(manifest.start_url, { maxRedirects: 0 });
-  expect(launch.status()).toBe(307);
-  const destination = launch.headers()["location"];
-  expect(destination).toMatch(/^\/admin\/stores\/[^/]+\/floor$/);
-  const floor = await page.request.get(destination);
-  expect(floor.ok()).toBe(true);
-  expect(await floor.text()).toContain("フロアの様子");
-  expect(floor.headers()["cache-control"]).toBe("private, no-store");
 });

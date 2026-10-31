@@ -45,6 +45,5 @@ TABLECAST_CONTAINER_ORIGIN=http://$tablecast_name.$tablecast_repo.container.loca
 TABLECAST_WEB_PORT=$tablecast_base
 TABLECAST_MAILPIT_PORT=$((tablecast_base + 1))
 TABLECAST_STORYBOOK_PORT=$((tablecast_base + 4))
-TABLECAST_GRAFANA_PORT=$((tablecast_base + 5))
-TABLECAST_TEMPO_PORT=$((tablecast_base + 6))
+TABLECAST_OBSERVABILITY_DIR='$(tablecast_quote "${TABLECAST_OBSERVABILITY_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/tablecast/observability}")'
 EOF

@@ -1,13 +1,13 @@
 import { sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
-import * as schema from "./db/auth-schema";
 import * as business from "./db/business-schema";
-import { createAuth, type AuthEnv } from "./modules/auth/service";
+import { createDatabase } from "./db/client";
+import { type AuthEnv, createAuth } from "./modules/auth/service";
+import { resolveLocalized } from "./modules/catalog/localization";
 import { configurationErrors } from "./modules/catalog/pricing";
 import { configurationSchema } from "./modules/configuration/model";
 import { DomainError, ensure } from "./platform/errors";
-import { localeSchema } from "./platform/model";
+import { staffLocaleSchema } from "./platform/model";
 const id = z
   .string()
   .min(1)
@@ -23,8 +23,9 @@ export const bootstrapInputSchema = z
         .email()
         .max(254)
         .transform((value) => value.toLowerCase()),
-      password: z.string().min(12).max(128),
-      locale: localeSchema,
+      // 旧CLI入力の互換性だけを保ち、パスワードは保存しない。
+      password: z.string().min(12).max(128).optional(),
+      locale: staffLocaleSchema,
     }),
     organization: z.strictObject({
       name,
@@ -44,8 +45,8 @@ export const bootstrapInputSchema = z
         path: ["store", "configuration", ...issue.path],
         message: issue.code,
       });
-    for (const locale of localeSchema.options)
-      if (input.store.configuration.cast.voice[locale] !== null)
+    for (const locale of input.store.configuration.languages)
+      if (resolveLocalized(input.store.configuration.cast.voice, locale) !== null)
         ctx.addIssue({
           code: "custom",
           path: ["store", "configuration", "cast", "voice", locale],
@@ -66,11 +67,11 @@ export const bootstrapInputSchema = z
 export type BootstrapInput = z.infer<typeof bootstrapInputSchema>;
 export type BootstrapEnv = AuthEnv & Pick<TablecastEnv, "TABLECAST_ENV">;
 export type BootstrapResult = {
-  userId: string;
+  configVersion: 1;
   organizationId: string;
   storeId: string;
   tableIds: string[];
-  configVersion: 1;
+  userId: string;
 };
 
 // 管理CLI専用。既存資源の採用・更新や途中失敗からの自動再開は行わない。
@@ -82,14 +83,14 @@ export async function bootstrapDatabase(
   const parsed = bootstrapInputSchema.safeParse(rawInput);
   ensure(parsed.success, "BOOTSTRAP_INVALID", 422);
   const input = parsed.data;
-  const db = drizzle(env.TABLECAST_DB, { schema });
+  const db = createDatabase(env.TABLECAST_DB);
   const progress: {
-    stage: "preflight" | "administrator" | "organization" | "store";
-    userId: string | null;
-    organizationId: string | null;
+    organizationId: null | string;
+    stage: "administrator" | "organization" | "preflight" | "store";
+    userId: null | string;
   } = { stage: "preflight", userId: null, organizationId: null };
   try {
-    const conflict = await db.get<Record<string, unknown> | undefined>(
+    const conflict = await db.get(
       sql`SELECT 1 FROM user WHERE lower(email)=${input.admin.email} UNION ALL SELECT 1 FROM organization WHERE slug=${input.organization.slug} UNION ALL SELECT 1 FROM stores WHERE id=${input.store.id} UNION ALL SELECT 1 FROM restaurant_tables WHERE id IN (SELECT value FROM json_each(${JSON.stringify(input.tables.map((table) => table.id))})) LIMIT 1`,
     );
     ensure(!conflict, "BOOTSTRAP_CONFLICT", 409, progress);
@@ -97,7 +98,17 @@ export async function bootstrapDatabase(
     // 認証API間は同一トランザクションにできないため、例外には判明したIDだけを残す。
     progress.stage = "administrator";
     const auth = createAuth(env, { disabled: true }, db);
-    const { user } = await auth.api.signUpEmail({ body: input.admin });
+    const user = await (
+      await auth.$context
+    ).internalAdapter.createUser(
+      {
+        name: input.admin.name,
+        email: input.admin.email,
+        locale: input.admin.locale,
+        emailVerified: false,
+      },
+      { method: "admin" },
+    );
     progress.userId = user.id;
     progress.stage = "organization";
     const organization = await auth.api.createOrganization({
@@ -143,3 +154,15 @@ export async function bootstrapDatabase(
     throw new DomainError("BOOTSTRAP_FAILED", 503, "BOOTSTRAP_FAILED", progress, { cause: error });
   }
 }
+
+export { isHostedEmulator } from "./modules/auth/preview";
+// 初期化・seed・reset用のCLI契約。HTTPの業務入口には公開しない。
+export { createAuth, tablecastGoogleMockIssuer } from "./modules/auth/service";
+export {
+  configurationErrors,
+  confirmationText,
+  type PlanContext,
+  priceCart,
+} from "./modules/catalog/pricing";
+
+export { DomainError } from "./platform/errors";

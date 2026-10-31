@@ -1,8 +1,8 @@
-import { Brand } from "./brand";
-import { useState, useTransition } from "react";
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
-import { Link, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
+import { type ErrorComponentProps, Link, useRouter } from "@tanstack/react-router";
+import { useState, useTransition } from "react";
 import { useI18n } from "../i18n/locale";
+import { Brand } from "./brand";
 import { ErrorNotice } from "./error-notice";
 import { LoadingState } from "./loading-state";
 

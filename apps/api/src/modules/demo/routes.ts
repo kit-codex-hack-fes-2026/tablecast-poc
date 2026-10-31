@@ -1,25 +1,36 @@
-import { Hono } from "hono";
 import { z } from "zod";
-import type { ApiEnv } from "../../platform/context";
+import { apiFactory } from "../../platform/http";
 import { validate } from "../../platform/validation";
 import { requireStore } from "../auth/middleware";
 import { requireManager } from "../auth/policy";
-import { getSession } from "../tables/queries";
+import { instructionResponse } from "../configuration/instruction-response";
 import { tableOperations } from "../tables/operations-routes";
+import { requireDemo } from "./middleware";
 import { demoUpdateSchema } from "./model";
 import { getDemo } from "./queries";
-import { createDemo, resetDemo, updateDemo } from "./service";
 
-const demoSessionRoutes = new Hono<ApiEnv>()
-  .use("*", async (c, next) => {
-    const demoId = c.req.param("demoId");
-    c.set("actor", { ...c.get("actor"), demoId, tableSessionId: demoId });
-    await getSession(c.get("services"), c.get("actor"));
-    await next();
-  })
-  .get("/", async (c) => c.json(await getDemo(c.get("services"), c.get("actor")), 200))
+const demoSessionRoutes = apiFactory
+  .createApp()
+  .use("*", requireDemo)
+  .get("/", async (c) =>
+    c.json(
+      instructionResponse(
+        await getDemo(c.get("services"), c.get("actor")),
+        c.req.header("X-Tablecast-Instructions"),
+      ),
+      200,
+    ),
+  )
   .patch("/", validate(demoUpdateSchema), async (c) =>
-    c.json(await updateDemo(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
+    c.json(
+      instructionResponse(
+        await (
+          await import("./service")
+        ).updateDemo(c.get("services"), c.get("actor"), c.req.valid("json")),
+        c.req.header("X-Tablecast-Instructions"),
+      ),
+      200,
+    ),
   )
   .post(
     "/reset",
@@ -30,16 +41,26 @@ const demoSessionRoutes = new Hono<ApiEnv>()
     ),
     async (c) =>
       c.json(
-        await resetDemo(c.get("services"), c.get("actor"), c.req.valid("json").expectedVersion),
+        instructionResponse(
+          await (
+            await import("./service")
+          ).resetDemo(c.get("services"), c.get("actor"), c.req.valid("json").expectedVersion),
+          c.req.header("X-Tablecast-Instructions"),
+        ),
         200,
       ),
   )
   .route("/table", tableOperations);
-export const demoRoutes = new Hono<ApiEnv>()
-  .use("*", requireStore)
-  .use("*", async (c, next) => {
+export const demoRoutes = apiFactory
+  .createApp()
+  .post("/", requireStore, async (c) => {
     requireManager(c.get("actor"));
-    await next();
+    return c.json(
+      instructionResponse(
+        await (await import("./service")).createDemo(c.get("services"), c.get("actor")),
+        c.req.header("X-Tablecast-Instructions"),
+      ),
+      200,
+    );
   })
-  .post("/", async (c) => c.json(await createDemo(c.get("services"), c.get("actor")), 200))
   .route("/:demoId", demoSessionRoutes);

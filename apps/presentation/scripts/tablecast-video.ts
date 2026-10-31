@@ -45,7 +45,7 @@ export function validatedPeakDb(log: string) {
   return peak;
 }
 
-export async function createVideo(args: string[]) {
+async function createVideo(args: string[]) {
   const { values } = parseArgs({
     args,
     options: {

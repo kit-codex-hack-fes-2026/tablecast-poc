@@ -1,11 +1,13 @@
+import type { ComponentProps } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { cn, tv, type VariantProps } from "tailwind-variants";
-import type { ComponentProps } from "react";
 import { Button } from "./button";
+import { surfaceMotion } from "./motion-variants";
+import { StyleScopeBoundary } from "./style-scope";
 
 const dialogVariants = tv({
   slots: {
-    viewport: "fixed inset-0 z-41 flex",
+    viewport: "fixed inset-0 z-41 flex data-ending-style:pointer-events-none",
     popup: "flex flex-col bg-card shadow-2xl",
   },
   variants: {
@@ -13,6 +15,10 @@ const dialogVariants = tv({
       center: {
         viewport: "items-center justify-center p-6 max-sm:p-3",
         popup: "max-h-full w-full max-w-xl rounded-xl p-6 max-sm:p-5",
+      },
+      pane: {
+        viewport: "absolute z-30 items-center justify-center p-4 sm:p-6",
+        popup: "max-h-full min-h-0 w-full overflow-hidden rounded-3xl",
       },
       right: { viewport: "justify-end", popup: "max-w-3xl px-6 pt-6 max-sm:px-5 size-full" },
       left: { viewport: "justify-start", popup: "max-w-3xl px-6 pt-6 max-sm:px-5 size-full" },
@@ -39,24 +45,56 @@ export function DialogDescription({ className, ...props }: DialogPrimitive.Descr
   );
 }
 
+/**
+ * 短い確認や詳細を重ねて表示する。
+ * Dialogにopen/onOpenChange、DialogContentにside(center/right/left/pane)とinitialFocus/finalFocusを渡す。
+ * Header内のTitle、Description、Close、Scroll、Footerを組み合わせる。
+ * 閉じるアイコンにはaria-labelが必須。
+ * 長い内容はScrollへ置き、操作を隠さない。
+ * 破壊操作にはConfirmActionを使う。
+ * paneはcontainerで指定したペイン内へ表示し、Portalのテーマは内部で引き継ぐ。
+ */
 export function DialogContent({
   className,
   side = "center",
+  container,
   ...props
-}: DialogPrimitive.Popup.Props & VariantProps<typeof dialogVariants>) {
+}: DialogPrimitive.Popup.Props &
+  VariantProps<typeof dialogVariants> & { container?: DialogPrimitive.Portal.Props["container"] }) {
   const { viewport, popup } = dialogVariants({ side });
   return (
-    <DialogPrimitive.Portal>
-      <DialogPrimitive.Backdrop className="fixed inset-0 bg-foreground/35 backdrop-blur-xs z-40" />
-      <DialogPrimitive.Viewport className={viewport()}>
-        <DialogPrimitive.Popup
-          {...props}
-          data-slot="dialog-content"
-          className={(state) =>
-            popup({ className: typeof className === "function" ? className(state) : className })
-          }
+    <DialogPrimitive.Portal container={container}>
+      <StyleScopeBoundary>
+        <DialogPrimitive.Backdrop
+          data-slot="dialog-backdrop"
+          className={cn(
+            side === "pane"
+              ? "absolute inset-0 z-20 bg-overlay/30"
+              : "fixed inset-0 bg-overlay z-40",
+            surfaceMotion({ kind: "backdrop" }),
+          )}
         />
-      </DialogPrimitive.Viewport>
+        <DialogPrimitive.Viewport data-slot="dialog-viewport" className={viewport()}>
+          <DialogPrimitive.Popup
+            render={(renderProps, state) => (
+              <div {...renderProps} inert={!state.open} aria-hidden={!state.open || undefined} />
+            )}
+            {...props}
+            data-slot="dialog-content"
+            data-theme-part="dialog"
+            className={(state) =>
+              popup({
+                className: cn(
+                  surfaceMotion({
+                    kind: side === "pane" ? "scale" : side === "center" ? "dialog" : side,
+                  }),
+                  typeof className === "function" ? className(state) : className,
+                ),
+              })
+            }
+          />
+        </DialogPrimitive.Viewport>
+      </StyleScopeBoundary>
     </DialogPrimitive.Portal>
   );
 }

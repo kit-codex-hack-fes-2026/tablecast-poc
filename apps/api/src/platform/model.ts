@@ -1,9 +1,27 @@
 import { z } from "zod";
-export const localeSchema = z.enum(["ja", "en"]);
+export const staffLocaleSchema = z.enum(["ja", "en"]);
+export const uiLocaleSchema = z.enum(["ja", "en", "zh-Hans", "ko"]);
+export const localeSchema = z
+  .string()
+  .min(2)
+  .max(35)
+  .refine(
+    (value) => {
+      try {
+        return Intl.getCanonicalLocales(value)[0] === value;
+      } catch {
+        return false;
+      }
+    },
+    { message: "言語コードは正規化したBCP 47形式で指定してください。" },
+  );
+
+export type StaffLocale = z.infer<typeof staffLocaleSchema>;
+export type UiLocale = z.infer<typeof uiLocaleSchema>;
 
 export type Locale = z.infer<typeof localeSchema>;
 
-export const id = z.string().min(1).max(100);
+export const id = z.string().min(1).max(100).meta({ id: "tablecastId" });
 
 export const money = z.number().int().min(0).max(10_000_000);
 

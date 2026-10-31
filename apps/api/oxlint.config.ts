@@ -1,106 +1,14 @@
 import { defineConfig } from "oxlint";
 import rootConfig from "../../oxlint.config.ts";
+import { dependencies } from "./config/dependencies.ts";
+import { files } from "./config/files.ts";
+import { modulePolicies } from "./config/module-contracts.ts";
 
 const root = import.meta.dirname;
-// ファイル単位で分類する。module配下への未分類ファイル追加も検査対象にする。
-const files = [
-  ["app", "src/app.ts"],
-  ["worker", "src/worker.ts"],
-  ["client", "src/client.ts"],
-  ["schema", "src/schema.ts"],
-  ["bootstrap", "src/bootstrap.ts"],
-  ["context", "src/platform/context.ts"],
-  ["telemetry", "src/platform/telemetry.ts"],
-  ["diagnostics", "src/platform/diagnostics.ts"],
-  ["container-metrics", "src/platform/container-metrics.ts"],
-  ["http", "src/platform/{http,validation}.ts"],
-  ["error", "src/platform/errors.ts"],
-  ["model", "src/platform/model.ts"],
-  ["db", "src/db/{auth-schema,business-schema,records}.ts"],
-  ["email", "src/emails/*.{ts,tsx}"],
-  ["runtime", "src/{containers,realtime/store-events}.ts"],
-  ["store-routes", "src/modules/stores/routes.ts"],
-  ["auth-middleware", "src/modules/auth/middleware.ts"],
-  ["auth-factory", "src/modules/auth/{service,options,preview}.ts"],
-  [
-    "voice-operation",
-    "src/modules/voice/{agent,realtime,turns,session,observability,conversation}.ts",
-  ],
-  ["service", "src/modules/voice/runtime.ts"],
-  ["provider", "src/modules/voice/catalog.ts"],
-  ["pure", "src/modules/{catalog/pricing,auth/policy,voice/prompt,voice/diagnostics}.ts"],
-  ["mutation", "src/modules/tables/mutations.ts"],
-  ["model", "src/modules/*/model.ts"],
-  ["query", "src/modules/*/{queries,history}.ts"],
-  ["service", "src/modules/*/service.ts"],
-  ["route", "src/modules/*/*routes.ts"],
-];
-// 左がimport元、右が許可する依存先。外部packageとContextのtype-onlyは別に制限する。
-const dependencies = {
-  app: ["route", "store-routes", "http", "context"],
-  worker: ["app", "runtime", "telemetry", "container-metrics"],
-  "container-metrics": [],
-  telemetry: ["error", "diagnostics"],
-  diagnostics: ["error"],
-  client: ["app", "route", "schema"],
-  schema: ["model"],
-  bootstrap: ["model", "pure", "error", "db", "auth-factory"],
-  context: ["auth-factory", "model"],
-  http: ["http", "error", "telemetry", "diagnostics"],
-  error: [],
-  model: ["model"],
-  db: ["db"],
-  email: ["email", "error"],
-  runtime: ["telemetry"],
-  "auth-factory": ["auth-factory", "model", "db", "email", "error"],
-  "auth-middleware": ["query", "model", "auth-factory", "error"],
-  pure: ["model", "pure", "error"],
-  provider: ["model", "pure", "error"],
-  query: ["query", "db", "model", "pure", "error", "telemetry"],
-  mutation: ["telemetry", "db", "model", "query", "error"],
-  service: [
-    "telemetry",
-    "service",
-    "query",
-    "mutation",
-    "db",
-    "model",
-    "pure",
-    "provider",
-    "auth-factory",
-    "error",
-  ],
-  "voice-operation": [
-    "telemetry",
-    "telemetry",
-    "voice-operation",
-    "service",
-    "query",
-    "mutation",
-    "db",
-    "model",
-    "pure",
-    "provider",
-    "error",
-  ],
-  route: [
-    "route",
-    "service",
-    "query",
-    "voice-operation",
-    "provider",
-    "model",
-    "pure",
-    "auth-middleware",
-    "auth-factory",
-    "http",
-    "error",
-  ],
-  "store-routes": ["service", "query", "model", "auth-middleware", "http", "error"],
-};
 
 export default defineConfig({
   extends: [rootConfig],
+  ignorePatterns: ["src/cloudflare-env.d.ts"],
   jsPlugins: [
     { name: "drizzle", specifier: "eslint-plugin-drizzle" },
     { name: "hono", specifier: "eslint-plugin-hono" },
@@ -136,6 +44,10 @@ export default defineConfig({
         checkAllOrigins: true,
         checkInternals: true,
         policies: [
+          {
+            from: { file: { categories: "auth-factory" } },
+            allow: { to: { file: { path: "src/modules/auth/passkey-policy.ts" } } },
+          },
           ...Object.entries(dependencies).map(([from, to]) => ({
             from: { file: { categories: from } },
             allow: { to: { file: { categories: to } } },
@@ -143,7 +55,7 @@ export default defineConfig({
           // リクエストのDrizzle生成時に認証の関連queryを有効にする。
           {
             from: { file: { categories: "context" } },
-            allow: { to: { file: { path: "src/db/auth-schema.ts" } } },
+            allow: { to: { file: { path: "src/db/client.ts" } } },
           },
           { allow: { to: { module: { origin: ["external", "core"] } } } },
           {
@@ -154,6 +66,8 @@ export default defineConfig({
                   "store-routes",
                   "auth-middleware",
                   "service",
+                  "use-case",
+                  "mcp-tools",
                   "query",
                   "mutation",
                   "voice-operation",
@@ -173,7 +87,11 @@ export default defineConfig({
                   captured: {
                     module: [
                       "catalog",
+                      "statistics",
+                      "customer-points",
+                      "customer-coupons",
                       "configuration",
+                      "games",
                       "devices",
                       "media",
                       "orders",
@@ -189,7 +107,26 @@ export default defineConfig({
             from: { file: { categories: ["model", "pure", "db"] } },
             disallow: { to: { module: { origin: ["external", "core"] } } },
           },
-          { from: { file: { categories: "model" } }, allow: { to: { module: { source: "zod" } } } },
+          {
+            from: { file: { categories: ["model", "pure"] } },
+            allow: { to: { module: { source: "zod" } } },
+          },
+          {
+            from: { file: { path: "src/modules/{catalog/search,configuration/knowledge}.ts" } },
+            allow: { to: { module: { source: "fuse.js" } } },
+          },
+          {
+            from: { file: { path: "src/modules/configuration/knowledge-files.ts" } },
+            allow: { to: { module: { source: ["yaml", "marked"] } } },
+          },
+          {
+            from: { file: { path: "src/modules/configuration/knowledge-archive.ts" } },
+            allow: { to: { module: { source: "fflate" } } },
+          },
+          {
+            from: { file: { path: "src/modules/appearance/{model.ts,css-tree.d.ts}" } },
+            allow: { to: { module: { source: ["css-tree", "css-tree/*"] } } },
+          },
           {
             from: { file: { categories: "db" } },
             allow: { to: { module: { source: ["drizzle-orm", "drizzle-orm/*"] } } },
@@ -199,11 +136,15 @@ export default defineConfig({
               file: {
                 categories: [
                   "service",
+                  "use-case",
+                  "mcp-tools",
                   "query",
                   "mutation",
                   "voice-operation",
                   "auth-factory",
                   "provider",
+                  "integration",
+                  "mcp-tools",
                 ],
               },
             },
@@ -215,10 +156,28 @@ export default defineConfig({
           },
           {
             from: {
-              file: { categories: ["service", "query", "mutation", "voice-operation", "provider"] },
+              file: {
+                categories: [
+                  "service",
+                  "query",
+                  "mutation",
+                  "voice-operation",
+                  "provider",
+                  "integration",
+                  "mcp-tools",
+                  "integration",
+                  "use-case",
+                  "mcp-tools",
+                ],
+              },
             },
             disallow: { to: { module: { source: "drizzle-orm", internalPath: "d1" } } },
           },
+          {
+            from: { file: { categories: ["context", "pure"] } },
+            allow: { to: { file: { path: "src/db/records.ts" } }, dependency: { kind: "type" } },
+          },
+          ...modulePolicies,
         ],
       },
     ],

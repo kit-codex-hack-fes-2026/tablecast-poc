@@ -1,0 +1,60 @@
+name: TableCastの差分テスト選択
+description: PRの比較結果から実行範囲を選び、不明な場合は全件へ戻す
+outputs:
+  web:
+    description: Web単体テストの実行範囲
+    value: ${{ steps.plan.outputs.web }}
+  components:
+    description: Browserテスト・Storyの実行範囲
+    value: ${{ steps.plan.outputs.components }}
+  api:
+    description: APIテストの実行範囲
+    value: ${{ steps.plan.outputs.api }}
+  runtime:
+    description: 開発runtimeテストの実行範囲
+    value: ${{ steps.plan.outputs.runtime }}
+  fixtures:
+    description: fixtureテストの実行範囲
+    value: ${{ steps.plan.outputs.fixtures }}
+  presentation:
+    description: 動画制作テストの実行範囲
+    value: ${{ steps.plan.outputs.presentation }}
+  e2e:
+    description: E2Eテストの実行範囲
+    value: ${{ steps.plan.outputs.e2e }}
+  build:
+    description: Workersをbuildするか
+    value: ${{ steps.plan.outputs.build }}
+  base:
+    description: 比較に用いたmerge baseのSHA
+    value: ${{ steps.plan.outputs.base }}
+  files:
+    description: 比較したファイル名のJSON配列
+    value: ${{ steps.plan.outputs.files }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      id: plan
+      with:
+        script: |
+          const {selectTablecastTests} = await import(`${process.env.GITHUB_WORKSPACE}/scripts/tablecast-test-selection.ts`);
+          let files = [];
+          let base = '';
+          const pr = context.payload.pull_request;
+          const eligible = context.eventName === 'pull_request' && pr.head.ref !== 'staging';
+          if (eligible) {
+            try {
+              const {data} = await github.rest.repos.compareCommitsWithBasehead({...context.repo, basehead: `${pr.base.sha}...${pr.head.sha}`});
+              if (!/^[a-f0-9]{40}$/.test(data.merge_base_commit.sha) || !data.files?.length || data.files.length >= 300) throw new Error('差分を完全に取得できません');
+              files = data.files.map(({filename, status, previous_filename}) => ({filename, status, previous_filename}));
+              base = data.merge_base_commit.sha;
+            } catch {
+              core.notice('比較に失敗したため全件を実行します');
+            }
+          }
+          const selection = selectTablecastTests(files, eligible ? 'pull_request' : 'full');
+          for (const [key, value] of Object.entries(selection)) core.setOutput(key, String(value));
+          core.setOutput('base', base);
+          core.setOutput('files', JSON.stringify(files.map(file => file.filename)));
+          await core.summary.addHeading('テストの選択').addRaw(selection.reason).addCodeBlock(JSON.stringify(selection, null, 2), 'json').write();

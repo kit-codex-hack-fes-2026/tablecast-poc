@@ -1,18 +1,19 @@
+import type { BetterAuthOptions } from "better-auth";
 import { getOAuthProviderApi, oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
-import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthEndpoint } from "better-auth/api";
-import { deviceAuthorization, jwt, organization, redeemDeviceCode } from "better-auth/plugins";
+import { deviceAuthorization, jwt, type organization, redeemDeviceCode } from "better-auth/plugins";
 import { z } from "zod";
+import { identityOptions } from "./identity-options";
 export function authOptions(
   origin: string,
   secret: string,
-  sendInvitationEmail?: (data: {
-    id: string;
-    email: string;
-    organization: { name: string };
-  }) => Promise<void>,
+  notifications: Pick<
+    NonNullable<Parameters<typeof organization>[0]>,
+    "organizationHooks" | "sendInvitationEmail"
+  > = {},
 ) {
+  const identity = identityOptions(origin, secret, notifications);
   const oauth = {
     // 連携取消を即時反映するため、標準のDB管理アクセストークンを使用する。
     disableJwtPlugin: true,
@@ -41,30 +42,9 @@ export function authOptions(
     }),
   };
   return {
-    appName: "TableCast",
-    baseURL: origin,
-    basePath: "/api/auth",
-    secret,
-    trustedOrigins: [origin],
-    emailAndPassword: { enabled: true, minPasswordLength: 12, requireEmailVerification: true },
-    account: {
-      accountLinking: { enabled: true, allowDifferentEmails: false, allowUnlinkingAll: false },
-    },
-    user: {
-      additionalFields: { locale: { type: ["ja", "en"], required: false, defaultValue: "ja" } },
-    },
-    advanced: {
-      database: { joins: true },
-      cookiePrefix: "tablecast",
-      useSecureCookies: origin.startsWith("https://"),
-      defaultCookieAttributes: { httpOnly: true, sameSite: "lax" },
-    },
+    ...identity,
     plugins: [
-      organization({
-        allowUserToCreateOrganization: false,
-        sendInvitationEmail,
-        requireEmailVerificationOnInvitation: true,
-      }),
+      ...identity.plugins,
       passkey({ rpID: new URL(origin).hostname, rpName: "TableCast", origin }),
       // Cookie認証で使わないJWTの生成とJWKS取得をセッション確認から外す。
       jwt({ disableSettingJwtHeader: true }),

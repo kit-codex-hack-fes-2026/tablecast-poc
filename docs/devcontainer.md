@@ -2,13 +2,15 @@
 
 cloneから起動までの手順は [セットアップ](setup.md#2a-dev-containerを使う) が正本である。
 
+ホスト開発はPortlessでworktree名ごとのURLを使う。Dev ContainerはCompose・Caddyの構成を維持し、コンテナ内へPortlessやホストの共有proxy stateを持ち込まない。
+
 ## runtimeと分離
 
-Node 24.7.0、Bun 1.3.13を使用する。Mailpit・Caddyはイメージ内の実行ファイル、Grafana LGTMはComposeの別サービスとして起動する。Docker socketを渡さず、コンテナ内でDockerを必要とするE2EはホストまたはCIで行う。
+Node 24.22.0、Bun 1.4.3を使用する。Mailpit・Caddyはイメージ内の実行ファイル、Grafana LGTM/Langfuseはホスト共有のComposeで先に起動し、外部network `tablecast-observability-local`から接続する。初回はホストで`sh scripts/tablecast-observability.sh up`を実行する。Docker socketを渡さず、コンテナ内でDockerを必要とするE2EはホストまたはCIで行う。
 
 `tablecast-init.sh` はホストのGit共通ディレクトリとworktree実パスからCompose設定を生成する。メインcheckoutは `main`、追加worktreeはフォルダー名、Codexの同名repoフォルダーでは親のIDを使う。branch名やcommitには依存しない。Compose project・volumeと公開ポートを実パスごとに分離する。
 
-workspaceとGit共通ディレクトリをホストと同じ絶対パスへmountする。依存、`.local`、Webのbuild出力とWrangler状態はLinux用のvolumeで覆い、ホストのmacOS用依存と分ける。Git共通ディレクトリは共有されるため、他worktreeのbranch・設定・indexを変更しない。
+workspaceとGit共通ディレクトリをホストと同じ絶対パスへmountする。依存、`.local`、Web/APIの`.cloudflare`出力とlocal stateはLinux用のvolumeで覆い、ホストのmacOS用依存と分ける。Git共通ディレクトリは共有されるため、他worktreeのbranch・設定・indexを変更しない。
 
 コンテナ内のWeb入口はCaddyの3000、Viteは3001。模擬OAuthをCaddy経由の同一originへ集約する。音声はホストのブラウザーからGPT-Liveへ直接接続する。Storybookは6006の全interfaceで待ち受け、ホストにはloopbackだけで公開する。
 

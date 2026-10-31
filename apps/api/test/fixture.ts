@@ -1,11 +1,13 @@
-import { reset } from "cloudflare:test";
+import { makeSignature } from "better-auth/crypto";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import * as authTables from "../src/db/auth-schema";
 import * as businessTables from "../src/db/business-schema";
 import { type Actor } from "../src/modules/auth/model";
-import { createAuth, hashDeviceToken } from "../src/modules/auth/service";
-import { ensure } from "../src/platform/errors";
+import { createAuth } from "../src/modules/auth/service";
+import { hashDeviceToken } from "../src/modules/auth/token";
+import { setVoiceSession } from "../src/modules/voice/service";
+import { createApiServices } from "../src/platform/context";
 import { configuration } from "./configuration-fixture";
 import { fixtureDb, insertFixture } from "./database-fixture";
 
@@ -16,36 +18,37 @@ export const device = {
 } satisfies Actor;
 export const deviceToken = "tablecast-fixture-device-token";
 export { configuration, text } from "./configuration-fixture";
-export async function resetFixtureStorage() {
-  // workerd 1.20260903.1は停止中のD1をreset対象から漏らすため、直前に起動する。
-  await env.TABLECAST_DB.prepare("SELECT 1").first();
-  await reset();
+export { resetFixtureStorage } from "./storage-fixture";
+
+// 実認証handlerが発行したCookieを、その後のHTTP要求へ渡す。
+export function responseCookies(response: Response) {
+  return response.headers
+    .getSetCookie()
+    .map((value) => value.split(";")[0])
+    .join("; ");
+}
+
+// 業務の前提だけに使い、登録・ログイン自体の保証は実WebAuthnの試験へ置く。
+export function addFixturePasskey(userId: string, id = "tablecast-fixture-passkey") {
+  return fixtureDb.insert(authTables.passkey).values({
+    id,
+    userId,
+    credentialID: btoa(id),
+    publicKey: "tablecast-fixture-public-key",
+    counter: 0,
+    deviceType: "multiDevice",
+    backedUp: true,
+  });
 }
 
 export async function setupFixture() {
-  const registration = await createAuth(env).api.signUpEmail({
-    body: {
-      email: "tablecast-staff@example.test",
-      password: "tablecast-local-fixture-password",
-      name: "店員",
-    },
-    asResponse: true,
-  });
-  ensure(registration.ok, "FIXTURE_AUTH_FAILED", 503);
-  const user = await fixtureDb
-    .select({ id: authTables.user.id })
-    .from(authTables.user)
-    .where(eq(authTables.user.email, "tablecast-staff@example.test"))
-    .get();
-  ensure(user, "FIXTURE_USER_MISSING", 503);
-  await fixtureDb
-    .update(authTables.user)
-    .set({ emailVerified: true })
-    .where(eq(authTables.user.id, user.id));
-  const response = await createAuth(env).api.signInEmail({
-    body: { email: "tablecast-staff@example.test", password: "tablecast-local-fixture-password" },
-    asResponse: true,
-  });
+  const auth = createAuth(env);
+  const ctx = await auth.$context;
+  const user = await ctx.internalAdapter.createUser(
+    { email: "tablecast-staff@example.test", name: "店員", emailVerified: true },
+    { method: "admin" },
+  );
+  const session = await ctx.internalAdapter.createSession(user.id);
   const now = Date.now();
   await env.TABLECAST_DB.batch([
     insertFixture(authTables.organization, {
@@ -104,9 +107,27 @@ export async function setupFixture() {
       role: "owner",
       tableSessionId: "tablecast-session",
     } satisfies Actor,
-    cookie: response.headers
-      .getSetCookie()
-      .map((value) => value.split(";")[0])
-      .join("; "),
+    cookie: `tablecast.session_token=${encodeURIComponent(`${session.token}.${await makeSignature(session.token, env.TABLECAST_AUTH_SECRET)}`)}`,
   };
+}
+
+export async function setupVoiceFixture(voiceSessionId: string, turnId: string) {
+  await setupFixture();
+  const services = createApiServices(env);
+  await setVoiceSession(services, device, voiceSessionId);
+  await services.db.batch([
+    services.db.insert(businessTables.voiceTurns).values({
+      id: turnId,
+      voice_session_id: voiceSessionId,
+      table_session_id: device.tableSessionId,
+      store_id: device.storeId,
+      status: "started",
+      started_at: Date.now(),
+      locale: "ja",
+    }),
+    services.db
+      .update(businessTables.tableSessions)
+      .set({ active_turn_id: turnId })
+      .where(eq(businessTables.tableSessions.id, device.tableSessionId)),
+  ]);
 }

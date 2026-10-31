@@ -1,10 +1,26 @@
-import { ensure } from "../../platform/errors";
 import type { Locale } from "../../platform/model";
 import type { Configuration, ConfigurationIssue } from "../configuration/model";
 import type { Cart, CartLine, PricedLine, Snapshot } from "../orders/model";
 import type { Plan } from "./model";
+import { ensure } from "../../platform/errors";
+import { lintStoreSkills } from "../configuration/knowledge-files";
+import { maxCartLines } from "../orders/model";
+import { evaluateCondition, productConditionErrors } from "./conditions";
+import { productFoodErrors, productFoodInformation } from "./food";
+import { localizedNames, resolveLocalized, uiLocale } from "./localization";
 export function configurationErrors(config: Configuration): ConfigurationIssue[] {
-  const errors: ConfigurationIssue[] = [];
+  const errors: ConfigurationIssue[] = lintStoreSkills(config.cast.skills ?? [])
+    .filter((issue) => issue.severity === "error")
+    .map((issue) => ({
+      code: "KNOWLEDGE_INVALID",
+      path: [
+        "cast",
+        "skills",
+        config.cast.skills?.findIndex((skill) => skill.id === issue.skillId) ?? 0,
+        "files",
+      ],
+      params: { skillId: issue.skillId, file: issue.path, issue: issue.code },
+    }));
   const unique = (items: { id: string }[], path: ConfigurationIssue["path"]) => {
     const seen = new Set<string>();
     for (const [index, item] of items.entries()) {
@@ -17,13 +33,41 @@ export function configurationErrors(config: Configuration): ConfigurationIssue[]
       seen.add(item.id);
     }
   };
+  unique(config.guides ?? [], ["guides"]);
   unique(config.categories, ["categories"]);
   unique(config.products, ["products"]);
   unique(config.plans, ["plans"]);
+  unique(config.banners ?? [], ["banners"]);
   const categories = new Set(config.categories.map((c) => c.id));
   const products = new Set(config.products.map((p) => p.id));
+  for (const [index, guide] of (config.guides ?? []).entries()) {
+    for (const [productIndex, productId] of guide.productIds.entries()) {
+      if (!products.has(productId))
+        errors.push({
+          code: "PRODUCT_NOT_FOUND",
+          path: ["guides", index, "productIds", productIndex],
+          params: { productId },
+        });
+    }
+  }
+
+  for (const [bannerIndex, banner] of (config.banners ?? []).entries()) {
+    unique(banner.hotspots, ["banners", bannerIndex, "hotspots"]);
+    for (const [spotIndex, spot] of banner.hotspots.entries()) {
+      if (!products.has(spot.productId))
+        errors.push({
+          code: "PRODUCT_NOT_FOUND",
+          path: ["banners", bannerIndex, "hotspots", spotIndex, "productId"],
+          params: { productId: spot.productId },
+        });
+    }
+  }
   for (const [productIndex, product] of config.products.entries()) {
     const productPath = ["products", productIndex];
+    errors.push(
+      ...productConditionErrors(product, productPath),
+      ...productFoodErrors(product, productPath),
+    );
     if (!categories.has(product.categoryId))
       errors.push({
         code: "CATEGORY_NOT_FOUND",
@@ -114,20 +158,21 @@ export function configurationErrors(config: Configuration): ConfigurationIssue[]
 }
 
 export type PlanContext = {
-  id: string;
-  startedAt: number;
-  rules: Plan;
   guestCount: number;
+  id: string;
+  lastOrderAt: null | number;
   orderedQuantity: number;
-  lastOrderAt: number | null;
+  rules: Plan;
+  startedAt: number;
 };
 export function priceCart(
-  config: Configuration,
+  config: Pick<Configuration, "products">,
   lines: CartLine[],
   version: number,
-  plan?: PlanContext | null,
+  plan?: null | PlanContext,
   now = Date.now(),
 ): Cart {
+  ensure(lines.length <= maxCartLines, "CART_LINE_LIMIT", 422, { max: maxCartLines });
   ensure(new Set(lines.map((line) => line.id)).size === lines.length, "DUPLICATE_LINE", 422);
   const priced: PricedLine[] = lines.map((line) => {
     const product = config.products.find((item) => item.id === line.productId);
@@ -140,6 +185,7 @@ export function priceCart(
     );
     const selectedIds = new Set(line.selections.map((s) => s.optionId));
     const missing: string[] = [];
+    const conditionIssues: NonNullable<PricedLine["conditionIssues"]> = [];
     const options: PricedLine["options"] = [];
     for (const selection of line.selections) {
       const group = product.modifiers.find((g) =>
@@ -160,10 +206,23 @@ export function priceCart(
       );
       for (const required of option.requires)
         if (!selectedIds.has(required)) missing.push(required);
+      const conditions = option.conditions;
+      if (conditions?.excludes)
+        ensure(!evaluateCondition(conditions.excludes, selectedIds), "OPTION_COMBINATION", 422, {
+          optionId: option.id,
+          relation: "excludes",
+          expression: conditions.excludes,
+        });
+      if (conditions?.requires && !evaluateCondition(conditions.requires, selectedIds))
+        conditionIssues.push({
+          optionId: option.id,
+          relation: "requires",
+        });
+      const names = localizedNames(option.text);
       options.push({
         id: option.id,
-        name: { ja: option.text.ja.displayName, en: option.text.en.displayName },
-        speechName: { ja: option.text.ja.speechName, en: option.text.en.speechName },
+        name: names.name,
+        speechName: names.speechName,
         quantity: selection.quantity,
         priceDelta: option.priceDelta,
       });
@@ -193,13 +252,14 @@ export function priceCart(
     ensure(unitPrice >= 0, "NEGATIVE_PRICE", 422);
     return {
       ...line,
-      name: { ja: product.text.ja.displayName, en: product.text.en.displayName },
-      speechName: { ja: product.text.ja.speechName, en: product.text.en.speechName },
+      ...localizedNames(product.text),
       options,
       unitPrice,
       total: unitPrice * line.quantity,
       missing: [...new Set(missing)],
+      ...(conditionIssues.length ? { conditionIssues } : {}),
       planCovered: covered,
+      foodInformation: productFoodInformation(product, line.selections),
     };
   });
   const coveredQuantity = priced
@@ -229,7 +289,9 @@ export function priceCart(
     version,
     lines: priced,
     total: priced.reduce((sum, line) => sum + line.total, 0),
-    complete: priced.length > 0 && priced.every((line) => line.missing.length === 0),
+    complete:
+      priced.length > 0 &&
+      priced.every((line) => line.missing.length === 0 && !line.conditionIssues?.length),
   };
 }
 
@@ -239,26 +301,39 @@ export function confirmationText(
   locale: Locale,
   plan: Snapshot["plan"],
 ): string {
-  const formatted = new Intl.NumberFormat(locale === "ja" ? "ja-JP" : "en-GB");
+  const language = uiLocale(locale);
+  const formatted = new Intl.NumberFormat(language === "en" ? "en-GB" : language);
   const items = lines
     .map((line) => {
       const options = line.options
         .map(
           (o) =>
-            `${o.speechName[locale]}${o.quantity > 1 ? (locale === "ja" ? `${o.quantity}点` : ` × ${o.quantity}`) : ""}`,
+            `${resolveLocalized(o.speechName, locale)}${o.quantity > 1 ? (locale === "ja" ? `${o.quantity}点` : ` × ${o.quantity}`) : ""}`,
         )
         .join(locale === "ja" ? "、" : ", ");
-      return locale === "ja"
+      if (language === "zh-Hans")
+        return `${resolveLocalized(line.speechName, locale)}${options ? `，${options}` : ""} × ${line.quantity}，${formatted.format(line.total)}日元`;
+      if (language === "ko")
+        return `${resolveLocalized(line.speechName, locale)}${options ? `, ${options}` : ""} ${line.quantity}개, ${formatted.format(line.total)}엔`;
+      return language === "ja"
         ? `${line.speechName.ja}${options ? `、${options}` : ""}を${line.quantity}点、${formatted.format(line.total)}円`
-        : `${line.quantity} ${line.speechName.en}${options ? ` with ${options}` : ""}, ${formatted.format(line.total)} yen`;
+        : `${line.quantity} ${resolveLocalized(line.speechName, locale)}${options ? ` with ${options}` : ""}, ${formatted.format(line.total)} yen`;
     })
     .join(locale === "ja" ? "。" : ". ");
   const planText = plan
     ? locale === "ja"
       ? `適用プランは${plan.name.ja}です。`
-      : `Plan: ${plan.name.en}. `
+      : language === "zh-Hans"
+        ? `套餐：${resolveLocalized(plan.name, locale)}。`
+        : language === "ko"
+          ? `이용 플랜: ${resolveLocalized(plan.name, locale)}. `
+          : `Plan: ${resolveLocalized(plan.name, locale)}. `
     : "";
-  return locale === "ja"
+  if (language === "zh-Hans")
+    return `${items}。${planText}合计${formatted.format(total)}日元。确认提交此订单吗？`;
+  if (language === "ko")
+    return `${items}. ${planText}총 ${formatted.format(total)}엔입니다. 이 내용으로 주문할까요?`;
+  return language === "ja"
     ? `${items}。${planText}合計${formatted.format(total)}円です。この内容で注文を送信してよろしいですか。`
     : `${items}. ${planText}The total is ${formatted.format(total)} yen. Shall I submit this order?`;
 }

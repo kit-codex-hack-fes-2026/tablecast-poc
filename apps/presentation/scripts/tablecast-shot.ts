@@ -29,7 +29,7 @@ export const shotSchema = z.object({
   hold: z.number().min(2.5).max(30),
 });
 export type Shot = z.infer<typeof shotSchema>;
-export const shotEvidenceSchema = z.object({
+const shotEvidenceSchema = z.object({
   sceneId: z.string(),
   definition: z.string(),
   readyAt: z.number(),
@@ -104,7 +104,7 @@ export function verifyShotEdit(
   if (JSON.stringify(expected.media?.zoom) !== JSON.stringify(scene.media?.zoom))
     throw new Error(`ズームが撮影時の位置・時刻と異なります。再編集してください: ${scene.id}`);
 }
-export function shotSubject(page: Page, shot: Shot) {
+function shotSubject(page: Page, shot: Shot) {
   const candidates = page.locator(shot.subject.selector);
   return shot.subject.text
     ? candidates.filter({ hasText: new RegExp(shot.subject.text) })

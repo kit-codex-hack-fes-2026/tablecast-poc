@@ -21,6 +21,59 @@ args = ["--no-env-file", "scripts/tablecast-grafana-mcp.ts", "cloud"]
 startup_timeout_sec = 60
 tool_timeout_sec = 60
 
+# Langfuseは履歴の読み取りに限定する。書き込みを伴う評価は明示したCLIから実行する。
+[mcp_servers.tablecast-langfuse-local]
+url = "http://127.0.0.1:3301/api/public/mcp"
+http_headers_helper = "bun --no-env-file scripts/tablecast-langfuse-headers.ts local"
+enabled_tools = [
+  "listObservations",
+  "getObservation",
+  "getObservationFieldSchema",
+  "getObservationFilterSchema",
+  "getObservationFilterValues",
+  "listPrompts",
+  "getPrompt",
+  "listDatasets",
+  "getDataset",
+  "listDatasetItems",
+  "getDatasetItem",
+  "listScores",
+  "getScore",
+  "queryMetrics",
+  "getMetricsSchema",
+  "listExperiments",
+  "listExperimentItems",
+  "getHealth",
+]
+startup_timeout_sec = 60
+tool_timeout_sec = 60
+
+[mcp_servers.tablecast-langfuse-cloud]
+url = "https://jp.cloud.langfuse.com/api/public/mcp"
+http_headers_helper = "bun --no-env-file scripts/tablecast-langfuse-headers.ts cloud"
+enabled_tools = [
+  "listObservations",
+  "getObservation",
+  "getObservationFieldSchema",
+  "getObservationFilterSchema",
+  "getObservationFilterValues",
+  "listPrompts",
+  "getPrompt",
+  "listDatasets",
+  "getDataset",
+  "listDatasetItems",
+  "getDatasetItem",
+  "listScores",
+  "getScore",
+  "queryMetrics",
+  "getMetricsSchema",
+  "listExperiments",
+  "listExperimentItems",
+  "getHealth",
+]
+startup_timeout_sec = 60
+tool_timeout_sec = 60
+
 [mcp_servers.tablecast-storybook]
 # 起動ログのportに合わせる。Dev Container外からはホスト公開portを使う。
 url = "http://127.0.0.1:6006/mcp"
@@ -29,3 +82,11 @@ url = "http://127.0.0.1:6006/mcp"
 # 登録後に codex mcp login tablecast-cloudflare でOAuth認可する。
 # [mcp_servers.tablecast-cloudflare]
 # url = "https://mcp.cloudflare.com/mcp"
+
+[mcp_servers.tablecast-fallow]
+command = "bun"
+args = ["--no-env-file", "x", "--no-install", "--package", "fallow", "fallow-mcp"]
+# Codexが動くホスト上のworktree絶対パスへ置き換える。
+cwd = "/absolute/path/to/tablecast-poc"
+startup_timeout_sec = 60
+tool_timeout_sec = 60

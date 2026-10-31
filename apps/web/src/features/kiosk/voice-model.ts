@@ -1,45 +1,86 @@
 import type { Locale } from "@tablecast/api/schema";
 export type VoiceStatus =
-  | "idle"
   | "connecting"
+  | "error"
+  | "idle"
   | "listening"
-  | "thinking"
+  | "paused"
   | "speaking"
   | "stopping"
-  | "paused"
-  | "error";
+  | "thinking";
+
+export const voiceStatusLabels = {
+  idle: "kiosk_voice_paused",
+  paused: "kiosk_voice_paused",
+  connecting: "kiosk_voice_connecting",
+  listening: "kiosk_voice_listening",
+  thinking: "kiosk_voice_thinking",
+  speaking: "kiosk_voice_speaking",
+  stopping: "kiosk_voice_stopping",
+  error: "kiosk_voice_error",
+} as const;
 export type LiveMessage = {
-  id: string;
-  role: "user" | "assistant";
-  turnId?: string;
-  text: string;
-  rawText?: string;
-  final: boolean;
-  interrupted?: boolean;
   createdAt: number;
+  displayIncomplete?: boolean;
+  final: boolean;
+  id: string;
+  interrupted?: boolean;
+  locale?: Locale;
+  rawText?: string;
+  role: "assistant" | "user";
   speaker?: string;
   streamId?: string;
-  locale?: Locale;
-  displayIncomplete?: boolean;
+  text: string;
+  turnId?: string;
 };
-export type MicrophoneError = "permission" | "empty" | "disconnected" | "failed" | "unsupported";
+export type MicrophoneError = "disconnected" | "empty" | "failed" | "permission" | "unsupported";
 export type MicrophoneView = {
-  devices: { deviceId: string; label: string }[];
-  selectedId: string;
   activeLabel?: string;
-  loading?: boolean;
-  switching?: boolean;
-  permissionRequired?: boolean;
-  limited?: boolean;
+  devices: { deviceId: string; label: string }[];
   error?: MicrophoneError;
+  limited?: boolean;
+  loading?: boolean;
+  permissionRequired?: boolean;
+  selectedId: string;
+  switching?: boolean;
 };
 export const initialMicrophone: MicrophoneView = { devices: [], selectedId: "default" };
 export type VoiceView = {
-  microphone?: MicrophoneView;
-  status: VoiceStatus;
-  error?: "permission" | "unconfigured" | "connection" | "active";
+  citations?: { title: string; url: string }[];
+  error?: "active" | "connection" | "permission" | "unconfigured";
+  inputTrack?: MediaStreamTrack;
   interim?: string;
   messages?: LiveMessage[];
-  inputTrack?: MediaStreamTrack;
+  microphone?: MicrophoneView;
   outputTrack?: MediaStreamTrack;
+  progress?: { stage: "reading" | "searching" | "thinking"; summary: string };
+  status: VoiceStatus;
+  suggestions?: string[];
+};
+
+export type VoiceCameraState = {
+  facing?: "environment" | "user";
+  permission?: "unknown" | PermissionState;
+  status:
+    | "capturing"
+    | "off"
+    | "permission-denied"
+    | "reading"
+    | "ready"
+    | "starting"
+    | "unavailable";
+};
+
+export type VoiceCamera = {
+  capture: (
+    signal: AbortSignal,
+    maxBytes: number,
+  ) => Promise<
+    | {
+        error: "CAMERA_OFF" | "CAMERA_PERMISSION_DENIED" | "CAMERA_STARTING" | "CAMERA_UNAVAILABLE";
+      }
+    | { imageUrl: string }
+  >;
+  complete: () => void;
+  getState?: () => VoiceCameraState;
 };

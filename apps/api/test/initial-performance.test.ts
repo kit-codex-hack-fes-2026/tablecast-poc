@@ -1,16 +1,16 @@
-import { env } from "cloudflare:workers";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { z } from "zod";
 import app from "../src/app";
-import { stores } from "../src/db/business-schema";
+import { stores } from "../src/db/table-schema";
 import { catalogSchema } from "../src/schema";
 import { fixtureDb } from "./database-fixture";
 import { configuration, setupFixture } from "./fixture";
 import { measuredDatabase } from "./measured-database";
 
-it("商品が100件でも初期取得は認可済みの全商品と価格・版を4往復以内で返す", async () => {
+it("商品が100件でも初期取得は認可済みの全商品と価格・版を3往復以内で返す", async () => {
   const { cookie, staff } = await setupFixture();
   for (const count of [1, 100]) {
     const expanded = {
@@ -61,7 +61,7 @@ it("商品が100件でも初期取得は認可済みの全商品と価格・版�
         configuration: expanded,
       });
       expect(catalog.configuration.products).toHaveLength(count);
-      expect(after.stats.roundtrips).toBeLessThanOrEqual(4);
+      expect(after.stats.roundtrips).toBeLessThanOrEqual(3);
       expect(after.stats.roundtrips).toBeLessThan(before.stats.roundtrips);
       const bytes = new TextEncoder().encode(JSON.stringify(initial)).length;
       const catalogBytes = new TextEncoder().encode(JSON.stringify(catalog)).length;

@@ -1,60 +1,20 @@
-import type { TableEvent } from "@tablecast/api/schema";
-import type { ReactNode } from "react";
-import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render } from "vitest-browser-react";
-import { catalog, product } from "../../../.storybook/tablecast-fixtures";
-import { MotionProvider } from "../../components/motion-provider";
-import { LocaleProvider } from "../../i18n/locale";
-import { VoicePanel } from "./voice-panel";
-import { conversationLines, type ConversationLine } from "./conversation-model";
+import { expect, it, vi } from "vitest";
+import { render } from "vitest-browser-react";
 import type { LiveMessage } from "./voice-model";
+import { StoreTheme } from "../../components/store-theme";
+import { catalog, product } from "../../test-support/tablecast-fixtures";
 import "../../styles.css";
-
-const startedAt = 1788645000000;
-function event(cursor: number, kind: string, data: Record<string, unknown>): TableEvent {
-  return {
-    cursor,
-    kind,
-    data,
-    storeId: catalog.storeId,
-    tableSessionId: "tablecast-session",
-    createdAt: startedAt + cursor * 1000,
-  };
-}
-const line: ConversationLine = {
-  id: "tablecast-caption-event",
-  turnId: "tablecast-caption-group",
-  role: "user",
-  text: "お茶をください",
-  locale: "ja",
-  createdAt: startedAt,
-  interrupted: false,
-};
-const started = event(1, "voice.turn", { turnId: "tablecast-business", status: "started" });
-const tool = event(2, "voice.tool", {
-  turnId: "tablecast-business",
-  toolCallId: "tablecast-call",
-  toolName: "getCatalog",
-  state: "running",
-});
-const caption = event(3, "voice.user", {
-  role: "user",
-  text: line.text,
-  turnId: line.turnId,
-  locale: "ja",
-});
-function Surface({ children, locale = "ja" }: { children: ReactNode; locale?: "ja" | "en" }) {
-  return (
-    <LocaleProvider initialLocale={locale}>
-      <MotionProvider>
-        <div className="h-160 max-w-2xl">{children}</div>
-      </MotionProvider>
-    </LocaleProvider>
-  );
-}
-afterEach(async () => {
-  await cleanup();
-});
+import { type ConversationLine, conversationLines } from "./conversation-model";
+import {
+  caption,
+  event,
+  line,
+  started,
+  startedAt,
+  Surface,
+  tool,
+} from "./test-support/voice-panel-fixture";
+import { VoicePanel } from "./voice-panel";
 
 it("保存通知と字幕の続きが届いても吹き出しを作り直さず前後の発話やツールとの位置を保つ", async () => {
   const messages: LiveMessage[] = [
@@ -93,6 +53,9 @@ it("保存通知と字幕の続きが届いても吹き出しを作り直さず�
       />
     </Surface>,
   );
+  const camera = document.querySelector("video");
+  const controls = document.querySelector("[data-theme-part=voice-controls]");
+  const controlsBottom = controls?.getBoundingClientRect().bottom;
   const beforeGuest = screen.getByText("刺身に合う日本酒をください").element().closest("article");
   const beforeReply = screen.getByText("辛口の日本酒です").element().closest("article");
   const nextGuest = screen.getByText("冷やでお願いします").element().closest("article");
@@ -134,6 +97,18 @@ it("保存通知と字幕の続きが届いても吹き出しを作り直さず�
   const replyArticle = reply.element().closest("article");
   expect(guestArticle).toBe(beforeGuest);
   expect(replyArticle).toBe(beforeReply);
+  expect(document.querySelector("video")).toBe(camera);
+  expect(document.querySelector("[data-theme-part=voice-controls]")).toBe(controls);
+  expect(controls?.getBoundingClientRect().bottom).toBe(controlsBottom);
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const animatedTranscript = replyArticle?.querySelector("[data-sd-animate]");
+  expect(reducedMotion && Boolean(animatedTranscript)).toBe(false);
+  const reducedMotionAnimations = reducedMotion ? document.getAnimations() : [];
+  expect(
+    reducedMotionAnimations.every(
+      (animation) => Number(animation.effect?.getTiming().duration) <= 1,
+    ),
+  ).toBe(true);
   if (!guestArticle || !replyArticle || !nextGuest) throw new Error("会話の吹き出しがない");
   expect(
     guestArticle.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -180,12 +155,11 @@ it("字幕のIDが異なっても業務toolを実行中と表示し終了通知�
 });
 
 it.each(["ja", "en"] as const)(
-  "%sの検索語を保ってツールを待機から実行・失敗へ更新し音声接続を維持する",
+  "%sで旧検索引数の商品IDを見せず、処理状態と音声接続を維持する",
   async (locale) => {
     const labels = {
       ja: {
-        query: "刺身 日本酒",
-        search: "検索：刺身 日本酒",
+        query: "tablecast-internal-product-ja",
         waiting: "待機中",
         running: "実行中",
         failed: "エラー",
@@ -196,8 +170,7 @@ it.each(["ja", "en"] as const)(
         debug: "デバッグ表示",
       },
       en: {
-        query: "sashimi sake",
-        search: "Search: sashimi sake",
+        query: "tablecast-internal-product-en",
         waiting: "Waiting",
         running: "Running",
         failed: "Failed",
@@ -215,6 +188,7 @@ it.each(["ja", "en"] as const)(
       toolName: "getCatalog",
       state: "requested",
       query: labels.query,
+      arguments: { productIds: [labels.query], optionId: "tablecast-internal-option" },
     });
     const running = event(3, "voice.tool", { ...request.data, state: "running" });
     const failure = event(4, "voice.tool", {
@@ -236,7 +210,7 @@ it.each(["ja", "en"] as const)(
     await expect
       .element(screen.getByText(labels.complete, { exact: true }))
       .not.toBeInTheDocument();
-    await expect.element(screen.getByText(labels.search, { exact: true })).toBeVisible();
+    await expect.element(screen.getByText(new RegExp(labels.query))).not.toBeInTheDocument();
     await expect.element(screen.getByText(/tablecast-search-call/)).not.toBeInTheDocument();
     await screen.rerender(
       <Surface locale={locale}>
@@ -250,7 +224,7 @@ it.each(["ja", "en"] as const)(
     );
     await expect.element(screen.getByText(labels.running, { exact: true })).toBeVisible();
     await expect.element(screen.getByText(labels.waiting, { exact: true })).not.toBeInTheDocument();
-    await expect.element(screen.getByText(labels.search, { exact: true })).toBeVisible();
+    await expect.element(screen.getByText(new RegExp(labels.query))).not.toBeInTheDocument();
     await screen.rerender(
       <Surface locale={locale}>
         <VoicePanel
@@ -270,7 +244,7 @@ it.each(["ja", "en"] as const)(
     );
     await expect.element(screen.getByText(labels.failed, { exact: true })).toBeVisible();
     await expect.element(screen.getByText(labels.failure, { exact: true })).toBeVisible();
-    await expect.element(screen.getByText(labels.search, { exact: true })).toBeVisible();
+    await expect.element(screen.getByText(new RegExp(labels.query))).not.toBeInTheDocument();
     await expect.element(screen.getByText(labels.waiting, { exact: true })).not.toBeInTheDocument();
     await expect.element(screen.getByText(labels.running, { exact: true })).not.toBeInTheDocument();
     await expect
@@ -280,14 +254,9 @@ it.each(["ja", "en"] as const)(
       .element(screen.getByRole("button", { name: labels.stop, exact: true }))
       .toBeEnabled();
     await expect.element(screen.getByText(/STORE_CONFIG_STALE/)).not.toBeInTheDocument();
-    await screen.getByRole("button", { name: labels.debug, exact: true }).click();
     await expect
-      .element(
-        screen.getByText("getCatalog · tablecast-search-call · STORE_CONFIG_STALE", {
-          exact: true,
-        }),
-      )
-      .toBeVisible();
+      .element(screen.getByRole("button", { name: labels.debug, exact: true }))
+      .not.toBeInTheDocument();
   },
 );
 
@@ -302,20 +271,23 @@ it("商品カードだけの業務イベントも字幕と独立して時系列�
   };
   const screen = await render(
     <Surface>
-      <VoicePanel
-        view={{ status: "paused" }}
-        lines={[line, later]}
-        events={[
-          event(2, "voice.products", { turnId: "tablecast-business", productIds: [product.id] }),
-        ]}
-        catalog={catalog}
-        onChoose={choose}
-        onStart={vi.fn<() => void>()}
-      />
+      <StoreTheme appearance={{ parts: { "product-card": { font: "serif" } } }}>
+        <VoicePanel
+          view={{ status: "paused" }}
+          lines={[line, later]}
+          events={[
+            event(2, "voice.products", { turnId: "tablecast-business", productIds: [product.id] }),
+          ]}
+          catalog={catalog}
+          onChoose={choose}
+          onStart={vi.fn<() => void>()}
+        />
+      </StoreTheme>
     </Surface>,
   );
   const card = screen.getByRole("button", { name: /月凪/ });
   await expect.element(card).toBeVisible();
+  expect(getComputedStyle(card.element()).fontFamily).toContain("sans-serif");
   const before = screen.getByText(line.text).element();
   const after = screen.getByText(later.text).element();
   expect(
@@ -324,7 +296,8 @@ it("商品カードだけの業務イベントも字幕と独立して時系列�
   expect(
     card.element().compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
-  await card.click();
+  // 停止中の中央音声ボタンを避け、見えている商品名から選択する。
+  await card.getByText(product.text.ja.displayName, { exact: true }).click();
   expect(choose).toHaveBeenCalledOnce();
   expect(choose).toHaveBeenCalledWith(product);
 });

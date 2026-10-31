@@ -1,10 +1,15 @@
 import { z } from "zod";
 import type { ApiServices } from "../../platform/context";
-import { DomainError, ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
-import { requireManager } from "../auth/policy";
 import type { Configuration } from "../configuration/model";
+import type { ImageAsset } from "./model";
+import { mediaAssets } from "../../db/media-schema";
+import { DomainError, ensure } from "../../platform/errors";
+import { byteStream } from "../../platform/streams";
+import { requireManager } from "../auth/policy";
 import { imageMetadataSchema, maxImageBytes, uploadImageSchema } from "./model";
+import { generateImageAsset } from "./placeholder";
+import { getImageMetadata } from "./queries";
 
 export async function uploadImage(
   services: ApiServices,
@@ -21,7 +26,7 @@ export async function uploadImage(
     422,
   );
   if (parsed.file) {
-    return saveMenuImage(services, actor, await downloadImage(parsed.file), {
+    return saveMenuImage(services, actor, await downloadUploadedFile(parsed.file), {
       imageKind: parsed.imageKind,
       imageSource: parsed.imageSource,
     });
@@ -45,7 +50,9 @@ export async function uploadImage(
   );
 }
 
-async function downloadImage(file: NonNullable<z.infer<typeof uploadImageSchema>["file"]>) {
+export async function downloadUploadedFile(
+  file: NonNullable<z.infer<typeof uploadImageSchema>["file"]>,
+) {
   const signal = AbortSignal.timeout(15_000);
   let url = new URL(file.download_url);
   try {
@@ -78,8 +85,8 @@ async function downloadImage(file: NonNullable<z.infer<typeof uploadImageSchema>
         await response.body?.cancel();
         throw new DomainError("IMAGE_DOWNLOAD_FAILED", 422, "IMAGE_DOWNLOAD_FAILED");
       }
-      const reader = response.body.getReader();
-      const chunks: Uint8Array<ArrayBuffer>[] = [];
+      const reader = byteStream(response.body).getReader();
+      const chunks: Uint8Array[] = [];
       let size = 0;
       try {
         while (true) {
@@ -93,7 +100,12 @@ async function downloadImage(file: NonNullable<z.infer<typeof uploadImageSchema>
         await reader.cancel();
         reader.releaseLock();
       }
-      const bytes = new Uint8Array(await new Blob(chunks).arrayBuffer());
+      const bytes = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
       const headerType = response.headers.get("Content-Type")?.split(";")[0]?.trim();
       const mimeType =
         file.mime_type ??
@@ -125,8 +137,9 @@ export async function saveMenuImage(
   );
   await validatedImageBytes(image, maxImageBytes);
   let bytes: ArrayBuffer;
+  let asset: ImageAsset;
   try {
-    const info = await services.env.TABLECAST_IMAGES.info(image.stream());
+    const info = await services.env.TABLECAST_IMAGES.info(byteStream(image.stream()));
     ensure(
       "width" in info &&
         "height" in info &&
@@ -137,10 +150,11 @@ export async function saveMenuImage(
       "INVALID_IMAGE",
       422,
     );
-    const output = await services.env.TABLECAST_IMAGES.input(image.stream())
+    const output = await services.env.TABLECAST_IMAGES.input(byteStream(image.stream()))
       .transform({ width: 1600, height: 1600, fit: "scale-down" })
       .output({ format: "image/webp", quality: 85, anim: false });
     bytes = await output.response().arrayBuffer();
+    asset = await generateImageAsset(services.env.TABLECAST_IMAGES, bytes);
   } catch (error) {
     if (error instanceof DomainError) throw error;
     const code = z.object({ code: z.number() }).safeParse(error);
@@ -163,10 +177,18 @@ export async function saveMenuImage(
     customMetadata: { storeId: actor.storeId, metadata: JSON.stringify(metadata) },
     onlyIf: { etagDoesNotMatch: "*" },
   });
+  await services.db
+    .insert(mediaAssets)
+    .values({
+      store_id: actor.storeId,
+      image_key: imageKey,
+      ...asset,
+    })
+    .onConflictDoNothing();
   return {
     imageKey,
     ...metadata,
-    url: `${services.env.TABLECAST_PUBLIC_ORIGIN}/media/${imageKey}`,
+    url: `${services.env.TABLECAST_PUBLIC_ORIGIN}/api/admin/stores/${encodeURIComponent(actor.storeId)}/images/${imageKey}`,
   };
 }
 
@@ -176,6 +198,19 @@ export async function requireConfigurationImages(
   configuration: Configuration,
 ) {
   const images = [
+    ...[
+      ...(configuration.cast.skills?.flatMap((skill) =>
+        skill.files.filter((file) => "imageKey" in file),
+      ) ?? []),
+      configuration.branding?.logo,
+      configuration.branding?.banner,
+      configuration.branding?.memberIcon,
+      configuration.branding?.membershipCard?.image,
+      ...Object.values(configuration.appearance?.assets ?? {}),
+      ...(configuration.banners ?? []).map((banner) => banner.image),
+    ]
+      .filter((image) => image != null)
+      .map((image) => ({ ...image, verifySource: true })),
     ...configuration.products.map((product) => ({ ...product, verifySource: true })),
     ...configuration.products.flatMap((product) =>
       product.modifiers.flatMap((modifier) =>
@@ -187,6 +222,27 @@ export async function requireConfigurationImages(
       ),
     ),
   ].filter((image) => image.imageKey?.startsWith("tablecast/uploads/"));
+  await requireImageAssets(services, actor, images);
+  if (configuration.branding?.memberIcon) {
+    const icon = await getImageMetadata(
+      services,
+      actor.storeId,
+      configuration.branding.memberIcon.imageKey,
+    );
+    ensure(icon.width === icon.height && icon.width >= 512, "MEMBER_ICON_SIZE", 422);
+  }
+}
+
+export async function requireImageAssets(
+  services: ApiServices,
+  actor: Actor,
+  images: {
+    imageKey?: null | string;
+    imageKind: z.infer<typeof imageMetadataSchema>["imageKind"];
+    imageSource?: null | z.infer<typeof imageMetadataSchema>["imageSource"];
+    verifySource: boolean;
+  }[],
+) {
   const stored = new Map(
     await Promise.all(
       [...new Set(images.map((product) => product.imageKey))].map(async (key) => {
@@ -231,7 +287,7 @@ async function validatedImageBytes(image: File, maxBytes: number) {
   return bytes;
 }
 
-function imageMimeType(bytes: Uint8Array) {
+export function imageMimeType(bytes: Uint8Array) {
   if (bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) return "image/png";
   if (bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return "image/jpeg";
   if (

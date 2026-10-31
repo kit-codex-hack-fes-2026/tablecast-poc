@@ -1,17 +1,6 @@
-import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { instrument } from "@inference-net/otel-cf-workers";
 import { context, propagation } from "@opentelemetry/api";
-import { telemetryConfig, requestLog, type TelemetryEnv } from "@tablecast/api/telemetry";
-import { paraglideMiddleware } from "./paraglide/server.js";
-
-const start = createServerEntry({
-  async fetch(request) {
-    const response = await paraglideMiddleware(request, () => handler.fetch(request));
-    response.headers.set("Cache-Control", "private, no-store");
-    return response;
-  },
-});
-
+import { requestLog, telemetryConfig, type TelemetryEnv } from "@tablecast/api/telemetry";
 export default instrument(
   {
     async fetch(request, env) {
@@ -41,11 +30,17 @@ export default instrument(
             new Request(request, { headers, redirect: "manual" }),
           );
           status = response.status;
-          return response;
+          if (status === 101) return response;
+          const outgoing = new Response(response.body, response);
+          outgoing.headers.append("Server-Timing", `web;dur=${performance.now() - started}`);
+          return outgoing;
         }
+        const { default: start } = await import("./ssr");
         const response = await start.fetch(request);
         status = response.status;
-        return response;
+        const outgoing = new Response(response.body, response);
+        outgoing.headers.append("Server-Timing", `ssr;dur=${performance.now() - started}`);
+        return outgoing;
       } finally {
         requestLog(
           {

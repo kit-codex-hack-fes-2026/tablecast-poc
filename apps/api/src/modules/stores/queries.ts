@@ -1,15 +1,16 @@
-import { and, desc, eq, exists, gt, inArray, isNull, max, or, sql, sum } from "drizzle-orm";
-import * as business from "../../db/business-schema";
-import { member, organization } from "../../db/auth-schema";
+import { and, desc, eq, exists, gt, inArray, isNull, max, ne, or, sql, sum } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
-import { catalogQuery, catalogValue } from "../catalog/queries";
 import type { TableEvent } from "../tables/model";
-import { eventValue, tableStateValue } from "../tables/queries";
 import type { AdminState } from "./model";
+import * as business from "../../db/business-schema";
+import { member, organization } from "../../db/identity-schema";
+import { catalogQuery, catalogValue } from "../catalog/queries";
+import { eventValue, tableStateValue } from "../tables/values";
 export async function getAdminState(services: ApiServices, actor: Actor): Promise<AdminState> {
   const db = services.db;
   const storeEvents = and(
+    ne(business.tableEvents.kind, "voice.suggestions"),
     eq(business.tableEvents.store_id, actor.storeId),
     or(
       isNull(business.tableEvents.table_session_id),
@@ -133,7 +134,7 @@ export async function getAdminState(services: ApiServices, actor: Actor): Promis
       .select()
       .from(business.tableEvents)
       .where(
-        sql`store_id=${actor.storeId} AND cursor IN (SELECT cursor FROM (SELECT cursor,row_number() OVER (PARTITION BY table_session_id ORDER BY cursor DESC) AS position FROM table_events WHERE store_id=${actor.storeId} AND table_session_id IN (${active})) WHERE position<=100)`,
+        sql`store_id=${actor.storeId} AND cursor IN (SELECT cursor FROM (SELECT cursor,row_number() OVER (PARTITION BY table_session_id ORDER BY cursor DESC) AS position FROM table_events WHERE store_id=${actor.storeId} AND kind<>'voice.suggestions' AND table_session_id IN (${active})) WHERE position<=100)`,
       )
       .orderBy(business.tableEvents.cursor),
     db
@@ -178,7 +179,8 @@ export async function getEvents(
   services: ApiServices,
   actor: Actor,
   after = 0,
-): Promise<{ events: TableEvent[]; cursor: number }> {
+  tail = false,
+): Promise<{ cursor: number; events: TableEvent[] }> {
   const db = services.db;
 
   const scope = actor.tableSessionId
@@ -213,11 +215,13 @@ export async function getEvents(
       and(
         eq(business.tableEvents.store_id, actor.storeId),
         scope,
+        ne(business.tableEvents.kind, "voice.suggestions"),
         gt(business.tableEvents.cursor, after),
       ),
     )
-    .orderBy(business.tableEvents.cursor)
-    .limit(500);
+    .orderBy(tail ? desc(business.tableEvents.cursor) : business.tableEvents.cursor)
+    .limit(tail ? 100 : 500);
+  if (tail) rows.reverse();
   return {
     events: rows.map((row) => {
       const event = eventValue(row);

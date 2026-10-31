@@ -4,16 +4,17 @@ import { describe, expect, it } from "vitest";
 import app from "../src/app";
 import * as auth from "../src/db/auth-schema";
 import * as business from "../src/db/business-schema";
-import { createDemo, updateDemo, resetDemo } from "../src/modules/demo/service";
-import { getDemo } from "../src/modules/demo/queries";
 import { getCatalog } from "../src/modules/catalog/queries";
-import { createDraft, updateDraft } from "../src/modules/configuration/service";
-import { updateCart, prepareConfirmation, submitOrder } from "../src/modules/orders/service";
+import { createDraft, updateDraft } from "../src/modules/configuration/use-cases/drafts";
+import { getDemo } from "../src/modules/demo/queries";
+import { createDemo, resetDemo, updateDemo } from "../src/modules/demo/service";
+import { updateCart } from "../src/modules/orders/use-cases/cart";
+import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
 import { getAdminState, getEvents } from "../src/modules/stores/queries";
 import { getTableState } from "../src/modules/tables/queries";
-import { callStaff, requestBill } from "../src/modules/tables/service";
-import { voiceActor } from "../src/modules/voice/queries";
+import { callStaff, requestBill, setUiSection } from "../src/modules/tables/use-cases/presentation";
 import { createCastTools } from "../src/modules/voice/agent";
+import { voiceContext } from "../src/modules/voice/queries";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
 import { demoSchema, tableStateSchema } from "../src/schema";
@@ -386,7 +387,7 @@ describe("卓を使わない会話注文デモ", () => {
     });
     await updateDemo(services(), actor, { expectedVersion: 1, sourceDraftId: draft.id });
     await setVoiceSession(services(), actor, "tablecast-demo-voice");
-    const voice = await voiceActor(services(), "tablecast-demo-voice");
+    const { actor: voice } = await voiceContext(services(), "tablecast-demo-voice");
     expect(voice.demoId).toBe(demo.id);
     expect(
       (await getCatalog(services(), voice.storeId, voice.demoId)).configuration.cast.proactive,
@@ -396,7 +397,7 @@ describe("卓を使わない会話注文デモ", () => {
       products: [expect.objectContaining({ id: "tea", price: 777 })],
     });
     await updateDemo(services(), actor, { expectedVersion: 2, proactive: false });
-    await expect(voiceActor(services(), "tablecast-demo-voice")).rejects.toMatchObject({
+    await expect(voiceContext(services(), "tablecast-demo-voice")).rejects.toMatchObject({
       code: "VOICE_SESSION_STALE",
     });
     await expect(
@@ -422,6 +423,7 @@ describe("卓を使わない会話注文デモ", () => {
       approved: true,
     });
     await requestBill(services(), actor);
+    await setUiSection(services(), actor, { section: "menu", search: { query: "tea" } }, "core");
     await resetDemo(services(), actor, 2);
     const state = await getTableState(services(), actor);
     expect(state.orders).toEqual([]);
@@ -429,6 +431,7 @@ describe("卓を使わない会話注文デモ", () => {
     expect(state.staffCalled).toBe(false);
     expect(state.billRequested).toBe(false);
     expect(state.events.map((event) => event.kind)).toEqual(["demo.reset"]);
+    expect(state.menuSearch).toBeNull();
     expect(state.guestCount).toBe(4);
     expect((await getDemo(services(), actor)).configuration.cast.proactive).toBe(true);
     expect(

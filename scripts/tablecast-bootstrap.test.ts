@@ -2,12 +2,12 @@ import { execFile } from "node:child_process";
 import { chmod, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
-import { bootstrapOptions, bootstrapTarget, readBootstrapInput } from "./tablecast-bootstrap";
-import { demoStores } from "./tablecast-fixtures";
+import { bootstrapOptions, bootstrapTarget, readBootstrapInput } from "./tablecast-bootstrap.ts";
+import { demoStores } from "./tablecast-fixtures.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const execute = promisify(execFile);
@@ -116,7 +116,7 @@ describe("初期セットアップCLIの対象固定", () => {
       await rm(directory, { recursive: true, force: true });
     }
   });
-  it("実CLIの事前確認はDBを作らず適用は移行済み専用D1だけを初期化する", async () => {
+  it("実CLIは正本の採用済みD1を事前確認し、適用は移行済み専用D1だけを初期化する", async () => {
     const directory = await mkdtemp(join(tmpdir(), "tablecast-bootstrap-cli-"));
     const configPath = join(directory, "wrangler.json");
     const inputPath = join(directory, "private.json");
@@ -136,25 +136,15 @@ describe("初期セットアップCLIの対象固定", () => {
     ];
     const run = (...tail: string[]) =>
       execute("bun", [...args, ...tail], { cwd: root, timeout: 45000 });
-    const wrangler = (...tail: string[]) =>
-      execute(
-        "bun",
-        [
-          "--no-env-file",
-          "x",
-          "--no-install",
-          "wrangler",
-          ...tail,
-          "--config",
-          configPath,
-          "--env",
-          "staging",
-          "--local",
-          "--persist-to",
-          state,
-        ],
+    const cf = (...tail: string[]) => {
+      const command = execute(
+        "node",
+        [join(root, "scripts/tablecast-cf-local.ts"), ...tail, "--local", "--persist-to", state],
         { cwd: root, timeout: 45000 },
       );
+      command.child.stdin?.end();
+      return command;
+    };
     try {
       await writeFile(configPath, JSON.stringify(config));
       await writeFile(inputPath, JSON.stringify(input()), { mode: 0o600 });
@@ -163,27 +153,63 @@ describe("初期セットアップCLIの対象固定", () => {
         join(directory, ".dev.vars"),
         "TABLECAST_PUBLIC_ORIGIN=http://unexpected.invalid\n",
       );
+      const native = await execute(
+        "node",
+        [
+          "--import",
+          "tsx",
+          "scripts/tablecast-bootstrap.ts",
+          "--config",
+          "apps/api/cloudflare.config.ts",
+          "--env",
+          "production",
+          "--input",
+          inputPath,
+          "--remote",
+        ],
+        {
+          cwd: root,
+          env: {
+            ...process.env,
+            TABLECAST_CONFIG: undefined,
+            TABLECAST_RELEASE_SHA: "a".repeat(40),
+            TABLECAST_EMAIL_FROM: "tablecast@example.test",
+          },
+          timeout: 45000,
+        },
+      );
+      expect(native.stdout).toContain('"database_id": "6cc5c833-9c01-4172-92e7-18d713db9a8f"');
+      expect(native.stdout).toContain('"worker": "tablecast-api"');
+      expect(native.stdout).toContain('"apply": false');
+      expect(native.stdout + native.stderr).not.toContain(input().authSecret);
+      expect(native.stdout + native.stderr).not.toContain(input().admin.password);
       const preview = await run();
       expect(preview.stdout).toContain('"apply": false');
       expect(preview.stdout + preview.stderr).not.toContain(input().admin.password);
       expect(preview.stdout + preview.stderr).not.toContain(input().authSecret);
       await expect(stat(state)).rejects.toMatchObject({ code: "ENOENT" });
-      await wrangler("d1", "migrations", "apply", "TABLECAST_DB");
+      await cf(
+        "d1",
+        "migrations",
+        "apply",
+        "11111111-1111-4111-8111-111111111111",
+        "--dir",
+        join(root, "apps/api/migrations"),
+      );
       const applied = await run("--apply");
       expect(applied.stdout).toContain('"configVersion": 1');
       expect(applied.stdout + applied.stderr).not.toContain(input().admin.password);
       expect(applied.stdout + applied.stderr).not.toContain(input().authSecret);
       await expect(run("--apply")).rejects.toMatchObject({ code: 1 });
-      const result = await wrangler(
+      const result = await cf(
         "d1",
-        "execute",
-        "TABLECAST_DB",
-        "--json",
-        "--command",
+        "raw",
+        "11111111-1111-4111-8111-111111111111",
+        "--sql",
         "SELECT (SELECT COUNT(*) FROM user) AS users,(SELECT COUNT(*) FROM stores) AS stores,(SELECT COUNT(*) FROM config_releases) AS releases,(SELECT COUNT(*) FROM restaurant_tables) AS tables",
       );
       const rows: unknown = JSON.parse(result.stdout);
-      expect(rows).toMatchObject([{ results: [{ users: 1, stores: 1, releases: 1, tables: 1 }] }]);
+      expect(rows).toMatchObject([{ results: { rows: [[1, 1, 1, 1]] } }]);
       expect(await readFile(inputPath, "utf8")).toBe(JSON.stringify(input()));
     } finally {
       await rm(directory, { recursive: true, force: true });

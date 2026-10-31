@@ -1,29 +1,30 @@
-import { randomUUID } from "node:crypto";
-import { z } from "zod";
 import {
   adminStateSchema,
   catalogSchema,
-  tableStateSchema,
-  snapshotSchema,
   orderSchema,
-} from "../apps/api/src/schema";
-import { demoCredentials, sampleLine } from "./tablecast-seed";
-import { readRuntime } from "./tablecast-runtime";
+  snapshotSchema,
+  tableStateSchema,
+} from "@tablecast/api/schema";
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
+import { signInDemoOwner } from "./tablecast-demo-auth.ts";
+import { assertPrepared } from "./tablecast-runtime.ts";
+import { demoCredentials, sampleLine } from "./tablecast-seed.ts";
 
 // 焦点のT01とブラウザー試験用T12には触れず、背景のT02だけで注文する。
 async function main() {
   if (process.argv.length > 2)
     throw new Error("demo:playは引数なしで、このworktreeの背景卓を一段階だけ進めます。");
-  const runtime = await readRuntime();
+  await assertPrepared();
   const credentials = await demoCredentials();
-  const origin = new URL(runtime.origin);
+  const origin = new URL(z.url().parse(process.env.TABLECAST_PUBLIC_ORIGIN));
+  const mailpit = z.url().parse(process.env.TABLECAST_MAILPIT_URL);
   async function request(path: string, cookie = "", body?: unknown, method = "POST") {
-    const response = await fetch(`http://127.0.0.1:${runtime.ports.web}${path}`, {
+    const response = await fetch(new URL(path, origin), {
       method: body === undefined ? "GET" : method,
       headers: {
         "Content-Type": "application/json",
         Origin: origin.origin,
-        Host: origin.host,
         Cookie: cookie,
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -38,13 +39,8 @@ async function main() {
       .map((cookie) => cookie.split(";")[0])
       .join("; ");
   let advanced = 0;
-  for (const account of [
-    { email: credentials.email, password: credentials.password },
-    { email: credentials.otherEmail, password: credentials.otherPassword },
-  ]) {
-    const login = await request("/api/auth/sign-in/email", "", account);
-    const staffCookie = cookieOf(login);
-    if (!staffCookie) throw new Error("デモ管理者の認証が成立していません。");
+  for (const email of [credentials.email, credentials.otherEmail]) {
+    const staffCookie = await signInDemoOwner(origin.origin, mailpit, email);
     const stores = z
       .object({ stores: z.array(z.object({ id: z.string() })) })
       .parse(await (await request("/api/admin/stores", staffCookie)).json());

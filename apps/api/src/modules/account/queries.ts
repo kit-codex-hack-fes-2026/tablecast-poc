@@ -1,12 +1,14 @@
 import { and, desc, eq, isNull, max, or, sql } from "drizzle-orm";
+import type { Database } from "../../db/client";
+import type { ApiServices } from "../../platform/context";
+import * as authTables from "../../db/identity-schema";
 import {
   oauthAccessToken,
   oauthClient,
   oauthConsent,
   oauthRefreshToken,
-} from "../../db/auth-schema";
-import { stores } from "../../db/business-schema";
-import type { Database } from "../../platform/context";
+} from "../../db/oauth-schema";
+import { stores } from "../../db/table-schema";
 export async function getMcpSessions(
   db: Database,
   userId: string,
@@ -48,8 +50,8 @@ export async function getMcpSessions(
       storeName: stores.name,
       createdAt: oauthConsent.createdAt,
       updatedAt: oauthConsent.updatedAt,
-      expiresAt: sql<number | null>`(${accessExpiry})`.mapWith(Number),
-      refreshExpiresAt: sql<number | null>`(${refreshExpiry})`.mapWith(Number),
+      expiresAt: sql<null | number>`(${accessExpiry})`.mapWith(Number),
+      refreshExpiresAt: sql<null | number>`(${refreshExpiry})`.mapWith(Number),
     })
     .from(oauthConsent)
     .innerJoin(oauthClient, eq(oauthClient.clientId, oauthConsent.clientId))
@@ -76,4 +78,23 @@ export async function getMcpSessions(
         : [];
     }),
   };
+}
+
+export async function getInvitationDetails(services: ApiServices, id: string) {
+  return services.db
+    .select({
+      id: authTables.invitation.id,
+      email: authTables.invitation.email,
+      role: authTables.invitation.role,
+      status: authTables.invitation.status,
+      expiresAt: authTables.invitation.expiresAt,
+      organizationName: authTables.organization.name,
+    })
+    .from(authTables.invitation)
+    .innerJoin(
+      authTables.organization,
+      eq(authTables.organization.id, authTables.invitation.organizationId),
+    )
+    .where(eq(authTables.invitation.id, id))
+    .get();
 }

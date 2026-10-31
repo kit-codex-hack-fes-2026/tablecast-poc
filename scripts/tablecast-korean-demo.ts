@@ -1,29 +1,37 @@
-import { configurationSchema } from "../apps/api/src/schema";
-import type { Modifier, Product } from "../apps/api/src/schema";
-import { demoImageKey } from "./tablecast-seed-media";
-import { demoOptionImageKey } from "./tablecast-demo-option-images";
-
-export const koreanDemoStoreId = "tablecast-hanul";
-export const koreanDemoStoreName = "韓国食堂ハヌル三条店";
+import {
+  configurationSchema,
+  type JapaneseAllergen,
+  type Modifier,
+  type Product,
+} from "@tablecast/api/schema";
+import { demoOptionImageKey } from "./tablecast-demo-option-images.ts";
+import {
+  koreanFoodInformation,
+  recipeFoodInformation,
+  seedDietary,
+  type SeedDietary,
+  withDemoFoodChanges,
+} from "./tablecast-fixtures/food.ts";
+import { demoImageKey } from "./tablecast-seed-media.ts";
 
 type KoreanMenuItem = {
-  key: string;
-  ja: string;
-  en: string;
-  price: number;
-  category: string;
-  ingredients: readonly [string, string];
-  contains: string[];
-  spice: "none" | "mild" | "medium";
-  groups: string[];
-  tabletop?: boolean;
-  hotVessel?: boolean;
   available?: boolean;
+  category: string;
+  contains: JapaneseAllergen[];
+  dietary: SeedDietary;
+  en: string;
+  groups: string[];
+  hotVessel?: boolean;
+  ingredients: readonly [string, string];
+  ja: string;
+  key: string;
   photo: string;
+  price: number;
+  spice: "medium" | "mild" | "none";
+  tabletop?: boolean;
 };
 
-// 材料・辛さ・商品写真の被写体を一か所で定義する。店舗や蔵元はすべて架空。
-export const koreanDemoMenu: KoreanMenuItem[] = [
+const mains: KoreanMenuItem[] = [
   {
     key: "samgyeopsal",
     ja: "サムギョプサル 卓上焼きセット 二人前",
@@ -34,7 +42,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "豚ばら肉300g、サンチュ6枚、にんにく、みそだれ。みそだれは大豆と小麦を含みます",
       "300g of pork belly, six lettuce leaves, garlic and ssamjang containing soya and wheat",
     ],
-    contains: ["soya", "wheat"],
+    contains: ["pork"],
+    dietary: seedDietary.meat,
     spice: "mild",
     groups: ["wraps", "ssamjang"],
     tabletop: true,
@@ -51,7 +60,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "牛肉、玉ねぎ、にんじんをしょうゆ、砂糖、ごま油で炒めます",
       "Beef, onion and carrot stir-fried with soy sauce, sugar and sesame oil",
     ],
-    contains: ["soya", "wheat", "sesame"],
+    contains: ["beef", "soya", "wheat", "sesame"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: ["rice"],
     photo:
@@ -67,7 +77,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "鶏もも肉、キャベツ、さつまいも、米のトックをコチュジャンだれで炒めます。たれは大豆と小麦を含みます",
       "Chicken thigh, cabbage, sweet potato and rice cakes cooked in gochujang sauce containing soya and wheat",
     ],
-    contains: ["soya", "wheat"],
+    contains: ["chicken", "soya", "wheat"],
+    dietary: seedDietary.meatGluten,
     spice: "medium",
     groups: ["spice", "hotpot-extras"],
     tabletop: true,
@@ -84,7 +95,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "豚肉と玉ねぎをコチュジャン、しょうゆ、ごま油で炒めます",
       "Pork and onion stir-fried with gochujang, soy sauce and sesame oil",
     ],
-    contains: ["soya", "wheat", "sesame"],
+    contains: ["pork", "soya", "wheat", "sesame"],
+    dietary: seedDietary.meatGluten,
     spice: "medium",
     groups: ["spice", "rice"],
     photo:
@@ -100,7 +112,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "豚ばら肉をしょうがとにんにくでゆで、サンチュ6枚とみそだれを添えます",
       "Pork belly boiled with ginger and garlic, served with six lettuce leaves and ssamjang",
     ],
-    contains: ["soya", "wheat"],
+    contains: ["pork"],
+    dietary: seedDietary.meat,
     spice: "mild",
     groups: ["wraps", "ssamjang"],
     photo:
@@ -116,7 +129,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "鶏もも肉を小麦粉と片栗粉の衣で揚げた五個盛り。基本はソースなしで、選択により材料が変わります",
       "Five chicken-thigh pieces fried in wheat-flour and potato-starch coating; plain by default, with ingredients changing for the selected sauce",
     ],
-    contains: ["wheat"],
+    contains: ["chicken", "wheat"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: ["chicken-sauce"],
     photo:
@@ -132,7 +146,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "米のトックと魚のすり身揚げをコチュジャンだれで煮ます。小麦、大豆、魚を含みます",
       "Rice cakes and fish cake simmered in gochujang sauce containing wheat, soya and fish",
     ],
-    contains: ["wheat", "soya", "fish"],
+    contains: ["wheat", "soya"],
+    dietary: seedDietary.fishGluten,
     spice: "medium",
     groups: ["spice", "hotpot-extras"],
     photo:
@@ -148,7 +163,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "海老、いか、ねぎ、小麦粉、卵を焼き、八切れに分けます",
       "Prawns, squid, spring onion, wheat flour and egg cooked as a pancake and cut into eight pieces",
     ],
-    contains: ["crustaceans", "molluscs", "wheat", "egg"],
+    contains: ["prawn", "squid", "wheat", "egg"],
+    dietary: seedDietary.fishGluten,
     spice: "none",
     groups: ["dip"],
     photo:
@@ -164,12 +180,16 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "白菜キムチ、小麦粉、卵を焼き、六切れに分けます。キムチは魚醤とえびの塩辛を含みます",
       "Cabbage kimchi, wheat flour and egg cooked as a pancake and cut into six pieces; the kimchi contains fish sauce and salted prawns",
     ],
-    contains: ["fish", "crustaceans", "wheat", "egg"],
+    contains: ["prawn", "wheat", "egg"],
+    dietary: seedDietary.fishGluten,
     spice: "mild",
     groups: ["dip"],
     photo:
       "One orange-red cabbage kimchi pancake, cut into exactly SIX clearly separate wedges. No seafood pieces, cheese or extra plates.",
   },
+];
+
+const sides: KoreanMenuItem[] = [
   {
     key: "gimbap",
     ja: "野菜と卵のキンパ 八切れ",
@@ -181,6 +201,7 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "Eight slices of a seaweed rice roll with carrot, cucumber, egg, spinach, pickled daikon and sesame oil",
     ],
     contains: ["egg", "sesame"],
+    dietary: seedDietary.eggMilk,
     spice: "none",
     groups: [],
     photo:
@@ -196,7 +217,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "ご飯、牛肉、ほうれん草、にんじん、もやし、きのこ、目玉焼き、ごま油。コチュジャンは別添えです",
       "Rice, beef, spinach, carrot, bean sprouts, mushrooms, a fried egg and sesame oil, with gochujang served separately",
     ],
-    contains: ["egg", "sesame", "soya", "wheat"],
+    contains: ["beef", "egg", "sesame", "soya", "wheat"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: ["rice", "bibimbap-protein", "egg", "vegetables"],
     photo:
@@ -212,7 +234,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "そばと小麦を使う麺を冷たい牛肉出汁で提供し、ゆで卵半分、きゅうり、梨を添えます",
       "Buckwheat and wheat noodles in chilled beef broth with half a boiled egg, cucumber and pear",
     ],
-    contains: ["buckwheat", "wheat", "egg"],
+    contains: ["beef", "buckwheat", "wheat", "egg"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: ["noodles"],
     photo:
@@ -228,7 +251,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "小麦の麺に豚肉、玉ねぎ、大豆のみそを炒めた黒いソースをかけます",
       "Wheat noodles topped with pork and onion in a dark fermented-soya sauce",
     ],
-    contains: ["wheat", "soya"],
+    contains: ["pork", "wheat", "soya"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: ["noodles"],
     photo:
@@ -244,7 +268,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "豚肉、豆腐、白菜キムチ、ねぎを煮込みます。キムチは魚醤とえびの塩辛を含みます",
       "Pork, tofu, cabbage kimchi and spring onion simmered together; the kimchi contains fish sauce and salted prawns",
     ],
-    contains: ["soya", "fish", "crustaceans"],
+    contains: ["pork", "soya", "prawn"],
+    dietary: seedDietary.meat,
     spice: "medium",
     groups: ["spice", "hotpot-extras", "rice"],
     hotVessel: true,
@@ -261,7 +286,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "やわらかい豆腐、あさり、海老、卵、玉ねぎを唐辛子の出汁で煮込み、卵は十分に加熱します",
       "Soft tofu, clams, prawns, egg and onion simmered in chilli broth; the egg is fully cooked",
     ],
-    contains: ["soya", "molluscs", "crustaceans", "egg"],
+    contains: ["soya", "prawn", "egg"],
+    dietary: seedDietary.fish,
     spice: "medium",
     groups: ["spice", "hotpot-extras", "rice"],
     hotVessel: true,
@@ -278,7 +304,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "牛骨の白い出汁に牛肉とねぎを合わせます。米や麺は含まず、塩は別添えです",
       "Milky beef-bone broth with beef and spring onion; rice and noodles are not included, and salt is served separately",
     ],
-    contains: [],
+    contains: ["beef"],
+    dietary: seedDietary.meat,
     spice: "none",
     groups: ["rice"],
     hotVessel: true,
@@ -295,7 +322,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "さつまいもでんぷんの春雨、牛肉、きのこ、ほうれん草、にんじんをしょうゆとごま油で炒めます",
       "Sweet-potato starch noodles, beef, mushrooms, spinach and carrot stir-fried with soy sauce and sesame oil",
     ],
-    contains: ["soya", "wheat", "sesame"],
+    contains: ["beef", "soya", "wheat", "sesame"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: [],
     photo:
@@ -311,7 +339,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "豚ひき肉、白菜、にらを小麦の皮で包んで蒸した四個盛り",
       "Four steamed dumplings with minced pork, cabbage and garlic chives in wheat wrappers",
     ],
-    contains: ["wheat"],
+    contains: ["pork", "wheat"],
+    dietary: seedDietary.meatGluten,
     spice: "none",
     groups: ["dip"],
     photo:
@@ -327,7 +356,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "白菜、大根、きゅうりのキムチ。魚醤、えびの塩辛、にんにく、唐辛子を使います",
       "Cabbage, daikon and cucumber kimchi made with fish sauce, salted prawns, garlic and chilli",
     ],
-    contains: ["fish", "crustaceans"],
+    contains: ["prawn"],
+    dietary: seedDietary.fish,
     spice: "medium",
     groups: [],
     photo:
@@ -344,11 +374,15 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "Two wheat pancakes filled with brown sugar, cinnamon and peanuts; take care with the hot syrup filling",
     ],
     contains: ["wheat", "peanuts"],
+    dietary: seedDietary.plantGluten,
     spice: "none",
     groups: [],
     photo:
       "Exactly TWO golden round hotteok pancakes on one small plate, one slightly opened to show brown-sugar cinnamon syrup and peanut filling. No ice cream, fruit, powder or extra garnish.",
   },
+];
+
+const drinks: KoreanMenuItem[] = [
   {
     key: "hanul-soju",
     ja: "ハヌル 清らか焼酎",
@@ -356,10 +390,11 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
     price: 780,
     category: "korean-alcohol",
     ingredients: [
-      "架空銘柄の米を原料とする焼酎。アルコール16%、360mlの瓶で提供します",
-      "Fictional rice-based soju, 16% ABV, served as a 360ml bottle",
+      "米を原料とする焼酎。アルコール16%、360mlの瓶で提供します",
+      "rice-based soju, 16% ABV, served as a 360ml bottle",
     ],
     contains: [],
+    dietary: seedDietary.alcohol,
     spice: "none",
     groups: ["glasses"],
     photo:
@@ -372,10 +407,11 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
     price: 880,
     category: "korean-alcohol",
     ingredients: [
-      "架空銘柄の米の焼酎にゆず果汁と糖類を合わせます。アルコール13%、360ml瓶です",
-      "Fictional rice soju mixed with yuzu juice and sugar, 13% ABV, in a 360ml bottle",
+      "米の焼酎にゆず果汁と糖類を合わせます。アルコール13%、360ml瓶です",
+      "rice soju mixed with yuzu juice and sugar, 13% ABV, in a 360ml bottle",
     ],
     contains: [],
+    dietary: seedDietary.alcohol,
     spice: "none",
     groups: ["glasses"],
     photo:
@@ -388,10 +424,11 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
     price: 880,
     category: "korean-alcohol",
     ingredients: [
-      "架空銘柄。米と小麦由来の発酵素材を使う白いにごり酒。アルコール6%、750ml瓶です",
-      "Fictional cloudy white rice wine made with rice and wheat-derived fermentation ingredients, 6% ABV, in a 750ml bottle",
+      "米と小麦由来の発酵素材を使う白いにごり酒。アルコール6%、750ml瓶です",
+      "cloudy white rice wine made with rice and wheat-derived fermentation ingredients, 6% ABV, in a 750ml bottle",
     ],
     contains: ["wheat"],
+    dietary: seedDietary.maltAlcohol,
     spice: "none",
     groups: ["glasses"],
     photo:
@@ -404,10 +441,11 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
     price: 980,
     category: "korean-alcohol",
     ingredients: [
-      "架空銘柄。米、栗、小麦由来の発酵素材を使うにごり酒。アルコール6%、750ml瓶です",
-      "Fictional cloudy rice wine made with rice, chestnut and wheat-derived fermentation ingredients, 6% ABV, in a 750ml bottle",
+      "米、栗、小麦由来の発酵素材を使うにごり酒。アルコール6%、750ml瓶です",
+      "cloudy rice wine made with rice, chestnut and wheat-derived fermentation ingredients, 6% ABV, in a 750ml bottle",
     ],
     contains: ["wheat"],
+    dietary: seedDietary.maltAlcohol,
     spice: "none",
     groups: ["glasses"],
     available: false,
@@ -421,10 +459,11 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
     price: 780,
     category: "korean-alcohol",
     ingredients: [
-      "架空銘柄の大麦麦芽とホップを使うラガー。アルコール4.5%、330ml瓶です",
-      "Fictional lager brewed with barley malt and hops, 4.5% ABV, in a 330ml bottle",
+      "大麦麦芽とホップを使うラガー。アルコール4.5%、330ml瓶です",
+      "lager brewed with barley malt and hops, 4.5% ABV, in a 330ml bottle",
     ],
-    contains: ["barley"],
+    contains: [],
+    dietary: seedDietary.maltAlcohol,
     spice: "none",
     groups: [],
     photo:
@@ -441,6 +480,7 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "Korean-style yuja tea made with yuzu peel, juice and sugar; its base ingredients contain sugar",
     ],
     contains: [],
+    dietary: seedDietary.plant,
     spice: "none",
     groups: ["tea-temperature", "sweetness"],
     photo:
@@ -457,6 +497,7 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "Roasted corn infused in water, unsweetened by default",
     ],
     contains: [],
+    dietary: seedDietary.plant,
     spice: "none",
     groups: ["tea-temperature"],
     photo:
@@ -472,7 +513,8 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "米、大麦麦芽、砂糖を使う冷たいノンアルコールドリンク。甘酒とは製法が異なります",
       "A chilled non-alcoholic drink made with rice, barley malt and sugar; it is prepared differently from amazake",
     ],
-    contains: ["barley"],
+    contains: [],
+    dietary: seedDietary.plantGluten,
     spice: "none",
     groups: ["ice"],
     photo:
@@ -486,6 +528,7 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
     category: "soft-drinks",
     ingredients: ["梨果汁、炭酸水、砂糖を合わせます", "Pear juice, sparkling water and sugar"],
     contains: [],
+    dietary: seedDietary.plant,
     spice: "none",
     groups: ["ice", "sweetness"],
     photo:
@@ -502,6 +545,7 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
       "A chilled non-alcoholic infusion of ginger, cinnamon and sugar",
     ],
     contains: [],
+    dietary: seedDietary.plant,
     spice: "mild",
     groups: ["ice", "sweetness"],
     photo:
@@ -509,11 +553,24 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
   },
 ];
 
-function text(ja: string, en: string, descriptionJa = "", descriptionEn = ""): Product["text"] {
+const koreanDemoStoreId = "tablecast-hanul";
+
+const koreanDemoStoreName = "韓国食堂ハヌル三条店";
+
+const koreanDemoMenu: KoreanMenuItem[] = [...mains, ...sides, ...drinks];
+
+function text(ja: string, en: string, descriptionJa = "", descriptionEn = "") {
   return {
-    ja: { displayName: ja, speechName: ja, description: descriptionJa, aliases: [ja] },
+    ja: {
+      displayName: ja,
+      transliteration: ja,
+      speechName: ja,
+      description: descriptionJa,
+      aliases: [ja],
+    },
     en: {
       displayName: en,
+      transliteration: en,
       speechName: en,
       description: descriptionEn,
       aliases: [en.toLowerCase()],
@@ -522,6 +579,7 @@ function text(ja: string, en: string, descriptionJa = "", descriptionEn = ""): P
 }
 
 type Choice = readonly [string, string, string, number];
+
 function group(
   key: string,
   ja: string,
@@ -551,7 +609,7 @@ function group(
   };
 }
 
-export const koreanDemoModifierGroups: Record<string, Modifier> = {
+const koreanDemoModifierGroups: Record<string, Modifier> = {
   spice: group("spice", "辛さ", "Chilli level", [
     ["mild", "控えめ・辛味あり", "Milder, still contains chilli", 0],
     ["standard", "通常", "Standard", 0],
@@ -642,11 +700,11 @@ export const koreanDemoModifierGroups: Record<string, Modifier> = {
 };
 
 const commonNote = {
-  ja: "架空デモの登録材料です。調味料の全成分・選択変更による成分差・交差接触は未確認です。ハラール、コーシャ等の宗教認証とヴィーガン適合は未確認です。材料名や肉抜きだけで適合を保証せず、スタッフへ確認してください。",
-  en: "These are recorded ingredients for a fictional demo. Full condiment ingredients, changes from options and cross-contact are unverified. Halal, kosher and other religious certification, and vegan suitability, are unverified. Ingredients or removing meat do not guarantee suitability; ask staff.",
+  ja: "原材料と食事対応は選択後の表示をご確認ください。厨房の器具を共用します。ハラール認証は取得していません。",
+  en: "Check the ingredient and dietary information for your selected options. Kitchen equipment is shared. We do not hold halal certification.",
 };
 
-export function koreanDemoStore(profile: "smoke" | "demo" | "history") {
+export function koreanDemoStore(profile: "demo" | "history" | "smoke") {
   const featured = ["samgyeopsal", "bibimbap", "fried-chicken", "yuja-tea"];
   const products: Product[] = koreanDemoMenu
     .filter((item) => profile !== "smoke" || featured.includes(item.key))
@@ -679,35 +737,41 @@ export function koreanDemoStore(profile: "smoke" | "demo" | "history") {
               "The bowl and broth are hot. Avoid touching the vessel and ask staff for help sharing or moving it.",
             ]
           : ["", ""];
+      const note = ["korean-alcohol", "soft-drinks"].includes(item.category)
+        ? {
+            ja: "飲料は専用器具で管理します。ハラール認証は取得していません。",
+            en: "Drinks are prepared with dedicated equipment. We do not hold halal certification.",
+          }
+        : commonNote;
       const description = {
-        ja: `${item.ingredients[0]}。${spice[0]}${safety[0]}${commonNote.ja}`,
-        en: `${item.ingredients[1]}. ${spice[1]} ${safety[1]} ${commonNote.en}`,
+        ja: `${item.ingredients[0]}。${spice[0]}${safety[0]}${note.ja}`,
+        en: `${item.ingredients[1]}. ${spice[1]} ${safety[1]} ${note.en}`,
       };
-      return {
-        id: `${koreanDemoStoreId}-${item.key}`,
-        categoryId: item.category,
-        text: text(item.ja, item.en, description.ja, description.en),
-        price: item.price,
-        available: item.available ?? true,
-        tags: [
-          ...(item.category === "korean-alcohol" ? ["alcohol"] : []),
-          ...(item.tabletop ? ["tabletop-cooking"] : []),
-        ],
-        imageKey: demoImageKey(`hanul-${item.key}.webp`),
-        imageKind: "illustration",
-        modifiers: item.groups.map((key) => {
-          const value = koreanDemoModifierGroups[key];
-          if (!value) throw new Error(`韓国店の選択肢がありません: ${key}`);
-          return value;
+      return withDemoFoodChanges(
+        koreanFoodInformation({
+          id: `${koreanDemoStoreId}-${item.key}`,
+          categoryId: item.category,
+          text: text(item.ja, item.en, description.ja, description.en),
+          price: item.price,
+          available: item.available ?? true,
+          tags: [
+            ...(item.category === "korean-alcohol" ? ["alcohol"] : []),
+            ...(item.tabletop ? ["tabletop-cooking"] : []),
+          ],
+          imageKey: demoImageKey(`hanul-${item.key}.webp`),
+          imageKind: "illustration",
+          modifiers: item.groups.map((key) => {
+            const value = koreanDemoModifierGroups[key];
+            if (!value) throw new Error(`韓国店の選択肢がありません: ${key}`);
+            return value;
+          }),
+          foodInfo: recipeFoodInformation(
+            item.contains,
+            item.dietary,
+            item.key === "fried-chicken" ? "fried" : item.category,
+          ),
         }),
-        allergens: {
-          contains: item.contains,
-          evidence: "verified",
-          crossContact: "unknown",
-          vegan: "unknown",
-          note: description,
-        },
-      };
+      );
     });
   return {
     id: koreanDemoStoreId,
@@ -750,8 +814,8 @@ export function koreanDemoStore(profile: "smoke" | "demo" | "history") {
       ],
       cast: {
         instructions: {
-          ja: "韓国食堂ハヌル三条店の接客担当です。料理の日本語名と材料、辛さ、取り分けの量を一つずつ説明してください。卓上調理は必ずスタッフが加熱機器を操作し、十分な加熱と熱い器への注意を案内します。辛さ控えめでも辛味は残る商品があります。宗教認証・ヴィーガン適合・交差接触は未確認です。肉抜き、植物性の具材やノンアルコールという名前だけで安全・適合を保証せず、スタッフへつないでください。",
-          en: "You host guests at the fictional Hanul Sanjo Korean kitchen. Explain dishes, ingredients, heat and sharing portions one point at a time. Staff must operate tabletop heaters; explain thorough cooking and hot-vessel precautions. Milder dishes may still contain chilli. Religious certification, vegan suitability and cross-contact are unverified. Do not promise safety or suitability from meat removal, plant ingredients or a non-alcoholic name alone; ask staff to help.",
+          ja: "韓国食堂ハヌル三条店の接客担当です。料理の日本語名と材料、辛さ、取り分けの量を一つずつ説明してください。卓上調理は必ずスタッフが加熱機器を操作し、十分な加熱と熱い器への注意を案内します。辛さ控えめでも辛味は残る商品があります。食事対応は選択後の業務APIを確認します。厨房器具は共用で、ハラール認証はありません。肉抜き、植物性の具材やノンアルコールという名前だけで安全・適合を保証せず、スタッフへつないでください。",
+          en: "You host guests at Hanul Sanjo Korean kitchen. Explain dishes, ingredients, heat and sharing portions one point at a time. Staff must operate tabletop heaters; explain thorough cooking and hot-vessel precautions. Milder dishes may still contain chilli. Use the business tools for dietary suitability after customisation. Kitchen equipment is shared and the restaurant has no halal certification. Do not promise safety or suitability from meat removal, plant ingredients or a non-alcoholic name alone; ask staff to help.",
         },
         voice: { ja: null, en: null },
         proactive: false,

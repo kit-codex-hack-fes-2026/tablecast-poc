@@ -1,26 +1,101 @@
 import { z } from "zod";
 import { id, money } from "../../platform/model";
 import { imageSourceSchema } from "../media/model";
-export const contentSchema = z
+import { selectionSchema } from "../orders/model";
+import { foodChangesSchema, foodInformationSchema } from "./food-model";
+import { localizedSchema } from "./localization";
+const nameSchema = z.string().min(1).max(150).regex(/\S/).meta({ id: "tablecastName" });
+const contentSchema = z
   .object({
-    displayName: z.string().min(1).max(150),
-    speechName: z.string().min(1).max(150),
-    description: z.string().max(3000),
+    displayName: nameSchema,
+    speechName: z.string().max(150).default(""),
+    description: z.string().max(3000).default(""),
     aliases: z.array(z.string().max(100)).max(30).default([]),
+    transliteration: nameSchema.optional(),
   })
-  .strict();
+  .strict()
+  .meta({ id: "tablecastLocalizedContent" });
 
-export const bilingualSchema = z.object({ ja: contentSchema, en: contentSchema }).strict();
+export const bilingualSchema = localizedSchema(contentSchema).meta({
+  id: "tablecastBilingualContent",
+});
+const productTextSchema = localizedSchema(
+  contentSchema.extend({ transliteration: nameSchema }).meta({ id: "tablecastProductName" }),
+).meta({ id: "tablecastProductTexts" });
 
 const imageFields = {
   imageKey: z
     .string()
     .max(300)
     .regex(/^tablecast\/[a-zA-Z0-9/_-]+\.(png|jpg|webp|svg)$/)
+    .meta({ id: "tablecastImageKey" })
     .nullable()
     .default(null),
   imageKind: z.enum(["photograph", "illustration"]).default("illustration"),
 };
+
+export type OptionCondition =
+  | { child: OptionCondition; kind: "not" }
+  | { children: OptionCondition[]; kind: "and" | "or" }
+  | { kind: "option"; optionId: string };
+
+export const conditionLimits = {
+  depth: 8,
+  children: 8,
+  nodes: 64,
+  productNodes: 1024,
+  configurationNodes: 65536,
+} as const;
+
+const conditionOptionSchema = z
+  .object({ kind: z.literal("option"), optionId: id })
+  .strict()
+  .meta({ id: "tablecastConditionOption" });
+
+// 深さをschema自体で有限にし、共通の選択肢節をMCP schemaでも再利用する。
+function conditionAtDepth(depth: number): z.ZodType<OptionCondition> {
+  if (depth === conditionLimits.depth) return conditionOptionSchema;
+  const child = conditionAtDepth(depth + 1).meta({ id: `tablecastConditionDepth${depth + 1}` });
+  return z.discriminatedUnion("kind", [
+    conditionOptionSchema,
+    z
+      .object({
+        kind: z.enum(["and", "or"]),
+        children: z.array(child).min(2).max(conditionLimits.children),
+      })
+      .strict(),
+    z.object({ kind: z.literal("not"), child }).strict(),
+  ]);
+}
+
+function conditionNodeCount(condition: null | OptionCondition): number {
+  if (!condition) return 0;
+  const pending = [condition];
+  let count = 0;
+  while (pending.length) {
+    const node = pending.pop();
+    if (!node) break;
+    count++;
+    if (node.kind === "not") pending.push(node.child);
+    else if (node.kind !== "option") pending.push(...node.children);
+  }
+  return count;
+}
+
+export const optionConditionSchema = conditionAtDepth(1)
+  .refine((condition) => conditionNodeCount(condition) <= conditionLimits.nodes, {
+    message: "CONDITION_NODE_LIMIT",
+  })
+  .meta({ id: "tablecastConditionDepth1" });
+export const optionConditionsSchema = z
+  .object({
+    version: z.literal(2),
+    requires: optionConditionSchema.nullable(),
+    excludes: optionConditionSchema.nullable(),
+  })
+  .strict();
+
+export type OptionConditions = z.infer<typeof optionConditionsSchema>;
 
 export const optionSchema = z
   .object({
@@ -32,8 +107,14 @@ export const optionSchema = z
     maxQuantity: z.number().int().min(1).max(20).default(1),
     requires: z.array(id).default([]),
     excludes: z.array(id).default([]),
+    conditions: optionConditionsSchema.optional(),
+    foodChanges: foodChangesSchema.optional(),
   })
-  .strict();
+  .strict()
+  .refine((option) => !option.conditions || (!option.requires.length && !option.excludes.length), {
+    path: ["conditions"],
+    message: "CONDITION_FORMAT_MIXED",
+  });
 
 export const modifierSchema = z
   .object({
@@ -50,22 +131,21 @@ export const productSchema = z
   .object({
     id,
     categoryId: id,
-    text: bilingualSchema,
+    text: productTextSchema,
     price: money,
     available: z.boolean(),
     tags: z.array(id).default([]),
     ...imageFields,
     imageSource: imageSourceSchema.optional(),
-    modifiers: z.array(modifierSchema).max(12).default([]),
-    allergens: z
-      .object({
-        contains: z.array(z.string()),
-        evidence: z.enum(["verified", "unknown"]),
-        crossContact: z.enum(["possible", "unknown", "controlled"]),
-        vegan: z.enum(["yes", "no", "unknown"]),
-        note: z.object({ ja: z.string(), en: z.string() }),
-      })
-      .strict(),
+    modifiers: z
+      .array(modifierSchema)
+      .max(12)
+      .default([])
+      .refine(
+        (modifiers) => productConditionNodeCount({ modifiers }) <= conditionLimits.productNodes,
+        { message: "CONDITION_PRODUCT_LIMIT" },
+      ),
+    foodInfo: foodInformationSchema,
   })
   .strict();
 
@@ -89,6 +169,27 @@ export const planSchema = z
 
 export type Product = z.infer<typeof productSchema>;
 
+export function productConditionNodeCount(product: {
+  modifiers: { options: { conditions?: OptionConditions }[] }[];
+}): number {
+  return product.modifiers.reduce(
+    (total, group) =>
+      total +
+      group.options.reduce(
+        (sum, option) =>
+          sum +
+          conditionNodeCount(option.conditions?.requires ?? null) +
+          conditionNodeCount(option.conditions?.excludes ?? null),
+        0,
+      ),
+    0,
+  );
+}
+
 export type Modifier = z.infer<typeof modifierSchema>;
 
 export type Plan = z.infer<typeof planSchema>;
+
+export const foodQuerySchema = z
+  .object({ productId: id, selections: z.array(selectionSchema).max(100) })
+  .strict();

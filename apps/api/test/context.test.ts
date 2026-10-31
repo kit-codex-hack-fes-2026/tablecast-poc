@@ -1,8 +1,8 @@
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { expect, it, vi } from "vitest";
-import { staffActor, staffIdentity } from "../src/modules/auth/middleware";
-import { requestServices, type ApiEnv, type ApiServices } from "../src/platform/context";
+import { requireIdentity, staffActor, staffIdentity } from "../src/modules/auth/middleware";
+import { type ApiEnv, type ApiServices, requestServices } from "../src/platform/context";
 import { handleError } from "../src/platform/http";
 import { setupFixture } from "./fixture";
 
@@ -16,13 +16,13 @@ it("ログイン済みの要求で認証と店舗認可を重ねてもsession照
     .use("*", async (c, next) => {
       const services = c.get("services");
       requests.push(services);
-      const read = vi.spyOn(services.auth.api, "getSession");
+      const read = vi.spyOn((await services.getIdentity()).api, "getSession");
       await next();
       sessionReads.push(read.mock.calls.length);
       read.mockRestore();
     })
     .onError(handleError)
-    .get("/staff", async (c) => {
+    .get("/staff", requireIdentity, async (c) => {
       const [first, second] = await Promise.all([staffIdentity(c), staffIdentity(c)]);
       const actor = await staffActor(c, staff.storeId);
       return c.json({ first: first.user.id, second: second.user.id, actor: actor.userId });
@@ -43,7 +43,7 @@ it("ログイン済みの要求で認証と店舗認可を重ねてもsession照
   expect(sessionReads).toEqual([1, 1]);
   expect(requests).toHaveLength(2);
   expect(requests[0]?.db).not.toBe(requests[1]?.db);
-  expect(requests[0]?.auth).not.toBe(requests[1]?.auth);
+  expect(await requests[0]?.getIdentity()).not.toBe(await requests[1]?.getIdentity());
 });
 
 it("認証設定のない環境でも公開経路はDBを利用でき、必要になるまでAuthを生成しない", async () => {

@@ -1,30 +1,41 @@
-import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
-import type { ApiEnv } from "../../platform/context";
+import { ensure } from "../../platform/errors";
+import { apiFactory } from "../../platform/http";
 import { validate } from "../../platform/validation";
+import { getSession } from "../tables/queries";
+import { recordConversationItems } from "./conversation";
 import {
   toolSchema,
   voiceConversationSchema,
   voiceDelegationSchema,
+  voiceObservationsSchema,
   voiceStartSchema,
+  voiceSuggestionsSchema,
 } from "./model";
-import { ensure } from "../../platform/errors";
-import { getSession } from "../tables/queries";
+import { recordVoiceObservations } from "./observability";
 import { invokeVoiceTool } from "./realtime";
-import { finishVoiceTurn } from "./turns";
-import { recordConversationItems } from "./conversation";
 import { startVoiceDelegation, startVoiceSession, stopVoiceSession } from "./session";
+import { finishVoiceTurn } from "./turns";
+import { createVoiceSuggestions } from "./use-cases/guidance";
 
 // 卓端末とデモの認証済み経路からだけ組み込む。音声用の共有bearer資格は不要。
-export const voiceRoutes = new Hono<ApiEnv>()
+export const voiceRoutes = apiFactory
+  .createApp()
   .use("*", bodyLimit({ maxSize: 256 * 1024 }))
+  .post("/observations", validate(voiceObservationsSchema), async (c) =>
+    c.json(
+      await recordVoiceObservations(c.get("services"), c.get("actor"), c.req.valid("json")),
+      200,
+    ),
+  )
   .post("/start", validate(voiceStartSchema), async (c) => {
     const started = startVoiceSession(
       c.get("services"),
       c.get("actor"),
       c.req.valid("json").sdp,
       c.req.raw.signal,
+      c.req.valid("json").purpose,
     );
     // 接続元が中断しても、発行済みLive sessionを失効させるまで待つ。
     c.executionCtx.waitUntil(started.catch(() => undefined));
@@ -41,6 +52,17 @@ export const voiceRoutes = new Hono<ApiEnv>()
       );
       return c.json(result.state, result.completed ? 200 : 202);
     },
+  )
+  .post("/suggestions", validate(voiceSuggestionsSchema), async (c) =>
+    c.json(
+      await createVoiceSuggestions(
+        c.get("services"),
+        c.get("actor"),
+        c.req.valid("json"),
+        c.req.raw.signal,
+      ),
+      200,
+    ),
   )
   .post("/conversation", validate(voiceConversationSchema), async (c) =>
     c.json(

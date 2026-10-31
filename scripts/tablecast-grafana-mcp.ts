@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
-import { readRuntime, tablecastContainer, tablecastLocal } from "./tablecast-runtime";
+import { localObservability } from "./tablecast-observability-config.ts";
+import { tablecastContainer, tablecastLocal } from "./tablecast-runtime.ts";
 
 const target = process.argv[2];
 if (target !== "local" && target !== "cloud")
@@ -7,12 +8,10 @@ if (target !== "local" && target !== "cloud")
 const args = ["run", "--rm", "-i"];
 const environment: Record<string, string> = {};
 if (target === "local") {
-  if (tablecastContainer) environment.GRAFANA_URL = "http://tablecast-lgtm:3000";
-  else {
-    const runtime = await readRuntime();
-    if (!runtime.ports.grafana) throw new Error("bun run devでLGTMを起動してください。");
-    environment.GRAFANA_URL = `http://host.docker.internal:${runtime.ports.grafana}`;
-  }
+  const local = await localObservability(tablecastContainer);
+  environment.GRAFANA_URL = local.TABLECAST_GRAFANA_ORIGIN;
+  if (!tablecastContainer) args.push("--network", "tablecast-observability-local");
+  if (!tablecastContainer) environment.GRAFANA_URL = "http://tablecast-lgtm:3000";
 } else {
   const token = resolve(tablecastLocal, "tablecast-grafana-read-token");
   if (!(await Bun.file(token).exists()))
@@ -28,14 +27,14 @@ const flags = [
   "stdio",
   "--disable-write",
   "--enabled-tools",
-  "datasource,loki,prometheus,navigation",
+  "datasource,loki,prometheus,navigation,tempo",
   "--max-loki-log-limit",
   "100",
 ];
 for (const [key, value] of Object.entries(environment)) args.push("-e", `${key}=${value}`);
 const command = tablecastContainer
   ? ["mcp-grafana", ...flags]
-  : ["docker", ...args, "grafana/mcp-grafana:1.3.0", ...flags];
+  : ["docker", ...args, "grafana/mcp-grafana:2.0.2", ...flags];
 const child = Bun.spawn(command, {
   env: { ...process.env, ...environment },
   stdin: "inherit",

@@ -11,3 +11,5 @@ export const membershipOptions = (organizationId: string) =>
         }),
       ),
   });
+
+export type Membership = typeof authClient.$Infer.ActiveOrganization;

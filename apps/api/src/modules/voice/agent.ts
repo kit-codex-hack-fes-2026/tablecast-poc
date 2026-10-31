@@ -1,41 +1,50 @@
-import type { TableRecord } from "../../db/records";
-import type { TableState } from "../tables/model";
 import { z } from "zod";
+import type { TableRecord } from "../../db/records";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
-import { localeSchema, type Locale } from "../../platform/model";
 import type { Actor } from "../auth/model";
+import type { DisplayCurrencyContext } from "../currency/model";
+import { ensure } from "../../platform/errors";
+import { localeSchema, id as productIdSchema } from "../../platform/model";
+import { getProductFoodInformation } from "../catalog/food-service";
+import { resolveText } from "../catalog/localization";
+import { foodQuerySchema } from "../catalog/model";
 import { getCatalog } from "../catalog/queries";
+import { menuSearchPage } from "../catalog/search";
+import { knowledgeReadSchema, knowledgeSearchSchema } from "../configuration/knowledge-model";
+import { maxConfigurationProducts } from "../configuration/model";
+import { approximateAmounts, currencyMetadata } from "../currency/display";
+import { displayCurrencyCodeSchema } from "../currency/model";
+import {
+  customerSuggestionsSchema,
+  memorySearchSchema,
+  saveCustomerMemorySchema,
+} from "../customer-memory/model";
+import {
+  customerRecommendationContext,
+  customerSuggestions,
+  searchCustomerMemories,
+} from "../customer-memory/queries";
+import { saveAutomaticCustomerMemory } from "../customer-memory/use-cases/sources";
 import { cartUpdateSchema, submitSchema } from "../orders/model";
-import { prepareConfirmation, submitOrder, updateCart } from "../orders/service";
-import { uiSectionInputSchema } from "../tables/model";
+import { updateCart } from "../orders/use-cases/cart";
+import { prepareConfirmation, submitOrder } from "../orders/use-cases/confirmation";
+import { getServiceGuidance } from "../tables/assistance-queries";
+import { menuSearchInputSchema, staffCallInputSchema, uiSectionInputSchema } from "../tables/model";
 import { getSession, getTableState } from "../tables/queries";
-import { callStaff, changeLocale, setUiSection, showProducts } from "../tables/service";
+import { showServiceGuidance } from "../tables/use-cases/assistance";
+import {
+  callStaff,
+  changeLocale,
+  setUiSection,
+  showProducts,
+} from "../tables/use-cases/presentation";
 import { showProductsSchema, type VoiceTrigger } from "./model";
-import { castInstructions } from "./prompt";
 import { setSpeechSpeed } from "./service";
-export function castSessionInstructions(locale: Locale, trigger: VoiceTrigger = "user") {
-  return `${castInstructions}\n応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalogで最新情報を確認する。カートや注文の操作前にgetTableStateで現在の版を取得する。同じ委任で取得した情報を再取得しない。操作結果の新しい版を次の操作に使う。独立した照会はまとめて呼ぶ。商品をカートに入れる依頼ではgetCatalogとgetTableStateを同じresponseで並列に呼び、両結果からupdateCartする。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介はgetCatalog(show=true)で検索とカード表示を一回で行う。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替える。prepareConfirmationの結果に含まれる商品・数量・選択肢・合計を短く伝えて承認を求める。同じ客発話でprepareConfirmationとsubmitOrderを呼ばない。"}`;
-}
-
-function castTool<T extends z.ZodType>(options: {
-  id: string;
-  description: string;
-  inputSchema: T;
-  execute: (input: z.output<T>) => Promise<unknown>;
-}) {
-  const invoke = (input: unknown) => {
-    const parsed = options.inputSchema.safeParse(input);
-    ensure(parsed.success, "INVALID_INPUT", 422);
-    return options.execute(parsed.data);
-  };
-  return {
-    ...options,
-    execute: invoke,
-    invoke,
-    parameters: z.toJSONSchema(options.inputSchema),
-  };
-}
+import { castTool } from "./tool";
+import { voiceToolDescriptions } from "./tool-descriptions";
+import { voiceCatalogProduct, voiceTableState } from "./tool-state";
+import { readStoreKnowledge, searchStoreKnowledge } from "./use-cases/knowledge";
+import { showReference } from "./use-cases/references";
 
 export function createCastTools(
   services: ApiServices,
@@ -43,89 +52,161 @@ export function createCastTools(
   signal: AbortSignal,
   trigger: VoiceTrigger = "user",
   currentSession?: TableRecord,
+  displayContext?: DisplayCurrencyContext,
 ) {
   const guard = () => signal.throwIfAborted();
+  const rates = displayContext?.rates;
+  const selectedCurrency = displayContext?.currency ?? null;
   return {
-    getCatalog: castTool({
-      id: "getCatalog",
-      description:
-        "商品検索。商品名・ID・別名・カテゴリをqueryへ指定する。複数対象は空白区切りで一括検索し、対象別にtoolを分けない。紹介時はshow=trueで候補カードも表示し、追加のshowProductsは不要。detail=falseは概要、trueは注文・アレルギー回答に必要な選択肢を含む詳細。商品を選ぶ前に必須選択肢を先回りして尋ねない。more=trueならoffsetを進めて次頁を取得できる。同じ委任で取得済みの商品は再照会しない。",
+    searchStoreKnowledge: castTool({
+      id: "searchStoreKnowledge",
+      description: voiceToolDescriptions.searchStoreKnowledge,
+      inputSchema: knowledgeSearchSchema,
+      execute: async (input) => {
+        guard();
+        return searchStoreKnowledge(services, actor, input);
+      },
+    }),
+    readStoreKnowledge: castTool({
+      id: "readStoreKnowledge",
+      description: voiceToolDescriptions.readStoreKnowledge,
+      inputSchema: knowledgeReadSchema,
+      execute: async (input) => {
+        guard();
+        return readStoreKnowledge(services, actor, input);
+      },
+    }),
+    searchCustomerMemories: castTool({
+      id: "searchCustomerMemories",
+      description: voiceToolDescriptions.searchCustomerMemories,
+      inputSchema: memorySearchSchema,
+      execute: async (input) => {
+        guard();
+        return searchCustomerMemories(services, actor, input);
+      },
+    }),
+    getCustomerSuggestions: castTool({
+      id: "getCustomerSuggestions",
+      description: voiceToolDescriptions.getCustomerSuggestions,
+      inputSchema: customerSuggestionsSchema,
+      execute: async (input) => {
+        guard();
+        return customerSuggestions(services, actor, input);
+      },
+    }),
+    getCustomerContext: castTool({
+      id: "getCustomerContext",
+      description: voiceToolDescriptions.getCustomerContext,
+      inputSchema: z.object({}).strict(),
+      execute: async () => {
+        guard();
+        return customerRecommendationContext(services, actor);
+      },
+    }),
+    ...(trigger === "user"
+      ? {
+          saveCustomerMemory: castTool({
+            id: "saveCustomerMemory",
+            description: voiceToolDescriptions.saveCustomerMemory,
+            inputSchema: saveCustomerMemorySchema,
+            execute: async (input) => {
+              guard();
+              return saveAutomaticCustomerMemory(services, actor, input);
+            },
+          }),
+        }
+      : {}),
+    getServiceGuidance: castTool({
+      id: "getServiceGuidance",
+      description: voiceToolDescriptions.getServiceGuidance,
       inputSchema: z
         .object({
           query: z.string().max(100).optional(),
-          offset: z.number().int().min(0).max(1000).optional(),
+          guideId: z.string().optional(),
+          offset: z.number().int().nonnegative().optional(),
+          show: z.boolean().optional(),
+        })
+        .strict(),
+      execute: async ({ show = true, ...input }) => {
+        guard();
+        const result = await getServiceGuidance(services, actor, input);
+        if (show && trigger === "user")
+          await showServiceGuidance(services, actor, {
+            configVersion: result.configVersion,
+            guideIds: result.guides.map((guide) => guide.id),
+            productIds: result.products.map((product) => product.id),
+          });
+        return result;
+      },
+    }),
+    getProductFoodInformation: castTool({
+      id: "getProductFoodInformation",
+      description: voiceToolDescriptions.getProductFoodInformation,
+      inputSchema: foodQuerySchema,
+      execute: async (input) => {
+        guard();
+        const { optionAllergens: _optionAllergens, ...result } = await getProductFoodInformation(
+          services,
+          actor,
+          input,
+        );
+        return result;
+      },
+    }),
+    getCatalog: castTool({
+      id: "getCatalog",
+      description: voiceToolDescriptions.getCatalog,
+      inputSchema: z
+        .object({
+          query: z.string().max(100).optional(),
+          productIds: z
+            .array(productIdSchema)
+            .min(1)
+            .max(8)
+            .optional()
+            .describe(
+              "検索結果から自分で照合した内部の商品ID。客には尋ねず案内しない。必須選択肢・追加料金を含む詳細を返す",
+            ),
+          offset: z.number().int().min(0).max(maxConfigurationProducts).optional(),
           limit: z.number().int().min(1).max(8).optional(),
           show: z.boolean().optional(),
+          quoteCurrency: displayCurrencyCodeSchema
+            .optional()
+            .describe("表示設定を変えず、この照会だけ外貨の参考額を返す"),
           includePlans: z
             .boolean()
             .describe("プランの料金・時間・対象・注文制限を質問されたときだけtrue")
             .optional(),
         })
         .strict(),
-      execute: async ({ query, offset = 0, limit = 8, show = false, includePlans = false }) => {
+      execute: async ({
+        query,
+        productIds,
+        offset = 0,
+        limit = 8,
+        show = false,
+        includePlans = false,
+        quoteCurrency,
+      }) => {
         guard();
         const session = currentSession ?? (await getSession(services, actor));
         const catalog = await getCatalog(services, actor.storeId, actor.demoId);
         const locale = session.locale;
-        const searchText = query?.trim().toLocaleLowerCase();
-        const terms = searchText?.split(/\s+/).filter(Boolean);
-        const exact = searchText
-          ? catalog.configuration.products.filter(
-              (product) =>
-                product.id.toLocaleLowerCase() === searchText ||
-                Object.values(product.text).some((text) =>
-                  [text.displayName, text.speechName, ...text.aliases].some(
-                    (name) => name.trim().toLocaleLowerCase() === searchText,
-                  ),
-                ),
-            )
-          : [];
-        const categoryNames = new Map(
-          catalog.configuration.categories.map((category) => [
-            category.id,
-            Object.values(category.text).flatMap((text) =>
-              [text.displayName, text.speechName, ...text.aliases]
-                .map((name) => name.trim().toLocaleLowerCase())
-                .filter(Boolean),
-            ),
-          ]),
+        const currency = quoteCurrency ?? selectedCurrency;
+        const search = productIds
+          ? { productIds, detail: true, total: new Set(productIds).size, more: false }
+          : menuSearchPage(catalog.configuration, { query, offset, limit });
+        const ids = [...new Set(search.productIds)];
+        const detail = Boolean(productIds) || search.detail;
+        const byId = new Map(
+          catalog.configuration.products.map((product) => [product.id, product]),
         );
-        const matched = exact.length
-          ? exact
-          : catalog.configuration.products.filter(
-              (product) =>
-                !terms?.length ||
-                terms.some((term) =>
-                  JSON.stringify([
-                    product.id,
-                    product.categoryId,
-                    product.text,
-                    categoryNames.get(product.categoryId),
-                  ])
-                    .toLocaleLowerCase()
-                    .includes(term),
-                ) ||
-                Object.values(product.text).some((text) =>
-                  [text.displayName, text.speechName, ...text.aliases].some(
-                    (name) =>
-                      name.trim().length > 0 && searchText?.includes(name.toLocaleLowerCase()),
-                  ),
-                ) ||
-                categoryNames.get(product.categoryId)?.some((name) => searchText?.includes(name)),
-            );
-        const categorySearch = catalog.configuration.categories.some(
-          (category) =>
-            terms?.some((term) =>
-              JSON.stringify([category.id, categoryNames.get(category.id)])
-                .toLocaleLowerCase()
-                .includes(term),
-            ) || categoryNames.get(category.id)?.some((name) => searchText?.includes(name)),
-        );
-        // 紹介用の複数候補には選択肢を複製せず、特定した商品だけ詳細を返す。
-        const detail =
-          !!terms?.length && matched.length === 1 && (exact.length === 1 || !categorySearch);
-        const matches = matched;
-        const products = matches.slice(offset, offset + limit);
+        const matches = ids.flatMap((id) => {
+          const product = byId.get(id);
+          return product ? [product] : [];
+        });
+        ensure(!productIds || matches.length === ids.length, "PRODUCT_NOT_FOUND", 422);
+        const products = matches;
         if (show) {
           ensure(trigger === "user", "VOICE_TOOL_FORBIDDEN", 403);
           if (products.length)
@@ -137,8 +218,9 @@ export function createCastTools(
             );
         }
         return {
-          total: matches.length,
-          more: offset + products.length < matches.length,
+          displayCurrency: currencyMetadata(currency, rates),
+          total: search.total,
+          more: search.more,
           ...(show
             ? { displayedProductIds: products.slice(0, 4).map((product) => product.id) }
             : {}),
@@ -148,65 +230,80 @@ export function createCastTools(
             ? {
                 plans: catalog.configuration.plans.map((plan) => ({
                   ...plan,
-                  text: plan.text[locale],
+                  text: resolveText(plan.text, locale),
+                  ...approximateAmounts({ pricePerPerson: plan.pricePerPerson }, currency, rates),
                 })),
               }
             : {}),
           categories: catalog.configuration.categories.map((category) => ({
             id: category.id,
-            displayName: category.text[locale].displayName,
+            displayName: resolveText(category.text, locale).displayName,
           })),
           detail,
-          products: products.map((product) => ({
-            id: product.id,
-            categoryId: product.categoryId,
-            price: product.price,
-            available: product.available,
-            displayName: product.text[locale].displayName,
-            speechName: product.text[locale].speechName,
-            description: product.text[locale].description,
-            ...(detail
-              ? {
-                  allergens: product.allergens,
-                  modifiers: product.modifiers?.map((modifier) => ({
-                    id: modifier.id,
-                    kind: modifier.kind,
-                    min: modifier.min,
-                    max: modifier.max,
-                    displayName: modifier.text[locale].displayName,
-                    speechName: modifier.text[locale].speechName,
-                    description: modifier.text[locale].description,
-                    options: modifier.options.map((option) => ({
-                      id: option.id,
-                      priceDelta: option.priceDelta,
-                      available: option.available,
-                      displayName: option.text[locale].displayName,
-                      speechName: option.text[locale].speechName,
-                      description: option.text[locale].description,
-                    })),
-                  })),
-                }
-              : {}),
-          })),
+          products: products.map((product) =>
+            voiceCatalogProduct(product, locale, currency, rates, detail),
+          ),
         };
       },
     }),
     getTableState: castTool({
       id: "getTableState",
-      description:
-        "現在の卓、locale（言語）・speechSpeed（話速）、画面のuiSection、表示中の商品詳細のselectedProductId（nullなら詳細なし）、カート版、確認、注文、請求状態を取得する。話者番号から人数や席を推定しない。",
-      inputSchema: z.object({}).strict(),
-      execute: async () => {
+      description: voiceToolDescriptions.getTableState,
+      inputSchema: z.object({ quoteCurrency: displayCurrencyCodeSchema.optional() }).strict(),
+      execute: async ({ quoteCurrency }) => {
         guard();
-        return voiceTableState(await getTableState(services, actor));
+        return voiceTableState(
+          await getTableState(services, actor),
+          quoteCurrency ?? selectedCurrency,
+          rates,
+        );
       },
     }),
     ...(trigger === "user"
       ? {
+          showReference: castTool({
+            id: "showReference",
+            description: voiceToolDescriptions.showReference,
+            inputSchema: z
+              .object({ url: z.url().max(2048), title: z.string().max(200).optional() })
+              .strict(),
+            execute: async (input) => {
+              guard();
+              return showReference(services, actor, input, signal);
+            },
+          }),
+          captureCamera: castTool({
+            id: "captureCamera",
+            description: voiceToolDescriptions.captureCamera,
+            inputSchema: z.object({ question: z.string().min(1).max(300) }).strict(),
+            execute: async ({ question }) => {
+              guard();
+              return { question, sessionAuthorized: true };
+            },
+          }),
+          endConversation: castTool({
+            id: "endConversation",
+            description: voiceToolDescriptions.endConversation,
+            inputSchema: z.object({}).strict(),
+            execute: async () => {
+              guard();
+              await getSession(services, actor);
+              return { ending: true };
+            },
+          }),
+          getCameraState: castTool({
+            id: "getCameraState",
+            description: voiceToolDescriptions.getCameraState,
+            inputSchema: z.object({}).strict(),
+            execute: async () => {
+              guard();
+              // 端末の権限・映像状態は認可完了後にWebが付加する。
+              return { sessionAuthorized: true };
+            },
+          }),
           setLanguage: castTool({
             id: "setLanguage",
-            description:
-              "客の明示依頼で表示と音声の言語をja（日本語）/en（British English）へ切り替える。音声は停止し、画面の再開ボタンで新言語を開始する。同じ言語なら変更不要。切替後に追加のツールや本文を生成しない。",
+            description: voiceToolDescriptions.setLanguage,
             inputSchema: z.object({ locale: localeSchema }).strict(),
             execute: async (input) => {
               guard();
@@ -214,10 +311,19 @@ export function createCastTools(
               return { locale: state.locale, voiceState: state.voiceState };
             },
           }),
+          setDisplayCurrency: castTool({
+            id: "setDisplayCurrency",
+            description: voiceToolDescriptions.setDisplayCurrency,
+            inputSchema: z.object({ currency: displayCurrencyCodeSchema.nullable() }).strict(),
+            execute: async ({ currency }) => {
+              guard();
+              ensure(displayContext, "DISPLAY_CONTEXT_REQUIRED", 422);
+              return { displayCurrency: currencyMetadata(currency, rates) };
+            },
+          }),
           setSpeechSpeed: castTool({
             id: "setSpeechSpeed",
-            description:
-              "客の明示依頼で話速を0.5〜1.5倍、0.1刻みで変更する。通常は1倍。相対的な依頼はgetTableStateのspeechSpeedから0.1増減し、範囲を守る。次の発話から反映する。",
+            description: voiceToolDescriptions.setSpeechSpeed,
             // Liveのfunction定義は小数のJSON Schema境界で作成に失敗するため、
             // モデルへは説明を渡す。実行時は共有serviceのschemaで範囲・刻みを検証する。
             inputSchema: z
@@ -229,10 +335,40 @@ export function createCastTools(
               return { speechSpeed: state.speechSpeed };
             },
           }),
+          showMenuSearch: castTool({
+            id: "showMenuSearch",
+            description: voiceToolDescriptions.showMenuSearch,
+            inputSchema: menuSearchInputSchema,
+            execute: async (input) => {
+              guard();
+              const catalog = await getCatalog(services, actor.storeId, actor.demoId);
+              const state = await setUiSection(
+                services,
+                actor,
+                { section: "menu", search: input },
+                "core",
+                { catalog, session: currentSession },
+              );
+              ensure(catalog.version === state.configVersion, "TABLE_CONFLICT");
+              const byId = new Map(
+                catalog.configuration.products.map((product) => [product.id, product]),
+              );
+              return {
+                version: state.configVersion,
+                ...state.menuSearch,
+                products: (state.menuSearch?.productIds ?? []).flatMap((id) => {
+                  const product = byId.get(id);
+                  return product
+                    ? [voiceCatalogProduct(product, state.locale, selectedCurrency, rates, false)]
+                    : [];
+                }),
+                displayCurrency: currencyMetadata(selectedCurrency, rates),
+              };
+            },
+          }),
           setUiSection: castTool({
             id: "setUiSection",
-            description:
-              "客の希望に応じて表示タブをmenu（メニュー）、cart（カート）、orders（注文履歴）、bill（会計）へ切り替える。個別の商品詳細を開くときはsection=menuとgetCatalogで確認したproductIdを指定する。productId省略/nullなら商品詳細を閉じて一覧へ戻る。menu以外では商品選択を解除する。注文や会計の確定は行わない。",
+            description: voiceToolDescriptions.setUiSection,
             inputSchema: uiSectionInputSchema,
             execute: async (input) => {
               guard();
@@ -242,8 +378,7 @@ export function createCastTools(
           }),
           showProducts: castTool({
             id: "showProducts",
-            description:
-              "商品紹介やおすすめを依頼されたら、getCatalogで確認した商品IDを最大4件指定して会話内に商品カードを表示する。カードは補助であり、候補の名前・違い・価格を同じ応答の音声でも伝える。表示だけでカート追加や注文を行わない。",
+            description: voiceToolDescriptions.showProducts,
             inputSchema: showProductsSchema,
             execute: async (input) => {
               guard();
@@ -252,18 +387,20 @@ export function createCastTools(
           }),
           updateCart: castTool({
             id: "updateCart",
-            description:
-              "現行expectedVersionに対してカートを更新する。既存行を保持し、客の選択をselectionsへ含める。指定のない必須項目は選ばず、返ったmissingをまとめて尋ねる。任意項目は指定がなければ未選択。数量不明の単品注文は1、追加数量が曖昧なら確認する。注文確定には別のprepareConfirmationと次発話の明示承認が必要。",
+            description: voiceToolDescriptions.updateCart,
             inputSchema: cartUpdateSchema,
             execute: async (input) => {
               guard();
-              return voiceTableState(await updateCart(services, actor, input));
+              return voiceTableState(
+                await updateCart(services, actor, input),
+                selectedCurrency,
+                rates,
+              );
             },
           }),
           prepareConfirmation: castTool({
             id: "prepareConfirmation",
-            description:
-              "版付きの注文確認を作る。結果の内容を自然な言葉で案内し、次の客発話で承認を求める。注文はまだ送信されない。",
+            description: voiceToolDescriptions.prepareConfirmation,
             inputSchema: z.object({ expectedVersion: z.number().int().nonnegative() }).strict(),
             execute: async (input) => {
               guard();
@@ -272,6 +409,8 @@ export function createCastTools(
                 channel: "voice",
               });
               return {
+                displayCurrency: currencyMetadata(selectedCurrency, rates),
+                ...approximateAmounts({ total: snapshot.total }, selectedCurrency, rates),
                 snapshotId: snapshot.id,
                 text: snapshot.text,
                 total: snapshot.total,
@@ -282,83 +421,36 @@ export function createCastTools(
           }),
           submitOrder: castTool({
             id: "submitOrder",
-            description:
-              "注文内容を案内した後の新しい客発話で、その内容への明示的な承認があったときだけ呼ぶ。訂正・質問・曖昧な相づち・背景会話は承認ではない。",
+            description: voiceToolDescriptions.submitOrder,
             inputSchema: submitSchema,
             execute: async (input) => {
               guard();
               ensure(input.approved, "APPROVAL_REQUIRED", 422);
               const order = await submitOrder(services, actor, input);
-              return { orderId: order.id, status: order.status, total: order.total };
+              return {
+                orderId: order.id,
+                status: order.status,
+                total: order.total,
+                displayCurrency: currencyMetadata(selectedCurrency, rates),
+                ...approximateAmounts({ total: order.total }, selectedCurrency, rates),
+              };
             },
           }),
           callStaff: castTool({
             id: "callStaff",
-            description:
-              "アレルギーや交差接触の根拠が不明、聞き取りが曖昧、客が希望した際にスタッフを呼ぶ。",
-            inputSchema: z.object({}).strict(),
-            execute: async () => {
+            description: voiceToolDescriptions.callStaff,
+            inputSchema: staffCallInputSchema,
+            execute: async (input) => {
               guard();
-              const state = await callStaff(services, actor);
-              return { staffCalled: state.staffCalled };
+              const state = await callStaff(services, actor, "core", input);
+              return {
+                staffCalled: state.staffCalled,
+                callId: state.staffCall?.id,
+                status: state.staffCall?.status,
+              };
             },
           }),
         }
       : {}),
-  };
-}
-
-// GUIのイベント履歴・二言語snapshotを毎回モデルへ複製しない。
-export function voiceTableState(state: TableState) {
-  return {
-    locale: state.locale,
-    speechSpeed: state.speechSpeed,
-    uiSection: state.uiSection,
-    selectedProductId: state.selectedProductId,
-    staffCalled: state.staffCalled,
-    cart: {
-      ...state.cart,
-      lines: state.cart.lines.map((line) => ({
-        id: line.id,
-        productId: line.productId,
-        quantity: line.quantity,
-        selections: line.selections,
-        name: line.name[state.locale],
-        speechName: line.speechName[state.locale],
-        unitPrice: line.unitPrice,
-        total: line.total,
-        missing: line.missing,
-        planCovered: line.planCovered,
-        options: line.options.map((option) => ({
-          id: option.id,
-          name: option.name[state.locale],
-          quantity: option.quantity,
-          priceDelta: option.priceDelta,
-        })),
-      })),
-    },
-    snapshot: state.snapshot
-      ? {
-          id: state.snapshot.id,
-          status: state.snapshot.status,
-          cartVersion: state.snapshot.cartVersion,
-          text: state.snapshot.text,
-          total: state.snapshot.total,
-          expiresAt: state.snapshot.expiresAt,
-        }
-      : null,
-    orders: state.orders.map((order) => ({
-      id: order.id,
-      status: order.status,
-      total: order.total,
-    })),
-    bill: state.bill,
-    billRequested: state.billRequested,
-    plan: state.plan
-      ? {
-          ...state.plan,
-          rules: { ...state.plan.rules, text: state.plan.rules.text[state.locale] },
-        }
-      : null,
   };
 }

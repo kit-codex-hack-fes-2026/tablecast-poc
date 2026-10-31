@@ -1,11 +1,12 @@
+import type { TableEvent } from "@tablecast/api/schema";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { parseResponse, rpc, tableEndpoint } from "./api";
 import { apiError } from "./api-error";
 
 export function useRealtime(
-  scope: "table" | { storeId: string } | undefined,
+  scope: "table" | undefined | { storeId: string },
   snapshotCursor: number,
-  onChange: () => void,
+  onChange: (update?: { cursor: number; events: TableEvent[] }) => void,
   tableClient = tableEndpoint.client,
 ) {
   const storeId = typeof scope === "object" ? scope.storeId : undefined;
@@ -22,7 +23,7 @@ export function useRealtime(
     let fetching = false;
     let queued = false;
     let lastSync = 0;
-    let socket: WebSocket | undefined;
+    let socket: undefined | WebSocket;
     let retry: ReturnType<typeof setTimeout> | undefined;
     const controller = new AbortController();
     async function synchronise() {
@@ -33,6 +34,7 @@ export function useRealtime(
       }
       queued = false;
       fetching = true;
+      cursor.current = Math.max(cursor.current, getSnapshotCursor());
       try {
         const result = await parseResponse(
           storeId
@@ -49,7 +51,7 @@ export function useRealtime(
           lastSync = Date.now();
           queued ||= result.events.length === 500;
           cursor.current = Math.max(cursor.current, result.cursor);
-          if (result.events.length) notify();
+          if (result.events.length && result.cursor > getSnapshotCursor()) notify(result);
         }
       } catch (error) {
         if (!disposed) {
@@ -75,7 +77,22 @@ export function useRealtime(
         setConnected(true);
         void synchronise();
       });
-      socket.addEventListener("message", () => {
+      socket.addEventListener("message", (event) => {
+        try {
+          const value: unknown = JSON.parse(String(event.data));
+          if (
+            value &&
+            typeof value === "object" &&
+            "cursor" in value &&
+            typeof value.cursor === "number" &&
+            value.cursor <= getSnapshotCursor()
+          ) {
+            lastSync = Date.now();
+            return;
+          }
+        } catch {
+          // 旧形式の通知も通常のイベント再取得で回復する。
+        }
         void synchronise();
       });
       socket.addEventListener("close", () => {

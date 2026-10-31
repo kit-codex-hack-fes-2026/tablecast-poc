@@ -13,17 +13,24 @@ const source = {
   symbol: { black: "tablecast-icon.svg", white: "tablecast-symbol-white.svg" },
 };
 
+/**
+ * TableCastの識別。
+ * variantはlogo/symbol、toneはblack/white。
+ * 文字入りか記号のみかを選び、背景とのコントラストを保つ。
+ * 店舗のロゴはStoreLogoへ渡す。
+ */
 export function Brand({
+  className,
   variant = "logo",
   tone = "black",
-}: VariantProps<typeof brand> & { tone?: "black" | "white" }) {
+}: VariantProps<typeof brand> & { className?: string; tone?: "black" | "white" }) {
   return (
     <img
       src={`/brand/${source[variant][tone]}`}
       width={variant === "logo" ? 500 : 120}
       height={120}
       alt="TableCast"
-      className={brand({ variant })}
+      className={brand({ variant, className })}
     />
   );
 }

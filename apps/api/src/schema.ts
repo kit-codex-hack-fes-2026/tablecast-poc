@@ -1,96 +1,187 @@
-// Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
 export {
-  imageMetadataSchema,
-  imageSourceSchema,
-  uploadedImageSchema,
-  uploadImageSchema,
-} from "./modules/media/model";
+  appearanceSchema,
+  bannerSchema,
+  themeCssRules,
+  themeFonts,
+  themeParts,
+  themePartSchema,
+} from "./modules/appearance/model";
+export type { Appearance, Banner, ThemeImage, ThemePart } from "./modules/appearance/model";
 export {
-  bilingualSchema,
-  contentSchema,
-  modifierSchema,
+  crossContactSourceSchema,
+  dietaryAssessmentSchema,
+  dietaryKeys,
+  dietaryReasonsByKind,
+  dietaryReasonSchema,
+  foodChangesSchema,
+  foodClassification,
+  foodInformationSchema,
+  foodProfileSchema,
+  halalCertificationSchema,
+  japaneseAllergenSchema,
+  unknownFoodProfile,
+} from "./modules/catalog/food-model";
+export type { FoodInformation, FoodProfile, JapaneseAllergen } from "./modules/catalog/food-model";
+export {
+  conditionLimits,
+  optionConditionSchema,
+  optionConditionsSchema,
   optionSchema,
   planSchema,
   productSchema,
 } from "./modules/catalog/model";
-export type { Modifier, Plan, Product } from "./modules/catalog/model";
+export type {
+  Modifier,
+  OptionCondition,
+  OptionConditions,
+  Plan,
+  Product,
+} from "./modules/catalog/model";
+export {
+  legacyFoodInformation,
+  readConfiguration,
+} from "./modules/configuration/food-compatibility";
+export {
+  type CastInstruction,
+  castInstructionSchema,
+  type InstructionBlock,
+  instructionLimit,
+  instructionText,
+} from "./modules/configuration/instruction-model";
+export {
+  storeSkillLimits,
+  storeSkillSchema,
+  storeSkillsSchema,
+} from "./modules/configuration/knowledge-model";
+export type { StoreSkill } from "./modules/configuration/knowledge-model";
 export {
   catalogSchema,
   configDraftSchema,
+  configurationHistoryPageSchema,
   configurationIssueSchema,
+  configurationReleaseSchema,
   configurationSchema,
+  draftChoicesPageSchema,
 } from "./modules/configuration/model";
 export type {
   Catalog,
   ConfigDraft,
   Configuration,
+  ConfigurationHistoryEntry,
+  ConfigurationHistoryPage,
   ConfigurationIssue,
+  ConfigurationRelease,
 } from "./modules/configuration/model";
+export { guideSchema } from "./modules/configuration/model";
+export type { Guide } from "./modules/configuration/model";
 export {
-  billSchema,
+  displayCurrencyActionSchema,
+  displayCurrencyCodes,
+  displayCurrencyCodeSchema,
+  displayCurrencyContextSchema,
+  exchangeRatesSchema,
+} from "./modules/currency/model";
+export type {
+  DisplayCurrencyCode,
+  DisplayCurrencyContext,
+  ExchangeRates,
+} from "./modules/currency/model";
+export {
+  couponConditionsSchema,
+  couponDefinitionSchema,
+  couponRuleSchema,
+} from "./modules/customer-coupons/model";
+export { customerMemoryInputSchema } from "./modules/customer-memory/model";
+export { pointPolicySchema, pointRulesSchema } from "./modules/customer-points/model";
+// Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
+export { customerConsentVersion, customerPreferencesSchema } from "./modules/customers/model";
+export { type Demo, demoSchema, type DemoUpdate, demoUpdateSchema } from "./modules/demo/model";
+
+export { gameMessageSchema, gamePackageSchema, gameStateSchema } from "./modules/games/model";
+
+export type { GamePackage, GameState } from "./modules/games/model";
+
+export {
+  imageAssetSchema,
+  imageAssetsSchema,
+  imageDeliveryVersion,
+  imageMetadataSchema,
+  maxImageBytes,
+  uploadedImageSchema,
+} from "./modules/media/model";
+
+export type { ImageAsset, ImageAssets } from "./modules/media/model";
+export {
   cartLineSchema,
-  cartSchema,
   cartUpdateSchema,
   orderSchema,
-  prepareSchema,
-  pricedLineSchema,
-  selectionSchema,
   snapshotSchema,
   submitSchema,
 } from "./modules/orders/model";
-export type {
-  Bill,
-  Cart,
-  CartLine,
-  CartUpdate,
-  Order,
-  PricedLine,
-  Snapshot,
-} from "./modules/orders/model";
-export { adminStateSchema, createStoreSchema, storeSummarySchema } from "./modules/stores/model";
-export type { AdminState, StoreSummary } from "./modules/stores/model";
+
+export { maxCartLines } from "./modules/orders/model";
+
+export type { CartLine, CartUpdate, Order, PricedLine, Snapshot } from "./modules/orders/model";
 export {
-  closedSessionSummarySchema,
-  eventDataSchema,
+  statisticsQuerySchema,
+  type StatisticsResult,
+  statisticsResultSchema,
+} from "./modules/statistics/model";
+
+export { adminStateSchema, createStoreSchema } from "./modules/stores/model";
+export type { StoreSummary } from "./modules/stores/model";
+
+export {
+  coreStateSchema,
   eventsSchema,
   historyPageSchema,
-  historyQuerySchema,
+  orderPageSchema,
   sessionEventsPageSchema,
-  sessionEventsQuerySchema,
-  tableEventSchema,
+  storeDateSchema,
+  storeTimeZone,
+  submittedCoreOrderSchema,
   tablePlanSchema,
   tableStateSchema,
+  timelinePageSchema,
   uiSectionInputSchema,
-  uiSectionSchema,
 } from "./modules/tables/model";
+
 export type {
   ClosedSessionSummary,
+  CoreState,
   HistoryPage,
-  HistoryQuery,
-  SessionEventsPage,
-  SessionEventsQuery,
+  OrderPage,
   TableEvent,
   TableState,
+  TimelinePage,
+  TimelineSession,
   UiSection,
   UiSectionInput,
 } from "./modules/tables/model";
 export {
-  speechSpeedInputSchema,
-  speechSpeedSchema,
-  voiceFailedEventSchema,
-  voiceListQuerySchema,
+  serviceGuidanceQuerySchema,
+  staffCallInputSchema,
+  staffCallPageSchema,
+  staffCallSchema,
+  staffHandoffSchema,
+} from "./modules/tables/model";
+
+export type { StaffCall, StaffCallInput, StaffCallPage } from "./modules/tables/model";
+
+export {
+  voiceObservationSchema,
   voicePageSchema,
-  voiceProductsEventSchema,
-  voiceSummarySchema,
-  voiceToolEventSchema,
+  voiceReferenceEventSchema,
   voiceToolNameSchema,
-  voiceTriggerSchema,
-  voiceTurnSchema,
 } from "./modules/voice/model";
-export type { VoiceListQuery, VoicePage, VoiceSummary, VoiceTrigger } from "./modules/voice/model";
-export { apiErrorSchema, localeSchema, validationIssuesSchema } from "./platform/model";
+export type { VoiceReference } from "./modules/voice/model";
+export {
+  apiErrorSchema,
+  localeSchema,
+  staffLocaleSchema,
+  uiLocaleSchema,
+  validationIssuesSchema,
+} from "./platform/model";
+
+export type { StaffLocale, UiLocale } from "./platform/model";
 export type { ApiError, Locale } from "./platform/model";
-
-export { showProductsSchema } from "./modules/voice/model";
-
-export { demoSchema, demoUpdateSchema, type Demo, type DemoUpdate } from "./modules/demo/model";

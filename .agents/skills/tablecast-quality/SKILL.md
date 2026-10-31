@@ -12,8 +12,11 @@ description: TableCastの静的検査・hooks・開発script・repo skillsとage
 - 共通lintルールはroot、API/Web固有pluginはworkspace設定へ置く。導入版のruleとOxlint互換性を確認し、変更したruleは小さい失敗例で実効性を確認する。広いignoreや存在しないruleで通さない。
 - 既存の標準lint・commitlint・CIへ責務を割り当てる。意味の判断を模倣する独自validatorや重いpre-push全体試験を増やさない。
 - 実CLIはpackage scripts、順序・並列・cacheはTurbo、資源はCompose、Pythonはuvが所有する。workspace外から読む設定・素材も、実際にその内容へ依存するcached taskのinputsへ含める。標準機能を包むだけのrunner、envの二重解決、Composeの中継層を作らない。
+- テスト高速化は[保証の所有層](../../../docs/testing.md#保証の所有層とe2eへの昇格)を先に見直し、既存projectへ接続して上位の重複を除く。テスト件数や単独jobの短縮だけで判断せず、準備・実行・後片付けと必須チェック全体の時間を分ける。test成功結果の再利用を、当該runでの実行成功と扱わない。
+- 差分選択やcacheを変更する作業では、静的importに現れないHTTP・binding・ファイル・子プロセスの依存を確認する。比較失敗・設定変更・削除・動的依存の見落としを標準runnerだけで防げると仮定せず、全件へ戻す条件と入力・環境の寿命を決める。
+- 並列化では[fixtureの資源所有](../../../docs/testing.md#並列実行と順番に依存しないfixture)とworker枠の実効scopeを確認する。共有DB・Cookie・port・生成物・出力先を隔離し、caseの順序依存を通常journeyへ入れない。Browser poolの過剰生成、準備失敗、未解放gateをretryや全体の直列化で隠さず、原因と全体時間を確認する。
 - 自作skillの正本は`.agents/skills`へ置く。skillは選択・実行判断、docsは仕様・運用手順を所有し、別の編集元や同期用symlinkを増やさない。詳細参照は必要な作業から到達させ、全文読込を既定にしない。
-- 外部skillは`bunx skills add <source> --skill <name> --agent codex -y`と`skills-lock.json`で取得元を管理する。上流本文を整形・翻訳しない。plugin・MCP設定では利用者の既存設定を保ち、生成物と手動設定を分ける。
+- 外部skillは`bunx skills add <source> --skill <name> --agent codex --copy -y`と`skills-lock.json`で取得元を管理する。更新は[セットアップ](../../../docs/setup.md#2c-agent開発環境)に従い、固定refと上流本文を保つ。TableCast固有の契約はAGENTS.mdとdocsへ置く。plugin・MCP設定では利用者の既存設定を保ち、生成物と手動設定を分ける。
 
 ## 変更範囲に応じた確認
 
@@ -21,4 +24,4 @@ description: TableCastの静的検査・hooks・開発script・repo skillsとage
 - lint・hooks・scriptを変えたら、対象の既存チェックと代表実行で実効性を確認する。rootとworkspaceの両方に影響するなら両方を検証し、広範囲の実装・共通設定を変えた場合は`bun run check`へ広げる。
 - 導入方法、env、CLI、Dev Containerを変えたら`setup.md`と既存の詳細手順を同じ差分で更新する。認証や外部接続を確認できない場合は未確認範囲を明示する。
 
-環境・配備・releaseの設定を変える場合は[配備手順](../../../docs/deployment.md#stagingとreleaseの運用)も更新する。通常の統合先はstaging、release本文はGitHub運用skillを正本とし、skills間に詳細を複製しない。
+環境・配備・releaseの設定を変える場合は[配備手順](../../../docs/deployment.md#stagingとreleaseの運用)も更新する。通常の統合先はstaging、release本文は[release運用](../../../docs/deployment.md#release-pr)を正本とし、skills間に詳細を複製しない。

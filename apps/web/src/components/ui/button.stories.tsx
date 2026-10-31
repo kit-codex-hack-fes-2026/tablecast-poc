@@ -1,13 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { Bell, Check, Mic, MicOff } from "lucide-react";
+import { expect, userEvent, within } from "storybook/test";
 import { Badge } from "./badge";
 import { Button } from "./button";
 import { Input } from "./input";
 
 const meta = {
+  tags: ["autodocs"],
+
   title: "デザインシステム/操作",
   component: Button,
-  parameters: { layout: "fullscreen" },
+  parameters: {
+    layout: "fullscreen",
+  },
 } satisfies Meta<typeof Button>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -68,4 +73,89 @@ export const 英語の操作: Story = {
       </section>
     </main>
   ),
+};
+
+export const コンパクトな操作領域: Story = {
+  render: () => (
+    <main className="space-y-6 p-6">
+      <h1>コンパクトな操作</h1>
+      <div className="flex flex-wrap items-start gap-3">
+        <Button size="xs">追加</Button>
+        <Button size="sm" variant="outline">
+          編集
+        </Button>
+        <Button size="text" variant="link">
+          詳細
+        </Button>
+        <Button size="icon-xs" variant="outline" aria-label="小さい確認操作">
+          <Check />
+        </Button>
+        <Button size="icon-sm" variant="outline" aria-label="確認操作">
+          <Check />
+        </Button>
+        <Button size="icon-lg" variant="outline" aria-label="大きい確認操作">
+          <Check />
+        </Button>
+      </div>
+      <div data-slot="button-group" className="inline-flex items-stretch gap-px">
+        <Button size="sm" variant="outline">
+          戻る
+        </Button>
+        <Button size="sm" variant="outline">
+          次へ
+        </Button>
+      </div>
+    </main>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const button of canvas.getAllByRole("button")) {
+      const bounds = button.getBoundingClientRect();
+      await expect(bounds.width).toBeGreaterThanOrEqual(44);
+      await expect(bounds.height).toBeGreaterThanOrEqual(44);
+    }
+    const back = canvas.getByRole("button", { name: "戻る" });
+    const next = canvas.getByRole("button", { name: "次へ" });
+    await expect(back.getBoundingClientRect().right).toBeLessThanOrEqual(
+      next.getBoundingClientRect().left,
+    );
+    await userEvent.click(back);
+    await userEvent.tab();
+    await expect(next).toHaveFocus();
+  },
+};
+
+export const 狭い領域の長い操作と状態: Story = {
+  render: () => (
+    <main className="w-64 max-w-full space-y-6 p-6">
+      <h1 className="text-xl">Long labels</h1>
+      <Button size="lg" className="w-full">
+        <Check />
+        Confirm changes to the restaurant menu and service settings
+      </Button>
+      <Badge variant="inactive">
+        This menu change has been published and is available to all tables
+      </Badge>
+      <Badge
+        variant="outline"
+        render={<a href="#tablecast-design-status" aria-label="View published changes" />}
+      >
+        View published changes
+      </Badge>
+    </main>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const action = canvas.getByRole("button", { name: /Confirm changes/ });
+    await expect(action.getBoundingClientRect().height).toBeGreaterThan(56);
+    await expect(action.scrollWidth).toBeLessThanOrEqual(action.clientWidth);
+    const status = canvas.getByText(/This menu change/);
+    await expect(status.getBoundingClientRect().height).toBeGreaterThan(24);
+    await expect(status.scrollHeight).toBeLessThanOrEqual(status.clientHeight);
+    const link = canvas.getByRole("link", { name: "View published changes" });
+    await expect(link.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await userEvent.click(action);
+    await userEvent.tab();
+    await expect(link).toHaveFocus();
+  },
 };

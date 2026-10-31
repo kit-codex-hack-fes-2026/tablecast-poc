@@ -1,51 +1,159 @@
+import { imageDeliveryVersion } from "@tablecast/api/schema";
+import { blurhashToDataUri } from "@unpic/placeholder";
 import { Image } from "@unpic/react/base";
-import { useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "tailwind-variants";
+import { useMediaImage } from "./image-provider";
 
 function transformImage(src: string | URL, { width = 640 }: { width?: number }) {
   const path = String(src).split("?")[0];
-  return `${path}?width=${Math.min(1600, Math.max(1, Math.round(width)))}`;
+  return `${path}?width=${Math.min(1600, Math.max(1, Math.round(width)))}&v=${imageDeliveryVersion}`;
 }
 
+function imageBreakpoints(sizes?: string, originalWidth = 1600) {
+  const fixedWidth = sizes && /^\d+px$/.test(sizes) ? Number.parseInt(sizes, 10) : undefined;
+  const maximum = Math.min(1600, originalWidth, fixedWidth ? fixedWidth * 3 : 1600);
+  const candidates = fixedWidth
+    ? [fixedWidth, fixedWidth * 2, fixedWidth * 3]
+    : [32, 64, 96, 128, 192, 256, 384, 416, 512, 640, 768, 960, 1280, 1600];
+  return [...new Set([...candidates.filter((value) => value < maximum), maximum])];
+}
+
+/** placeholderの復元と、decode・再利用・差替えの寿命を同じ場所で管理する。 */
+function useImagePlaceholder(
+  src: string,
+  hash: string | undefined,
+  width: number,
+  height: number,
+  onError?: () => void,
+) {
+  const data = useMemo(() => {
+    if (!hash) return undefined;
+    const scale = 16 / Math.max(width, height);
+    return blurhashToDataUri(
+      hash,
+      Math.max(1, Math.round(width * scale)),
+      Math.max(1, Math.round(height * scale)),
+    );
+  }, [hash, width, height]);
+  const [settled, setSettled] = useState<{ src: string; state: "finished" | "loaded" }>();
+  const state = settled?.src === src ? settled.state : "pending";
+  const finish = useCallback(() => setSettled({ src, state: "finished" }), [src]);
+  const fail = () => {
+    finish();
+    onError?.();
+  };
+  const frameRef = useCallback(
+    (frame: HTMLSpanElement | null) => {
+      const image = frame?.querySelector("img");
+      // 読込済みの再利用とSSR後のhydrationでは、待機表示の演出を繰り返さない。
+      if (data && image?.currentSrc && image.complete) setSettled({ src, state: "finished" });
+    },
+    [data, src],
+  );
+  async function load(image: HTMLImageElement) {
+    if (!data) return;
+    const selected = image.currentSrc;
+    const current = () => image.isConnected && image.currentSrc === selected;
+    try {
+      await image.decode();
+    } catch {
+      if (current()) fail();
+      return;
+    }
+    if (!current()) return;
+    const next = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "finished"
+      : "loaded";
+    setSettled((previous) =>
+      previous?.src === src && previous.state === "finished" ? previous : { src, state: next },
+    );
+  }
+  return {
+    background: state === "finished" ? undefined : data,
+    fail,
+    finish,
+    frameRef,
+    hasPlaceholder: data !== undefined,
+    load,
+    state,
+  };
+}
+
+/**
+ * 商品写真と画像の失敗時表示。
+ * src・alt・width・heightが必須。
+ * sizesは実際の表示幅、priorityは先頭の重要画像のみ、blurhashは取込時に生成したplaceholder、onErrorは代替表示の通知に使う。
+ * 表示幅に合う画像を既存の配送経路から取得し、無意味な別URLや原寸画像を指定しない。
+ * 写真は商品名・価格の代替ではない。
+ */
 export function ProductImage({
-  src,
+  src: source,
   alt,
   width,
   height,
   sizes,
   className,
   priority = false,
-  blurDataURL,
+  blurhash,
+  natural = false,
+  responsive = false,
   onError,
 }: {
-  src: string;
   alt: string;
-  width: number;
-  height: number;
-  sizes?: string;
+  blurhash?: string;
   className?: string;
-  priority?: boolean;
-  blurDataURL?: `data:image/${string}`;
+  height: number;
+  natural?: boolean;
   onError?: () => void;
+  priority?: boolean;
+  responsive?: boolean;
+  sizes?: string;
+  src: string;
+  width: number;
 }) {
-  const [settledSrc, setSettledSrc] = useState<string>();
-  const background = blurDataURL && settledSrc !== src ? blurDataURL : undefined;
-  const imageStyle = {
+  const { src, asset } = useMediaImage(source);
+  const { background, fail, finish, frameRef, hasPlaceholder, load, state } = useImagePlaceholder(
+    src,
+    blurhash ?? asset?.blurhash,
+    asset?.width ?? width,
+    asset?.height ?? height,
+    onError,
+  );
+  const placeholderRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (state !== "loaded") return undefined;
+    let cancelled = false;
+    // 初回描画前の完了やtransitionの中止でも、待機背景を残さない。
+    const animations = placeholderRef.current?.getAnimations() ?? [];
+    void Promise.allSettled(animations.map((animation) => animation.finished)).then(() => {
+      if (!cancelled) finish();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [finish, state]);
+  if (natural && asset) {
+    width = asset.width;
+    height = asset.height;
+  }
+  const breakpoints = imageBreakpoints(responsive ? undefined : sizes, asset?.width);
+  const imageStyle: CSSProperties & Record<`--${string}`, string> = {
+    "--tablecast-image-width": `${width}px`,
+    "--tablecast-image-height": `${height}px`,
     "--tablecast-image-ratio": `${width} / ${height}`,
     "--tablecast-image-placeholder": background ? `url("${background}")` : "none",
   };
   return (
     <span
       key={src}
-      style={{ display: "contents", ...imageStyle }}
-      ref={
-        blurDataURL
-          ? (frame) => {
-              const image = frame?.querySelector("img");
-              if (image?.currentSrc && image.complete) setSettledSrc(src);
-            }
-          : undefined
-      }
+      data-image-state={state}
+      style={imageStyle}
+      className={cn(
+        "relative inline-block h-(--tablecast-image-height) w-(--tablecast-image-width) max-w-full overflow-hidden align-middle aspect-(--tablecast-image-ratio)",
+        className,
+      )}
+      ref={frameRef}
     >
       <Image
         src={src}
@@ -54,21 +162,29 @@ export function ProductImage({
         height={height}
         sizes={priority ? sizes : `auto, ${sizes ?? `${width}px`}`}
         layout="fixed"
-        objectFit="contain"
         unstyled
         priority={priority}
-        onLoad={blurDataURL ? () => setSettledSrc(src) : undefined}
-        onError={() => {
-          if (blurDataURL) setSettledSrc(src);
-          onError?.();
-        }}
-        className={cn(
-          "aspect-(--tablecast-image-ratio) [background-image:var(--tablecast-image-placeholder)] bg-contain bg-center bg-no-repeat",
-          className,
-        )}
-        transformer={transformImage}
-        breakpoints={[64, 96, 128, 192, 256, 384, 512, 640, 768, 960, 1280, 1600]}
+        onLoad={(event) => void load(event.currentTarget)}
+        onError={fail}
+        className={cn("block size-full object-contain aspect-(--tablecast-image-ratio)", className)}
+        transformer={(input: string | URL, options: { width?: number }) =>
+          transformImage(input, { width: Math.min(options.width ?? 640, asset?.width ?? 1600) })
+        }
+        breakpoints={breakpoints}
       />
+      {hasPlaceholder && (
+        <span
+          ref={placeholderRef}
+          aria-hidden="true"
+          data-ui="image-placeholder"
+          className={cn(
+            "pointer-events-none absolute inset-0 bg-contain bg-center bg-no-repeat blur-[4px] [background-image:var(--tablecast-image-placeholder)]",
+            state === "pending" ? "opacity-100" : "opacity-0",
+            state === "loaded" &&
+              "transition-opacity duration-(--motion-state) ease-(--motion-ease-out) motion-reduce:transition-none",
+          )}
+        />
+      )}
     </span>
   );
 }

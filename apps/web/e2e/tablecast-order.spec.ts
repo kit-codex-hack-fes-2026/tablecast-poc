@@ -1,232 +1,420 @@
-import { test } from "./support/test";
-import { expect } from "@playwright/test";
 import type { CartLine } from "@tablecast/api/schema";
+import { expect } from "@playwright/test";
 import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
 import en from "../messages/en.json" with { type: "json" };
 import ja from "../messages/ja.json" with { type: "json" };
-import { credentials } from "./support/runtime";
-import { tabTo } from "./tablecast-accessibility";
+import ko from "../messages/ko.json" with { type: "json" };
+import zh from "../messages/zh-Hans.json" with { type: "json" };
+import { fixtureValue } from "../src/test-support/fixture-value";
+import { signInFromLogin } from "./support/session";
+import { test } from "./support/test";
 
 // スタッフの認証入力を含むため、通信traceを保存しない。
-test.use({ trace: "off", actionTimeout: 15_000 });
+test.use({ trace: "off", actionTimeout: 15_000, serviceWorkers: "block" });
 
-for (const { staffLanguage, labels } of [
-  { staffLanguage: "日本語", labels: ja },
-  { staffLanguage: "英語", labels: en },
-]) {
-  test(`スタッフ画面が${staffLanguage}の場合に日英の端末認可・カスタマイズ注文・提供・会計を実DBへ反映する`, async ({
-    page: staff,
-    browser,
+const labels = ja;
+test("端末認可後に4言語を切り替え、スタッフと注文・提供・会計を実DBへ反映する", async ({
+  page: staff,
+  browser,
+  baseURL,
+  browserName,
+}, testInfo) => {
+  let guestContext = await browser.newContext({
     baseURL,
-  }, testInfo) => {
-    const guestContext = await browser.newContext({
-      baseURL,
-      viewport: { width: 1024, height: 768 },
+    viewport: { width: 1024, height: 768 },
+    serviceWorkers: "block",
+  });
+  let guest = await guestContext.newPage();
+  const storeId = "tablecast-komorebi";
+  try {
+    await staff.goto(`/login?returnTo=${encodeURIComponent(`/admin/stores/${storeId}/floor`)}`);
+    await staff.getByRole("button", { name: "日本語", exact: true }).click();
+    await signInFromLogin(staff, baseURL);
+    await expect(staff).toHaveURL(new RegExp(`/admin/stores/${storeId}/floor$`));
+    await expect(staff.getByRole("main")).toBeVisible();
+    const current = adminStateSchema.parse(
+      await (await staff.request.get(`/api/admin/stores/${storeId}`)).json(),
+    );
+    const vacant = current.vacantTables.find((table) => table.name === "T10");
+    if (!vacant) throw new Error("専用fixtureのT10が空席ではありません。");
+    const tableId = vacant.id;
+    const opened = await staff.request.post(`/api/admin/stores/${storeId}/tables/open`, {
+      data: { tableId, guestCount: 2, locale: "en" },
     });
-    const guest = await guestContext.newPage();
-    const storeId = "tablecast-komorebi";
-    try {
-      await staff.goto(`/login?returnTo=${encodeURIComponent(`/admin/stores/${storeId}/floor`)}`);
-      await staff
-        .getByRole("button", { name: staffLanguage === "英語" ? "English" : "日本語", exact: true })
-        .click();
-      await staff.getByLabel(labels.auth_email).fill(credentials.email);
-      await staff.getByLabel(labels.auth_password, { exact: true }).fill(credentials.password);
-      await staff.getByRole("button", { name: labels.auth_sign_in, exact: true }).click();
-      await expect(staff).toHaveURL(new RegExp(`/admin/stores/${storeId}/floor$`));
-      await expect(staff.getByRole("main")).toBeVisible();
-      const current = adminStateSchema.parse(
-        await (await staff.request.get(`/api/admin/stores/${storeId}`)).json(),
-      );
-      const vacant = current.vacantTables[0];
-      if (!vacant) throw new Error("試験用の空卓が必要です。既存の利用卓は変更しません。");
-      const tableId = vacant.id;
-      const opened = await staff.request.post(`/api/admin/stores/${storeId}/tables/open`, {
-        data: { tableId, guestCount: 2, locale: "ja" },
-      });
-      expect(opened.ok()).toBeTruthy();
-      tableStateSchema.parse(await opened.json());
-      await guest.goto("/");
-      await guest.getByRole("button", { name: "端末を接続する" }).click();
-      const pairingCode = guest.getByLabel("端末に表示されたコード");
-      await expect(pairingCode).toHaveText(/\S+/);
-      const code = await pairingCode.textContent();
-      await staff.goto(`/admin/stores/${storeId}/devices/new`);
-      await staff.getByLabel(labels.admin_pair_code).fill(code ?? "");
-      await expect(staff.getByLabel(labels.admin_pair_code)).toHaveValue(code ?? "");
-      await staff
+    expect(opened.ok()).toBeTruthy();
+    tableStateSchema.parse(await opened.json());
+    await guest.goto("/pair");
+    await guest.getByRole("button", { name: "English", exact: true }).click();
+    await guest.getByRole("button", { name: en.pair_begin, exact: true }).click();
+    const pairingCode = guest.getByLabel(en.admin_pair_code);
+    await expect(pairingCode).toHaveText(/\S+/);
+    const code = await pairingCode.textContent();
+    await staff.goto(`/admin/stores/${storeId}/devices/new`);
+    await staff.getByLabel(labels.admin_pair_code).fill(code ?? "");
+    await expect(staff.getByLabel(labels.admin_pair_code)).toHaveValue(code ?? "");
+    await staff
+      .getByRole("row")
+      .filter({ has: staff.getByRole("rowheader", { name: vacant.name, exact: true }) })
+      .getByRole("button")
+      .click();
+    await expect(
+      staff
         .getByRole("row")
-        .filter({ has: staff.getByRole("cell", { name: vacant.name, exact: true }) })
-        .getByRole("button")
-        .click();
+        .filter({ has: staff.getByRole("rowheader", { name: vacant.name, exact: true }) })
+        .getByRole("button"),
+    ).toHaveAttribute("aria-pressed", "true");
+    await staff.getByRole("button", { name: labels.admin_approve, exact: true }).click();
+    await expect(guest).toHaveURL(/\/$/);
+    await expect(guest.getByRole("banner").getByText(vacant.name, { exact: true })).toBeVisible();
+    await expect(guest.getByRole("tab", { name: en.kiosk_menu, exact: true })).toBeVisible();
+    for (const language of [
+      { code: "zh-Hans", name: "简体中文", labels: zh },
+      { code: "ko", name: "한국어", labels: ko },
+    ]) {
+      await guest.locator('[data-ui="language-switch"]').getByRole("combobox").click();
+      await guest.getByRole("option", { name: language.name, exact: true }).click();
       await expect(
-        staff
-          .getByRole("row")
-          .filter({ has: staff.getByRole("cell", { name: vacant.name, exact: true }) })
-          .getByRole("button"),
-      ).toHaveAttribute("aria-pressed", "true");
-      await staff.getByRole("button", { name: labels.admin_approve, exact: true }).click();
-      await expect(guest.getByRole("banner").getByText(vacant.name, { exact: true })).toBeVisible();
-      await guest.getByRole("button", { name: "日本語", exact: true }).click();
-      await expect(guest.getByRole("tab", { name: "おしながき", exact: true })).toBeVisible();
-      const catalogue = catalogSchema.parse(
-        await (await guest.request.get("/api/table/catalog")).json(),
-      );
-      const products = ["single"].map((kind) => {
-        const product = catalogue.configuration.products.find(
+        guest.getByRole("tab", { name: language.labels.kiosk_menu, exact: true }),
+      ).toBeVisible();
+      await guest.reload();
+      await expect(
+        guest.getByRole("tab", { name: language.labels.kiosk_menu, exact: true }),
+      ).toBeVisible();
+      const state = tableStateSchema.parse(await (await guest.request.get("/api/table")).json());
+      expect(state.locale).toBe(language.code);
+    }
+    await guest.getByRole("button", { name: "日本語", exact: true }).click();
+    await expect(guest.getByRole("tab", { name: ja.kiosk_menu, exact: true })).toBeVisible();
+    await guest.getByRole("combobox", { name: ja.currency_select, exact: true }).click();
+    await guest.getByRole("option", { name: /USD/ }).click();
+    // 認証入力・ペアリングコードを映さず、承認済みの注文画面から収録する。
+    const recording = await browser.newContext({
+      baseURL,
+      storageState: await guestContext.storageState(),
+      viewport: { width: 1024, height: 768 },
+      serviceWorkers: "block",
+      recordVideo: {
+        dir: testInfo.outputPath("tablecast-order-ui-video"),
+        size: { width: 1024, height: 768 },
+      },
+    });
+    await guestContext.close();
+    guestContext = recording;
+    guest = await guestContext.newPage();
+    await guest.emulateMedia({
+      reducedMotion: browserName === "webkit" ? "reduce" : "no-preference",
+    });
+    await guest.goto("/");
+    // 応答だけを1.5秒遅延し、実APIへの連続追加と即時表示を収録する。
+    let delayCart = true;
+    await guest.route("**/api/table/cart", async (route) => {
+      if (delayCart && route.request().method() === "PUT") {
+        delayCart = false;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      await route.continue();
+    });
+
+    await expect(guest.getByRole("tab", { name: ja.kiosk_menu, exact: true })).toBeVisible();
+    await expect(guest.locator('[data-ui="store-logo-banner"] img')).toBeVisible();
+    await expect(guest.locator('[data-ui="store-logo-banner"] img')).toHaveJSProperty(
+      "complete",
+      true,
+    );
+    expect(
+      await guest
+        .locator('[data-ui="store-logo-banner"] img')
+        .evaluate((image: HTMLImageElement) => image.naturalWidth),
+    ).toBeGreaterThan(0);
+    await expect(guest.locator('[data-ui="tab-price"] [aria-label]')).toHaveCount(2);
+    await guest.screenshot({ path: testInfo.outputPath("tablecast-menu.png") });
+    const catalogue = catalogSchema.parse(
+      await (await guest.request.get("/api/table/catalog")).json(),
+    );
+    const customised = catalogue.configuration.products.find(
+      (item) =>
+        item.available &&
+        item.imageKey &&
+        item.modifiers.length > 0 &&
+        item.modifiers.every((modifier) => modifier.kind === "single"),
+    );
+    if (!customised) throw new Error("単一選択の商品が必要です");
+    const simpleByCategory = new Map(
+      catalogue.configuration.products
+        .filter(
           (item) =>
             item.available &&
-            item.modifiers.length > 0 &&
-            item.modifiers.every((modifier) => modifier.kind === kind),
-        );
-        if (!product) throw new Error(`${kind}の合成商品がありません`);
-        return product;
-      });
-      const chosen: Pick<CartLine, "productId" | "quantity" | "selections">[] = [];
-      await guest.screenshot({ path: testInfo.outputPath("tablecast-kiosk-normal-ja.png") });
-      // 全modifier・文字拡大・音声失敗の分岐は部品とWebアプリ統合で所有する。
-      for (const product of products) {
-        await test.step(`${product.text.ja.displayName}をカスタマイズする`, async () => {
-          await guest.getByRole("tab", { name: "おしながき", exact: true }).click();
-          await guest
-            .getByRole("button")
-            .filter({ has: guest.getByText(product.text.ja.displayName, { exact: true }) })
-            .click();
-          const productPage = guest.getByRole("region", {
-            name: product.text.ja.displayName,
-            exact: true,
-          });
-          await expect(productPage).toBeVisible();
-          await expect(guest.getByRole("dialog")).toHaveCount(0);
-          const selections: CartLine["selections"] = [];
-          for (const modifier of product.modifiers) {
-            const options = modifier.options.filter(
-              (item) => item.available && !item.requires.length && !item.excludes.length,
-            );
-            const first = options[0];
-            if (!first) throw new Error("選択可能な合成オプションがありません");
-            await guest
-              .getByRole("radio", {
-                name: new RegExp(first.text.ja.displayName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-              })
-              .click();
-            selections.push({ optionId: first.id, quantity: 1 });
-          }
-          const quantity = 1;
-          await guest.getByRole("button", { name: "注文かごに追加", exact: true }).click();
-          await expect(productPage).not.toBeVisible();
-          await expect(guest.getByRole("tab", { name: /^注文かご/ })).toHaveAttribute(
-            "aria-selected",
-            "true",
-          );
-          chosen.push({ productId: product.id, quantity, selections });
-          if (chosen.length === 1) {
-            const initial = tableStateSchema.parse(
-              await (await guest.request.get("/api/table")).json(),
-            ).cart;
-            for (const nextQuantity of [2, 1]) {
-              await guest
-                .getByRole("button", {
-                  name: `${product.text.ja.displayName}: ${nextQuantity === 2 ? ja.common_increase : ja.common_decrease}`,
-                  exact: true,
-                })
-                .click();
-              await expect
-                .poll(async () => {
-                  const updatedCart = tableStateSchema.parse(
-                    await (await guest.request.get("/api/table")).json(),
-                  ).cart;
-                  return {
-                    quantity: updatedCart.lines[0]?.quantity,
-                    selections: updatedCart.lines[0]?.selections,
-                    total: updatedCart.total,
-                  };
-                })
-                .toEqual({
-                  quantity: nextQuantity,
-                  selections,
-                  total: initial.total * nextQuantity,
-                });
-            }
-          }
+            item.imageKey &&
+            item.modifiers.length === 0 &&
+            item.categoryId !== customised.categoryId,
+        )
+        .map((item) => [item.categoryId, item]),
+    );
+    const products = [customised, ...Array.from(simpleByCategory.values()).slice(0, 2)];
+    if (products.length !== 3) throw new Error("複数商品を確認するため3商品が必要です");
+    const chosen: Pick<CartLine, "productId" | "quantity" | "selections">[] = [];
+    // 全modifier・文字拡大・音声失敗の分岐は部品とWebアプリ統合で所有する。
+    for (const product of products) {
+      await test.step(`${product.text.ja.displayName}をカスタマイズする`, async () => {
+        const menuTab = guest.getByRole("tab", { name: ja.kiosk_menu, exact: true });
+        await menuTab.click();
+        await expect(menuTab).toHaveAttribute("aria-selected", "true");
+        await guest
+          .getByRole("tabpanel")
+          .getByRole("button")
+          .filter({ has: guest.getByText(product.text.ja.displayName, { exact: true }) })
+          .click();
+        const productPage = guest.getByRole("region", {
+          name: product.text.ja.displayName,
+          exact: true,
         });
-      }
-      const basket = tableStateSchema.parse(
-        await (await guest.request.get("/api/table")).json(),
-      ).cart;
-      expect(basket.complete).toBe(true);
-      expect(
-        basket.lines.map(({ productId, quantity, selections }) => ({
-          productId,
-          quantity,
-          selections,
-        })),
-      ).toEqual(chosen);
-      await expect(
-        guest.getByRole("button", { name: "注文内容を確認", exact: true }),
-      ).toBeEnabled();
-      await expect(guest.getByRole("textbox")).toHaveCount(0);
-      await guest.getByRole("button", { name: "English", exact: true }).click();
-      await expect(guest.getByRole("button", { name: "Review order", exact: true })).toBeEnabled();
-      await staff.goto(`/admin/stores/${storeId}/floor`);
-      await expect(
-        staff.getByRole("heading", { name: labels.admin_live, exact: true }),
-      ).toBeVisible();
-      await guest.getByRole("tab", { name: /^Your basket/ }).click();
-      await tabTo(guest, guest.getByRole("button", { name: "Review order", exact: true }));
-      await guest.keyboard.press("Enter");
-      const review = guest.getByRole("region", { name: en.kiosk_review_title, exact: true });
-      await expect(review).toBeVisible();
-      await expect(guest.getByRole("dialog")).toHaveCount(0);
-      for (const product of products)
-        await expect(review).toContainText(product.text.en.displayName);
-      await tabTo(
-        guest,
-        guest.getByRole("button", { name: "Confirm and place order", exact: true }),
-      );
-      await guest.keyboard.press("Enter");
-      await expect(guest.getByText(en.kiosk_ordered, { exact: true })).toBeVisible();
-      await guest.getByRole("button", { name: "Close", exact: true }).click();
-      const ordered = tableStateSchema.parse(await (await guest.request.get("/api/table")).json());
-      expect(ordered.cart.lines).toHaveLength(0);
-      expect(ordered.orders).toHaveLength(1);
-      expect(ordered.orders[0]?.snapshot.lines).toEqual(basket.lines);
-      expect(ordered.billRequested).toBe(false);
-      await staff.goto(`/admin/stores/${storeId}/floor`);
-      const billingMetric = staff
-        .locator("[data-slot=metric]")
-        .filter({ has: staff.getByText(labels.admin_billing, { exact: true }) })
-        .locator("strong");
-      const previousBilling = Number(await billingMetric.innerText());
-      await guest.getByRole("tab", { name: en.kiosk_bill, exact: true }).click();
-      await guest.getByRole("button", { name: en.kiosk_bill_request, exact: true }).click();
-      await expect(billingMetric).toHaveText(String(previousBilling + 1));
-      await staff.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();
-      await staff.getByRole("tab", { name: labels.admin_orders, exact: true }).click();
-      await staff.getByRole("button", { name: labels.admin_accept, exact: true }).click();
-      await staff.getByRole("button", { name: labels.admin_serve, exact: true }).click();
-      await expect(staff.getByText(labels.order_served, { exact: true })).toBeVisible();
-      await staff.getByRole("tab", { name: labels.admin_payments, exact: true }).click();
-      await staff.getByLabel(labels.admin_amount, { exact: true }).fill(String(ordered.bill.due));
-      await staff.getByLabel(labels.admin_reason, { exact: true }).fill("店頭支払のE2E確認");
-      await staff.getByRole("button", { name: labels.admin_payment, exact: true }).click();
-      await expect
-        .poll(async () => {
-          const result = tableStateSchema.parse(
-            await (await guest.request.get("/api/table")).json(),
+        await expect(productPage).toBeVisible();
+        await expect(
+          guest.getByRole("dialog", { name: product.text.ja.displayName, exact: true }),
+        ).toBeVisible();
+        const selections: CartLine["selections"] = [];
+        for (const modifier of product.modifiers) {
+          const options = modifier.options.filter(
+            (item) => item.available && !item.requires.length && !item.excludes.length,
           );
-          return result.bill.due;
-        })
-        .toBe(0);
-      await staff.goto(`/admin/stores/${storeId}/floor`);
-      await expect(billingMetric).toHaveText(String(previousBilling));
-      await staff.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();
-      await staff.getByRole("tab", { name: labels.admin_overview, exact: true }).click();
-      await staff.getByRole("button", { name: labels.admin_close_session, exact: true }).click();
-      await expect(guest.getByRole("heading", { name: "Thank you for joining us" })).toBeVisible();
-    } finally {
-      // DBとWorkerはcase専用fixtureが破棄する。後片付けのHTTPで元の失敗を上書きしない。
-      await guestContext.close();
+          const first = options[0];
+          if (!first) throw new Error("選択可能な合成オプションがありません");
+          await productPage
+            .getByRole("group", {
+              name: new RegExp(
+                `^${modifier.text.ja.displayName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+              ),
+            })
+            .getByRole("radio", { name: first.text.ja.displayName, exact: true })
+            .click();
+          selections.push({ optionId: first.id, quantity: 1 });
+        }
+        if (product.id === customised.id)
+          await guest.screenshot({ path: testInfo.outputPath("tablecast-product-dialog.png") });
+        const quantity = 1;
+        await productPage.getByRole("button", { name: ja.kiosk_add, exact: true }).click();
+        await expect(productPage).not.toBeVisible();
+        await expect(guest.getByRole("tab", { name: ja.kiosk_menu, exact: true })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
+        chosen.push({ productId: product.id, quantity, selections });
+      });
     }
-  });
-}
+    const cartTab = guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) });
+    await cartTab.click();
+    const lastProduct = products.at(-1);
+    if (!lastProduct) throw new Error("追加した商品が必要です");
+    const addedMessage = ja.kiosk_cart_added_product
+      .replace("{product}", lastProduct.text.ja.displayName)
+      .replace("{count}", "1");
+    await expect(guest.getByText(addedMessage, { exact: true })).toBeVisible();
+    await expect(guest.getByText(ja.kiosk_cart_empty, { exact: true })).not.toBeVisible();
+    await guest.screenshot({ path: testInfo.outputPath("tablecast-basket-toast.png") });
+    await expect(guest.getByRole("button", { name: ja.kiosk_review, exact: true })).toBeEnabled();
+    // 通信完了を待ち、退出中・表示制限中の通知を操作対象にしない。
+    const basketToasts = guest
+      .getByRole("dialog", { name: addedMessage, exact: true })
+      .and(guest.locator(":not([data-ending-style]):visible"));
+    while (await basketToasts.count()) {
+      await basketToasts
+        .first()
+        .getByRole("button", { name: ja.common_close, exact: true })
+        .press("Enter");
+    }
+    if (browserName === "chromium") {
+      // 実データのカゴを各端末のCSS viewportで撮影する。
+      for (const [width, height] of [
+        [1512, 982],
+        [1180, 820],
+        [820, 1180],
+        [402, 874],
+      ] as const) {
+        const preview = await browser.newContext({
+          baseURL,
+          storageState: await guestContext.storageState(),
+          viewport: { width, height },
+          reducedMotion: "reduce",
+          serviceWorkers: "block",
+        });
+        try {
+          const responsive = await preview.newPage();
+          await responsive.goto("/");
+          await expect(responsive.getByRole("tab")).toHaveCount(3);
+          await responsive.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
+          await expect(
+            responsive.getByRole("button", { name: ja.kiosk_review, exact: true }),
+          ).toBeVisible();
+          await expect(responsive.locator('[data-ui="cart-preview"] img')).toHaveCount(
+            products.length,
+          );
+          await expect(responsive.locator('[data-ui="tab-price"] [aria-label]')).toHaveCount(2);
+          const branding = await responsive
+            .locator('[data-ui="store-logo-banner"]')
+            .evaluate((element) => {
+              const image = element.querySelector("img");
+              const caption = element.querySelector("div");
+              const name = caption?.querySelector("span");
+              if (!image || !caption || !name) throw new Error("店舗バナー・店名・卓名が必要です");
+              const picture = image.getBoundingClientRect();
+              const text = caption.getBoundingClientRect();
+              return {
+                imageCenter: picture.top + picture.height / 2,
+                textCenter: text.top + text.height / 2,
+                imageRight: picture.right,
+                textLeft: text.left,
+                nameWidth: name.clientWidth,
+                nameContentWidth: name.scrollWidth,
+              };
+            });
+          expect(branding.imageCenter).toBeCloseTo(branding.textCenter, 0);
+          expect(branding.textLeft).toBeGreaterThan(branding.imageRight);
+          expect(branding.nameContentWidth).toBeLessThanOrEqual(branding.nameWidth + 1);
+          await responsive.screenshot({
+            path: testInfo.outputPath(`tablecast-basket-${width}.png`),
+          });
+        } finally {
+          await preview.close();
+        }
+      }
+    }
+    const basket = tableStateSchema.parse(
+      await (await guest.request.get("/api/table")).json(),
+    ).cart;
+    expect(basket.complete).toBe(true);
+    expect(
+      basket.lines.map(({ productId, quantity, selections }) => ({
+        productId,
+        quantity,
+        selections,
+      })),
+    ).toEqual(chosen);
+    await expect(guest.getByRole("textbox")).toHaveCount(products.length);
+    await expect(
+      guest.getByRole("textbox", { name: new RegExp(`${ja.common_quantity}$`) }).first(),
+    ).toHaveValue("1");
+    if ((await cartTab.getAttribute("aria-expanded")) !== "true") await cartTab.click();
+    await expect(guest.getByRole("button", { name: ja.kiosk_review, exact: true })).toBeEnabled();
+    await staff.goto(`/admin/stores/${storeId}/floor`);
+    await expect(
+      staff.getByRole("heading", { name: labels.admin_live, exact: true }),
+    ).toBeVisible();
+    await guest.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
+    const review = guest.getByRole("region", { name: ja.kiosk_review_title, exact: true });
+    await expect(review).toBeVisible();
+    await expect(guest.locator('[data-theme-part="dialog"]')).toHaveCount(0);
+    for (const product of products) await expect(review).toContainText(product.text.ja.displayName);
+    await guest.getByRole("button", { name: ja.kiosk_confirm, exact: true }).click();
+    const orderNotice = guest.getByRole("dialog", {
+      name: ja.kiosk_ordered_items.replace(
+        "{count}",
+        String(chosen.reduce((sum, line) => sum + line.quantity, 0)),
+      ),
+      exact: true,
+    });
+    await expect(orderNotice).toBeVisible();
+    await expect(guest.locator('[data-ui="orders-preview"] img')).toHaveCount(products.length);
+    await orderNotice.getByRole("button", { name: ja.common_close, exact: true }).click();
+    const ordered = tableStateSchema.parse(await (await guest.request.get("/api/table")).json());
+    expect(ordered.cart.lines).toHaveLength(0);
+    expect(ordered.orders).toHaveLength(1);
+    expect(ordered.orders[0]?.snapshot.lines).toEqual(basket.lines);
+    expect(ordered.billRequested).toBe(false);
+    await guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_orders_bill}`) }).click();
+    const history = guest.locator('[data-ui="order-card"]');
+    await expect(history).toBeVisible();
+    // snapshotの名称・金額を保ったまま現在カタログの写真を添える。
+    const historyImages = basket.lines.reduce((sum, line) => {
+      const product = catalogue.configuration.products.find((item) => item.id === line.productId);
+      return (
+        sum +
+        (product?.imageKey ? 1 : 0) +
+        line.options.filter((option) =>
+          product?.modifiers
+            .flatMap((group) => group.options)
+            .some((item) => item.id === option.id && item.imageKey),
+        ).length
+      );
+    }, 0);
+    expect(historyImages).toBeGreaterThan(1);
+    await expect(history.locator("img")).toHaveCount(historyImages);
+    await expect(guest.getByRole("tabpanel")).toHaveCSS("opacity", "1");
+    await expect(guest.getByRole("banner")).toBeInViewport();
+    await guest.screenshot({ path: testInfo.outputPath("tablecast-history.png") });
+    await staff.goto(`/admin/stores/${storeId}/floor`);
+    const billingMetric = staff
+      .getByRole("region", { name: labels.floor_current, exact: true })
+      .getByRole("button")
+      .filter({ has: staff.getByText(labels.admin_billing, { exact: true }) })
+      .locator("strong");
+    const beforeBillRequest = adminStateSchema.parse(
+      await (await staff.request.get(`/api/admin/stores/${storeId}`)).json(),
+    );
+    const previousBilling = beforeBillRequest.tables.filter(
+      (table) => table.billRequested && table.bill.due > 0,
+    ).length;
+    await expect(billingMetric).toHaveText(String(previousBilling));
+    await guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_orders_bill}`) }).click();
+    await guest.getByRole("button", { name: ja.kiosk_bill_request, exact: true }).click();
+    await expect(billingMetric).toHaveText(String(previousBilling + 1));
+    await staff.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();
+    await expect(staff).toHaveURL(
+      (url) => url.pathname === `/admin/stores/${storeId}/visits/${ordered.id}`,
+    );
+    await staff.getByRole("tab", { name: labels.admin_orders, exact: true }).click();
+    const order = staff
+      .getByRole("tabpanel")
+      .getByRole("article")
+      .filter({
+        has: staff.getByText(fixtureValue(products[0]).text.ja.displayName, { exact: true }),
+      });
+    await order.getByRole("button", { name: labels.admin_accept, exact: true }).click();
+    const serve = order.getByRole("button", { name: labels.admin_serve, exact: true });
+    await expect(serve).toBeEnabled();
+    await serve.click();
+    await expect(order.getByText(labels.order_served, { exact: true })).toBeVisible();
+    await staff.getByRole("tab", { name: labels.admin_payments, exact: true }).click();
+    const payment = staff
+      .getByRole("tabpanel")
+      .locator("form")
+      .filter({
+        has: staff.getByLabel(labels.admin_amount, { exact: true }),
+      });
+    const amount = payment.getByLabel(labels.admin_amount, { exact: true });
+    await amount.fill(String(ordered.bill.due));
+    await payment.getByLabel(labels.admin_reason, { exact: true }).fill("店頭支払のE2E確認");
+    const pay = payment.getByRole("button", { name: labels.admin_payment, exact: true });
+    await pay.click();
+    await expect(amount).toHaveValue("");
+    await expect(pay).toBeEnabled();
+    await expect
+      .poll(async () => {
+        const result = tableStateSchema.parse(await (await guest.request.get("/api/table")).json());
+        return result.bill.due;
+      })
+      .toBe(0);
+    await staff.goto(`/admin/stores/${storeId}/floor`);
+    await expect(billingMetric).toHaveText(String(previousBilling));
+    await staff.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();
+    await staff.getByRole("tab", { name: labels.admin_overview, exact: true }).click();
+    await staff
+      .getByRole("tabpanel")
+      .getByRole("button", { name: labels.admin_close_session, exact: true })
+      .click();
+    await expect(guest.getByRole("heading", { name: ja.kiosk_closed })).toBeVisible();
+    const closed = tableStateSchema.parse(
+      await (await staff.request.get(`/api/admin/stores/${storeId}/tables/${ordered.id}`)).json(),
+    );
+    expect(closed.id).toBe(ordered.id);
+    expect(closed.status).toBe("closed");
+  } finally {
+    // DBとWorkerはcase専用fixtureが破棄する。後片付けのHTTPで元の失敗を上書きしない。
+    const video = guest.video();
+    await guestContext.close();
+    if (video)
+      await testInfo.attach("tablecast-order-ui", {
+        path: await video.path(),
+        contentType: "video/webm",
+      });
+  }
+});

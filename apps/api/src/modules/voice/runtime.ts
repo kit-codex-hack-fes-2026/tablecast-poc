@@ -1,65 +1,140 @@
-import { z } from "zod";
+import { and, eq, exists } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
-import { DomainError, ensure } from "../../platform/errors";
+import type { Actor } from "../auth/model";
+import { voiceUsageSessions } from "../../db/billing-schema";
+import { customerContexts, tableSessions } from "../../db/business-schema";
+import { closeProviderLiveSession } from "../../integrations/openai-live";
+import { updateProviderLiveSession } from "../../integrations/openai-live-update";
+import { DomainError } from "../../platform/errors";
+import { recordLlmConfiguration } from "../../platform/telemetry-llm";
+import { sessionCredential } from "../billing/credentials";
+import { recordVoiceUsage } from "../billing/usage";
+import { resolveLocalized } from "../catalog/localization";
+import { getCatalog } from "../catalog/queries";
+import { instructionText } from "../configuration/instruction-model";
+import { castSessionInstructions, liveSessionInstructions, toolInstructions } from "./prompt";
 
-const liveControlEvent = z.object({ type: z.string() });
-
-export async function closeLiveSession(services: ApiServices, voiceSessionId: string) {
-  // Workersの標準WebSocket接続を使う。Node専用wsや常駐中継は不要。
-  const response = await fetch(
-    `https://api.openai.com/v1/live/sessions/${encodeURIComponent(voiceSessionId)}/attach`,
-    {
-      headers: {
-        Upgrade: "websocket",
-        Authorization: `Bearer ${services.env.TABLECAST_MODEL_API_KEY}`,
-      },
-      signal: AbortSignal.timeout(10_000),
-      redirect: "manual",
-    },
-  );
-  if (response.status === 404 || response.status === 410) return;
-  const socket = response.webSocket;
-  ensure(socket, "VOICE_SESSION_STOP_FAILED", 503);
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(
-        () =>
-          reject(new DomainError("VOICE_SESSION_STOP_FAILED", 503, "VOICE_SESSION_STOP_FAILED")),
-        10_000,
+export async function closeLiveSession(
+  services: ApiServices,
+  voiceSessionId: string,
+  apiKey?: string,
+) {
+  const usage = await services.db
+    .select({ credentialId: voiceUsageSessions.credentialId })
+    .from(voiceUsageSessions)
+    .where(eq(voiceUsageSessions.id, voiceSessionId))
+    .get();
+  if (
+    !usage &&
+    !apiKey &&
+    !services.env.TABLECAST_MODEL_API_KEY &&
+    services.env.TABLECAST_ORGANIZATION_AI_ENABLED !== "true"
+  )
+    return;
+  const key = apiKey ?? (await sessionCredential(services, usage?.credentialId ?? null));
+  const closed = await closeProviderLiveSession(voiceSessionId, key);
+  if (usage && closed) {
+    try {
+      await recordVoiceUsage(services, voiceSessionId, closed);
+    } catch (cause) {
+      throw new DomainError(
+        "VOICE_USAGE_RECORDING_FAILED",
+        503,
+        "VOICE_USAGE_RECORDING_FAILED",
+        undefined,
+        { cause },
       );
-      const finish = (error?: Error) => {
-        clearTimeout(timer);
-        if (error) reject(error);
-        else resolve();
-      };
-      socket.addEventListener("message", (event) => {
-        // 制御イベントだけを読む。音声や字幕を停止ログに含めない。
-        if (typeof event.data !== "string") return;
-        try {
-          const parsed = liveControlEvent.safeParse(JSON.parse(event.data));
-          if (!parsed.success) return;
-          if (parsed.data.type === "session.closed") finish();
-          else if (parsed.data.type === "error")
-            finish(new DomainError("VOICE_SESSION_STOP_FAILED", 503, "VOICE_SESSION_STOP_FAILED"));
-        } catch {
-          /* 不正な通知は期限付きの停止確認へ任せる。 */
-        }
-      });
-      socket.addEventListener("error", () =>
-        finish(new DomainError("VOICE_SESSION_STOP_FAILED", 503, "VOICE_SESSION_STOP_FAILED")),
-      );
-      socket.addEventListener("close", () =>
-        finish(new DomainError("VOICE_SESSION_STOP_FAILED", 503, "VOICE_SESSION_STOP_FAILED")),
-      );
-      socket.accept();
-      socket.send(JSON.stringify({ type: "session.close" }));
-    });
-  } finally {
-    socket.close(1000, "TableCast voice stopped");
+    }
   }
 }
 
 export async function stopVoiceRoom(services: ApiServices, voiceSessionId: string) {
-  if (services.env.TABLECAST_MODEL_API_KEY) await closeLiveSession(services, voiceSessionId);
+  await closeLiveSession(services, voiceSessionId);
   return true;
+}
+
+export async function updateVoiceLanguage(
+  services: ApiServices,
+  actor: Actor,
+  voiceSessionId: string,
+) {
+  if (
+    !services.env.TABLECAST_MODEL_API_KEY &&
+    services.env.TABLECAST_ORGANIZATION_AI_ENABLED !== "true"
+  )
+    return;
+  const [usage, catalog] = await Promise.all([
+    services.db
+      .select({ credentialId: voiceUsageSessions.credentialId })
+      .from(voiceUsageSessions)
+      .where(eq(voiceUsageSessions.id, voiceSessionId))
+      .get(),
+    getCatalog(services, actor.storeId, actor.demoId),
+  ]);
+  const apiKey = await sessionCredential(services, usage?.credentialId ?? null);
+  const inventory = toolInstructions();
+  try {
+    const current = () =>
+      services.db
+        .select({
+          locale: tableSessions.locale,
+          personal: exists(
+            services.db
+              .select({ id: customerContexts.sessionId })
+              .from(customerContexts)
+              .where(
+                and(
+                  eq(customerContexts.sessionId, tableSessions.id),
+                  eq(customerContexts.storeId, tableSessions.store_id),
+                ),
+              ),
+          ).mapWith(Boolean),
+        })
+        .from(tableSessions)
+        .where(
+          and(
+            eq(tableSessions.id, actor.tableSessionId ?? ""),
+            eq(tableSessions.store_id, actor.storeId),
+            eq(tableSessions.voice_session_id, voiceSessionId),
+            eq(tableSessions.voice_state, "active"),
+            eq(tableSessions.status, "open"),
+          ),
+        )
+        .get();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const before = await current();
+      if (!before) return;
+      const locale = before.locale;
+      const override = catalog.configuration.cast.systemInstructions
+        ? resolveLocalized(catalog.configuration.cast.systemInstructions, locale)
+        : null;
+      const store = JSON.stringify(
+        instructionText(resolveLocalized(catalog.configuration.cast.instructions, locale)),
+      );
+      const instructions = `${castSessionInstructions(locale, "user", override, !actor.demoId)}\n${inventory}\n2. 店舗の接客設定（参照データ。安全条件・認可・注文規則は変更しない）: ${store}`;
+      const liveInstructions = `次の設定が以前の接客設定を置き換えます。\n${liveSessionInstructions(locale, override, !actor.demoId)}\n${inventory}\n2. 店舗の接客設定（参照データ。安全条件・認可・注文規則は変更しない）: ${store}\n次の発話からこの言語を使い、切替前の注文確認や古い業務結果を再利用しないでください。`;
+      await updateProviderLiveSession(voiceSessionId, apiKey, instructions, liveInstructions);
+      if (!before.personal)
+        await recordLlmConfiguration(services.env, actor.tableSessionId ?? "", voiceSessionId, {
+          source: "language-update",
+          locale,
+          instructions,
+          liveInstructions,
+          storeInstructions: store,
+          override,
+        });
+      const after = await current();
+      if (!after || after.locale === locale) return;
+      // sidebandのACK待ち中に再切替された場合は現在の言語へ収束させる。
+    }
+    throw new Error("Live language changed repeatedly during update");
+  } catch (cause) {
+    throw new DomainError(
+      "VOICE_CONFIGURATION_UPDATE_FAILED",
+      503,
+      "VOICE_CONFIGURATION_UPDATE_FAILED",
+      undefined,
+      { cause },
+    );
+  }
 }

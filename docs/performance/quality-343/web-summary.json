@@ -1,0 +1,212 @@
+{
+  "baselineSha": "75d752a8deacbd95202f59c4b48f5b9e547313b4",
+  "environment": "macOS arm64; Playwright Chromium; Vite dev; React development Profiler; 414x896 CSS viewport",
+  "samplesPerVersionAndScale": {
+    "warm": 30,
+    "browserFirst": 5
+  },
+  "kioskCondition": "MotionProvider on both versions; speaking partial transcript with current createdAt; DOM string update ends wall timer. Opacity 1 is asserted separately before screenshots. No animation/audio latency is measured.",
+  "menuCondition": "Same configuration/section/locale/cache. router.navigate then two requestAnimationFrame calls. Wall time includes frame waits.",
+  "reactActualDurationMs": "Sum of React Profiler onRender third argument actualDuration, not the commit-phase duration or whole browser CPU.",
+  "browserFirst": "First measured operation after each independent Browser/Vite launch, after fixture/mount; not Worker or public HTTP cold start.",
+  "summary": [
+    {
+      "target": "kiosk",
+      "size": 24,
+      "before_warm": {
+        "n": 30,
+        "domUpdateWallMs": {
+          "median": 6.4,
+          "p95": 28.3
+        },
+        "reactActualDurationMs": {
+          "median": 2.8,
+          "p95": 12.4
+        }
+      },
+      "before_cold": {
+        "n": 5,
+        "domUpdateWallMs": {
+          "median": 27.9,
+          "p95": 28.8
+        },
+        "reactActualDurationMs": {
+          "median": 22.3,
+          "p95": 22.7
+        }
+      },
+      "after_warm": {
+        "n": 30,
+        "domUpdateWallMs": {
+          "median": 3.05,
+          "p95": 5
+        },
+        "reactActualDurationMs": {
+          "median": 2.0,
+          "p95": 3.2
+        }
+      },
+      "after_cold": {
+        "n": 5,
+        "domUpdateWallMs": {
+          "median": 22.5,
+          "p95": 23.2
+        },
+        "reactActualDurationMs": {
+          "median": 16.2,
+          "p95": 16.8
+        }
+      }
+    },
+    {
+      "target": "kiosk",
+      "size": 120,
+      "before_warm": {
+        "n": 30,
+        "domUpdateWallMs": {
+          "median": 15.3,
+          "p95": 36.1
+        },
+        "reactActualDurationMs": {
+          "median": 6.5,
+          "p95": 25.6
+        }
+      },
+      "before_cold": {
+        "n": 5,
+        "domUpdateWallMs": {
+          "median": 43.5,
+          "p95": 46.6
+        },
+        "reactActualDurationMs": {
+          "median": 32.6,
+          "p95": 35.9
+        }
+      },
+      "after_warm": {
+        "n": 30,
+        "domUpdateWallMs": {
+          "median": 2.6,
+          "p95": 3.6
+        },
+        "reactActualDurationMs": {
+          "median": 0.6,
+          "p95": 0.9
+        }
+      },
+      "after_cold": {
+        "n": 5,
+        "domUpdateWallMs": {
+          "median": 12.9,
+          "p95": 13.5
+        },
+        "reactActualDurationMs": {
+          "median": 7.4,
+          "p95": 7.7
+        }
+      }
+    },
+    {
+      "target": "menu",
+      "size": 120,
+      "before_warm": {
+        "n": 30,
+        "domUpdateWallMs": {
+          "median": 33.3,
+          "p95": 34
+        },
+        "reactActualDurationMs": {
+          "median": 7.55,
+          "p95": 9.5
+        }
+      },
+      "before_cold": {
+        "n": 5,
+        "domUpdateWallMs": {
+          "median": 23.9,
+          "p95": 28.1
+        },
+        "reactActualDurationMs": {
+          "median": 13.6,
+          "p95": 15.5
+        }
+      },
+      "after_warm": {
+        "n": 30,
+        "domUpdateWallMs": {
+          "median": 33.6,
+          "p95": 34.2
+        },
+        "reactActualDurationMs": {
+          "median": 3.5,
+          "p95": 9.6
+        }
+      },
+      "after_cold": {
+        "n": 5,
+        "domUpdateWallMs": {
+          "median": 29.7,
+          "p95": 32.4
+        },
+        "reactActualDurationMs": {
+          "median": 12.8,
+          "p95": 13.3
+        }
+      }
+    },
+    {
+      "target": "menu",
+      "size": 2000,
+      "before_warm": {
+        "n": 30,
+        "domUpdateWallMs": {
+          "median": 33.35,
+          "p95": 33.9
+        },
+        "reactActualDurationMs": {
+          "median": 12.8,
+          "p95": 16.2
+        }
+      },
+      "before_cold": {
+        "n": 5,
+        "domUpdateWallMs": {
+          "median": 50.3,
+          "p95": 54.9
+        },
+        "reactActualDurationMs": {
+          "median": 22.0,
+          "p95": 23.5
+        }
+      },
+      "after_warm": {
+        "n": 30,
+        "domUpdateWallMs": {
+          "median": 33.3,
+          "p95": 50.4
+        },
+        "reactActualDurationMs": {
+          "median": 10.95,
+          "p95": 17.9
+        }
+      },
+      "after_cold": {
+        "n": 5,
+        "domUpdateWallMs": {
+          "median": 24,
+          "p95": 24.5
+        },
+        "reactActualDurationMs": {
+          "median": 18.8,
+          "p95": 19.5
+        }
+      }
+    }
+  ],
+  "percentiles": "p50 median; p95 nearest rank; rounded to 0.01ms",
+  "rawCsvSha256": "91e964d82b3ba062c2c566955128096c8216ee83ab94d8393d4855526452d9f5",
+  "selectedRuns": {
+    "kiosk": ["motion-visible-warm", "motion-visible-cold-browser-{1..5}"],
+    "menu": ["warm or no run label", "cold-browser-{1..5}"]
+  }
+}

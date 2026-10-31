@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { apiFetch } from "../../lib/api-fetch";
+import { fixtureValue } from "../../test-support/fixture-value";
 import { VoiceConnection, type VoiceView } from "./voice-connection";
 
 vi.mock("../../lib/api-fetch", () => ({ apiFetch: vi.fn<typeof apiFetch>() }));
@@ -24,16 +25,16 @@ class VoicePeer extends EventTarget {
   channel = new VoiceChannel();
   iceGatheringState = "complete";
   connectionState = "new";
-  localDescription?: { type: string; sdp: string };
+  localDescription?: { sdp: string; type: string };
   sender = { replaceTrack: vi.fn<(track: SyntheticTrack) => Promise<void>>(async () => undefined) };
   addTrack = vi.fn<() => typeof this.sender>(() => this.sender);
   createDataChannel = vi.fn<() => VoiceChannel>(() => this.channel);
-  createOffer = vi.fn<() => Promise<{ type: string; sdp: string }>>(async () => ({
+  createOffer = vi.fn<() => Promise<{ sdp: string; type: string }>>(async () => ({
     type: "offer",
     sdp: "tablecast-offer",
   }));
-  setLocalDescription = vi.fn<(description: { type: string; sdp: string }) => Promise<void>>(
-    async (description: { type: string; sdp: string }) => {
+  setLocalDescription = vi.fn<(description: { sdp: string; type: string }) => Promise<void>>(
+    async (description: { sdp: string; type: string }) => {
       this.localDescription = description;
     },
   );
@@ -151,17 +152,17 @@ it("停止中の選択はcaptureせず明示開始と再開で反映する", asy
   expect(getUserMedia).not.toHaveBeenCalled();
   expect(requests).toHaveLength(0);
   await connection.start("ja");
-  expect(sources[0].id).toBe("external");
+  expect(fixtureValue(sources[0]).id).toBe("external");
   await connection.stop();
   await connection.selectMicrophone("built-in");
   expect(getUserMedia).toHaveBeenCalledOnce();
   await connection.start("ja");
-  expect(sources[1].id).toBe("built-in");
+  expect(fixtureValue(sources[1]).id).toBe("built-in");
 });
 
 it("切断した入力は停止し遅延イベントでもcaptureを再開しない", async () => {
   await connection.start("ja");
-  const source = sources[0];
+  const source = fixtureValue(sources[0]);
   source.readyState = "ended";
   source.dispatchEvent(new Event("ended"));
   await connection.stop();
@@ -186,14 +187,14 @@ it.each([
       microphone: { selectedId: selected, activeLabel: active, switching: false, error: undefined },
     });
     expect(peer().sender.replaceTrack).toHaveBeenCalledWith(sources[1]);
-    expect(sources[1].id).toBe(active);
-    expect(sources[0].readyState).toBe("ended");
-    expect(sources[1].readyState).toBe("live");
+    expect(fixtureValue(sources[1]).id).toBe(active);
+    expect(fixtureValue(sources[0]).readyState).toBe("ended");
+    expect(fixtureValue(sources[1]).readyState).toBe("live");
     expect(getUserMedia).toHaveBeenCalledTimes(2);
     expect(peer().addTrack).toHaveBeenCalledOnce();
     expect(peer().close).not.toHaveBeenCalled();
     expect(requests).toHaveLength(1);
-    sources[0].dispatchEvent(new Event("ended"));
+    fixtureValue(sources[0]).dispatchEvent(new Event("ended"));
     expect(changes.at(-1)?.status).toBe("listening");
     await connection.stop();
     expect(sources.every((source) => source.readyState === "ended")).toBe(true);
@@ -237,7 +238,7 @@ it.each(["成功", "失敗"])(
       status: "listening",
       microphone: { selectedId: "default", activeLabel: "built-in", switching: false },
     });
-    expect(sources[2].readyState).toBe("live");
+    expect(fixtureValue(sources[2]).readyState).toBe("live");
     expect(peer().close).not.toHaveBeenCalled();
   },
 );
@@ -267,7 +268,7 @@ it.each([
     status: "paused",
     microphone: { error, switching: false },
   });
-  expect(sources[0].readyState).toBe("ended");
+  expect(fixtureValue(sources[0]).readyState).toBe("ended");
 });
 
 it("送信切替の失敗では新旧入力を解放して明示再開を待つ", async () => {

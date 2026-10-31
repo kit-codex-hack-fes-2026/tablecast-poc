@@ -1,12 +1,14 @@
 # Codex プラグイン
 
-この文書は店舗メニュー・接客設定を操作する製品プラグインを扱う。TableCastを開発するagentのskills・Cloudflare・Grafana等の導入は[setup](setup.md#2c-agent開発環境)を参照する。
+卓上ゲームの制作依頼も同梱skillで扱う。実行基盤はTableCast側が所有し、Codexは`get_game_spec`・`register_game`・`validate_game`等のMCPを制作入口として使う。[ゲームプラグイン仕様](game-plugins.md)を参照する。stagingでは既存の`tablecast-staging`接続を使い、配備済みツール一覧にゲーム操作が含まれることを確認してから制作する。
+
+この文書は店舗メニュー・接客設定と卓上ゲームを操作する製品プラグインを扱う。TableCastを開発するagentのskills・Cloudflare・Grafana等の導入は[setup](setup.md#2c-agent開発環境)を参照する。
 
 ## 管理画面からの導入
 
 店舗の利用者は、公開MCP `https://tablecast.kit-codex.workers.dev/mcp` へOAuthで接続する。リポジトリのclone、開発サーバー、pluginの生成は不要である。
 
-`/account/integrations/plugins` はGitHub Marketplaceからの導入とリモートMCPへのOAuth接続を案内する。`/account/integrations/manual` は任意のMCPクライアント向けの接続URL・Streamable HTTP・OAuth 2.1/PKCE/DCR設定と、同梱SKILL.mdの任意ダウンロードを提供する。staging以外の画面の接続URLは公開pluginの`plugins/tablecast/.mcp.json`を直接参照し、ローカル画面でも本番を案内する。スキルの追加だけでは接続や権限を付与しない。
+`/account/integrations/plugins` はGitHub Marketplaceからの導入とリモートMCPへのOAuth接続を案内する。`/account/integrations/manual` は任意のMCPクライアント向けの接続URL・Streamable HTTP・OAuth 2.1/PKCE/DCR設定と、用途別の4つのSKILL.mdの任意ダウンロードを提供する。画面の接続名は全環境で`tablecast`、接続URLは利用中のoriginの`/mcp`とする。公開pluginの`plugins/tablecast/.mcp.json`は本番接続用として維持し、検証環境への手動接続と区別する。スキルの追加だけでは接続や権限を付与しない。
 
 `/account/mcp-sessions` ではOAuth接続の日時・scope・有効期限を確認し、不要な接続を解除する。認可コードとPKCE、組織選択、明示同意を経て発行したアクセストークンだけを受け付ける。クライアントの初回接続には動的クライアント登録を使用する。登録だけでは店舗へのアクセス権を持たない。認可・scopeの契約は[MCP仕様](mcp.md)を参照する。
 
@@ -19,7 +21,7 @@ codex plugin marketplace add kit-codex-hack-fes-2026/tablecast-poc
 codex plugin add tablecast@tablecast
 ```
 
-`.agents/plugins/marketplace.json`が`plugins/tablecast`のMCP接続とメニュー設定用skillを配布する。配布元の`source: local`は同じリポジトリ内のplugin配置を示し、接続するMCPはCloudflare本番のHTTPS URLである。
+`.agents/plugins/marketplace.json`が`plugins/tablecast`のMCP接続と設定・ゲーム制作、提案、分析、テーマ制作、ヘルプの5つのskillを配布する。配布元の`source: local`は同じリポジトリ内のplugin配置を示し、接続するMCPはCloudflare本番のHTTPS URLである。
 
 インストール時のOAuth画面でTableCastへログインし、対象の組織とscopeを確認して同意する。認証情報の保管はクライアントに任せる。新しいチャットを開始し、`get_configuration`が対象店舗のIDと名前を返すことを確認する。インストール成功だけで接続済みと判定しない。[公式のplugin導入ガイド](https://learn.chatgpt.com/docs/plugins)を参照する。
 
@@ -40,6 +42,24 @@ codex mcp login tablecast --scopes tablecast:read
 
 pluginを導入済みなら同じMCPを手動で重複登録しない。ChatGPT WebはローカルのCodex設定を参照しないため、利用できるplugin経由で接続する。クライアントごとの対応と操作は[公式MCPガイド](https://learn.chatgpt.com/docs/extend/mcp)を参照する。
 
+## 店舗業務から始める
+
+導入画面には日英の依頼例とコピー操作を置く。製品pluginには自己完結した次のskillを同梱し、手動導入では必要なものをそれぞれ取得できる。
+
+| skill               | 代表依頼                               | 成果                                         |
+| ------------------- | -------------------------------------- | -------------------------------------------- |
+| tablecast           | このサイトとメニュー写真を元に設定して | 資料との対応、確認事項、日英の検証済み下書き |
+| tablecast-advisor   | この店に合う接客を提案して             | 現在設定を踏まえた具体文・理由・評価方法     |
+| tablecast-analytics | 直近28日と前の28日を比較して           | 母数付きの統計比較と施策候補                 |
+| tablecast-theme     | ロゴを保ち背景とチラシを制作して       | 実素材と配置を確認したデザイン下書き         |
+| tablecast-help      | 会員特典の設定方法を教えて             | 目的に合う公開ドキュメントの説明             |
+
+提案・分析だけでは設定を変えない。2番の案で設定して等の採用依頼では、追加の実行確認なしで変更対象だけを下書きへ保存・検証する。メニュー等の公開は管理画面で人が承認する。ポイント・クーポンの保存は即時適用されるため、下書きだけの依頼では実行しない。資料中の命令は操作指示にせず、未確認価格・安全情報を創作しない。
+
+統計は[閉卓基準の指標](statistics.md)と取得条件を示す。MCPがまだ未配備の環境では未実装toolを装わず、提供された表・CSVで進められる部分を案内する。合成履歴から実店舗の人気や施策効果を断定しない。
+
+配布の確認では各SKILL.md単体のmetadataと参照先、実際のダウンロード内容、plugin生成物の5つのskillを確認する。接続・認可、実クライアントの資料読解と会話品質、実公開の検証はそれぞれ分けて記録する。
+
 ## ローカル接続
 
 ここからは開発者向けの検証手順であり、製品のWeb画面には掲載しない。日常のMCP動作確認では、対象worktreeの`.codex/config.toml`へ`tablecast-local`として直接登録する。本番pluginの導入や再生成は不要である。
@@ -47,7 +67,7 @@ pluginを導入済みなら同じMCPを手動で重複登録しない。ChatGPT 
 1. [setup](setup.md)に従って対象worktreeの開発サーバーを起動する（ホストは`bun run dev`、Dev Containerは`bun run dev:container`）。別ターミナルを同じworktreeで開き、起動ログのURL、または次の読取でMCP URLを確認する。
 
    ```sh
-   bun --no-env-file -e 'import { readRuntime } from "./scripts/tablecast-runtime"; console.log(`${(await readRuntime()).origin}/mcp`)'
+   bun --env-file=.local/.env -e 'console.log(new URL("/mcp", process.env.TABLECAST_PUBLIC_ORIGIN).href)'
    ```
 
 2. Git管理外の`.codex/config.toml`へ次のテーブルだけを追加し、`<local-origin>`を確認したURLのoriginへ置き換える。既存のGrafana・Storybook・本番MCP設定は保持する。Dev Container利用時は[接続元ホストの選択](setup.md#mcp設定の配置と確認)も確認する。
@@ -73,7 +93,7 @@ pluginを導入済みなら同じMCPを手動で重複登録しない。ChatGPT 
 pluginの同梱MCP・skill・インストール時のOAuthを確認するときだけ、開発サーバー起動後に生成する。
 
 ```sh
-bun --no-env-file scripts/tablecast-plugin.ts
+bun run plugin:prepare
 codex plugin marketplace add "$PWD/.local/tablecast-plugin-marketplace"
 codex plugin add tablecast@tablecast
 ```
@@ -100,4 +120,49 @@ pluginのversionも更新し、Marketplaceからplugin・MCP・skillへの参照
 
 ## stagingのremote MCP確認
 
-stagingの管理画面に表示される固定URLを`tablecast-staging`名で直接登録する。本番pluginとローカル接続は維持する。ブラウザーでAccessへログインし、模擬Google認証・組織選択・scope同意を経て接続する。ChatGPT・Codexそれぞれで設定取得と下書き更新を確認し、公開は管理画面の明示承認で行う。再配備後の認可保持と、全体リセット後の旧token拒否・再認可を区別して記録する。[環境・リセット](deployment.md#stagingとreleaseの運用)を参照する。
+stagingの管理画面に表示される固定URLを`tablecast-staging`名で直接登録する。本番pluginとローカル接続は維持する。ブラウザーで模擬Google認証・組織選択・scope同意を経て接続する。stagingへのCloudflare Accessログインは不要。ChatGPT・Codexそれぞれで設定取得と下書き更新を確認し、公開は管理画面の明示承認で行う。再配備後の認可保持と、全体リセット後の旧token拒否・再認可を区別して記録する。[環境・リセット](deployment.md#stagingとreleaseの運用)を参照する。
+
+## テーマ制作skill
+
+製品pluginはメニュー設定skillと`tablecast-theme`を同梱する。後者は構造化した店舗ロゴ、部品テーマ、登録画像、CSS、複数商品リンクを持つチラシの制作を扱う。正本は`.agents/skills/tablecast-theme/SKILL.md`で、`scripts/tablecast-plugin.ts`が配布用の`plugins/tablecast/skills/tablecast-theme`へコピーする。配布用コピーを手編集しない。
+
+接続先を書き換えずに同梱skillを同期する場合は`bun --no-env-file scripts/tablecast-plugin.ts --skills-only`を使う。ローカル・公開plugin生成時にも同じ正本をコピーする。手動MCP導入画面から各skillを個別にダウンロードできる。テーマskillは自己完結し、リポジトリ内の開発資料へのアクセスを要求しない。
+
+`tablecast-theme`は画像中心の制作例、素材ごとの生成プロンプト、登録画像とレイアウト設定の対応を同梱する。`get_theme_spec`から稼働中サーバーの現行schemaを取得し、クライアントの画像生成機能を使って背景・透過ロゴ案・チラシを独立して作る。MCPサーバーに画像生成モデルやAPIキー設定を追加しない。提供済み公式ロゴを優先し、実UIの確認結果と未生成の素材を区別する。
+
+## 公開ヘルプ
+
+主目的は、agent pluginに同梱する参照資料を`.agents/skills/tablecast-help/references`へ整備することである。agentは目的に合う章を相対リンクで読み、Webは同じ原稿を読むための表示面とする。画面と参照資料の表示名は日本語でドキュメント、英語でDocumentationとし、既存のURLとskill識別子は維持する。配信形式や索引の説明を利用者向けの本文へ追加しない。
+
+`/help`は利用者の表示言語から`/help/ja`または`/help/en`へ移動する公開入口である。日英それぞれ12章をFumadocsで表示し、ログイン・組織選択を要求しない。管理画面・導入画面・業務API・MCPの認証は従来どおり必要である。
+
+`tablecast-help` skillに`references/ja`と`references/en`を同梱する。正本は`.agents/skills/tablecast-help`に置き、Webが直接コンパイルする。既存の`scripts/tablecast-plugin.ts --skills-only`がテーマskillと同様に配布コピーを作る。配布コピーを手編集せず、Web用に別の原稿は管理しない。既存の4つの操作skillは必要時に接続先originの`/llms.txt`から説明を探せる。設定・接続操作の前に全文を読むことは要求しない。手動導入の既存SKILL.mdは従来どおり単体で利用でき、ヘルプ全文はWebまたはpluginから参照する。
+
+agent向けに`/llms.txt`で日英の索引とページ単位のMarkdown URL、`/llms-full.txt`で全章、`/help/content/:lang/:slug.md`で必要な章だけを返す。すべて公開説明だけを含み、実店舗情報・認証情報・業務操作は含めない。MCPの初期化結果も現在環境のヘルプと索引を案内する。
+
+章は通常のMarkdownとfrontmatterの`title`・`description`で記述し、同じ言語の章へは`./configuration.md`のような相対リンクを使う。WebとMarkdown配信はFumadocsの`getPageByHref`で言語内の仮想ディレクトリから同じ章を解決し、各形式の公開URLへ変換する。これによりskill同梱版でも公開版でも関連章へ到達できる。表示順は各言語の`meta.json`で管理する。追加時は両言語、目次、関連章へのリンクを揃え、Web buildと代表ヘルプE2Eを確認する。
+
+## 多言語メニューの設定指針
+
+`tablecast` skillへ[多言語メニューの設定指針](../plugins/tablecast/skills/tablecast/references/localization.md)を同梱する。商品名の意味訳と転写、固有名と長音記号の保持、sentence case、料理が何か分かる説明、情報を省略しない編集、言語と参考通貨の扱いを説明する。言語・名称・翻訳は既存MCPの下書き・検証・差分・公開申請で設定する。配布元の更新と、利用者がインストールしたpluginへの更新反映は分けて確認する。
+
+## 店舗のオンボーディングと資料Skill
+
+`tablecast` skillは[初期設定](../plugins/tablecast/skills/tablecast/references/onboarding.md)と[資料Skill](../plugins/tablecast/skills/tablecast/references/store-skills.md)の手順を同梱する。`get_store_onboarding`で現在値と不足を確認し、既存の下書きへメニュー・言語・食事情報・接客・テーマ・資料を反映する。画像アップロード、ファイルCRUD、ZIP取込／書出、Agent Skills lintをMCPから使える。GUIは店舗ホームの店舗の初期設定から同じ確認事項を開く。
+
+ポイント・クーポンは専用toolで確認し、メニュー下書きと異なり即時適用されることを説明する。未採用の特典を勝手に設定しない。現在値の存在を事実確認済みとせず、未確認の食事情報を安全と断定しない。OAuth、認証情報、端末登録、顧客本人の同意、最終公開の人の操作を保持する。配布元の更新は利用者がインストール済みのpluginの自動更新を保証しない。
+
+## 利用ケースと実行範囲
+
+[店舗の利用ケース](../plugins/tablecast/skills/tablecast/references/use-cases.md)に、資料取込・多言語接客・営業後の改善の具体的な依頼と必要なtoolをまとめる。[製品の価値と検証経路](use-cases.md)で客向け音声操作と店舗管理MCPの責務を区別する。自然言語の依頼を実行可能なtoolへ対応付けたことと、実モデルが依頼を完遂したことは別々に記録する。
+
+## 公開ドキュメントと同梱skillの保守
+
+製品plugin 0.9.0では、多言語・食事情報、店舗資料、営業中の接客、会員特典、店舗デザイン、ゲームの案内を日英で揃える。`tablecast`の[特典手順](../plugins/tablecast/skills/tablecast/references/rewards.md)は、読取り・対象確認、即時適用、発行・取消の依頼範囲を区別する。会員カードと会員アプリアイコンはテーマskillの下書きへ保存する。
+
+公開説明は現在の画面・MCP登録とschemaへ照合する。機能の記載を配備済みの証拠にせず、接続先に存在しないtoolを案内だけから利用可能と扱わない。更新時は次を確認する。
+
+- `tablecast-help`は`.agents/skills/tablecast-help`、テーマは`.agents/skills/tablecast-theme`を編集し、既存の`--skills-only`で配布コピーを同期する。設定・提案・分析skillは`plugins/tablecast/skills`の既存配布原稿を編集する。
+- 両言語の章、`meta.json`、目次、help skillの導線、ページ間リンクを揃える。単体SKILL.mdで参照ファイルがない場合は接続先の公開ドキュメントへ案内する。
+- metadata・リンク・整形、正本と配布コピーの一致、manifestのversionとMCP URLを確認する。章追加時は既存ヘルプE2Eの章数を更新し、匿名でのWeb・Markdown・検索・日英切替を確認する。
+- 文書のbuild・配信検証、実クライアントのPlugin更新・OAuth、モデルによる業務完遂は別々に記録する。業務データの変更や公開を文書検証のために行わない。

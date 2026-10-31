@@ -1,17 +1,23 @@
 import { isAPIError } from "better-auth/api";
-import { and, desc, eq } from "drizzle-orm";
-import { user } from "../../db/auth-schema";
-import * as business from "../../db/business-schema";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
+import * as business from "../../db/business-schema";
+import { user } from "../../db/identity-schema";
+import { ensure } from "../../platform/errors";
 import { requireManager } from "../auth/policy";
-import { hashDeviceToken } from "../auth/service";
+import { hashDeviceToken } from "../auth/token";
+import {
+  finishCustomerContextChange,
+  resetCustomerContextStatements,
+} from "../customer-memory/context";
 export async function redeemDevice(services: ApiServices, deviceCode: string) {
   const { db } = services;
   let result;
   try {
-    result = await services.auth.api.tablecastRedeemDevice({
+    result = await (
+      await services.getAuth()
+    ).api.tablecastRedeemDevice({
       body: { deviceCode: deviceCode },
     });
   } catch (error) {
@@ -49,12 +55,12 @@ export async function approveDevice(
   services: ApiServices,
   actor: Actor,
   headers: Headers,
-  input: { userCode: string; tableId: string },
+  input: { tableId: string; userCode: string },
 ) {
   requireManager(actor);
   ensure(actor.userId, "LOGIN_REQUIRED", 401);
   const { db } = services;
-  const auth = services.auth;
+  const auth = await services.getAuth();
   const target = await db
     .select({ id: business.restaurantTables.id })
     .from(business.restaurantTables)
@@ -85,10 +91,29 @@ export async function approveDevice(
 }
 export async function revokeDevice(services: ApiServices, actor: Actor, id: string) {
   requireManager(actor);
-  await services.db
-    .update(business.devices)
-    .set({ revoked_at: Date.now() })
-    .where(and(eq(business.devices.id, id), eq(business.devices.store_id, actor.storeId)));
+  const token = crypto.randomUUID();
+  const result = await services.db.batch([
+    services.db
+      .update(business.devices)
+      .set({ revoked_at: Date.now() })
+      .where(and(eq(business.devices.id, id), eq(business.devices.store_id, actor.storeId))),
+    ...resetCustomerContextStatements(
+      services,
+      actor.storeId,
+      and(
+        eq(business.tableSessions.status, "open"),
+        inArray(
+          business.tableSessions.table_id,
+          services.db
+            .select({ id: business.devices.table_id })
+            .from(business.devices)
+            .where(and(eq(business.devices.id, id), eq(business.devices.store_id, actor.storeId))),
+        ),
+      ),
+      token,
+    ),
+  ]);
+  await finishCustomerContextChange(services, actor.storeId, result[1], result[6]);
   return { revoked: true };
 }
 

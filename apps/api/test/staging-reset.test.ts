@@ -1,12 +1,12 @@
 import { env } from "cloudflare:workers";
-import { drizzle } from "drizzle-orm/d1";
 import { sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
 import { expect, test } from "vitest";
 import { resetStagingDatabase } from "../../../scripts/tablecast-staging-reset";
-import { deploymentOwner, stores } from "../src/db/business-schema";
-import { session, user } from "../src/db/auth-schema";
-import { setupFixture } from "./fixture";
+import { session, user } from "../src/db/identity-schema";
+import { deploymentOwner, stores } from "../src/db/table-schema";
 import { createAuth } from "../src/modules/auth/service";
+import { setupFixture } from "./fixture";
 
 const staging = {
   ...env,

@@ -2,17 +2,21 @@ import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test"
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
+import { z } from "zod";
 import app from "../src/app";
 import * as business from "../src/db/business-schema";
-import { updateCart } from "../src/modules/orders/service";
-import { changeLocale } from "../src/modules/tables/service";
-import { getTableState } from "../src/modules/tables/queries";
+import { resolveLocalized } from "../src/modules/catalog/localization";
+import { updateCart } from "../src/modules/orders/use-cases/cart";
 import { getEvents } from "../src/modules/stores/queries";
+import { getTableState } from "../src/modules/tables/queries";
+import { changeLocale } from "../src/modules/tables/use-cases/presentation";
 import { recordConversationItems } from "../src/modules/voice/conversation";
+import { defaultCastInstructions } from "../src/modules/voice/prompt";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { startVoiceSession } from "../src/modules/voice/session";
 import { finishVoiceTurn } from "../src/modules/voice/turns";
 import { createApiServices } from "../src/platform/context";
+import { type Configuration, instructionText, type Locale } from "../src/schema";
 import { configuration, device, deviceToken, setupFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
@@ -20,7 +24,7 @@ const configured = () => ({
   ...env,
   TABLECAST_VOICE_ENABLED: "true",
   TABLECAST_MODEL_API_KEY: "tablecast-private-model-key",
-  TABLECAST_MODEL: "gpt-5.6-luna",
+  TABLECAST_MODEL: "gpt-6.1-terra",
 });
 const startRequest = () =>
   new Request("http://localhost:3000/api/table/voice/start", {
@@ -171,10 +175,47 @@ it("同じ音声session・他卓・切替後の新turnを古い停止要求で�
   ).toEqual({ status: "started" });
 });
 
-it.each(["ja", "en"] as const)(
-  "認証した卓の%s接客設定を両モデルへ渡し、SDPだけを返す",
-  async (locale) => {
+it.each([
+  { locale: "ja", rich: false, model: "gpt-6.1-terra" },
+  { locale: "en", rich: false, model: "gpt-6.1-terra" },
+  { locale: "ja", rich: true, model: "tablecast-configured-model" },
+  { locale: "en", rich: true, model: "tablecast-configured-model" },
+] satisfies { locale: Locale; model: string; rich: boolean }[])(
+  "認証した卓の$locale接客設定（文書=$rich）と委譲先$modelを渡し、SDPだけを返す",
+  async ({ locale, rich, model }) => {
     await setupFixture();
+    const selected: Configuration = structuredClone(configuration);
+    if (rich) {
+      selected.cast.systemInstructions = {
+        ja: null,
+        en: null,
+        [locale]: `TableCast system override (${locale}). Use Arabic digits.`,
+      };
+      selected.cast.instructions[locale] = {
+        format: "tiptap-json",
+        version: 1,
+        document: {
+          type: "doc",
+          content: [
+            {
+              type: "heading",
+              attrs: { level: 2 },
+              content: [
+                { type: "text", text: locale === "ja" ? "接客方針" : "Service instructions" },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Speak politely", marks: [{ type: "bold" }] }],
+            },
+          ],
+        },
+      };
+      await createApiServices(env)
+        .db.update(business.stores)
+        .set({ config_json: JSON.stringify(selected) })
+        .where(eq(business.stores.id, device.storeId));
+    }
     await changeLocale(createApiServices(env), device, locale);
     const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
       expect(url instanceof Request ? url.url : url.toString()).toBe(
@@ -188,24 +229,79 @@ it.each(["ja", "en"] as const)(
           delegation: {
             type: "responses",
             responses: {
-              model: "gpt-5.6-luna",
-              reasoning: { effort: "none" },
+              model,
+              reasoning: { effort: "low" },
               service_tier: "priority",
+              max_output_tokens: 4096,
               parallel_tool_calls: true,
             },
           },
         },
         transport: { type: "webrtc", sdp: "tablecast-sdp-offer" },
       });
+      expect(JSON.parse(init.body)).toHaveProperty(
+        "session.instructions",
+        expect.stringContaining("現在の会員文脈を確認してから話します"),
+      );
+      expect(JSON.parse(init.body)).toHaveProperty(
+        "session.delegation.responses.instructions",
+        expect.stringContaining("その委任の初めにgetCustomerContext"),
+      );
+      expect(JSON.parse(init.body)).toHaveProperty(
+        "session.input.0.content.0.text",
+        expect.stringContaining("getCustomerContextで現在の接客対象と同意を確認"),
+      );
       for (const path of ["session.instructions", "session.delegation.responses.instructions"]) {
+        const instructions =
+          selected.cast.systemInstructions?.[locale] ??
+          resolveLocalized(defaultCastInstructions, locale);
+        expect(JSON.parse(init.body)).toHaveProperty(path, expect.stringContaining(instructions));
         expect(JSON.parse(init.body)).toHaveProperty(
           path,
-          expect.stringContaining(configuration.cast.instructions[locale]),
+          expect.stringContaining("客にIDの存在を説明せず"),
+        );
+        expect(JSON.parse(init.body)).toHaveProperty(
+          path,
+          expect.stringContaining("商品名・特徴・表示順で対象を確認"),
+        );
+        const tools = z
+          .object({
+            session: z.object({
+              delegation: z.object({
+                responses: z.object({
+                  tools: z.array(
+                    z.looseObject({
+                      type: z.string(),
+                      name: z.string().optional(),
+                      description: z.string().optional(),
+                    }),
+                  ),
+                }),
+              }),
+            }),
+          })
+          .parse(JSON.parse(init.body)).session.delegation.responses.tools;
+        expect(tools.map((item) => item.name)).toEqual(
+          expect.arrayContaining(["captureCamera", "showReference", "endConversation"]),
+        );
+        for (const registeredTool of tools.filter((item) => item.type === "function")) {
+          expect(JSON.parse(init.body)).toHaveProperty(
+            path,
+            expect.stringContaining(`${registeredTool.name}: ${registeredTool.description}`),
+          );
+        }
+        expect(JSON.parse(init.body)).toHaveProperty(
+          path,
+          expect.stringContaining(
+            JSON.stringify(instructionText(resolveLocalized(selected.cast.instructions, locale))),
+          ),
         );
         expect(JSON.parse(init.body)).toHaveProperty(
           path,
           expect.not.stringContaining(
-            configuration.cast.instructions[locale === "ja" ? "en" : "ja"],
+            instructionText(
+              resolveLocalized(selected.cast.instructions, locale === "ja" ? "en" : "ja"),
+            ),
           ),
         );
       }
@@ -215,7 +311,12 @@ it.each(["ja", "en"] as const)(
       });
     });
     const ctx = createExecutionContext();
-    const response = await app.request(startRequest(), undefined, configured(), ctx);
+    const response = await app.request(
+      startRequest(),
+      undefined,
+      { ...configured(), TABLECAST_MODEL: model },
+      ctx,
+    );
     expect(response.status).toBe(200);
     const body = await response.text();
     expect(JSON.parse(body)).toMatchObject({

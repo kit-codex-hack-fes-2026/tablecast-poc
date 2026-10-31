@@ -1,6 +1,6 @@
+import type { InferResponseType } from "hono/client";
 import { env } from "cloudflare:workers";
 import { expect, expectTypeOf, it } from "vitest";
-import type { InferResponseType } from "hono/client";
 import app from "../src/app";
 import {
   createTablecastClient,
@@ -20,7 +20,7 @@ it("未認証のRPCを呼ぶと、hcの失敗型と実応答が一致しrequest 
   // Given: Cookieを持たない公開client。
   type Failure = InferResponseType<typeof client.api.admin.stores.$get, 401>;
   expectTypeOf<Failure>().toEqualTypeOf<{
-    error: { code: string; message?: string; details?: unknown };
+    error: { code: string; details?: unknown; message?: string };
     traceId?: string;
   }>();
   // When: 店舗一覧の認証が失敗する。
@@ -78,7 +78,9 @@ it("卓clientの認証失敗も標準DetailedErrorとして返す", async () => 
   });
   // When / Then: 401の型を公開し、実応答も標準例外にする。
   expectTypeOf<InferResponseType<typeof table.index.$get, 401>>().toHaveProperty("error");
-  await expect(parseResponse(table.index.$get())).rejects.toBeInstanceOf(DetailedError);
+  await expect(parseResponse(table.index.$get({ query: {} }))).rejects.toBeInstanceOf(
+    DetailedError,
+  );
 });
 
 it("サイズ制限による拒否でも業務RPCのコードとrequest IDを返す", async () => {
@@ -128,4 +130,47 @@ it("入力検証は項目の制約を日英で返し、入力値や正規表現�
   expect(
     issues.every((issue) => Object.keys(issue).toSorted().join(",") === "code,messages,path"),
   ).toBe(true);
+});
+
+it("DB由来の会計・注文入力も従来の業務制約と未知項目の拒否を維持する", async () => {
+  // Given: 店舗の認証済みスタッフと、既存の会計入力制約。
+  const { cookie } = await setupFixture();
+  const payment = { amount: 1, kind: "payment", reason: "確認", idempotencyKey: "tablecast-input" };
+  const invalid = [
+    { ...payment, amount: 0 },
+    { ...payment, amount: 10_000_001 },
+    { ...payment, amount: -10_000_001 },
+    { ...payment, amount: 1.5 },
+    { ...payment, reason: "" },
+    { ...payment, reason: "あ".repeat(501) },
+    { ...payment, idempotencyKey: "short" },
+    { ...payment, kind: "refund" },
+    { ...payment, actor_id: "another-user" },
+  ];
+  // When: 金額・理由・種別・冪等キーと、サーバー所有項目の入力を検証する。
+  for (const input of invalid) {
+    const response = await app.request(
+      "/api/admin/stores/tablecast-store/tables/tablecast-session/payments",
+      {
+        method: "POST",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      },
+      env,
+    );
+    // Then: DBの型から生成しても、広い列定義をそのまま公開しない。
+    expect(response.status).toBe(422);
+    expect(apiErrorSchema.parse(await response.json()).error.code).toBe("INVALID_INPUT");
+  }
+  const status = await app.request(
+    "/api/admin/stores/tablecast-store/orders/tablecast-order/status",
+    {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "submitted" }),
+    },
+    env,
+  );
+  expect(status.status).toBe(422);
+  expect(apiErrorSchema.parse(await status.json()).error.code).toBe("INVALID_INPUT");
 });

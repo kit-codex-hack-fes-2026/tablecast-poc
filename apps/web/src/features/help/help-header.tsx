@@ -1,0 +1,40 @@
+import type { ComponentProps } from "react";
+import { useHotkey } from "@tanstack/react-hotkeys";
+import { useNavigate, useParams } from "@tanstack/react-router";
+import { useSidebar } from "fumadocs-ui/layouts/docs/slots/sidebar";
+import { AppHeader } from "../../components/app-header";
+import { NavigationToggle } from "../../components/app-navigation";
+import { useI18n } from "../../i18n/locale";
+
+export function HelpHeader(props: ComponentProps<"header">) {
+  const { t } = useI18n();
+  const { lang, _splat } = useParams({ from: "/help/$lang/$" });
+  const navigate = useNavigate();
+  const { open, setOpen, collapsed, setCollapsed, mode } = useSidebar();
+  const expanded = mode === "drawer" ? open : !collapsed;
+  const toggle = () => (mode === "drawer" ? setOpen(!open) : setCollapsed(!collapsed));
+  useHotkey("Mod+B", toggle, { enabled: mode === "full", ignoreInputs: true });
+  return (
+    <AppHeader
+      {...props}
+      id="nd-subnav"
+      onLocaleChange={(locale) => {
+        if (locale !== lang)
+          void navigate({
+            to: "/help/$lang/$",
+            params: { lang: locale, _splat: _splat ?? "" },
+            hash: "",
+          });
+      }}
+      navigation={
+        <NavigationToggle
+          expanded={expanded}
+          controls={mode === "drawer" ? "nd-sidebar-mobile" : "nd-sidebar"}
+          shortcut={mode === "full"}
+          onClick={toggle}
+        />
+      }
+      context={<span className="min-w-0 truncate text-sm font-medium">{t("help_title")}</span>}
+    />
+  );
+}

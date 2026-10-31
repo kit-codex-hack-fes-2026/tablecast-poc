@@ -1,26 +1,47 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { productSchema, type CartLine, type Product } from "@tablecast/api/schema";
+import { resolveLocalized } from "@tablecast/api/localization";
+import { type CartLine, type Product, productSchema } from "@tablecast/api/schema";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { expect, fn, userEvent, within } from "storybook/test";
-import { catalog, product, table } from "../../../.storybook/tablecast-fixtures";
+import {
+  catalog as seedCatalog,
+  product as seedProduct,
+  table as seedTable,
+} from "../../../.storybook/tablecast-fixtures";
 import { CartLines } from "../../components/cart-lines";
-import { ProductMenu } from "./menu";
+import { ProductMenu } from "../../components/product-menu";
+import { catalog, product, table } from "../../test-support/tablecast-fixtures";
 import { ProductPage } from "./product-dialog";
 
 const meta = {
   title: "客向け/メニューと注文",
   component: ProductMenu,
   decorators: [
-    (Story) => (
-      <div className="max-w-md pt-5 min-w-0 min-h-0 flex flex-col border-l border-l-border bg-card max-lg:border-l-0 max-lg:border-t max-lg:border-t-border max-lg:min-h-160">
-        <Story />
-      </div>
-    ),
+    (Story) => {
+      const [client] = useState(() => new QueryClient());
+      useEffect(() => () => client.clear(), [client]);
+      return (
+        <QueryClientProvider client={client}>
+          <div className="max-w-md pt-5 min-w-0 min-h-0 flex flex-col border-l border-l-border bg-card max-lg:border-l-0 max-lg:border-t max-lg:border-t-border max-lg:min-h-160">
+            <Story />
+          </div>
+        </QueryClientProvider>
+      );
+    },
   ],
-  args: { catalog, onChoose: fn() },
+  args: { catalog: seedCatalog, onChoose: fn() },
 } satisfies Meta<typeof ProductMenu>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+export const SeedMenu: Story = { name: "seedの店舗設定と商品画像", args: { catalog: seedCatalog } };
+export const SeedProductDetails: Story = {
+  name: "seedの日本酒と温度・容量・選択肢画像",
+  render: () => <ProductPage product={seedProduct} busy={false} onClose={fn()} onSave={fn()} />,
+};
+
 export const Products: Story = {
+  args: { catalog },
   name: "画像なしと売切",
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -30,7 +51,44 @@ export const Products: Story = {
     await expect(args.onChoose).toHaveBeenCalledWith(product);
   },
 };
-export const EnglishProducts: Story = { name: "長い英語の商品名", globals: { locale: "en" } };
+export const EnglishProducts: Story = {
+  args: { catalog },
+  name: "長い英語の商品名",
+  globals: { locale: "en" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const name = resolveLocalized(product.text, "en").displayName;
+    const card = canvas.getByRole("button", { name: new RegExp(name) });
+    await expect(card).toBeVisible();
+    await expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+    await expect(canvas.getByRole("button", { name: /Shiragasumi/ })).toBeDisabled();
+  },
+};
+export const NarrowProducts: Story = {
+  args: { catalog },
+  name: "狭いペイン・長い英語・売切",
+  globals: { locale: "en" },
+  decorators: [
+    (Story) => (
+      <div className="w-64 max-w-full">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const available = canvas.getByRole("button", { name: /Tsukinagi/ });
+    const soldOut = canvas.getByRole("button", { name: /Shiragasumi/ });
+    await expect(soldOut).toBeDisabled();
+    await expect(soldOut.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      available.getBoundingClientRect().bottom,
+    );
+    await expect(available.scrollWidth).toBeLessThanOrEqual(available.clientWidth);
+    await expect(canvasElement.scrollWidth).toBeLessThanOrEqual(canvasElement.clientWidth);
+    await userEvent.click(available);
+    await expect(args.onChoose).toHaveBeenCalledWith(product);
+  },
+};
 export const Customisation: Story = {
   name: "必須カスタマイズ",
   render: () => <ProductPage product={product} busy={false} onClose={fn()} onSave={fn()} />,
@@ -80,22 +138,32 @@ export const OptionalCustomisation: Story = {
     });
     await step("結果: 商品と数量を保ち、選択肢を除去して保存する", async () => {
       await expect(saveOptional).toHaveBeenCalledTimes(1);
-      await expect(saveOptional).toHaveBeenCalledWith({
-        ...optionalLine,
-        selections: [],
-      });
+      await expect(saveOptional).toHaveBeenCalledWith(
+        {
+          ...optionalLine,
+          selections: [],
+        },
+        true,
+        expect.any(DOMRect),
+      );
     });
   },
 };
 export const EnglishOptionalCustomisation: Story = {
   ...OptionalCustomisation,
   name: "英語で任意の単一選択をカート編集から解除する",
+  tags: ["!test"],
   globals: { locale: "en" },
 };
 
 const relationText = (ja: string, en: string) => ({
-  ja: { ...product.text.ja, displayName: ja, speechName: ja },
-  en: { ...product.text.en, displayName: en, speechName: en },
+  ja: { ...product.text.ja, displayName: ja, speechName: ja, transliteration: ja },
+  en: {
+    ...resolveLocalized(product.text, "en"),
+    displayName: en,
+    speechName: en,
+    transliteration: en,
+  },
 });
 const relatedProduct: Product = {
   ...product,
@@ -200,13 +268,17 @@ export const RelatedCustomisation: Story = {
       await expect(chocolate).not.toBeChecked();
       await expect(yoghurt).toBeChecked();
       await expect(saveRelated).toHaveBeenCalledTimes(1);
-      await expect(saveRelated).toHaveBeenCalledWith({
-        ...relatedLine,
-        selections: [
-          { optionId: "tablecast-yoghurt", quantity: 1 },
-          { optionId: "tablecast-berries", quantity: 2 },
-        ],
-      });
+      await expect(saveRelated).toHaveBeenCalledWith(
+        {
+          ...relatedLine,
+          selections: [
+            { optionId: "tablecast-yoghurt", quantity: 1 },
+            { optionId: "tablecast-berries", quantity: 2 },
+          ],
+        },
+        true,
+        expect.any(DOMRect),
+      );
       await expect(body.queryByRole("textbox")).not.toBeInTheDocument();
     });
   },
@@ -214,6 +286,7 @@ export const RelatedCustomisation: Story = {
 export const EnglishRelatedCustomisation: Story = {
   ...RelatedCustomisation,
   name: "英語で相互排他の選択を外し、依存条件をタッチで満たす",
+  tags: ["!test"],
   globals: { locale: "en" },
 };
 const longProduct = productSchema.parse({
@@ -227,7 +300,7 @@ const longProduct = productSchema.parse({
         .slice(0, 3000),
     },
     en: {
-      ...product.text.en,
+      ...resolveLocalized(product.text, "en"),
       displayName: "A fragrant sake with a gentle finish, served alongside seasonal dishes. "
         .repeat(3)
         .slice(0, 150),
@@ -240,17 +313,22 @@ const longProduct = productSchema.parse({
 const saveLongProduct = fn<(line: CartLine) => void>();
 export const LongDescription: Story = {
   name: "上限の長い商品名と説明でも選択欄と注文ボタンへ到達する",
+  tags: ["!test"],
   globals: { locale: "en" },
   render: () => (
     <div className="h-160 min-h-0 overflow-y-auto" data-testid="product-page-scroll">
       <ProductPage product={longProduct} busy={false} onClose={fn()} onSave={saveLongProduct} />
     </div>
   ),
-  play: async ({ canvasElement, step }) => {
+  play: async ({ canvasElement, step, globals }) => {
     const document = canvasElement.ownerDocument;
     const body = within(document.body);
-    const add = body.getByRole("button", { name: "Add to basket" });
-    const back = body.getByRole("button", { name: "Our menu" });
+    const add = body.getByRole("button", {
+      name: globals.locale === "en" ? "Add to basket" : "注文かごに追加",
+    });
+    const back = body.getByRole("button", {
+      name: globals.locale === "en" ? "Close" : "閉じる",
+    });
     const firstOption = body.getByRole("radio", { name: "60 mL" });
     const scroll = body.getByTestId("product-page-scroll");
     saveLongProduct.mockClear();
@@ -286,13 +364,22 @@ export const LongDescription: Story = {
           quantity: 1,
           selections: [{ optionId: "tablecast-glass", quantity: 1 }],
         }),
+        false,
+        expect.any(DOMRect),
       );
     });
   },
 };
+
+export const JapaneseLongDescription: Story = {
+  ...LongDescription,
+  name: "日本語の上限本文でも選択と注文操作へキーボードで到達する",
+  tags: ["test"],
+  globals: { locale: "ja" },
+};
 export const Basket: Story = {
   name: "変更内容と合計を表示",
-  render: () => <CartLines lines={table.cart.lines} onEdit={fn()} onRemove={fn()} />,
+  render: () => <CartLines lines={seedTable.cart.lines} onEdit={fn()} onRemove={fn()} />,
 };
 export const Incomplete: Story = {
   name: "必須選択が未完了",
@@ -324,6 +411,7 @@ export const EmptyMenu: Story = {
 export const EnglishEmptyMenu: Story = {
   ...EmptyMenu,
   name: "英語の商品0件の案内",
+  tags: ["!test"],
   globals: { locale: "en" },
 };
 export const EmptyCategory: Story = {
@@ -349,13 +437,16 @@ export const EmptyCategory: Story = {
     await userEvent.click(canvas.getByRole("button", { name: locale === "en" ? "All" : "すべて" }));
     await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
     await expect(
-      canvas.getByRole("button", { name: new RegExp(product.text[locale].displayName) }),
+      canvas.getByRole("button", {
+        name: new RegExp(resolveLocalized(product.text, locale).displayName),
+      }),
     ).toBeEnabled();
   },
 };
 export const EnglishEmptyCategory: Story = {
   ...EmptyCategory,
   name: "英語で空のカテゴリからすべてへ戻る",
+  tags: ["!test"],
   globals: { locale: "en" },
 };
 export const SoldOutOnly: Story = {
@@ -371,7 +462,9 @@ export const SoldOutOnly: Story = {
     const locale = globals.locale === "en" ? "en" : "ja";
     await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
     await expect(
-      canvas.getByRole("button", { name: new RegExp(product.text[locale].displayName) }),
+      canvas.getByRole("button", {
+        name: new RegExp(resolveLocalized(product.text, locale).displayName),
+      }),
     ).toBeDisabled();
     await expect(
       canvas.getByText(locale === "en" ? "Sold out" : "売り切れ", { exact: true }),
@@ -381,5 +474,6 @@ export const SoldOutOnly: Story = {
 export const EnglishSoldOutOnly: Story = {
   ...SoldOutOnly,
   name: "英語で売切だけでも商品を表示する",
+  tags: ["!test"],
   globals: { locale: "en" },
 };

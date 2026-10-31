@@ -35,6 +35,16 @@ assets/images/*
 !assets/images/tablecast-main-consult.png
 !assets/images/tablecast-main-guest.png
 !assets/images/tablecast-main-staff.png
+!assets/images/pitch/
+assets/images/pitch/*
+!assets/images/pitch/README.md
+!assets/images/pitch/tablecast-friends.png
+!assets/images/pitch/tablecast-travellers.png
+!assets/images/pitch/tablecast-plugin-connection.jpg
+!assets/images/pitch/tablecast-plugin-analysis.jpg
+!assets/images/pitch/tablecast-plugin-proposals.jpg
+!assets/images/pitch/tablecast-plugin-draft.jpg
+!assets/images/pitch/tablecast-plugin-review.jpg
 
 # 採用テイクは原録画・音声・編集project・実測証跡を含める。失敗テイクは削除しない。
 assets/openscreen/*

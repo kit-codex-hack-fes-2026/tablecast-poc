@@ -8,30 +8,41 @@
 TableCast内にOCR・翻訳Agent・別の設定チャットを作らない。管理画面には確認、差分、必要な手動修正と公開を用意する。
 UIそのものの翻訳はWebのメッセージファイル、商品・プラン・キャストはDBにある日英コンテンツを正本にする。
 
+### 選択肢の条件式
+
+`update_draft`のoptionには任意の`conditions: { version: 2, requires, excludes }`を渡せる。式は`{kind:"option", optionId}`、`{kind:"and"|"or", children}`、`{kind:"not", child}`で、条件なしは`null`とする。旧`requires` / `excludes`配列を持つ選択肢も混在できるが、一つの選択肢で新条件と空でない旧配列を併記しない。式は深さ8、各AND/ORは2〜8子、式64節、商品1,024節、設定65,536節まで。`get_configuration`のJSON Schemaは深さごとの参照を含む有限schemaを返し、節数合計はAPIが追加検証する。
+
+食事制限の設定も`get_configuration`・`update_draft`・`validate_draft`・`get_draft_diff`を使う。`get_configuration.foodClassification`に日本の29品目の固定ID・日英名称・区分・参照版を返す。`foodInfo`の固定部分、具材と調理条件、標準構成、選択肢の`foodChanges.add/remove`、各品目の含有・不使用・不明、4食事区分と`reasons`・`halalCertification`・`crossContactSources`のenumは全て同じconfigurationで保存できる。自由文の根拠や29品目外のアレルゲンIDは受け付けず、既知の判定には理由IDが必要で、参照切れ・重複・同一選択肢で同じ具材を追加かつ除去する設定は公開できない。増減の解除は空配列を明示する。詳細な意味は[食事制限仕様](product.md#アレルゲンと食事制限)に従う。
+
+取得した`conditions`を省略して全体保存すると`CONFIGURATION_FORMAT_UNSUPPORTED`となる。条件を削除するときは`version:2`と両式の`null`を明示する。実際の選択肢・商品削除は可能。既存draft・releaseの一括移行やDB migrationは不要。新形式を保存した環境へ旧APIを戻す場合は、先に条件を互換形式へ戻す移行が必要となる。
+
 ## 管理できるもの
+
+卓上ゲームは`get_game_spec`で契約を取得し、`register_game`・`validate_game`で下書き登録と検証を行う。管理画面で人が試遊して承認する。ゲームの契約とツール一覧は[ゲームプラグイン仕様](game-plugins.md)を参照する。
 
 カテゴリ、商品、価格、説明、読上げ名、検索alias、画像参照、カスタマイズ、食べ飲み放題プラン、キャストの自由文指示を設定する。
 日英で商品ID、価格、在庫、ルールを複製しない。各言語のdisplayName・speechName・説明だけを分ける。
 原資料から不明な原材料・アレルゲン・価格・対象プランは未確認とし、ChatGPTの推測で確定させない。
 生成画像は明示的な商品イメージとして扱い、実際の商品写真と偽らない。PoCで独自画像生成APIを必須実装しない。
 
-商品とカスタマイズ選択肢は同じ `imageKey`（既存 `/media/` のキー、未設定は `null`）と `imageKind`（`photograph` / `illustration`、省略時は `illustration`）を持つ。選択肢の説明は既存 `text.ja.description` / `text.en.description` を使う。画像フィールドのない旧設定は読み込み時に既定値を補い、DB migration は不要。既存 `get_configuration` / `update_draft` の設定 JSON で扱い、保存・検証だけでは公開せず、人間の公開承認後に客画面へ反映する。画像の送信・生成用 MCP tool は追加しない。
+商品とカスタマイズ選択肢は同じ `imageKey`（R2のキー、未設定は `null`）と `imageKind`（`photograph` / `illustration`、省略時は `illustration`）を持つ。選択肢の説明は既存 `text.ja.description` / `text.en.description` を使う。既存 `get_configuration` / `update_draft` の設定 JSON で扱い、保存・検証だけでは公開せず、人間の公開承認後に客画面へ反映する。画像の送信・生成用 MCP tool は追加しない。
 
 ## ツールのまとまり
 
 初期は次の程度で足りる。型を一つの万能JSONにして検証を失わず、同じ意味の細粒度ツールを大量に増やさない。
 
-| ツール群       | 用途                                           |
-| -------------- | ---------------------------------------------- |
-| 設定取得       | 公開schema、対応言語、現在の公開設定           |
-| 画像取込       | 商品画像を保存し、出所付きの画像参照を返す     |
-| 下書き作成     | 公開版を元に一つの変更セットを作る             |
-| 商品バッチ更新 | カテゴリ、商品、カスタマイズ、日英テキスト     |
-| プラン更新     | 店舗依存ルールを登録する                       |
-| キャスト更新   | 日英の標準voice・会話指示・自由文の演技方針    |
-| 下書き検証     | 不足、参照不整合、価格、ルール、読上げ名を検査 |
-| 差分取得       | 現在の公開版との差分を説明可能な形で返す       |
-| 公開・破棄     | 承認後の公開または不要な下書きの破棄           |
+| ツール群       | 用途                                                       |
+| -------------- | ---------------------------------------------------------- |
+| 設定取得       | 公開schema、対応言語、現在の公開設定                       |
+| テーマ制作仕様 | 素材の生成要件・推奨寸法・配置schemaを返す                 |
+| 画像取込       | 商品・ロゴ・装飾・チラシを保存し、出所付きの画像参照を返す |
+| 下書き作成     | 公開版を元に一つの変更セットを作る                         |
+| 商品バッチ更新 | カテゴリ、商品、カスタマイズ、言語別テキスト               |
+| プラン更新     | 店舗依存ルールを登録する                                   |
+| キャスト更新   | 日英の標準voice・会話指示・自由文の演技方針                |
+| 下書き検証     | 不足、参照不整合、価格、ルール、読上げ名を検査             |
+| 差分取得       | 現在の公開版との差分を説明可能な形で返す                   |
+| 公開・破棄     | 承認後の公開または不要な下書きの破棄                       |
 
 API側の既存操作をMCPから呼ぶ。MCP専用の価格計算・別DB・認可系統を作らない。
 個別ツール名や最終schemaは、最初の実装で実際の操作単位に合わせて固定する。
@@ -46,7 +57,7 @@ Base64を扱うクライアントはfileの代わりに画像ファイルのBase
 
 `imageKind`は`photograph`または`illustration`、`imageSource`は`{ generated: boolean, description: string }`を必須とする。生成画像は`generated: true`かつ`illustration`にし、実写真と偽らない。descriptionには店舗が提供した写真・資料名、生成した商品イメージなどの出所を500文字以内で記録する。秘密情報、署名付きURL、個人情報を入れない。これは利用者が申告した出所であり、生成モデルの証明や権利確認の代わりにはならない。
 
-取込には現在のowner/admin権限と`tablecast:write` scopeが必要である。既存のCloudflare Images bindingで実形式と寸法を確認し、縦横1600px以内の静止WebPへ変換してR2へ保存する。画像バイトや元ファイルのメタデータをログ・tool応答へ返さない。取込済み画像はURLを知る人へ公開配信されるため、非公開資料そのものを渡さない。
+取込には現在のowner/admin権限と`tablecast:write` scopeが必要である。既存のCloudflare Images bindingで実形式と寸法を確認し、縦横1600px以内の静止WebPへ変換してR2へ保存する。画像バイトや元ファイルのメタデータをログ・tool応答へ返さない。取込時に実寸とBlurHashをD1へ保存し、画像URLのネットワーク取得には店舗の認可を要求する。設定JSONへBlurHashを保存せず、MCPの設定取得にも画面用の`imageAssets`を付けない。取得済み画像は端末キャッシュで再利用するため、権限失効後の即時消去は保証しない。
 
 1. `get_configuration`と`create_draft`で対象店舗と現在の設定を確認する。
 2. `upload_image`へfile参照または実画像のBase64と出所を渡す。画像生成・OCRはクライアント側で行う。
@@ -87,4 +98,60 @@ voiceはGPT-Liveの標準voiceを選ぶ。Custom Voiceやreference uploadの項�
 
 ## stagingでの検証
 
-stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、クライアント名は`tablecast-staging`とする。Web・模擬ログイン・同意はCloudflare Accessの対象で、機械通信のMCP・discovery・DCR・token・revokeだけAccessを除外する。OAuth・PKCE・scope・店舗認可とtoolの入出力は本番と同じ契約を使う。接続と再認可は[plugin手順](codex-plugin.md#stagingのremote-mcp確認)、保持・全体リセットと検証SHAは[配備手順](deployment.md#stagingとreleaseの運用)を参照する。
+stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、クライアント名は`tablecast-staging`とする。Web・模擬ログイン・同意・MCPはCloudflare Access資格なしで公開する。OAuth・PKCE・scope・店舗認可とtoolの入出力は本番と同じ契約を使う。接続と再認可は[plugin手順](codex-plugin.md#stagingのremote-mcp確認)、保持・全体リセットと検証SHAは[配備手順](deployment.md#stagingとreleaseの運用)を参照する。
+
+### 接客方針の文書形式
+
+`cast.instructions.ja/en` は旧文字列と版1の制限されたTiptap文書のunion。文書を保存する `update_draft` 呼出しでは `instructionFormatVersion: 1` を付ける。省略した旧クライアントは文書を含む下書きを更新できず、競合として拒否される。schemaと本文投影・上限はGUIと共通。[保存契約と展開条件](prompt-editor-design.md)を参照する。
+
+## 店舗統計
+
+`get_statistics` はowner/admin向けの読取りtoolで、`tablecast:read` により概要・商品・カスタマイズの統計を取得する。from/toで指定した期間内に閉卓した通常来店を対象にする。詳細は[指標・期間・ページング](statistics.md)を参照する。分析だけの依頼で下書きを作らず、採用された設定変更に既存の下書きtoolを使う。
+
+## 会員特典の管理
+
+`get_point_policy` / `set_point_policy`で将来の来店向けポイント設定を扱う。`list_coupon_rules` / `save_coupon_rule`は券面画像と日英条件を含む発行ルール、`list_reward_members`は発行先の会員ID・表示名、`list_issued_coupons`は発行済み券の状態をページ取得する。`issue_coupon`は手動ルールから冪等キー付きで発行し、`revoke_coupon`は未使用券を理由付きで取り消す。
+
+会員検索は会員ID・表示名と`nextCursor`だけを返す。発行済み券は券ID・表示名・状態・発行日時・発行時の条件と`nextCursor`を返す。MCPの出力境界でこれらを明示的に選び、管理HTTP用の会員メール・画像・入会日時をモデルへ渡さない。管理画面の人物表示に必要なHTTP応答は維持する。
+
+券面は既存の`upload_image`で取り込み、返された画像キーと出所を保存する。書込みには既存の店舗管理権限を検証し、GUIと同じAPI serviceを通す。発行済み券の条件は後から変更しない。会員の個人記憶を一覧・検索するMCP操作は設けない。
+
+## テーマ・店舗ロゴ・チラシ
+
+`get_configuration`のschemaに`branding.logo`・`appearance`・`banners`を含む。画像は既存の`upload_image`で登録し、返されたキー・種別・出所に日英のaltを付けて設定する。店舗ロゴは組織共通ロゴとは別である。テーマ画像、ロゴ、チラシの画像所有と出所は下書き保存・公開時に検証する。
+
+`update_draft`で設定を保持しながら変更し、`validate_draft`・`get_draft_diff`・`request_publication`を使う。禁止CSSは行・列と理由を含む入力エラー、欠損商品は既存のPRODUCT_NOT_FOUNDを返す。領域IDとバナーIDは重複させない。詳しい制作例は製品pluginのtablecast-theme skillを参照する。テーマ文字列と画像を音声の業務tool結果へ複製しない。
+
+画像を使うテーマ制作では`get_configuration`と`get_theme_spec`を取得する。後者は接続先店舗、現行テーマschema、背景・ロゴ・チラシの生成要件と推奨寸法、公開部品、デザイン編集URLを返す読取り専用tool。画像生成はクライアントの生成・編集機能で行い、MCPは実素材の`upload_image`と共有下書きへ接続する。生成機能がない場合やファイルを渡せない場合は未生成・未登録と明示する。参考画像から一枚のUIを作って貼る方式にせず、素材別に生成・出所登録・配置・実UIプレビューを行う。
+
+## 対応言語と商品名
+
+`get_configuration`は現在の`configuration.languages`を`locales`として、収録済みUI言語を`uiLocales`、fallback順を`["en", "ja"]`として返す。新しい専用toolは作らず、`create_draft`→`update_draft`→`validate_draft`→`get_draft_diff`→`request_publication`を共用する。`update_draft`へは他の言語・価格・画像を保持した全configurationを渡す。公開は返された管理画面で人が承認する。
+
+店舗の`languages`に`ja`・`en`を残し、正規のBCP 47コード（例`zh-Hans`・`ko`・`fr-CA`）を追加する。商品`text`には日本語が必須で、各言語の`displayName`と`transliteration`を同時に指定する。片方だけ・空文字・空白だけは422となる。未翻訳の言語は`text`のキー全体を省略できる。`speechName`・`description`・`aliases`は必要に応じて付ける。カテゴリ・選択肢・プラン・ガイド・接客指示・voice・画像altも言語コードのmapを使う。
+
+英語の転写は長音記号付きヘボン式にし、銘柄を残して酒の種別を意味訳する。中国語・韓国語の転写は各言語の文字で記す。商品名の例は`en: { displayName: "Japanese soy sauce fried chicken", transliteration: "Karaage" }`。転写を括弧で意味訳へ埋め込まない。原材料・宗教認証等の安全情報を翻訳で創作しない。追加言語の欠落は英語→日本語へ戻り、選択した接客言語は維持する。
+
+## 店舗資料の複数ファイルSkill
+
+`get_configuration`で入力schemaと現在設定を取得し、`cast.skills`へ`{ id, files: [{ path, content }] }`を保存できる。`id`は英小文字・数字・ハイフンの名前、`files`は空でない`SKILL.md`と任意の参照テキストファイルを持つ。frontmatter・Markdown・JSON・CSV・コードなどは原文保持する。ファイルパスはSkill内の相対パスで、絶対パス、親ディレクトリ、URL、重複を拒否する。最大8 Skill、各30ファイル、各32,000文字、店舗全体256,000文字に制限する。文字数はUTF-16単位とする。
+
+既存下書きがあれば`get_draft_diff`で再取得して使い、なければ`create_draft`する。全configurationと最新`expectedVersion`を`update_draft`へ送り、他の商品・言語・Skillを保持する。保存済みSkillがある下書きでskillsを省略すると旧形式として拒否する。全削除を意図する場合は空配列を明示する。`validate_draft`と差分確認後、公開申請を依頼された場合だけ`request_publication`し、人が管理画面で承認する。資料は公開後の接客から検索可能になる。読取scopeでは更新できず、個人の顧客記憶を取得・設定するMCP操作は設けない。
+
+画像ファイルは`upload_image`で取り込んだ`{ path, imageKey, imageKind, imageSource, alt }`をfilesへ追加する。画像のpathはPNG・JPEG・WebPの拡張子にする。Markdownから`![説明](../assets/photo.webp)`のように同じSkillの相対パスで参照できる。imageKeyの所属店舗と出所は、既存の画像設定と同じAPIで検証する。画像もファイル件数上限に含み、検索と原文読取では代替テキストと出所を返す。
+
+管理画面の接客設定で折り畳めるツリーからSkill・ファイルを選び、Markdown・画像・コードのプレビューと原文を確認し、下書きを手動編集できる。参照資料のスクリプトを実行する機能ではない。資料は客へ案内してよい店舗情報に限定し、認証情報・内部連絡先・個人記憶を含めない。営業時間などの運用案内と、現在の価格・在庫・食事対応を判定する業務APIを区別する。
+
+### Skillファイルの個別操作とZIP
+
+`get_store_onboarding`は公開設定または指定した下書きの不足・確認事項、対応tool、管理画面を返す。GUIの店舗初期設定も同じ判定を使う。`progress`は設定あり・要確認・未設定・要修正・任意の件数、任意を除く総数、次の設定項目IDを返す。設定ありは設定値の存在を表し、内容の事実確認や公開承認の完了を示さない。メニュー・言語・食事情報・選択肢・接客・テーマ・資料・特典を確認する。OAuth・認証情報・端末登録・顧客の同意・最終公開は人が行う。
+
+`list_store_skills`でmetadataとツリー、`read_store_skill_file`で4,000文字ずつ原文または画像の出所を取得する。続きを読むときは`expectedVersion`が必須。`edit_store_skill`は最新の下書き版を確認して、Skillの作成・改名・削除とファイルの作成／更新・改名・削除を行う。画像は`upload_image`の返却値を画像ファイルへ設定する。`SKILL.md`単体の改名・削除は拒否する。
+
+`lint_store_skills`はAgent SkillsのYAML frontmatter、必須の`name`・`description`、ディレクトリ名との一致、参照ファイルを検査する。500行超は警告。指摘は50件ずつ返し、`totalIssues`・`nextOffset`で総数と続きを示す。続きは取得版の`expectedVersion`が必須。初期設定の概要も最大50件と総数を返す。エラーは`validate_draft`でも公開を止める。一般のSkillスクリプトはテキストとして保持し、実行しない。
+
+`import_store_skills`は単体Skillまたは複数の`skill-id/`フォルダーを持つZIPを取り込む。実ファイルのBase64を`data`、ChatGPT添付を`file`へ渡し、併記しない。圧縮5MiB、展開20MiB、250エントリーまで。同名置換は`replaceExisting=true`を明示する。パス、重複、サイズ、中央ディレクトリ、CRC、Skill lintを確認してから下書きを一度更新し、失敗時は下書きを維持する。画像のアップロード後に版競合が起きた場合、未参照の画像が残ることはあるが公開は変わらない。
+
+`export_store_skills`が返す`resource_link`を`resources/read`で取得すると、画像の実バイト列と出所manifest付きZIPになる。店舗固有の保存キーはZIPに含めない。`tablecast-skills.json`に画像の出所・種類・altを保持する。manifestなしの画像入りZIPでは確認済みの`imageMetadata`が必要。保存画像は各ファイルの拡張子と一致するPNG／JPEG／WebPで配布する。書出しも5MiBまで。
+
+GUIは共通の`/api/admin/stores/:storeId/knowledge`系APIを使う。未保存の取込は編集フォームへ戻して通常の下書き保存を行い、MCPの版付き取込は直接その下書きを保存する。どちらも公開版へ直接反映しない。

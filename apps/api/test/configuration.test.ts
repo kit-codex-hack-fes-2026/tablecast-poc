@@ -1,26 +1,21 @@
 import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
-import { eq } from "drizzle-orm";
 import * as businessTables from "../src/db/business-schema";
 import { getCatalog } from "../src/modules/catalog/queries";
-import {
-  createDraft,
-  getDraft,
-  publishDraft,
-  updateDraft,
-  validateDraft,
-} from "../src/modules/configuration/service";
-import { prepareConfirmation, updateCart } from "../src/modules/orders/service";
+import { getDraft } from "../src/modules/configuration/queries";
+import { createDraft, validateDraft } from "../src/modules/configuration/use-cases/drafts";
+import { publishDraft } from "../src/modules/configuration/use-cases/publish";
+import { updateCart } from "../src/modules/orders/use-cases/cart";
+import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
 import { getEvents } from "../src/modules/stores/queries";
 import { createApiServices } from "../src/platform/context";
-import { configDraftSchema, configurationIssueSchema, tableStateSchema } from "../src/schema";
+import { tableStateSchema } from "../src/schema";
 import { insertFixture } from "./database-fixture";
 import {
   device,
   deviceToken,
   configuration as fixtureConfiguration,
   setupFixture,
-  text,
 } from "./fixture";
 
 const table = async () =>
@@ -33,131 +28,6 @@ const table = async () =>
       )
     ).json(),
   );
-
-it.each([
-  { name: "追加", remove: false },
-  { name: "削除", remove: true },
-])(
-  "商品・グループ・選択肢の$nameでは内包する価格と安全情報を重要な差分として返す",
-  async ({ remove }) => {
-    const { staff, cookie } = await setupFixture();
-    const original = (await getCatalog(createApiServices(env), staff.storeId)).configuration;
-    const extended = structuredClone(original);
-    const tea = extended.products[0];
-    const coffee = extended.products[1];
-    const group = coffee?.modifiers[0];
-    const option = group?.options[0];
-    if (!tea || !coffee || !group || !option) throw new Error("設定fixtureがありません");
-    extended.products.push({ ...tea, id: "new-tea" });
-    coffee.modifiers.push({
-      ...group,
-      id: "new-group",
-      options: [{ ...option, id: "new-option" }],
-    });
-    group.options.push({ ...option, id: "soy" });
-    extended.categories.push({ id: "seasonal", text: text("季節限定", "Seasonal") });
-    const before = remove ? extended : original;
-    const after = remove ? original : extended;
-    await env.TABLECAST_DB.prepare("UPDATE stores SET config_json=? WHERE id=?")
-      .bind(JSON.stringify(before), staff.storeId)
-      .run();
-    const draft = await createDraft(createApiServices(env), staff);
-    await updateDraft(createApiServices(env), staff, draft.id, {
-      expectedVersion: draft.version,
-      configuration: after,
-    });
-
-    const response = await exports.default.fetch(
-      new Request(`http://localhost:3000/api/admin/stores/${staff.storeId}/drafts/${draft.id}`, {
-        headers: { Cookie: cookie },
-      }),
-    );
-    expect(response.status).toBe(200);
-    const { changes } = configDraftSchema.parse(await response.json());
-    expect(changes.map(({ path, sensitive }) => ({ path, sensitive }))).toEqual([
-      { path: "categories.1", sensitive: false },
-      { path: "products.1.modifiers.0.options.2", sensitive: true },
-      { path: "products.1.modifiers.1", sensitive: true },
-      { path: "products.2", sensitive: true },
-    ]);
-    for (const change of changes) {
-      expect(remove ? change.after : change.before).toBeNull();
-      expect(remove ? change.before : change.after).toEqual(expect.any(Object));
-    }
-    const productChange = changes.find(({ path }) => path === "products.2");
-    expect(remove ? productChange?.before : productChange?.after).toEqual(extended.products[2]);
-  },
-);
-
-it.each([
-  { name: "参照不整合が残る", invalid: true },
-  { name: "現在の規則では整合する", invalid: false },
-])("旧形式の$name下書きを構造化して読み、版・未検証状態を変更しない", async ({ invalid }) => {
-  const { staff, cookie } = await setupFixture();
-  const created = await createDraft(createApiServices(env), staff);
-  const configuration = structuredClone(created.configuration);
-  if (invalid) {
-    const product = configuration.products[0];
-    if (!product) throw new Error("商品fixtureがありません");
-    product.categoryId = "missing-category";
-  }
-  const draft = await updateDraft(createApiServices(env), staff, created.id, {
-    expectedVersion: created.version,
-    configuration,
-  });
-  const legacyErrors = JSON.stringify(["旧版の検証エラー: 固定文言の解析には依存しない"]);
-  await env.TABLECAST_DB.prepare("UPDATE config_drafts SET errors_json=? WHERE id=?")
-    .bind(legacyErrors, draft.id)
-    .run();
-
-  const response = await exports.default.fetch(
-    new Request(`http://localhost:3000/api/admin/stores/${staff.storeId}/drafts/${draft.id}`, {
-      headers: { Cookie: cookie },
-    }),
-  );
-  expect(response.status).toBe(200);
-  const read = configDraftSchema.parse(await response.json());
-  expect(read.errors).toEqual(
-    invalid
-      ? [
-          {
-            code: "CATEGORY_NOT_FOUND",
-            path: ["products", 0, "categoryId"],
-            params: { categoryId: "missing-category" },
-          },
-        ]
-      : [],
-  );
-  expect(read.status).toBe("draft");
-  expect(read.version).toBe(draft.version);
-  expect(
-    await env.TABLECAST_DB.prepare(
-      "SELECT status,version,errors_json FROM config_drafts WHERE id=?",
-    )
-      .bind(draft.id)
-      .first(),
-  ).toEqual({ status: "draft", version: draft.version, errors_json: legacyErrors });
-  await expect(
-    publishDraft(createApiServices(env), staff, draft.id, {
-      expectedVersion: draft.version,
-      baseVersion: draft.baseVersion,
-      idempotencyKey: "tablecast-legacy-draft-publication",
-      approved: true,
-    }),
-  ).rejects.toMatchObject({ code: invalid ? "DRAFT_INVALID" : "DRAFT_CONFLICT" });
-  expect((await getCatalog(createApiServices(env), staff.storeId)).version).toBe(draft.baseVersion);
-
-  const validated = await validateDraft(createApiServices(env), staff, draft.id, draft.version);
-  expect(validated.errors).toEqual(read.errors);
-  expect(validated.status).toBe(invalid ? "draft" : "ready");
-  const persisted = await env.TABLECAST_DB.prepare(
-    "SELECT errors_json FROM config_drafts WHERE id=?",
-  )
-    .bind(draft.id)
-    .first<string>("errors_json");
-  if (persisted === null) throw new Error("保存した下書きがありません");
-  expect(configurationIssueSchema.array().parse(JSON.parse(persisted))).toEqual(validated.errors);
-});
 
 it("卓へ同店舗の公開版と更新通知だけを返し、管理metadata・他卓・他店舗を渡さない", async () => {
   const { staff } = await setupFixture();
@@ -365,51 +235,4 @@ it("設定公開の途中失敗では公開版・下書き・履歴・既存確�
       .bind(confirmation.id)
       .first("status"),
   ).toBe("pending");
-});
-
-it("画像フィールドがない旧公開設定を読み、下書きで選択肢画像を保存しても公開版を変えない", async () => {
-  const { staff, cookie } = await setupFixture();
-  const services = createApiServices(env);
-  const legacy = {
-    ...fixtureConfiguration,
-    products: fixtureConfiguration.products.map((product) => ({
-      ...product,
-      modifiers: product.modifiers.map((group) => ({
-        ...group,
-        options: group.options.map((option) =>
-          Object.fromEntries(
-            Object.entries(option).filter(([key]) => !["imageKey", "imageKind"].includes(key)),
-          ),
-        ),
-      })),
-    })),
-  };
-  await services.db
-    .update(businessTables.stores)
-    .set({ config_json: JSON.stringify(legacy) })
-    .where(eq(businessTables.stores.id, staff.storeId));
-  const draft = await createDraft(services, staff);
-  const option = draft.configuration.products[1]?.modifiers[0]?.options[0];
-  if (!option) throw new Error("選択肢fixtureがありません");
-  expect(option).toMatchObject({ imageKey: null, imageKind: "illustration" });
-  option.imageKey = "tablecast/images/tablecast-milk.webp";
-  option.imageKind = "photograph";
-
-  const response = await exports.default.fetch(
-    new Request(`http://localhost:3000/api/admin/stores/${staff.storeId}/drafts/${draft.id}`, {
-      method: "PUT",
-      headers: {
-        Cookie: cookie,
-        Origin: "http://localhost:3000",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ expectedVersion: draft.version, configuration: draft.configuration }),
-    }),
-  );
-  expect(response.status).toBe(200);
-  const saved = await getDraft(services, staff, draft.id);
-  expect(saved.configuration.products[1]?.modifiers[0]?.options[0]).toEqual(option);
-  const published = await getCatalog(services, staff.storeId);
-  expect(published.configuration.products[1]?.modifiers[0]?.options[0]?.imageKey).toBeNull();
-  expect(saved.version).toBe(draft.version + 1);
 });

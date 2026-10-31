@@ -1,0 +1,105 @@
+{
+  "counter": "2.10",
+  "metric": "cloc code lines excluding comments and blank lines; identical classification for each revision",
+  "implementation": ["apps/api/src", "apps/web/src", "apps/emulate", "scripts"],
+  "extensions": ["ts", "tsx", "js", "jsx", "mts", "cts"],
+  "excluded": [".agents", "*.d.ts", "routeTree.gen.ts", "src/paraglide", "assets"],
+  "separate": [
+    "presentation",
+    "test/tests/e2e/test-support/testing paths",
+    "test/spec/stories filename segments",
+    "fixture filenames",
+    "configuration"
+  ],
+  "targetMaximum": 55990,
+  "revisions": [
+    {
+      "revision": "75d752a8deacbd95202f59c4b48f5b9e547313b4",
+      "code": {
+        "tests": 47774,
+        "cli": 6128,
+        "web": 31694,
+        "api": 18007,
+        "presentation": 4195,
+        "configuration": 1130,
+        "emulate": 162
+      },
+      "files": {
+        "tests": 276,
+        "cli": 29,
+        "web": 287,
+        "api": 132,
+        "presentation": 25,
+        "configuration": 19,
+        "emulate": 2
+      },
+      "implementation": 55991
+    },
+    {
+      "revision": "0b3ff9613ce11b929201771b7cb2ee7bc21531fa",
+      "code": {
+        "tests": 49820,
+        "web": 32373,
+        "api": 18564,
+        "presentation": 4401,
+        "cli": 6382,
+        "configuration": 1588,
+        "emulate": 162
+      },
+      "files": {
+        "tests": 323,
+        "web": 379,
+        "api": 188,
+        "presentation": 41,
+        "cli": 60,
+        "configuration": 23,
+        "emulate": 2
+      },
+      "implementation": 57481
+    },
+    {
+      "revision": "before-rc5-refactor-working-tree",
+      "code": {
+        "web": 31423,
+        "cli": 6215,
+        "presentation": 4195,
+        "tests": 49897,
+        "api": 18190,
+        "configuration": 1574,
+        "emulate": 162
+      },
+      "files": {
+        "web": 354,
+        "cli": 39,
+        "presentation": 25,
+        "tests": 325,
+        "api": 176,
+        "configuration": 23,
+        "emulate": 2
+      },
+      "implementation": 55990
+    },
+    {
+      "revision": "working-tree",
+      "code": {
+        "web": 31443,
+        "cli": 6252,
+        "presentation": 4195,
+        "tests": 50328,
+        "api": 18113,
+        "configuration": 1569,
+        "emulate": 162
+      },
+      "files": {
+        "web": 354,
+        "cli": 39,
+        "presentation": 25,
+        "tests": 328,
+        "api": 176,
+        "configuration": 23,
+        "emulate": 2
+      },
+      "implementation": 55970
+    }
+  ]
+}

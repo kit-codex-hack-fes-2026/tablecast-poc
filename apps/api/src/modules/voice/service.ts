@@ -1,11 +1,11 @@
+import type { z } from "zod";
 import { sql } from "drizzle-orm";
-import { z } from "zod";
-import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
-import { telemetryContent } from "../../platform/telemetry";
 import type { Actor } from "../auth/model";
-import type { TableState } from "../tables/model";
+import type { CoreState, StateView, TableState } from "../tables/model";
+import * as business from "../../db/business-schema";
+import { ensure } from "../../platform/errors";
+import { recordD1Update } from "../../platform/telemetry";
 import {
   eventStatement,
   interruptVoiceTurns,
@@ -13,19 +13,32 @@ import {
   voiceCondition,
 } from "../tables/mutations";
 import { getSession, getTableState } from "../tables/queries";
+import { withStateRead } from "../tables/state-read";
 import { speechSpeedInputSchema, voiceToolEventSchema } from "./model";
-
-// 会話画面へ公開する引数はメニュー検索語だけに限る。
-export function voiceToolQuery(toolName: string, argumentsValue: unknown) {
-  if (toolName !== "getCatalog") return undefined;
-  const parsed = z.object({ query: voiceToolEventSchema.shape.query }).safeParse(argumentsValue);
-  return parsed.success ? parsed.data.query : undefined;
-}
+export function setSpeechSpeed(
+  services: ApiServices,
+  actor: Actor,
+  input: z.infer<typeof speechSpeedInputSchema>,
+  view: "core",
+): Promise<CoreState>;
+export function setSpeechSpeed(
+  services: ApiServices,
+  actor: Actor,
+  input: z.infer<typeof speechSpeedInputSchema>,
+  view?: "full",
+): Promise<TableState>;
+export function setSpeechSpeed(
+  services: ApiServices,
+  actor: Actor,
+  input: z.infer<typeof speechSpeedInputSchema>,
+  view: StateView,
+): Promise<CoreState | TableState>;
 export async function setSpeechSpeed(
   services: ApiServices,
   actor: Actor,
   input: z.infer<typeof speechSpeedInputSchema>,
-): Promise<TableState> {
+  view: StateView = "full",
+): Promise<CoreState | TableState> {
   const db = services.db;
 
   const parsed = speechSpeedInputSchema.safeParse(input);
@@ -34,22 +47,29 @@ export async function setSpeechSpeed(
   ensure(session.status === "open", "SESSION_CLOSED");
   const mutation = crypto.randomUUID();
   const gate = voiceCondition(actor);
-  const result = await db.batch([
-    db
-      .update(business.tableSessions)
-      .set({ speech_speed: parsed.data.speed, mutation_id: mutation })
-      .where(sql`id=${session.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
-    eventStatement(services, actor, mutation, "voice.speed", parsed.data),
-  ]);
-  ensure(result[0]?.meta.changes === 1, "TABLE_CONFLICT");
-  await notifyStore(services, actor.storeId, actor.tableSessionId);
-  return getTableState(services, actor);
+  return withStateRead(services, actor, view, async (queries, decode) => {
+    const [updated, event, ...state] = await db.batch([
+      db
+        .update(business.tableSessions)
+        .set({ speech_speed: parsed.data.speed, mutation_id: mutation })
+        .where(sql`id=${session.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
+      eventStatement(services, actor, mutation, "voice.speed", parsed.data),
+      ...queries,
+    ] as const);
+    ensure(updated.meta.changes === 1, "TABLE_CONFLICT");
+    recordD1Update(updated.meta);
+    await notifyStore(services, actor.storeId, actor.tableSessionId, {
+      cursor: event.meta.last_row_id,
+      demoId: session.kind === "demo" ? session.id : undefined,
+    });
+    return decode(state);
+  });
 }
 
 export async function recordVoiceEvent(
   services: ApiServices,
   actor: Actor,
-  event: { kind: "voice.tool"; data: Omit<z.infer<typeof voiceToolEventSchema>, "turnId"> },
+  event: { data: Omit<z.infer<typeof voiceToolEventSchema>, "turnId">; kind: "voice.tool" },
   reserve = false,
   waitUntil?: (promise: Promise<unknown>) => void,
 ) {
@@ -60,12 +80,6 @@ export async function recordVoiceEvent(
     ...event.data,
     turnId: actor.turnId,
   });
-  if (data.query !== undefined) {
-    const query = voiceToolEventSchema.shape.query.safeParse(
-      telemetryContent(data.query, services.env),
-    );
-    data.query = query.success ? query.data : undefined;
-  }
   const gate = voiceCondition(actor);
   const result = await db
     .insert(business.tableEvents)
@@ -86,7 +100,7 @@ export async function recordVoiceEvent(
 export async function setVoiceSession(
   services: ApiServices,
   actor: Actor,
-  voiceSessionId: string | null,
+  voiceSessionId: null | string,
   expectedVoiceSessionId?: string,
   expectedVoiceVersion?: number,
 ) {
@@ -120,6 +134,9 @@ export async function setVoiceSession(
     }),
   ]);
   ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-  await notifyStore(services, actor.storeId, actor.tableSessionId);
+  await notifyStore(services, actor.storeId, actor.tableSessionId, {
+    cursor: result[4].meta.last_row_id,
+    demoId: row.kind === "demo" ? row.id : undefined,
+  });
   return getTableState(services, actor);
 }

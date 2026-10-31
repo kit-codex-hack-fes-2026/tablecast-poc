@@ -1,9 +1,13 @@
+import { configurationErrors, priceCart } from "@tablecast/api/bootstrap";
+import { resolveText } from "@tablecast/api/localization";
+import { dietaryKeys, japaneseAllergenSchema } from "@tablecast/api/schema";
+import { searchStoreSkills } from "@tablecast/api/store-knowledge";
 import { describe, expect, it } from "vitest";
-import { demoStores } from "./tablecast-fixtures";
-import { configurationErrors, priceCart } from "../apps/api/src/modules/catalog/pricing";
+import { demoStores } from "./tablecast-fixtures.ts";
+import { withDemoFoodChanges } from "./tablecast-fixtures/food.ts";
 
 describe("デモの構成データ", () => {
-  it("同じプロファイルから和食・バーガー・韓国料理店の日英102商品と個別写真を作る", () => {
+  it("同じプロファイルから和食・バーガー・韓国料理店の4言語の102商品と個別写真を作る", () => {
     const stores = demoStores("demo");
     expect(stores).toEqual(demoStores("demo"));
     expect(new Set(stores.map((store) => store.id)).size).toBe(3);
@@ -47,31 +51,140 @@ describe("デモの構成データ", () => {
       const { products } = store.configuration;
       expect(products.some((product) => /small|sharing|coffee|latte/.test(product.id))).toBe(false);
       for (const product of products) {
-        for (const locale of ["ja", "en"] as const) {
-          expect(product.text[locale].speechName.length).toBeGreaterThan(0);
-          expect(product.text[locale].description.length).toBeGreaterThan(0);
-          expect(product.text[locale].aliases.length).toBeGreaterThan(0);
+        for (const language of ["ja", "en"])
+          expect(resolveText(product.text, language).aliases.length).toBeGreaterThan(0);
+        for (const locale of ["ja", "en", "zh-Hans", "ko"] as const) {
+          expect(product.text[locale]?.transliteration?.trim()).toBeTruthy();
+          expect(resolveText(product.text, locale).speechName.length).toBeGreaterThan(0);
+          expect(resolveText(product.text, locale).description.length).toBeGreaterThan(0);
         }
       }
     }
   });
-  it("未確認の原材料を安全と断定せず売切・必須選択の状態を含める", () => {
-    const products = demoStores("demo").flatMap((store) => store.configuration.products);
-    expect(products.some((product) => !product.available)).toBe(true);
-    expect(products.some((product) => product.modifiers.some((group) => group.min > 0))).toBe(true);
+  it.each(["demo", "history", "smoke"] as const)(
+    "%sの全商品と具材に確認済みの食事情報を持つ",
+    (profile) => {
+      const products = demoStores(profile).flatMap((store) => store.configuration.products);
+      expect(products.some((product) => !product.available)).toBe(profile !== "smoke");
+      expect(products.some((product) => product.modifiers.some((group) => group.min > 0))).toBe(
+        true,
+      );
+      for (const product of products) {
+        for (const option of product.modifiers.flatMap((group) => group.options))
+          expect(option.foodChanges, `${product.id}: ${option.id}`).toBeDefined();
+        const profiles = [
+          product.foodInfo.base,
+          ...product.foodInfo.components.map((item) => item.profile),
+        ];
+        for (const food of profiles) {
+          expect(Object.keys(food.allergens).sort()).toEqual(
+            [...japaneseAllergenSchema.options].sort(),
+          );
+          expect(
+            Object.values(food.allergens).every((status) =>
+              ["contains", "not_used"].includes(status),
+            ),
+          ).toBe(true);
+          for (const key of dietaryKeys) {
+            expect(["yes", "no"]).toContain(food.dietary[key].status);
+            expect(food.dietary[key].reasons.length).toBeGreaterThan(0);
+          }
+          expect(food.halalCertification).toBe("not_certified");
+          expect(food.crossContact).not.toBe("unknown");
+          expect(food.crossContact === "controlled" || food.crossContactSources.length > 0).toBe(
+            true,
+          );
+        }
+      }
+    },
+  );
+  it("未分類の選択肢を暗黙に確認済みへ変換しない", () => {
+    const product = structuredClone(demoStores("demo")[0]?.configuration.products[0]);
+    const option = product?.modifiers[0]?.options[0];
+    if (!product || !option) throw new Error("選択肢のあるseed商品がありません。");
+    option.id = "tablecast-unreviewed-option";
+    option.foodChanges = undefined;
+    expect(() => withDemoFoodChanges(product)).toThrow("食事情報が未分類");
+  });
+  it("魚・大麦・交換・追加・除去の食事対応と厨房の共用条件が選択後にも一致する", () => {
+    const stores = demoStores("demo");
+    const food = (productId: string, options: string[] = []) => {
+      const store = stores.find((item) =>
+        item.configuration.products.some((product) => product.id === productId),
+      );
+      if (!store) throw new Error(`商品がありません: ${productId}`);
+      const result = priceCart(
+        store.configuration,
+        [
+          {
+            id: "tablecast-food-line",
+            productId,
+            quantity: 1,
+            selections: options.map((optionId) => ({ optionId, quantity: 1 })),
+          },
+        ],
+        1,
+      );
+      const information = result.lines[0]?.foodInformation;
+      if (!information) throw new Error("選択後の食事情報がありません。");
+      return information;
+    };
+    expect(food("tablecast-komorebi-tuna-sashimi")).toMatchObject({
+      allergens: { wheat: "not_used", salmon: "not_used" },
+      crossContact: "possible",
+      dietary: {
+        vegan: { status: "no" },
+        vegetarian: { status: "no" },
+        halal: { status: "yes" },
+        glutenFree: { status: "yes" },
+      },
+    });
+    expect(food("tablecast-hanul-sikhye").dietary.glutenFree.status).toBe("no");
+    expect(food("tablecast-komorebi-beer").dietary.halal.reasons).toContain("alcohol");
     expect(
-      products.every(
-        (product) =>
-          product.allergens.crossContact === "unknown" && product.allergens.vegan === "unknown",
-      ),
-    ).toBe(true);
+      food("tablecast-komorebi-shiitake", ["tablecast-komorebi-seasoning-tare"]).allergens.wheat,
+    ).toBe("contains");
     expect(
-      products.some(
-        (product) =>
-          product.allergens.evidence === "verified" && product.allergens.contains.includes("fish"),
-      ),
-    ).toBe(true);
-    expect(products.some((product) => product.allergens.evidence === "unknown")).toBe(true);
+      food("tablecast-komorebi-shiitake", ["tablecast-komorebi-seasoning-salt"]).allergens.wheat,
+    ).toBe("not_used");
+    expect(food("tablecast-komorebi-udon").dietary.vegetarian.status).toBe("no");
+    expect(
+      food("tablecast-komorebi-udon", ["tablecast-komorebi-broth-kombu"]).dietary.vegan.status,
+    ).toBe("yes");
+    expect(
+      food("tablecast-komorebi-ochazuke", ["tablecast-komorebi-broth-kombu"]).dietary.vegan.status,
+    ).toBe("no");
+    expect(food("tablecast-komorebi-edamame").dietary.vegan.status).toBe("yes");
+    expect(
+      food("tablecast-hanul-bibimbap", [
+        "tablecast-hanul-bibimbap-protein-tofu",
+        "tablecast-hanul-egg-none",
+      ]).dietary.vegan.status,
+    ).toBe("yes");
+    expect(food("tablecast-hanul-samgyeopsal").allergens.soya).toBe("contains");
+    expect(
+      food("tablecast-hanul-samgyeopsal", ["tablecast-hanul-ssamjang-none"]).allergens.soya,
+    ).toBe("not_used");
+    expect(
+      food("tablecast-hanul-fried-chicken", ["tablecast-hanul-chicken-sauce-honey-mustard"])
+        .allergens.egg,
+    ).toBe("contains");
+    expect(
+      food("tablecast-koharu-westward-classic", [
+        "tablecast-koharu-bun-lettuce",
+        "tablecast-koharu-patty-plant",
+        "tablecast-koharu-cheese-none",
+        "tablecast-koharu-sauce-mustard",
+      ]),
+    ).toMatchObject({
+      dietary: { vegan: { status: "yes" } },
+      crossContact: "possible",
+    });
+    expect(food("tablecast-koharu-fries", ["tablecast-koharu-extras-bacon"])).toMatchObject({
+      allergens: { pork: "contains" },
+      dietary: { vegan: { status: "no" }, halal: { status: "no" } },
+      crossContactSources: ["shared_equipment", "shared_frying_oil"],
+    });
   });
   it("韓国店の台本で器三人分を一本分の酒とし、チヂミの訂正後は4740円になる", () => {
     const config = demoStores("demo").find(
@@ -152,4 +265,24 @@ describe("デモの構成データ", () => {
     expect(stores.reduce((sum, store) => sum + store.configuration.products.length, 0)).toBe(12);
     for (const store of stores) expect(configurationErrors(store.configuration)).toEqual([]);
   });
+});
+
+it.each([
+  ["営業時間", "references/visit.md", "17:00"],
+  ["予約", "references/reservations.md", "予約"],
+  ["wheelchairs", "references/facilities.md", "wheelchair"],
+  ["receipts", "references/service.md", "receipt"],
+  ["allergies", "references/dining.md", "allerg"],
+  ["pairings", "references/sake.md", "pairing"],
+  ["削除", "references/membership.md", "削除"],
+])("こもれびの公開用資料から%sの根拠を取得できる", (query, path, text) => {
+  const skills =
+    demoStores("demo").find((store) => store.id === "tablecast-komorebi")?.configuration.cast
+      .skills ?? [];
+  const result = searchStoreSkills(skills, query, 0);
+  expect(
+    result.matches.some(
+      (match) => match.path === path && match.excerpt.toLowerCase().includes(text.toLowerCase()),
+    ),
+  ).toBe(true);
 });

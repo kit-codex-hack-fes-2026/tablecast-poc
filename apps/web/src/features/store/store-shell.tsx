@@ -1,30 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { createContext, useContext, useEffect } from "react";
+import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
+import { apiError } from "../../lib/api-error";
+import { ConfigurationHeader } from "../configuration/configuration-header";
+import { useConfigurationRoute } from "../configuration/configuration-route";
+import { ConfigurationToolbarProvider } from "../configuration/configuration-toolbar";
+import { StoreAdminShell } from "./admin-shell";
+import { StoreContext } from "./store-context";
 import { storesOptions } from "./store-query";
 
-import { apiError } from "../../lib/api-error";
-import { AdminShell } from "../shell/admin-shell";
-
-const StoreContext = createContext<{
-  id: string;
-  name: string;
-  logo: string | null;
-  role: string;
-  organizationId: string;
-} | null>(null);
-export function useStore() {
-  const store = useContext(StoreContext);
-  if (!store) throw new Error("STORE_CONTEXT_REQUIRED");
-  return store;
-}
 export function StoreShell({ storeId }: { storeId: string }) {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const { active: inMenu } = useConfigurationRoute();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const group =
+    inMenu || pathname.endsWith("/games")
+      ? "admin_config"
+      : /\/(points|coupons)$/.test(pathname)
+        ? "nav_rewards"
+        : /\/(members|devices|profile)$/.test(pathname)
+          ? "nav_store_management"
+          : "nav_operations";
   const stores = useQuery(storesOptions);
   const store = stores.data?.stores.find((item) => item.id === storeId);
   useEffect(() => {
@@ -35,24 +36,41 @@ export function StoreShell({ storeId }: { storeId: string }) {
       });
   }, [stores.error, navigate]);
   return (
-    <AdminShell tab="live" storeId={storeId} header={store?.name ?? t("admin_store")}>
-      <ErrorNotice error={stores.error} onRetry={() => void stores.refetch()} />
-      {stores.isPending ? (
-        <LoadingState />
-      ) : store ? (
-        <StoreContext.Provider value={store}>
-          <Outlet />
-        </StoreContext.Provider>
-      ) : (
-        !stores.error && (
-          <div className="space-y-4">
-            <p>{t("auth_no_stores")}</p>
-            <Button nativeButton={false} role="link" render={<Link to="/organisations" />}>
-              {t("org_manage")}
-            </Button>
-          </div>
-        )
-      )}
-    </AdminShell>
+    <ConfigurationToolbarProvider key={storeId}>
+      <StoreAdminShell
+        tab="live"
+        storeId={storeId}
+        storeName={store?.name}
+        header={
+          inMenu && store ? (
+            <ConfigurationHeader
+              key={`${storeId}:${pathname}`}
+              storeId={storeId}
+              role={store.role}
+            />
+          ) : (
+            <span className="text-sm text-muted-foreground">{t(group)}</span>
+          )
+        }
+      >
+        <ErrorNotice query={stores} />
+        {stores.isPending ? (
+          <LoadingState />
+        ) : store ? (
+          <StoreContext.Provider key={store.id} value={store}>
+            <Outlet />
+          </StoreContext.Provider>
+        ) : (
+          !stores.error && (
+            <div className="space-y-4">
+              <p>{t("auth_no_stores")}</p>
+              <Button nativeButton={false} role="link" render={<Link to="/organisations" />}>
+                {t("org_manage")}
+              </Button>
+            </div>
+          )
+        )}
+      </StoreAdminShell>
+    </ConfigurationToolbarProvider>
   );
 }
