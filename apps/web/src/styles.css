@@ -71,6 +71,7 @@
   --color-destructive-solid-hover: var(--red-10);
   --color-destructive-text: var(--red-12);
   --color-info: var(--blue-12);
+  --color-info-surface: var(--blue-2);
   --color-info-soft: var(--blue-3);
   --color-info-hover: var(--blue-4);
   --color-info-selected: var(--blue-5);

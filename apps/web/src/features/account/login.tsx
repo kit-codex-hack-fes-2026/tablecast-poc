@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useHydrated, useLocation } from "@tanstack/react-router";
-import { Fingerprint, Mail } from "lucide-react";
+import { Fingerprint, Info, Mail } from "lucide-react";
 import { useEffect } from "react";
 import { z } from "zod";
 import type { MemberLoginBranding } from "./member-login-query";
@@ -209,7 +209,49 @@ function LoginLayout({
           <p className="leading-relaxed text-muted-foreground">{t("customer_member_login_hint")}</p>
         )}
         {children}
+        {!memberSignIn && ["development", "preview", "staging"].includes(import.meta.env.MODE) && (
+          <LoginDemoTips />
+        )}
       </div>
     </AuthLayout>
+  );
+}
+
+function LoginDemoTips() {
+  const { t } = useI18n();
+  return (
+    <aside
+      aria-labelledby="login-demo-tips-title"
+      className="space-y-4 rounded-xl border border-info-border bg-info-surface p-5 text-sm leading-relaxed text-info-text"
+    >
+      <h2 id="login-demo-tips-title" className="flex items-center gap-2 font-semibold">
+        <Info aria-hidden="true" className="size-5 shrink-0" />
+        {t("auth_demo_title")}
+      </h2>
+      <ol className="list-decimal space-y-2 pl-5">
+        <li>
+          {t("auth_demo_sign_in")}
+          <span className="block break-all">haruka.sato@komorebi-shijo.com</span>
+        </li>
+        <li>{t("auth_demo_select_store")}</li>
+      </ol>
+      <section className="space-y-1">
+        <h3 className="font-semibold">{t("auth_demo_voice_title")}</h3>
+        <p>{t("auth_demo_voice_steps")}</p>
+      </section>
+      <section className="space-y-1">
+        <h3 className="font-semibold">{t("auth_demo_plugin_title")}</h3>
+        <ol className="list-decimal space-y-2 pl-5">
+          <li>{t("auth_demo_plugin_connect")}</li>
+          <li>{t("auth_demo_plugin_approve")}</li>
+        </ol>
+        <Link
+          to="/account/integrations/plugins"
+          className="inline-flex min-h-11 items-center underline underline-offset-4"
+        >
+          {t("auth_demo_integration_link")}
+        </Link>
+      </section>
+    </aside>
   );
 }
