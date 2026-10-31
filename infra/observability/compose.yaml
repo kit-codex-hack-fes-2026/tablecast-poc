@@ -1,7 +1,7 @@
 name: tablecast-observability-local
 services:
   tablecast-lgtm:
-    image: grafana/otel-lgtm:0.37.0
+    image: grafana/otel-lgtm:0.39.0
     restart: unless-stopped
     environment:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
@@ -15,7 +15,7 @@ services:
       - tablecast-lgtm:/data
       - ./tempo.yaml:/otel-lgtm/tempo-config.yaml:ro
   tablecast-langfuse-worker:
-    image: docker.langfuse.com/langfuse/langfuse-worker:4.71.0
+    image: docker.langfuse.com/langfuse/langfuse-worker:4.72.0
     restart: unless-stopped
     depends_on: &tablecast-langfuse-dependencies
       tablecast-postgres:
@@ -52,7 +52,7 @@ services:
       LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://tablecast-minio:9000
       LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
   tablecast-langfuse-web:
-    image: docker.langfuse.com/langfuse/langfuse:4.71.0
+    image: docker.langfuse.com/langfuse/langfuse:4.72.0
     restart: unless-stopped
     depends_on: *tablecast-langfuse-dependencies
     ports:
